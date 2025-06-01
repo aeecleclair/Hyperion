@@ -16,6 +16,7 @@ from fastapi import HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.templating import Jinja2Templates
 from jellyfish import jaro_winkler_similarity
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,8 +28,13 @@ from app.core.users.models_users import CoreUser
 from app.core.utils import security
 from app.types import core_data
 from app.types.content_type import ContentType
-from app.types.exceptions import CoreDataNotFoundError, FileNameIsNotAnUUIDError
+from app.types.exceptions import (
+    CoreDataNotFoundError,
+    FileDoesNotExistError,
+    FileNameIsNotAnUUIDError,
+)
 from app.utils.mail.mailworker import send_email
+from weasyprint import CSS, HTML
 
 if TYPE_CHECKING:
     from app.core.utils.config import Settings
@@ -126,7 +132,6 @@ async def save_file_as_data(
     upload_file: UploadFile,
     directory: str,
     filename: str,
-    request_id: str,
     max_file_size: int = 1024 * 1024 * 2,  # 2 MB
     accepted_content_types: list[ContentType] | None = None,
 ):
@@ -202,9 +207,8 @@ async def save_file_as_data(
 
     except Exception:
         hyperion_error_logger.exception(
-            f"save_file_to_the_disk: could not save file to {filename} ({request_id})",
+            f"save_file_to_the_disk: could not save file to {filename}",
         )
-        raise HTTPException(status_code=400, detail="Could not save file")
 
 
 async def save_bytes_as_data(
@@ -212,7 +216,6 @@ async def save_bytes_as_data(
     directory: str,
     filename: str,
     extension: str,
-    request_id: str,
 ):
     """
     Save bytes in file in the data folder.
@@ -248,20 +251,20 @@ async def save_bytes_as_data(
 
     except Exception:
         hyperion_error_logger.exception(
-            f"save_file_to_the_disk: could not save file to {filename} ({request_id})",
+            f"save_file_to_the_disk: could not save file to {filename}",
         )
-        raise HTTPException(status_code=400, detail="Could not save file")
+        raise
 
 
 def get_file_path_from_data(
     directory: str,
     filename: str,
-    default_asset: str,
+    default_asset: str | None = None,
 ) -> Path:
     """
     If there is a file with the provided filename in the data folder, return it. The file extension will be inferred from the provided content file.
     > "data/{directory}/{filename}.ext"
-    Otherwise, return the default asset.
+    Otherwise, return the default asset if provided, or raise an exception.
 
     The filename should be a uuid.
 
@@ -276,7 +279,10 @@ def get_file_path_from_data(
     for filePath in Path().glob(f"data/{directory}/{filename}.*"):
         return filePath
 
-    return Path(default_asset)
+    if default_asset is not None:
+        return Path(default_asset)
+
+    raise FileDoesNotExistError()
 
 
 def get_file_from_data(
@@ -318,6 +324,44 @@ def delete_file_from_data(
 
     for filePath in Path().glob(f"data/{directory}/{filename}.*"):
         filePath.unlink()
+
+
+async def generate_pdf_from_template(
+    template_name: str,
+    context: dict[str, Any],
+    directory: str,
+    filename: str,
+) -> None:
+    """
+    Generate a PDF file from a Jinja2 template using weasyprint.
+    `context` is a dictionary containing the variables to be used in the template.
+
+    Save it in the `data` folder. `filename` should be a uuid.
+
+    The template should be located in the `assets/templates` directory.
+
+    You should only provide thrusted templates to this function.
+    See [WeasyPrint security consideration](https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#security)
+    """
+    templates = Environment(
+        loader=FileSystemLoader("assets/templates"),
+        autoescape=select_autoescape(["html"]),
+    )
+    rendered_html = templates.get_template(template_name).render(context)
+
+    html = HTML(string=rendered_html)
+    css = CSS("assets/templates/output.css")
+
+    pdf = html.write_pdf(
+        stylesheets=[css],
+    )
+
+    await save_bytes_as_data(
+        file_bytes=pdf,
+        directory=directory,
+        filename=filename,
+        extension="pdf",
+    )
 
 
 async def save_pdf_first_page_as_image(
