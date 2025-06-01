@@ -1269,24 +1269,24 @@ async def get_user_device(
             detail="User is not registered for MyECL Pay",
         )
 
-    wallet_devices = await cruds_myeclpay.get_wallet_device(
+    wallet_device = await cruds_myeclpay.get_wallet_device(
         wallet_device_id=wallet_device_id,
         db=db,
     )
 
-    if wallet_devices is None:
+    if wallet_device is None:
         raise HTTPException(
             status_code=404,
             detail="Wallet device does not exist",
         )
 
-    if wallet_devices.wallet_id != user_payment.wallet_id:
+    if wallet_device.wallet_id != user_payment.wallet_id:
         raise HTTPException(
             status_code=400,
             detail="Wallet device does not belong to the user",
         )
 
-    return wallet_devices
+    return wallet_device
 
 
 @router.get(
