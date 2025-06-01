@@ -196,7 +196,6 @@ async def create_campaigns_logo(
     session_id: str,
     image: UploadFile = File(...),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.cinema)),
-    request_id: str = Depends(get_request_id),
     db: AsyncSession = Depends(get_db),
 ):
     session = await cruds_cinema.get_session_by_id(db=db, session_id=session_id)
@@ -210,7 +209,6 @@ async def create_campaigns_logo(
         upload_file=image,
         directory="cinemasessions",
         filename=str(session_id),
-        request_id=request_id,
         max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,

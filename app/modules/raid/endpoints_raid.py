@@ -463,7 +463,6 @@ async def delete_all_teams(
 async def upload_document(
     document_type: DocumentType,
     file: UploadFile = File(...),
-    request_id: str = Depends(get_request_id),
     user: models_users.CoreUser = Depends(is_user()),
     db: AsyncSession = Depends(get_db),
 ):
@@ -476,7 +475,6 @@ async def upload_document(
         upload_file=file,
         directory="raid",
         filename=document_id,
-        request_id=request_id,
         max_file_size=50 * 1024 * 1024,  # TODO : Change this value
         accepted_content_types=[
             ContentType.jpg,

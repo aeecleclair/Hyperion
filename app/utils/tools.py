@@ -401,7 +401,6 @@ async def save_pdf_first_page_as_image(
             directory=output_image_directory,
             filename=filename,
             extension="jpg",
-            request_id=request_id,
         )
 
 

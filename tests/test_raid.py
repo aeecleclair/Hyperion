@@ -22,7 +22,6 @@ from app.modules.raid.raid_type import (
     Size,
 )
 from app.modules.raid.utils.pdf.pdf_writer import (
-    HTMLPDFWriter,
     PDFWriter,
     maximize_image,
 )
@@ -949,11 +948,6 @@ def test_pdf_writer_write_security_file(
     pdf_writer.team = mock_team
     with patch.object(pdf_writer, "write_key_label"):
         pdf_writer.write_security_file(mock_security_file, mock_participant)
-
-
-def test_html_pdf_writer_init():
-    html_pdf_writer = HTMLPDFWriter()
-    assert isinstance(html_pdf_writer, HTMLPDFWriter)
 
 
 # @patch("app.modules.raid.utils.pdf.pdf_writer.fitz")
