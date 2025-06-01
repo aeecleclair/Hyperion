@@ -214,6 +214,13 @@ async def delete_team_invite_tokens(
     await db.commit()
 
 
+async def delete_all_invite_tokens(
+    db: AsyncSession,
+) -> None:
+    await db.execute(delete(models_raid.InviteToken))
+    await db.commit()
+
+
 async def delete_team(
     team_id: str,
     db: AsyncSession,

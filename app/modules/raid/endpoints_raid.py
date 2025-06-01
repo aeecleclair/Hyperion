@@ -446,7 +446,8 @@ async def delete_all_teams(
             ):
                 google_api.delete_file(team.second.security_file.file_id)
             # Delete team invite tokens
-            await cruds_raid.delete_team_invite_tokens(team.id, db)
+
+    await cruds_raid.delete_all_invite_tokens(db)
 
     # Delete all teams from the database
     await cruds_raid.delete_all_teams(db)
