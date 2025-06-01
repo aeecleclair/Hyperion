@@ -169,7 +169,6 @@ async def create_paper_pdf_and_cover(
         upload_file=pdf,
         directory="ph/pdf",
         filename=str(paper_id),
-        request_id=request_id,
         max_file_size=10 * 1024 * 1024,  # 10 MB
         accepted_content_types=[ContentType.pdf],
     )
