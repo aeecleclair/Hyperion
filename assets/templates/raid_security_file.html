@@ -1,0 +1,343 @@
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+
+    <style>
+      @font-face {
+        font-family: "DejaVu Sans";
+        src: url("fonts/DejaVuSans.ttf") format("truetype");
+      }
+
+      body {
+        font-family: "DejaVu Sans", sans-serif;
+      }
+      @page {
+        margin: 0cm;
+      }
+    </style>
+  </head>
+
+  <body class="relative">
+    <div class="ml-6 mt-5">
+      <div class="flex flex-col w-full justify-center">
+        <div class="flex flex-row w-full">
+          <div class="flex flex-col w-full justify-center items-center">
+            <span class="text-4xl font-bold text-green-700"
+              >FICHE SÉCURITÉ N°1</span
+            >
+            <div class="h-4"></div>
+            <span class="font-semibold">Pour le responsable sécurité</span>
+          </div>
+        </div>
+        <span class="ml-8 text-xl font-semibold text-green-700"
+          >COORDONNÉES PERSONNELLES</span
+        >
+        <table
+          class="mx-8 mt-3 table-auto border-collapse border border-slate-500"
+        >
+          <tbody>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">Nom</td>
+              <td class="px-3 p-2 border border-slate-500">{{name}}</td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">Prénom</td>
+              <td class="px-3 p-2 border border-slate-500">{{firstname}}</td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">
+                Numéro de dossard
+              </td>
+              <td class="px-3 p-2 border border-slate-500">{{team_number}}</td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">
+                Date de naissance
+              </td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{birthday.strftime("%d/%m/%Y")}}
+              </td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">Adresse</td>
+              <td class="px-3 p-2 border border-slate-500">{{address}}</td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">Téléphone</td>
+              <td class="px-3 p-2 border border-slate-500">{{phone}}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <span class="ml-8 text-xl font-semibold text-green-700 mt-8"
+          >ANTÉCÉDENTS</span
+        >
+        <table
+          class="mx-8 mt-3 table-auto border-collapse border border-slate-500"
+        >
+          <tbody>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">Allergie</td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{security_file.allergy if security_file.allergy else "Aucune"}}
+              </td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">Asthme</td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{"Non" if not security_file.asthma else ("Oui, le " +
+                security_file.intensive_care_unit_when if
+                (security_file.intensive_care_unit and
+                security_file.intensive_care_unit_when) else "Oui")}}
+              </td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">
+                Traitement en cours
+              </td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{security_file.ongoing_treatment if
+                security_file.ongoing_treatment else "Aucun"}}
+              </td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">Maladies</td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{security_file.sicknesses if security_file.sicknesses else
+                "Aucune"}}
+              </td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">
+                Hospitalisation
+              </td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{security_file.hospitalization if security_file.hospitalization
+                else "Non"}}
+              </td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">
+                Chirurgicaux
+              </td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{security_file.surgical_operation if
+                security_file.surgical_operation else "Non"}}
+              </td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">
+                Traumatismes
+              </td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{security_file.trauma if security_file.trauma else "Aucun"}}
+              </td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">Familiaux</td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{security_file.family if security_file.family else "Aucun"}}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <span class="ml-8 text-xl font-semibold text-green-700 mt-6"
+          >PERSONNE À CONTACTER EN CAS D’URGENCE</span
+        >
+        <table
+          class="mx-8 mt-3 table-auto border-collapse border border-slate-500"
+        >
+          <tbody>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">Nom</td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{security_file.emergency_person_name}}
+              </td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">Prénom</td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{security_file.emergency_person_firstname}}
+              </td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">Téléphone</td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{security_file.emergency_person_phone}}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ---- -->
+      <section style="page-break-before: always">
+        <div class="flex flex-row w-full mt-5">
+          <div class="flex flex-col w-full justify-center items-center">
+            <span class="text-4xl font-bold text-green-700"
+              >FICHE SÉCURITÉ N°2</span
+            >
+            <div class="h-4"></div>
+            <span class="font-semibold">A conserver tout au long du Raid</span>
+          </div>
+          <img src="./../static/images/logo.png" alt="" class="h-52" />
+        </div>
+        <span class="ml-8 text-xl font-semibold text-green-700"
+          >COORDONNÉES PERSONNELLES</span
+        >
+        <table
+          class="mx-8 mt-3 table-auto border-collapse border border-slate-500"
+        >
+          <tbody>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">Nom</td>
+              <td class="px-3 p-2 border border-slate-500">{{name}}</td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">Prénom</td>
+              <td class="px-3 p-2 border border-slate-500">{{firstname}}</td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">
+                Numéro de dossard
+              </td>
+              <td class="px-3 p-2 border border-slate-500"></td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">
+                Date de naissance
+              </td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{birthday.strftime("%d/%m/%Y")}}
+              </td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">Adresse</td>
+              <td class="px-3 p-2 border border-slate-500">{{address}}</td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">Téléphone</td>
+              <td class="px-3 p-2 border border-slate-500">{{phone}}</td>
+            </tr>
+          </tbody>
+        </table>
+        <span class="ml-8 text-xl font-semibold text-green-700 mt-6"
+          >ANTÉCÉDENTS</span
+        >
+        <table
+          class="mx-8 mt-3 table-auto border-collapse border border-slate-500"
+        >
+          <tbody>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">Allergie</td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{security_file.allergy if security_file.allergy else "Aucune"}}
+              </td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">Asthme</td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{"Non" if not security_file.asthma else ("Oui, le " +
+                security_file.intensive_care_unit_when if
+                (security_file.intensive_care_unit and
+                security_file.intensive_care_unit_when) else "Oui")}}
+              </td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">
+                Traitement en cours
+              </td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{security_file.ongoing_treatment if
+                security_file.ongoing_treatment else "Aucun"}}
+              </td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">Maladies</td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{security_file.sicknesses if security_file.sicknesses else
+                "Aucune"}}
+              </td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">
+                Hospitalisation
+              </td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{security_file.hospitalization if security_file.hospitalization
+                else "Non"}}
+              </td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">
+                Chirurgicaux
+              </td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{security_file.surgical_operation if
+                security_file.surgical_operation else "Non"}}
+              </td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">
+                Traumatismes
+              </td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{security_file.trauma if security_file.trauma else "Aucun"}}
+              </td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">Familiaux</td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{security_file.family if security_file.family else "Aucun"}}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <span class="ml-8 text-xl font-semibold text-green-700 mt-6"
+          >PERSONNE À CONTACTER EN CAS D’URGENCE</span
+        >
+        <table
+          class="mx-8 mt-3 table-auto border-collapse border border-slate-500"
+        >
+          <tbody>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">
+                Responsable Sécurité
+              </td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{security_responsible.firstname + " " +
+                security_responsible.name + " - +" + security_responsible.phone
+                if security_responsible else "Aucun"}}
+              </td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">Président·e</td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{president.firstname + " " + president.name + " - +" +
+                president.phone if president else "Aucun"}}
+              </td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">
+                Responsable Bénévole
+              </td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{volunteer_responsible.firstname + " " +
+                volunteer_responsible.name + " - +" +
+                volunteer_responsible.phone if volunteer_responsible else
+                "Aucun"}}
+              </td>
+            </tr>
+            <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">Secouristes</td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{"+" + rescue.phone if rescue else "Aucun"}}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+  </body>
+</html>
