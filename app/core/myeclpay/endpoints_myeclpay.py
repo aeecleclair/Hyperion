@@ -1231,7 +1231,7 @@ async def get_user_devices(
         user_id=user.id,
         db=db,
     )
-    if user_payment is None or not is_user_latest_tos_signed(user_payment):
+    if user_payment is None:
         raise HTTPException(
             status_code=400,
             detail="User is not registered for MyECL Pay",
@@ -1263,7 +1263,7 @@ async def get_user_device(
         user_id=user.id,
         db=db,
     )
-    if user_payment is None or not is_user_latest_tos_signed(user_payment):
+    if user_payment is None:
         raise HTTPException(
             status_code=400,
             detail="User is not registered for MyECL Pay",
@@ -1308,7 +1308,7 @@ async def get_user_wallet(
         user_id=user.id,
         db=db,
     )
-    if user_payment is None or not is_user_latest_tos_signed(user_payment):
+    if user_payment is None:
         raise HTTPException(
             status_code=400,
             detail="User is not registered for MyECL Pay",
