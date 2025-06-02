@@ -2,7 +2,7 @@ import logging
 import uuid
 from datetime import UTC, date, datetime
 
-from fastapi import Depends, File, HTTPException, UploadFile
+from fastapi import BackgroundTasks, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +24,7 @@ from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_rai
 from app.modules.raid.raid_type import DocumentType, DocumentValidation, Size
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.utils_raid import (
+    generate_teams_pdf_util,
     get_participant,
     post_update_actions,
     save_security_file,
@@ -215,12 +216,13 @@ async def update_participant(
 
     await cruds_raid.update_participant(participant_id, participant, is_minor, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    await post_update_actions(
-        team,
-        db,
-        drive_file_manager,
-        settings=settings,
-    )
+    if team:
+        await post_update_actions(
+            team,
+            db,
+            drive_file_manager,
+            settings=settings,
+        )
 
 
 @module.router.post(
@@ -257,20 +259,22 @@ async def create_team(
     await cruds_raid.create_team(db_team, db)
     # We need to get the team from the db to have access to relationships
     created_team = await cruds_raid.get_team_by_id(team_id=db_team.id, db=db)
-    await post_update_actions(
-        created_team,
-        db,
-        drive_file_manager,
-        settings=settings,
-    )
+    if created_team:
+        await post_update_actions(
+            created_team,
+            db,
+            drive_file_manager,
+            settings=settings,
+        )
     return created_team
 
 
 @module.router.post(
     "/raid/teams/generate-pdf",
-    status_code=204,
+    status_code=200,
 )
 async def generate_teams_pdf(
+    background_tasks: BackgroundTasks,
     user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
     db: AsyncSession = Depends(get_db),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
@@ -280,16 +284,14 @@ async def generate_teams_pdf(
     PDF are automatically generated when a team is created or updated.
     This endpoint is used to regenerate all the PDFs.
     """
-    teams = await cruds_raid.get_all_teams(db)
-
-    for team in teams:
-        await cruds_raid.update_team(team.id, schemas_raid.TeamUpdate(number=-1), db)
-        await post_update_actions(
-            team,
-            db,
-            drive_file_manager,
-            settings=settings,
-        )
+    background_tasks.add_task(
+        generate_teams_pdf_util,
+        user,
+        db,
+        drive_file_manager,
+        settings,
+    )
+    return "PDF generation started"
 
 
 @module.router.get(
@@ -372,12 +374,13 @@ async def update_team(
         raise HTTPException(status_code=403, detail="You can only edit your own team.")
     await cruds_raid.update_team(team_id, team, db)
     updated_team = await cruds_raid.get_team_by_id(team_id, db)
-    await post_update_actions(
-        updated_team,
-        db,
-        drive_file_manager,
-        settings=settings,
-    )
+    if updated_team:
+        await post_update_actions(
+            updated_team,
+            db,
+            drive_file_manager,
+            settings=settings,
+        )
 
 
 @module.router.delete(
@@ -579,12 +582,13 @@ async def validate_document(
     """
     await cruds_raid.update_document_validation(document_id, validation, db)
     team = await cruds_raid.get_team_by_participant_id(user.id, db)
-    await post_update_actions(
-        team,
-        db,
-        drive_file_manager,
-        settings=settings,
-    )
+    if team:
+        await post_update_actions(
+            team,
+            db,
+            drive_file_manager,
+            settings=settings,
+        )
 
 
 @module.router.post(
@@ -681,12 +685,13 @@ async def confirm_payment(
         participant_id,
         db,
     )
-    await post_update_actions(
-        team,
-        db,
-        drive_file_manager,
-        settings=settings,
-    )
+    if team:
+        await post_update_actions(
+            team,
+            db,
+            drive_file_manager,
+            settings=settings,
+        )
 
 
 @module.router.post(
@@ -712,12 +717,13 @@ async def confirm_t_shirt_payment(
         raise HTTPException(status_code=400, detail="T shirt size not set.")
     await cruds_raid.confirm_t_shirt_payment(participant_id, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    await post_update_actions(
-        team,
-        db,
-        drive_file_manager,
-        settings=settings,
-    )
+    if team:
+        await post_update_actions(
+            team,
+            db,
+            drive_file_manager,
+            settings=settings,
+        )
 
 
 @module.router.post(
@@ -738,12 +744,13 @@ async def validate_attestation_on_honour(
         raise HTTPException(status_code=403, detail="You are not the participant")
     await cruds_raid.validate_attestation_on_honour(participant_id, db)
     team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    await post_update_actions(
-        team,
-        db,
-        drive_file_manager,
-        settings=settings,
-    )
+    if team:
+        await post_update_actions(
+            team,
+            db,
+            drive_file_manager,
+            settings=settings,
+        )
 
 
 @module.router.post(
