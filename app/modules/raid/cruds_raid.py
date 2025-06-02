@@ -548,16 +548,16 @@ async def get_number_of_team_by_difficulty(
     teams_found = result.scalars().all()
     # We can not use a where clause because the validation_progress is a Python property
     # and is not usable in a SQL query
-    return len(
-        list(
-            filter(
-                lambda team: team.validation_progress == 100
-                and team.number is not None
-                and team.number >= 0,
-                teams_found,
-            ),
-        ),
-    )
+    team_numbers = [
+        team.number
+        for team in filter(
+            lambda team: team.validation_progress == 100
+            and team.number is not None
+            and team.number >= 0,
+            teams_found,
+        )
+    ]
+    return max(team_numbers) if team_numbers else 0
 
 
 async def create_participant_checkout(

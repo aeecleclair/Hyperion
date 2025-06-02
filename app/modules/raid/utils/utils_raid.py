@@ -11,15 +11,14 @@ from app.core.google_api.google_api import DriveGoogleAPI
 from app.core.payment import schemas_payment
 from app.core.utils.config import Settings
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
+from app.modules.raid.raid_type import Difficulty
 from app.modules.raid.schemas_raid import (
     ParticipantBase,
     ParticipantUpdate,
 )
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.pdf.pdf_writer import HTMLPDFWriter, PDFWriter
-from app.utils.tools import (
-    get_core_data,
-)
+from app.utils.tools import get_core_data
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -139,8 +138,18 @@ async def set_team_number(team: models_raid.Team, db: AsyncSession) -> None:
         team.difficulty,
         db,
     )
+    difficulty_separator = {
+        Difficulty.discovery: 0,
+        Difficulty.sports: 100,
+        Difficulty.expert: 200,
+    }
+    new_team_number = (
+        difficulty_separator[team.difficulty] + 1
+        if number_of_team == 0
+        else number_of_team + 1
+    )
     updated_team: schemas_raid.TeamUpdate = schemas_raid.TeamUpdate(
-        number=number_of_team,
+        number=new_team_number,
     )
     await cruds_raid.update_team(team.id, updated_team, db)
 
@@ -191,7 +200,9 @@ async def post_update_actions(
 ) -> None:
     try:
         if team:
-            if team.validation_progress == 100:
+            if team.validation_progress == 100 and (
+                team.number is None or team.number == -1
+            ):
                 await set_team_number(team, db)
                 all_teams = await cruds_raid.get_all_validated_teams(db)
                 if all_teams:
