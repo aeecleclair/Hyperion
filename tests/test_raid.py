@@ -374,7 +374,7 @@ def test_update_team(client: TestClient):
     assert response.status_code == 204
 
 
-def set_team_number(client: TestClient):
+def test_set_team_number(client: TestClient):
     update_data = {"name": "Updated Validated Team"}
     response = client.patch(
         f"/raid/teams/{validated_team.id}",
