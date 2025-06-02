@@ -283,7 +283,7 @@ async def generate_teams_pdf(
     teams = await cruds_raid.get_all_teams(db)
 
     for team in teams:
-        await cruds_raid.update_team(team.id, schemas_raid.TeamUpdate(number=None), db)
+        await cruds_raid.update_team(team.id, schemas_raid.TeamUpdate(number=-1), db)
         await post_update_actions(
             team,
             db,
