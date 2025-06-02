@@ -135,15 +135,12 @@ async def write_teams_csv(
 async def set_team_number(team: models_raid.Team, db: AsyncSession) -> None:
     if team.difficulty is None:
         return
-    team_by_difficulty = await cruds_raid.get_team_by_difficulty(
+    number_of_team = await cruds_raid.get_number_of_team_by_difficulty(
         team.difficulty,
         db,
     )
-    fully_validated_teams = [
-        team for team in team_by_difficulty if team.validation_progress == 100
-    ]
     updated_team: schemas_raid.TeamUpdate = schemas_raid.TeamUpdate(
-        number=len(fully_validated_teams),
+        number=number_of_team,
     )
     await cruds_raid.update_team(team.id, updated_team, db)
 

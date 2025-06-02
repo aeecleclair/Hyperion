@@ -106,7 +106,7 @@ async def get_all_teams(
 
 async def get_all_validated_teams(
     db: AsyncSession,
-) -> list[models_raid.Team]:
+) -> Sequence[models_raid.Team]:
     teams = await db.execute(
         select(models_raid.Team).options(
             # Since there is nested classes in the Team model, we need to load all the related data
@@ -538,14 +538,17 @@ async def update_team_file_id(
     await db.flush()
 
 
-async def get_team_by_difficulty(
+async def get_number_of_team_by_difficulty(
     difficulty: Difficulty,
     db: AsyncSession,
-) -> list[models_raid.Team]:
+) -> int:
     result = await db.execute(
         select(models_raid.Team).where(models_raid.Team.difficulty == difficulty),
     )
-    return result.scalars().all()
+    teams_found = result.scalars().all()
+    # We can not use a where clause because the validation_progress is a Python property
+    # and is not usable in a SQL query
+    return len(filter(lambda team: team.validation_progress == 100, teams_found))
 
 
 async def create_participant_checkout(
