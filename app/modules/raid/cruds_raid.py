@@ -1,7 +1,8 @@
 from collections.abc import Sequence
 from datetime import UTC, datetime
+from typing import List
 
-from sqlalchemy import and_, delete, func, or_, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -538,19 +539,14 @@ async def update_team_file_id(
     await db.flush()
 
 
-async def get_number_of_team_by_difficulty(
+async def get_team_by_difficulty(
     difficulty: Difficulty,
     db: AsyncSession,
-) -> int:
+) -> list[models_raid.Team]:
     result = await db.execute(
-        select(func.count()).where(
-            and_(
-                models_raid.Team.difficulty == difficulty,
-                models_raid.Team.validation_progress() == 100.0,
-            ),
-        ),
+        select(models_raid.Team).where(models_raid.Team.difficulty == difficulty),
     )
-    return result.scalar() or 0
+    return result.scalars().all()
 
 
 async def create_participant_checkout(
