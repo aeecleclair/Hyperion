@@ -546,7 +546,7 @@ async def get_number_of_team_by_difficulty(
         select(func.count()).where(
             and_(
                 models_raid.Team.difficulty == difficulty,
-                models_raid.Team.validation_progress == 100.0,
+                models_raid.Team.validation_progress() == 100.0,
             ),
         ),
     )
