@@ -16,7 +16,7 @@ from app.modules.raid.raid_type import (
     DocumentType,
     DocumentValidation,
     MeetingPlace,
-    Size
+    Size,
 )
 from app.modules.raid.utils.pdf.pdf_writer import (
     HTMLPDFWriter,
@@ -952,3 +952,118 @@ def test_html_pdf_writer_init():
 #         1,
 #     )
 #     assert result == f"data/raid/{mock_participant.id}.pdf"
+
+
+async def test_set_team_number_utility_empty_database(mocker):
+    """Test the set_team_number utility with an empty database (no existing teams)"""
+    # Create mock objects
+    mock_db = mocker.AsyncMock()
+    mock_team = mocker.Mock(
+        spec=Team,
+        id=str(uuid.uuid4()),
+        difficulty=Difficulty.sports,
+    )
+
+    # Mock the get_number_of_team_by_difficulty function to return 0
+    mocker.patch(
+        "app.modules.raid.cruds_raid.get_number_of_team_by_difficulty",
+        return_value=0,
+    )
+
+    # Mock the update_team function
+    mock_update_team = mocker.patch("app.modules.raid.cruds_raid.update_team")
+
+    # Call the function
+    from app.modules.raid.utils.utils_raid import set_team_number
+
+    await set_team_number(mock_team, mock_db)
+
+    # Assert update_team was called with correct parameters
+    mock_update_team.assert_called_once()
+    args, kwargs = mock_update_team.call_args
+    assert args[0] == mock_team.id
+    assert args[1].number == 101  # 100 (sports separator) + 1
+
+
+async def test_set_team_number_utility_existing_teams(mocker):
+    """Test the set_team_number utility with existing teams"""
+    # Create mock objects
+    mock_db = mocker.AsyncMock()
+    mock_team = mocker.Mock(
+        spec=Team,
+        id=str(uuid.uuid4()),
+        difficulty=Difficulty.expert,
+    )
+
+    # Mock the get_number_of_team_by_difficulty function to return existing team numbers
+    mocker.patch(
+        "app.modules.raid.cruds_raid.get_number_of_team_by_difficulty",
+        return_value=220,
+    )
+
+    # Mock the update_team function
+    mock_update_team = mocker.patch("app.modules.raid.cruds_raid.update_team")
+
+    # Call the function
+    from app.modules.raid.utils.utils_raid import set_team_number
+
+    await set_team_number(mock_team, mock_db)
+
+    # Assert update_team was called with correct parameters
+    mock_update_team.assert_called_once()
+    args, kwargs = mock_update_team.call_args
+    assert args[0] == mock_team.id
+    assert args[1].number == 221  # 220 + 1
+
+
+async def test_set_team_number_utility_no_difficulty(mocker):
+    """Test the set_team_number utility with a team without difficulty"""
+    # Create mock objects
+    mock_db = mocker.AsyncMock()
+    mock_team = mocker.Mock(
+        spec=Team,
+        id=str(uuid.uuid4()),
+        difficulty=None,
+    )
+
+    # Mock the update_team function
+    mock_update_team = mocker.patch("app.modules.raid.cruds_raid.update_team")
+
+    # Call the function
+    from app.modules.raid.utils.utils_raid import set_team_number
+
+    await set_team_number(mock_team, mock_db)
+
+    # Assert update_team was not called
+    mock_update_team.assert_not_called()
+
+
+async def test_set_team_number_utility_discovery_difficulty(mocker):
+    """Test the set_team_number utility with discovery difficulty"""
+    # Create mock objects
+    mock_db = mocker.AsyncMock()
+    mock_team = mocker.Mock(
+        spec=Team,
+        id=str(uuid.uuid4()),
+        difficulty=Difficulty.discovery,
+    )
+
+    # Mock the get_number_of_team_by_difficulty function
+    mocker.patch(
+        "app.modules.raid.cruds_raid.get_number_of_team_by_difficulty",
+        return_value=5,
+    )
+
+    # Mock the update_team function
+    mock_update_team = mocker.patch("app.modules.raid.cruds_raid.update_team")
+
+    # Call the function
+    from app.modules.raid.utils.utils_raid import set_team_number
+
+    await set_team_number(mock_team, mock_db)
+
+    # Assert update_team was called with correct parameters
+    mock_update_team.assert_called_once()
+    args, kwargs = mock_update_team.call_args
+    assert args[0] == mock_team.id
+    assert args[1].number == 6  # discovery (0) + 5 + 1
