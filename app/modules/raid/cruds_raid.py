@@ -1,7 +1,8 @@
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import and_, delete, func, or_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -542,7 +543,10 @@ async def get_number_of_team_by_difficulty(
     db: AsyncSession,
 ) -> int:
     result = await db.execute(
-        select(func.count()).where(models_raid.Team.difficulty == difficulty),
+        select(func.count()).where(
+            and_(models_raid.Team.difficulty == difficulty),
+            models_raid.Team.validation_progress == 100,
+        ),
     )
     return result.scalar() or 0
 
