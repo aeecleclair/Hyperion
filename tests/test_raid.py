@@ -95,7 +95,7 @@ async def init_objects() -> None:
     await add_object_to_db(document)
 
     validated_document = models_raid.Document(
-        id="validated_document_id",
+        id="6e9736ab-5ceb-42a8-a252-e8c66696f7b1",
         name="validated.pdf",
         uploaded_at=datetime.datetime.now(tz=datetime.UTC),
         validation=DocumentValidation.accepted,
