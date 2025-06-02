@@ -549,7 +549,7 @@ async def get_number_of_team_by_difficulty(
     # We can not use a where clause because the validation_progress is a Python property
     # and is not usable in a SQL query
     team_numbers = [
-        team.number
+        team.number if team.number is not None and team.number >= 0 else 0
         for team in filter(
             lambda team: team.validation_progress == 100
             and team.number is not None
