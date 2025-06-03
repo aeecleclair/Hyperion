@@ -8,6 +8,7 @@ from collections.abc import Callable, Sequence
 from inspect import iscoroutinefunction
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar
+from uuid import UUID
 
 import aiofiles
 import calypsso
@@ -214,7 +215,7 @@ async def save_file_as_data(
 async def save_bytes_as_data(
     file_bytes: bytes,
     directory: str,
-    filename: str,
+    filename: str | UUID,
     extension: str,
 ):
     """
@@ -229,6 +230,8 @@ async def save_bytes_as_data(
 
     WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
     """
+    if isinstance(filename, UUID):
+        filename = str(filename)
 
     if not uuid_regex.match(filename):
         hyperion_error_logger.error(
@@ -258,7 +261,7 @@ async def save_bytes_as_data(
 
 def get_file_path_from_data(
     directory: str,
-    filename: str,
+    filename: str | UUID,
     default_asset: str | None = None,
 ) -> Path:
     """
@@ -270,6 +273,9 @@ def get_file_path_from_data(
 
     WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
     """
+    if isinstance(filename, UUID):
+        filename = str(filename)
+
     if not uuid_regex.match(filename):
         hyperion_error_logger.error(
             f"get_file_from_data: security issue, the filename is not a valid UUID: {filename}. This mean that the user input was not properly checked.",
@@ -282,7 +288,7 @@ def get_file_path_from_data(
     if default_asset is not None:
         return Path(default_asset)
 
-    raise FileDoesNotExistError()
+    raise FileDoesNotExistError(name=f"{directory}/{filename}.*")
 
 
 def get_file_from_data(
@@ -330,7 +336,7 @@ async def generate_pdf_from_template(
     template_name: str,
     context: dict[str, Any],
     directory: str,
-    filename: str,
+    filename: str | UUID,
 ) -> None:
     """
     Generate a PDF file from a Jinja2 template using weasyprint.
@@ -367,9 +373,8 @@ async def generate_pdf_from_template(
 async def save_pdf_first_page_as_image(
     input_pdf_directory: str,
     output_image_directory: str,
-    filename: str,
+    filename: str | UUID,
     default_pdf_path: str,
-    request_id: str,
     jpg_quality=95,
 ):
     """

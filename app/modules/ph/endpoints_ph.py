@@ -178,7 +178,6 @@ async def create_paper_pdf_and_cover(
         output_image_directory="ph/cover",
         filename=str(paper_id),
         default_pdf_path="assets/pdf/default_ph.pdf",
-        request_id=request_id,
         jpg_quality=95,
     )
 
