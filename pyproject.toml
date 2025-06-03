@@ -6,12 +6,17 @@ authors = [{ name = "AEECL ECLAIR" }]
 
 # Hyperion follows Semantic Versioning
 # https://semver.org/
-version = "4.5.1"
+version = "4.5.2"
 minimal-titan-version-code = 139
 requires-python = ">= 3.11, < 3.13"
 
 license = "MIT"
-license-files = ["LICENSE", "assets/privacy.txt", "assets/terms-and-conditions.txt", "assets/myeclpay-terms-of-service.txt"]
+license-files = [
+    "LICENSE",
+    "assets/privacy.txt",
+    "assets/terms-and-conditions.txt",
+    "assets/myeclpay-terms-of-service.txt",
+]
 
 
 [tool.ruff]
