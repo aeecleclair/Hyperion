@@ -22,7 +22,6 @@ from app.core.myeclpay.integrity_myeclpay import (
     format_cancel_log,
     format_refund_log,
     format_transaction_log,
-    format_transfer_log,
 )
 from app.core.myeclpay.models_myeclpay import Store, WalletDevice
 from app.core.myeclpay.types_myeclpay import (
@@ -737,10 +736,18 @@ async def delete_store(
         wallet_id=store.wallet_id,
         db=db,
     )
-    if transactions:
+    transfers = await cruds_myeclpay.get_transfers_by_wallet_id(
+        wallet_id=store.wallet_id,
+        db=db,
+    )
+    refunds = await cruds_myeclpay.get_refunds_by_wallet_id(
+        wallet_id=store.wallet_id,
+        db=db,
+    )
+    if len(transactions) > 0 or len(transfers) > 0 or len(refunds) > 0:
         raise HTTPException(
             status_code=400,
-            detail="Store has transactions and cannot be deleted anymore",
+            detail="Store has items in history and cannot be deleted anymore",
         )
 
     sellers = await cruds_myeclpay.get_sellers_by_store_id(
@@ -891,6 +898,16 @@ async def update_store_seller(
     **The user must have the `can_manage_sellers` permission for this store**
     """
 
+    store = await cruds_myeclpay.get_store(
+        store_id=store_id,
+        db=db,
+    )
+    if store is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Store does not exist",
+        )
+
     seller_admin = await cruds_myeclpay.get_seller(
         user_id=user.id,
         store_id=store_id,
@@ -902,27 +919,11 @@ async def update_store_seller(
             detail="User does not have the permission to manage sellers",
         )
 
-    store = await cruds_myeclpay.get_store(
-        store_id=store_id,
-        db=db,
-    )
-    if store is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Store does not exist",
-        )
-
     structure = await cruds_myeclpay.get_structure_by_id(
         structure_id=store.structure_id,
         db=db,
     )
-    if structure is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Structure does not exist",
-        )
-
-    if structure.manager_user_id == seller_user_id:
+    if structure is None or structure.manager_user_id == seller_user_id:
         raise HTTPException(
             status_code=400,
             detail="User is the manager for this structure and cannot be updated as a seller",
@@ -964,6 +965,16 @@ async def delete_store_seller(
 
     **The user must have the `can_manage_sellers` permission for this store**
     """
+    store = await cruds_myeclpay.get_store(
+        store_id=store_id,
+        db=db,
+    )
+    if store is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Store does not exist",
+        )
+
     seller_admin = await cruds_myeclpay.get_seller(
         user_id=user.id,
         store_id=store_id,
@@ -975,26 +986,11 @@ async def delete_store_seller(
             detail="User does not have the permission to manage sellers",
         )
 
-    store = await cruds_myeclpay.get_store(
-        store_id=store_id,
-        db=db,
-    )
-    if store is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Store does not exist",
-        )
-
     structure = await cruds_myeclpay.get_structure_by_id(
         structure_id=store.structure_id,
         db=db,
     )
-    if structure is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Structure does not exist",
-        )
-    if structure.manager_user_id == seller_user_id:
+    if structure is None or structure.manager_user_id == seller_user_id:
         raise HTTPException(
             status_code=400,
             detail="User is the manager for this structure and cannot be deleted as a seller",
@@ -1635,113 +1631,6 @@ async def get_user_wallet_history(
         )
 
     return history
-
-
-# TODO: do we keep this endpoint?
-@router.post(
-    "/myeclpay/transfer/admin",
-    response_model=None,
-    status_code=204,
-)
-async def add_transfer_by_admin(
-    transfer_info: schemas_myeclpay.AdminTransferInfo,
-    db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
-    settings: Settings = Depends(get_settings),
-    notification_tool: NotificationTool = Depends(get_notification_tool),
-):
-    if transfer_info.transfer_type == TransferType.HELLO_ASSO:
-        raise HTTPException(
-            status_code=400,
-            detail="HelloAsso transfers can not be created manually",
-        )
-
-    if transfer_info.amount < 100:
-        raise HTTPException(
-            status_code=400,
-            detail="Please give an amount in cents, greater than 1€.",
-        )
-
-    if transfer_info.credited_user_id is None:
-        raise HTTPException(
-            status_code=400,
-            detail="Please provide a credited user id for this transfer type",
-        )
-    # TODO: IMPORTANT: do not let all BDE do this
-    if GroupType.BDE not in [group.id for group in user.groups]:
-        raise HTTPException(
-            status_code=403,
-            detail="User is not allowed to approve this transfer",
-        )
-    credited_user = await cruds_users.get_user_by_id(
-        user_id=transfer_info.credited_user_id,
-        db=db,
-    )
-    if credited_user is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Receiver user does not exist",
-        )
-
-    user_payment = await cruds_myeclpay.get_user_payment(
-        user_id=credited_user.id,
-        db=db,
-    )
-    if user_payment is None:
-        raise HTTPException(
-            status_code=404,
-            detail="User is not registered for MyECL Pay",
-        )
-
-    if not is_user_latest_tos_signed(user_payment):
-        raise HTTPException(
-            status_code=400,
-            detail="User has not signed the latest TOS",
-        )
-
-    wallet = await cruds_myeclpay.get_wallet(
-        wallet_id=user_payment.wallet_id,
-        db=db,
-    )
-    if wallet is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Wallet does not exist",
-        )
-    if wallet.balance + transfer_info.amount > settings.MYECLPAY_MAXIMUM_WALLET_BALANCE:
-        raise HTTPException(
-            status_code=403,
-            detail="Wallet balance would exceed the maximum allowed balance",
-        )
-    creation_date = datetime.now(UTC)
-    transfer = schemas_myeclpay.Transfer(
-        id=uuid.uuid4(),
-        type=transfer_info.transfer_type,
-        approver_user_id=user.id,
-        total=transfer_info.amount,
-        transfer_identifier="",  # TODO: require to provide an identifier
-        wallet_id=user_payment.wallet_id,
-        creation=creation_date,
-        confirmed=True,
-    )
-    await cruds_myeclpay.create_transfer(transfer, db)
-    await cruds_myeclpay.increment_wallet_balance(
-        wallet_id=user_payment.wallet_id,
-        amount=transfer_info.amount,
-        db=db,
-    )
-
-    hyperion_myeclpay_logger.info(format_transfer_log(transfer))
-
-    message = Message(
-        title="💳 Paiement - transfert",
-        content=f"Votre compte a été crédité de {transfer_info.amount / 100} €",
-        action_module="MyECLPay",
-    )
-    await notification_tool.send_notification_to_user(
-        user_id=user_payment.user_id,
-        message=message,
-    )
 
 
 @router.post(

@@ -49,9 +49,6 @@ class RequestStatus(str, Enum):
 
 class TransferType(str, Enum):
     HELLO_ASSO = "hello_asso"
-    CHECK = "check"
-    CASH = "cash"
-    BANK_TRANSFER = "bank_transfer"
 
 
 class ActionType(str, Enum):
