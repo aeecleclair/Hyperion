@@ -1518,13 +1518,16 @@ async def test_create_and_activate_user_device(
         return_value=UNIQUE_TOKEN,
     )
 
+    private_key = Ed25519PrivateKey.generate()
+    public_key = private_key.public_key()
+
     response = client.post(
         "/myeclpay/users/me/wallet/devices",
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
         json={
             "name": "MySuperDevice",
             "ed25519_public_key": base64.b64encode(
-                ecl_user_wallet_device_public_key.public_bytes(
+                public_key.public_bytes(
                     encoding=serialization.Encoding.Raw,
                     format=serialization.PublicFormat.Raw,
                 ),
@@ -1540,12 +1543,9 @@ async def test_create_and_activate_user_device(
             response.json()["id"],
         )
         assert wallet_device is not None
-        assert (
-            wallet_device.ed25519_public_key
-            == ecl_user_wallet_device_public_key.public_bytes(
-                encoding=serialization.Encoding.Raw,
-                format=serialization.PublicFormat.Raw,
-            )
+        assert wallet_device.ed25519_public_key == public_key.public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
         )
 
     response = client.get(
@@ -1628,7 +1628,7 @@ async def test_revoke_user_device(
         id=uuid4(),
         name="Will revoke device",
         wallet_id=ecl_user_wallet.id,
-        ed25519_public_key=b"key",
+        ed25519_public_key=b"keytest_revoke_user_device",
         creation=datetime.now(UTC),
         status=WalletDeviceStatus.ACTIVE,
         activation_token="will_revoke_activation_token",

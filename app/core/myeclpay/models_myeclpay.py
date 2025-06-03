@@ -38,7 +38,7 @@ class WalletDevice(Base):
     id: Mapped[PrimaryKey]
     name: Mapped[str]
     wallet_id: Mapped[UUID] = mapped_column(ForeignKey("myeclpay_wallet.id"))
-    ed25519_public_key: Mapped[bytes]
+    ed25519_public_key: Mapped[bytes] = mapped_column(unique=True)
     creation: Mapped[datetime]
     status: Mapped[WalletDeviceStatus]
     activation_token: Mapped[str] = mapped_column(unique=True)
@@ -87,7 +87,10 @@ class Refund(Base):
     __tablename__ = "myeclpay_refund"
 
     id: Mapped[PrimaryKey]
-    transaction_id: Mapped[UUID] = mapped_column(ForeignKey("myeclpay_transaction.id"))
+    transaction_id: Mapped[UUID] = mapped_column(
+        ForeignKey("myeclpay_transaction.id"),
+        unique=True,
+    )
     debited_wallet_id: Mapped[UUID] = mapped_column(ForeignKey("myeclpay_wallet.id"))
     credited_wallet_id: Mapped[UUID] = mapped_column(ForeignKey("myeclpay_wallet.id"))
     total: Mapped[int]  # Stored in cents
@@ -137,7 +140,7 @@ class StructureManagerTransfert(Base):
         primary_key=True,
     )
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
-    confirmation_token: Mapped[str]
+    confirmation_token: Mapped[str] = mapped_column(unique=True)
     valid_until: Mapped[datetime]
 
 
@@ -170,6 +173,7 @@ class Request(Base):
     status: Mapped[RequestStatus]
     transaction_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("myeclpay_transaction.id"),
+        unique=True,
     )
 
 

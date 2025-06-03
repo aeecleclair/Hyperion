@@ -4,10 +4,11 @@ from uuid import UUID
 
 from sqlalchemy import and_, delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import noload, selectinload
 
 from app.core.memberships import schemas_memberships
 from app.core.myeclpay import models_myeclpay, schemas_myeclpay
+from app.core.myeclpay.exceptions_myeclpay import WalletNotFoundOnUpdateError
 from app.core.myeclpay.types_myeclpay import (
     TransactionStatus,
     WalletDeviceStatus,
@@ -441,11 +442,16 @@ async def get_wallet(
     wallet_id: UUID,
     db: AsyncSession,
 ) -> models_myeclpay.Wallet | None:
-    result = await db.execute(
-        select(models_myeclpay.Wallet).where(
+    # We lock the wallet `for update` to prevent race conditions
+    request = (
+        select(models_myeclpay.Wallet)
+        .where(
             models_myeclpay.Wallet.id == wallet_id,
-        ),
+        )
+        .with_for_update(of=models_myeclpay.Wallet)
     )
+
+    result = await db.execute(request)
     return result.scalars().first()
 
 
@@ -512,11 +518,23 @@ async def increment_wallet_balance(
     """
     Append `amount` to the wallet balance.
     """
-    await db.execute(
-        update(models_myeclpay.Wallet)
+    # Prevent a race condition by locking the wallet row
+    # as we don't want the balance to be modified between the select and the update.
+    request = (
+        select(models_myeclpay.Wallet)
         .where(models_myeclpay.Wallet.id == wallet_id)
-        .values(balance=models_myeclpay.Wallet.balance + amount),
+        .options(
+            noload(models_myeclpay.Wallet.store),
+            noload(models_myeclpay.Wallet.user),
+        )
+        .with_for_update()
     )
+    result = await db.execute(request)
+    wallet = result.scalars().first()
+
+    if wallet is None:
+        raise WalletNotFoundOnUpdateError(wallet_id=wallet_id)
+    wallet.balance += amount
 
 
 async def create_user_payment(
@@ -600,12 +618,16 @@ async def get_transaction(
     transaction_id: UUID,
     db: AsyncSession,
 ) -> schemas_myeclpay.Transaction | None:
+    # We lock the transaction `for update` to prevent
+    # race conditions
     result = (
         (
             await db.execute(
-                select(models_myeclpay.Transaction).where(
+                select(models_myeclpay.Transaction)
+                .where(
                     models_myeclpay.Transaction.id == transaction_id,
-                ),
+                )
+                .with_for_update(of=models_myeclpay.Transaction),
             )
         )
         .scalars()
