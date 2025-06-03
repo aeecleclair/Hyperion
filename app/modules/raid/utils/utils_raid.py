@@ -7,7 +7,6 @@ import aiofiles
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core
 from app.core.google_api.google_api import DriveGoogleAPI
 from app.core.payment import schemas_payment
 from app.core.utils.config import Settings
@@ -287,7 +286,6 @@ async def get_participant(
 
 
 async def generate_teams_pdf_util(
-    user: models_core.CoreUser,
     db: AsyncSession,
     drive_file_manager: DriveFileManager,
     settings: Settings,

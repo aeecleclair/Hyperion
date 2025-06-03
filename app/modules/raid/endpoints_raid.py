@@ -286,7 +286,6 @@ async def generate_teams_pdf(
     """
     background_tasks.add_task(
         generate_teams_pdf_util,
-        user,
         db,
         drive_file_manager,
         settings,

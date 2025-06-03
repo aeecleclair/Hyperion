@@ -79,11 +79,11 @@ async def init_objects() -> None:
     token_simple_without_team = create_api_access_token(simple_user_without_team)
 
     global validated_team_captain, token_validated_team_captain
-    validated_team_captain = await create_user_with_groups([GroupType.student])
+    validated_team_captain = await create_user_with_groups([])
     token_validated_team_captain = create_api_access_token(validated_team_captain)
 
     global validated_team_second
-    validated_team_second = await create_user_with_groups([GroupType.student])
+    validated_team_second = await create_user_with_groups([])
 
     document = models_raid.Document(
         id="some_document_id",
@@ -144,8 +144,8 @@ async def init_objects() -> None:
         birthday=datetime.date(2001, 1, 1),
         phone="0606060606",
         email="test@validated.fr",
-        t_shirt_size="M",
-        bike_size="M",
+        t_shirt_size=Size.M,
+        bike_size=Size.M,
         attestation_on_honour=True,
         situation="centrale",
         payment=True,
@@ -166,8 +166,8 @@ async def init_objects() -> None:
         birthday=datetime.date(2001, 1, 1),
         phone="0606060606",
         email="test2@validated.fr",
-        t_shirt_size="M",
-        bike_size="M",
+        t_shirt_size=Size.M,
+        bike_size=Size.M,
         attestation_on_honour=True,
         situation="centrale",
         payment=True,
