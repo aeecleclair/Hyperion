@@ -15,7 +15,6 @@ from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
     get_notification_tool,
-    get_request_id,
     get_scheduler,
     get_settings,
     is_user_a_member,

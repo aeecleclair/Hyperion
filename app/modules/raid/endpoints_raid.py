@@ -15,7 +15,6 @@ from app.dependencies import (
     get_db,
     get_drive_file_manager,
     get_payment_tool,
-    get_request_id,
     get_settings,
     is_user,
     is_user_in,

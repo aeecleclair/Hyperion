@@ -13,7 +13,6 @@ from app.core.users import models_users
 from app.dependencies import (
     get_db,
     get_notification_tool,
-    get_request_id,
     is_user_an_ecl_member,
     is_user_in,
 )
