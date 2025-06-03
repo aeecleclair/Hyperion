@@ -2141,7 +2141,7 @@ async def store_scan_qrcode(
         )
         transaction_id = uuid.uuid4()
         creation_date = datetime.now(UTC)
-        transaction = schemas_myeclpay.Transaction(
+        transaction = schemas_myeclpay.TransactionInfo(
             id=transaction_id,
             debited_wallet_id=debited_wallet_device.wallet_id,
             credited_wallet_id=store.wallet_id,
@@ -2150,6 +2150,12 @@ async def store_scan_qrcode(
             total=scan_info.tot,
             creation=creation_date,
             status=TransactionStatus.CONFIRMED,
+            qr_code_id=scan_info.id,
+            qr_code_tot=scan_info.tot,
+            qr_code_iat=scan_info.iat,
+            qr_code_key=scan_info.key,
+            qr_code_store=scan_info.store,
+            signature=scan_info.signature,
         )
         # We create a transaction
         await cruds_myeclpay.create_transaction(

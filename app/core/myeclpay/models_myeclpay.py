@@ -66,6 +66,13 @@ class Transaction(Base):
     # The Seller may add a note to the transaction, for example to specify the product that was buyed
     store_note: Mapped[str | None]
 
+    qr_code_id: Mapped[UUID | None]
+    qr_code_tot: Mapped[int | None]
+    qr_code_iat: Mapped[datetime | None]
+    qr_code_key: Mapped[UUID | None]
+    qr_code_store: Mapped[bool | None]
+    signature: Mapped[str | None]
+
     debited_wallet: Mapped[Wallet] = relationship(
         init=False,
         foreign_keys=[debited_wallet_id],

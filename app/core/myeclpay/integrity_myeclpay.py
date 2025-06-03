@@ -26,7 +26,7 @@ def format_transfer_log(
 
 
 def format_transaction_log(
-    transaction: schemas_myeclpay.Transaction,
+    transaction: schemas_myeclpay.TransactionBase,
 ):
     return f"{ActionType.TRANSACTION.name} {transaction.id} {transaction.debited_wallet_id} {transaction.credited_wallet_id} {transaction.total}"
 

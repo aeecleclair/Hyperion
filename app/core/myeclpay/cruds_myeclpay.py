@@ -544,7 +544,7 @@ async def get_user_payment(
 
 
 async def create_transaction(
-    transaction: schemas_myeclpay.Transaction,
+    transaction: schemas_myeclpay.TransactionInfo,
     debited_wallet_device_id: UUID,
     store_note: str | None,
     db: AsyncSession,
@@ -560,6 +560,12 @@ async def create_transaction(
         creation=transaction.creation,
         status=transaction.status,
         store_note=store_note,
+        qr_code_id=transaction.qr_code_id,
+        qr_code_tot=transaction.qr_code_tot,
+        qr_code_iat=transaction.qr_code_iat,
+        qr_code_key=transaction.qr_code_key,
+        qr_code_store=transaction.qr_code_store,
+        signature=transaction.signature,
     )
     db.add(transaction_db)
 
