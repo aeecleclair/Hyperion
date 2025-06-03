@@ -21,10 +21,10 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     op.create_unique_constraint(
-        "myeclpay_refund_transaction_id_key", "myeclpay_refund", ["transaction_id"]
+        "myeclpay_refund_transaction_id_key", "myeclpay_refund", ["transaction_id"],
     )
     op.create_unique_constraint(
-        "myeclpay_request_transaction_id_key", "myeclpay_request", ["transaction_id"]
+        "myeclpay_request_transaction_id_key", "myeclpay_request", ["transaction_id"],
     )
     op.create_unique_constraint(
         "myeclpay_structure_manager_transfer_confirmation_token_key",
