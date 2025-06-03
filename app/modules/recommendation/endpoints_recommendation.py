@@ -9,7 +9,6 @@ from app.core.groups.groups_type import AccountType, GroupType
 from app.core.users import models_users
 from app.dependencies import (
     get_db,
-    get_request_id,
     is_user_a_member,
     is_user_in,
 )
