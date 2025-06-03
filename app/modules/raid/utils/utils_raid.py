@@ -1,9 +1,11 @@
 import logging
+import uuid
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
 from pathlib import Path
 
 import aiofiles
+import fitz
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,12 +19,19 @@ from app.modules.raid.schemas_raid import (
     ParticipantUpdate,
 )
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
-from app.modules.raid.utils.pdf.pdf_writer import PDFWriter
+from app.modules.raid.utils.pdf.conversion_utils import (
+    date_to_string,
+    get_difficulty_label,
+    get_document_validation_label,
+    get_meeting_place_label,
+    nullable_number_to_string,
+)
 from app.utils.tools import (
     delete_file_from_data,
     generate_pdf_from_template,
     get_core_data,
     get_file_path_from_data,
+    save_bytes_as_data,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -161,14 +170,28 @@ async def set_team_number(team: models_raid.Team, db: AsyncSession) -> None:
 
 async def save_team_info(
     team: models_raid.Team,
+    information: coredata_raid.RaidInformation,
     db: AsyncSession,
     drive_file_manager: DriveFileManager,
     settings: Settings,
-) -> None:
+):
     try:
-        pdf_writer = PDFWriter()
-        file_path = pdf_writer.write_team(team)
-        file_name = file_path.split("/")[-1]
+        physical_file_uuid = await prepare_complete_team_file(
+            team=team,
+            information=information,
+        )
+
+        file_path = str(
+            get_file_path_from_data(
+                directory="raid/team",
+                filename=physical_file_uuid,
+            ),
+        )
+
+        file_name = (
+            str(team.number) + "_" if team.number else ""
+        ) + f"{team.name}_{team.captain.name}_{team.captain.firstname}.pdf"
+
         if team.file_id:
             try:
                 async with DriveGoogleAPI(db, settings) as google_api:
@@ -191,7 +214,6 @@ async def save_team_info(
                 settings=settings,
             )
         await cruds_raid.update_team_file_id(team.id, file_id, db)
-        pdf_writer.clear_pdf()
     except Exception:
         hyperion_error_logger.exception("Error while creating pdf")
         return
@@ -231,6 +253,213 @@ async def post_update_actions(
         return
 
 
+async def generate_security_file_pdf(
+    participant: models_raid.Participant,
+    information: coredata_raid.RaidInformation,
+    team_number: int | None = None,
+):
+    """
+    Generate a security file PDF for a participant.
+    The file will be saved in the `raid/security_file` directory with the participant's ID as the filename.
+    """
+    context = {
+        **participant.__dict__,
+        "president": information.president.__dict__ if information.president else None,
+        "rescue": information.rescue.__dict__ if information.rescue else None,
+        "security_responsible": information.security_responsible.__dict__
+        if information.security_responsible
+        else None,
+        "volunteer_responsible": information.volunteer_responsible.__dict__
+        if information.volunteer_responsible
+        else None,
+        "team_number": team_number,
+    }
+
+    await generate_pdf_from_template(
+        template_name="raid_security_file.html",
+        directory="raid/security_file",
+        filename=participant.id,
+        context=context,
+    )
+
+
+async def generate_recap_file_pdf(
+    team: models_raid.Team,
+):
+    context = {
+        "team_name": team.name,
+        "parcours": get_difficulty_label(team.difficulty),
+        "lieu_rdv": get_meeting_place_label(team.meeting_place),
+        "numero": nullable_number_to_string(team.number),
+        "inscription": str(int(team.validation_progress)) + " %",
+        "capitaine": team.captain.__dict__,
+        "participant": team.second.__dict__ if team.second else None,
+    }
+
+    file_id = team.id
+
+    await generate_pdf_from_template(
+        template_name="raid_inscription_recap.html",
+        directory="raid/recap",
+        filename=file_id,
+        context=context,
+    )
+    return file_id
+
+
+def scale_rect_to_fit(container, content_width, content_height):
+    """Return a rect that fits content inside container preserving aspect ratio."""
+    container_width = container.width
+    container_height = container.height
+
+    scale = min(container_width / content_width, container_height / content_height)
+    new_width = content_width * scale
+    new_height = content_height * scale
+
+    x0 = container.x0 + (container_width - new_width) / 2
+    y0 = container.y0 + (container_height - new_height) / 2
+    x1 = x0 + new_width
+    y1 = y0 + new_height
+
+    return fitz.Rect(x0, y0, x1, y1)
+
+
+async def prepare_complete_team_file(
+    team: models_raid.Team,
+    information: coredata_raid.RaidInformation,
+):
+    recap_file_id = await generate_recap_file_pdf(
+        team=team,
+    )
+
+    output_pdf: fitz.Document = fitz.open()
+
+    pdf_file_path = get_file_path_from_data(
+        "raid/recap",
+        recap_file_id,
+    )
+
+    recap_pdf: fitz.Document
+    with fitz.open(pdf_file_path) as recap_pdf:
+        output_pdf.insert_pdf(recap_pdf)
+
+    await generate_security_file_pdf(
+        participant=team.captain,
+        information=information,
+        team_number=team.number,
+    )
+    security_file_path = get_file_path_from_data(
+        directory="raid/security_file",
+        filename=team.captain.id,
+    )
+    security_pdf: fitz.Document
+    with fitz.open(security_file_path) as security_pdf:
+        output_pdf.insert_pdf(security_pdf)
+
+    if team.second:
+        await generate_security_file_pdf(
+            participant=team.second,
+            information=information,
+            team_number=team.number,
+        )
+        security_file_path = get_file_path_from_data(
+            directory="raid/security_file",
+            filename=team.second.id,
+        )
+        with fitz.open(security_file_path) as security_pdf:
+            output_pdf.insert_pdf(security_pdf)
+
+    for participant in [team.captain, team.second] if team.second else [team.captain]:
+        for document in [
+            participant.id_card,
+            participant.medical_certificate,
+            participant.student_card,
+            participant.raid_rules,
+            participant.parent_authorization,
+        ]:
+            if document:
+                path = get_file_path_from_data("raid", document.id)
+
+                page = output_pdf.new_page(width=595, height=842)  # A4 size in points
+                title_font_size = 16
+                subtitle_font_size = 12
+                margin = 50
+                page.insert_text(
+                    (margin, margin),
+                    participant.firstname + " " + participant.name,
+                    fontsize=title_font_size,
+                    fontname="helv",
+                    fill=(0, 0, 0),
+                )
+                page.insert_text(
+                    (margin, margin + 25),
+                    f"Date de téléversement {date_to_string(document.uploaded_at)} | Validation : {get_document_validation_label(document.validation)}",
+                    fontsize=subtitle_font_size,
+                    fontname="helv",
+                    fill=(0.2, 0.2, 0.2),
+                )
+
+                if path.suffix.lower() in [".pdf"]:
+                    src_doc = fitz.open(path)
+                    src_page = src_doc.load_page(0)
+                    pix = src_page.get_pixmap(matrix=fitz.Matrix(1.5, 1.5))
+
+                else:  # assume image
+                    pix = fitz.Pixmap(path)
+
+                # Define the area for the image
+                image_rect = fitz.Rect(margin, 120, 595 - margin, 742 - margin)
+
+                # Scale to fit
+                img_rect = scale_rect_to_fit(image_rect, pix.width, pix.height)
+                page.insert_image(img_rect, pixmap=pix)
+
+                if path.suffix.lower() in [".pdf"]:
+                    if len(src_doc) > 1:
+                        output_pdf.insert_pdf(
+                            src_doc,
+                            from_page=1,
+                            to_page=len(src_doc),
+                        )
+
+    for i, page in enumerate(output_pdf, start=1):
+        footer_text = (
+            f"RAID Raid Centrale Lyon - équipe {team.number} {team.name} - Page {i}"
+        )
+        page_width = page.rect.width
+        font_size = 10
+        margin = 40
+
+        # Calculate x position to center the footer
+        text_width = fitz.get_text_length(
+            footer_text,
+            fontname="helv",
+            fontsize=font_size,
+        )
+        x_pos = (page_width - text_width) / 2
+
+        # Add footer text near the bottom of the page
+        page.insert_text(
+            (x_pos, page.rect.height - margin),
+            footer_text,
+            fontsize=font_size,
+            fontname="helv",
+            fill=(0.5, 0.5, 0.5),
+        )
+
+    file_id = uuid.uuid4()
+    await save_bytes_as_data(
+        file_bytes=output_pdf.write(),
+        directory="raid/team",
+        filename=file_id,
+        extension="pdf",
+    )
+
+    output_pdf.close()
+
+    return file_id
+
+
 async def save_security_file(
     participant: models_raid.Participant,
     information: coredata_raid.RaidInformation,
@@ -240,32 +469,17 @@ async def save_security_file(
     settings: Settings,
 ) -> None:
     try:
-        context = {
-            **participant.__dict__,
-            "president": information.president.__dict__
-            if information.president
-            else None,
-            "rescue": information.rescue.__dict__ if information.rescue else None,
-            "security_responsible": information.security_responsible.__dict__
-            if information.security_responsible
-            else None,
-            "volunteer_responsible": information.volunteer_responsible.__dict__
-            if information.volunteer_responsible
-            else None,
-            "team_number": team_number,
-        }
-
-        await generate_pdf_from_template(
-            template_name="raid_security_file.html",
-            directory="raid/security_file",
-            filename=participant.id,
-            context=context,
+        await generate_security_file_pdf(
+            participant,
+            information,
+            team_number,
         )
 
         file_path = get_file_path_from_data(
             directory="raid/security_file",
             filename=participant.id,
         )
+
         file_name = f"{str(team_number) + '_' if team_number else ''}{participant.firstname}_{participant.name}_fiche_sécurité.pdf"
         if participant.security_file is None:
             hyperion_error_logger.error(
