@@ -5,9 +5,8 @@ from datetime import timedelta
 from functools import lru_cache
 
 import redis
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from sqlalchemy import NullPool
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.auth import schemas_auth
@@ -28,6 +27,10 @@ from app.utils.redis import connect, disconnect
 from app.utils.tools import (
     get_random_string,
 )
+
+
+class FailedToAddObjectToDB(Exception):
+    """Exception raised when an object cannot be added to the database."""
 
 
 @lru_cache
@@ -69,6 +72,14 @@ async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
     async with TestingSessionLocal() as db:
         try:
             yield db
+        except HTTPException:
+            await db.commit()
+            raise
+        except Exception:
+            await db.rollback()
+            raise
+        else:
+            await db.commit()
         finally:
             await db.close()
 
@@ -169,16 +180,17 @@ async def create_user_with_groups(
                         description=None,
                     ),
                 )
-
-        except IntegrityError:
+            await db.commit()
+        except Exception as error:
             await db.rollback()
-            raise
+            raise FailedToAddObjectToDB from error
         finally:
             await db.close()
+
     async with TestingSessionLocal() as db:
         user_db = await cruds_users.get_user_by_id(db, user_id)
-        await db.close()
-    return user_db  # type: ignore[return-value] # (user_db can't be None)
+        assert user_db is not None
+        return user_db
 
 
 def create_api_access_token(
@@ -205,9 +217,9 @@ async def add_object_to_db(db_object: Base) -> None:
         try:
             db.add(db_object)
             await db.commit()
-        except IntegrityError:
+        except Exception as error:
             await db.rollback()
-            raise
+            raise FailedToAddObjectToDB from error
         finally:
             await db.close()
 

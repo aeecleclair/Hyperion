@@ -98,18 +98,14 @@ async def validate_transfer_callback(
         )
         raise TransferAlreadyConfirmedInCallbackError(checkout_id)
 
-    try:
-        await cruds_myeclpay.confirm_transfer(
-            db=db,
-            transfer_id=transfer.id,
-        )
-        await cruds_myeclpay.increment_wallet_balance(
-            db=db,
-            wallet_id=transfer.wallet_id,
-            amount=paid_amount,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+    await cruds_myeclpay.confirm_transfer(
+        db=db,
+        transfer_id=transfer.id,
+    )
+    await cruds_myeclpay.increment_wallet_balance(
+        db=db,
+        wallet_id=transfer.wallet_id,
+        amount=paid_amount,
+    )
+
     hyperion_myeclpay_logger.info(format_transfer_log(transfer))

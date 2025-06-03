@@ -930,10 +930,6 @@ async def edit_cash_by_id(
             amount=cash.balance + balance.balance,
             db=db,
         )
-    except ValueError:
-        hyperion_error_logger.exception("Error in tombola edit_cash_by_id")
-        raise HTTPException(status_code=400, detail="Error while editing cash.")
-
     finally:
         locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
@@ -969,13 +965,10 @@ async def draw_winner(
             detail="Raffle must be locked to draw a prize",
         )
 
-    try:
-        winning_tickets = await cruds_raffle.draw_winner_by_prize_raffle(
-            prize_id=prize_id,
-            db=db,
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    winning_tickets = await cruds_raffle.draw_winner_by_prize_raffle(
+        prize_id=prize_id,
+        db=db,
+    )
 
     for ticket in winning_tickets:
         ticket.prize = prize

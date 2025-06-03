@@ -1,7 +1,6 @@
 from collections.abc import Sequence
 
 from sqlalchemy import delete, select, update
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.users import models_users
@@ -80,10 +79,7 @@ async def create_association(
     """Create a new Association in database and return it"""
 
     db.add(association)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
+    await db.flush()
     return association
 
 
@@ -99,11 +95,7 @@ async def update_association(
         .where(models_phonebook.Association.id == association_id)
         .values(**association_edit.model_dump(exclude_none=True)),
     )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
 
 
 async def update_association_groups(
@@ -126,11 +118,7 @@ async def update_association_groups(
                 group_id=group_id,
             ),
         )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
 
 
 async def deactivate_association(association_id: str, db: AsyncSession):
@@ -141,11 +129,7 @@ async def deactivate_association(association_id: str, db: AsyncSession):
         .where(models_phonebook.Association.id == association_id)
         .values(deactivated=True),
     )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
 
 
 async def delete_association(association_id: str, db: AsyncSession):
@@ -167,11 +151,7 @@ async def delete_association(association_id: str, db: AsyncSession):
             models_phonebook.Association.id == association_id,
         ),
     )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
 
 
 async def get_association_by_id(
@@ -209,11 +189,7 @@ async def get_associated_groups_by_association_id(
 async def create_membership(membership: models_phonebook.Membership, db: AsyncSession):
     """Create a Membership in database"""
     db.add(membership)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
 
 
 async def update_membership(
@@ -228,11 +204,7 @@ async def update_membership(
         .where(models_phonebook.Membership.id == membership_id)
         .values(**membership_edit.model_dump(exclude_none=True)),
     )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
 
 
 async def update_order_of_memberships(
@@ -279,11 +251,7 @@ async def update_order_of_memberships(
             )
             .values(member_order=models_phonebook.Membership.member_order - 1),
         )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
 
 
 async def delete_membership(membership_id: str, db: AsyncSession):
@@ -294,11 +262,7 @@ async def delete_membership(membership_id: str, db: AsyncSession):
             models_phonebook.Membership.id == membership_id,
         ),
     )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
 
 
 async def get_memberships_by_user_id(

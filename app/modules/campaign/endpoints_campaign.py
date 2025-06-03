@@ -216,12 +216,10 @@ async def add_list(
         members=members,
         program=campaign_list.program,
     )
-    try:
-        await cruds_campaign.add_list(campaign_list=model_list, db=db)
-        # We can't directly return the model_list because it doesn't have the relationships loaded
-        return await cruds_campaign.get_list_by_id(db=db, list_id=list_id)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+
+    await cruds_campaign.add_list(campaign_list=model_list, db=db)
+    # We can't directly return the model_list because it doesn't have the relationships loaded
+    return await cruds_campaign.get_list_by_id(db=db, list_id=list_id)
 
 
 @module.router.delete(
@@ -248,10 +246,7 @@ async def delete_list(
             detail=f"You can't delete a list if the vote has already begun. The module status is {status} but should be 'waiting'",
         )
 
-    try:
-        await cruds_campaign.delete_list(list_id=list_id, db=db)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    await cruds_campaign.delete_list(list_id=list_id, db=db)
 
 
 @module.router.delete(
@@ -278,14 +273,11 @@ async def delete_lists_by_type(
             detail=f"You can't delete a list if the vote has already begun. The module status is {status} but should be 'waiting'",
         )
 
-    try:
-        if list_type is None:
-            for type_obj in ListType:
-                await cruds_campaign.delete_list_by_type(list_type=type_obj, db=db)
-        else:
-            await cruds_campaign.delete_list_by_type(list_type=list_type, db=db)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    if list_type is None:
+        for type_obj in ListType:
+            await cruds_campaign.delete_list_by_type(list_type=type_obj, db=db)
+    else:
+        await cruds_campaign.delete_list_by_type(list_type=list_type, db=db)
 
 
 @module.router.patch(
@@ -325,14 +317,11 @@ async def update_list(
                     detail=f"User with id {member.user_id} doesn't exist.",
                 )
 
-    try:
-        await cruds_campaign.update_list(
-            list_id=list_id,
-            campaign_list=campaign_list,
-            db=db,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    await cruds_campaign.update_list(
+        list_id=list_id,
+        campaign_list=campaign_list,
+        db=db,
+    )
 
 
 @module.router.get(
@@ -564,26 +553,23 @@ async def reset_vote(
             detail=f"The vote can only be reset in Published or Counting. The current status is {status}",
         )
 
-    try:
-        # Archive results to a json file
-        results = await get_results(db=db, user=user)
-        async with aiofiles.open(
-            f"data/campaigns/results-{datetime.now(UTC).date().isoformat()}.json",
-            mode="w",
-        ) as file:
-            await file.write(
-                json.dumps(
-                    [{"list_id": res.list_id, "count": res.count} for res in results],
-                ),
-            )
-
-        await cruds_campaign.reset_campaign(db=db)
-        await cruds_campaign.set_status(
-            db=db,
-            new_status=StatusType.waiting,
+    # Archive results to a json file
+    results = await get_results(db=db, user=user)
+    async with aiofiles.open(
+        f"data/campaigns/results-{datetime.now(UTC).date().isoformat()}.json",
+        mode="w",
+    ) as file:
+        await file.write(
+            json.dumps(
+                [{"list_id": res.list_id, "count": res.count} for res in results],
+            ),
         )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+
+    await cruds_campaign.reset_campaign(db=db)
+    await cruds_campaign.set_status(
+        db=db,
+        new_status=StatusType.waiting,
+    )
 
 
 @module.router.post(
@@ -640,19 +626,17 @@ async def vote(
         id=str(uuid.uuid4()),
         list_id=vote.list_id,
     )
-    try:
-        # Mark user has voted for the given section.
-        await cruds_campaign.mark_has_voted(
-            db=db,
-            user_id=user.id,
-            section_id=campaign_list.section_id,
-        )
-        await cruds_campaign.add_vote(
-            db=db,
-            vote=model_vote,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+
+    # Mark user has voted for the given section.
+    await cruds_campaign.mark_has_voted(
+        db=db,
+        user_id=user.id,
+        section_id=campaign_list.section_id,
+    )
+    await cruds_campaign.add_vote(
+        db=db,
+        vote=model_vote,
+    )
 
 
 @module.router.get(

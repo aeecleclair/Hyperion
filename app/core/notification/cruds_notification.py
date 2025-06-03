@@ -2,7 +2,6 @@ from collections.abc import Sequence
 from datetime import date
 
 from sqlalchemy import delete, select, update
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.notification import models_notification
@@ -56,13 +55,8 @@ async def create_firebase_devices(
     """Register a new firebase device in database and return it"""
 
     db.add(firebase_device)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return firebase_device
+    await db.flush()
+    return firebase_device
 
 
 async def delete_firebase_devices(
@@ -75,7 +69,7 @@ async def delete_firebase_devices(
             == firebase_device_token,
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def batch_delete_firebase_device_by_token(
@@ -87,7 +81,7 @@ async def batch_delete_firebase_device_by_token(
             models_notification.FirebaseDevice.firebase_device_token.in_(tokens),
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def update_firebase_devices_register_date(
@@ -103,7 +97,7 @@ async def update_firebase_devices_register_date(
         )
         .values({"register_date": new_register_date}),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def create_topic_membership(
@@ -111,13 +105,8 @@ async def create_topic_membership(
     db: AsyncSession,
 ) -> models_notification.TopicMembership:
     db.add(topic_membership)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return topic_membership
+    await db.flush()
+    return topic_membership
 
 
 async def delete_topic_membership(
@@ -133,7 +122,7 @@ async def delete_topic_membership(
             == custom_topic.topic_identifier,
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def get_topic_memberships_by_topic(
