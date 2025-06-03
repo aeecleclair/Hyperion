@@ -77,8 +77,8 @@ class FileNameIsNotAnUUIDError(Exception):
 
 
 class FileDoesNotExistError(Exception):
-    def __init__(self):
-        super().__init__("The file does not exist")
+    def __init__(self, name: str):
+        super().__init__(f"The file {name} does not exist")
 
 
 class RedisConnectionError(Exception):

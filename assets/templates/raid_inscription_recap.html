@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Dossier d'inscription</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 1.5cm;
+      }
+      body {
+        font-family: sans-serif;
+        font-size: 0.75rem;
+      }
+      h1,
+      h2 {
+        margin-top: 0;
+        margin-bottom: 0.5rem;
+      }
+      table {
+        font-size: 0.7rem;
+      }
+      .table-row td {
+        padding: 0.25rem 0.5rem;
+      }
+      .section {
+        margin-bottom: 1.5rem;
+      }
+    </style>
+  </head>
+  <body class="text-gray-800">
+    <!-- First section: Capitaine -->
+    <div class="section">
+      <h1 class="text-base font-bold mb-3">
+        Dossier d'inscription de l'équipe {{ team_name }}
+      </h1>
+
+      <div class="grid grid-cols-4 gap-2 mb-4">
+        <div>
+          <p class="font-semibold">Parcours</p>
+          <p>{{ parcours }}</p>
+        </div>
+        <div>
+          <p class="font-semibold">Lieu de rendez-vous</p>
+          <p>{{ lieu_rdv }}</p>
+        </div>
+        <div>
+          <p class="font-semibold">Numéro</p>
+          <p>{{ numero }}</p>
+        </div>
+        <div>
+          <p class="font-semibold">Inscription</p>
+          <p>{{ inscription }}</p>
+        </div>
+      </div>
+
+      <h2 class="text-sm font-semibold mb-1">Capitaine</h2>
+
+      <table class="w-full table-auto border-collapse border border-gray-400">
+        <tbody>
+          {% for label, value in [ ("Nom", capitaine.nom), ("Prénom",
+          capitaine.prenom), ("Date de naissance", capitaine.date_naissance),
+          ("Adresse", capitaine.adresse), ("Téléphone", capitaine.telephone),
+          ("Email", capitaine.email), ("Taille du vélo", capitaine.taille_velo),
+          ("Taille du t-shirt", capitaine.tshirt), ("Situation",
+          capitaine.situation), ("Régime alimentaire", capitaine.regime),
+          ("Attestation sur l'honneur", capitaine.attestation), ("Documents
+          validés", capitaine.documents_valides ~ ' / 3'), ("Paiement",
+          capitaine.paiement) ] %}
+          <tr class="border border-gray-400 table-row">
+            <td class="font-semibold border border-gray-300">{{ label }}</td>
+            <td class="border border-gray-300">{{ value }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2 class="text-sm font-semibold mb-1">Coéquipier</h2>
+
+      <table class="w-full table-auto border-collapse border border-gray-400">
+        <tbody>
+          {% for label, value in [ ("Nom", participant.nom), ("Prénom",
+          participant.prenom), ("Date de naissance",
+          participant.date_naissance), ("Adresse", participant.adresse),
+          ("Téléphone", participant.telephone), ("Email", participant.email),
+          ("Taille du vélo", participant.taille_velo), ("Taille du t-shirt",
+          participant.tshirt), ("Situation", participant.situation), ("Régime
+          alimentaire", participant.regime), ("Attestation sur l'honneur",
+          participant.attestation), ("Documents validés",
+          participant.documents_valides ~ ' / 3'), ("Paiement",
+          participant.paiement) ] %}
+          <tr class="border border-gray-400 table-row">
+            <td class="font-semibold border border-gray-300">{{ label }}</td>
+            <td class="border border-gray-300">{{ value }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </body>
+</html>
