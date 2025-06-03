@@ -35,6 +35,7 @@ from app.types.content_type import ContentType
 from app.types.exceptions import MissingHelloAssoSlugError
 from app.types.module import Module
 from app.utils.tools import (
+    delete_all_folder_from_data,
     get_core_data,
     get_file_from_data,
     get_random_string,
@@ -453,6 +454,8 @@ async def delete_all_teams(
 
     # Delete all teams from the database
     await cruds_raid.delete_all_teams(db)
+
+    delete_all_folder_from_data("raid")
 
 
 @module.router.post(
