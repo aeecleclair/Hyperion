@@ -347,7 +347,7 @@ async def update_list(
 
 @module.router.get(
     "/campaign/voters",
-    response_model=list[schemas_permissions.CorePermission],
+    response_model=list[schemas_permissions.CoreGroupPermission],
     status_code=200,
 )
 async def get_voters(
@@ -385,7 +385,7 @@ async def add_voter(
     **The user must be a member of a group authorized to manage the campaign to use this endpoint**
     """
     permission = (
-        await cruds_permissions.get_permissions_by_group_id_and_permission_name(
+        await cruds_permissions.get_group_permission_by_group_id_and_permission_name(
             db=db,
             permission_name=CampaignPermissions.vote,
             group_id=group_id,
@@ -397,9 +397,9 @@ async def add_voter(
             status_code=400,
             detail="This group is already a voter.",
         )
-    await cruds_permissions.create_permission(
+    await cruds_permissions.create_group_permission(
         db=db,
-        permission=schemas_permissions.CorePermission(
+        permission=schemas_permissions.CoreGroupPermission(
             permission_name=CampaignPermissions.vote,
             group_id=group_id,
         ),
@@ -444,7 +444,7 @@ async def delete_voter(
     **The user must be a member of a group authorized to manage the campaign to use this endpoint**
     """
     permission = (
-        await cruds_permissions.get_permissions_by_group_id_and_permission_name(
+        await cruds_permissions.get_group_permission_by_group_id_and_permission_name(
             db=db,
             permission_name=CampaignPermissions.vote,
             group_id=group_id,
@@ -457,9 +457,9 @@ async def delete_voter(
             detail="This group is not a voter.",
         )
 
-    await cruds_permissions.delete_permission(
+    await cruds_permissions.delete_group_permission(
         db=db,
-        permission=schemas_permissions.CorePermission(
+        permission=schemas_permissions.CoreGroupPermission(
             permission_name=CampaignPermissions.vote,
             group_id=group_id,
         ),

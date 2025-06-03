@@ -469,17 +469,30 @@ def is_user_allowed_to(
         if GroupType.admin in [group.id for group in user.groups]:
             return user
 
-        permissions: list[schemas_permissions.CorePermission] = []
+        group_permissions: list[schemas_permissions.CoreGroupPermission] = []
+        account_type_permissions: list[
+            schemas_permissions.CoreAccountTypePermission
+        ] = []
         for permission_name in permissions_name:
-            permissions += await cruds_permissions.get_permissions_by_permission_name(
-                db,
-                permission_name,
-            )
+            group_permissions += (
+                await cruds_permissions.get_permissions_by_permission_name(
+                    db,
+                    permission_name,
+                )
+            ).group_permissions
+            account_type_permissions += (
+                await cruds_permissions.get_permissions_by_permission_name(
+                    db,
+                    permission_name,
+                )
+            ).account_type_permissions
 
         if not any(
             permission.group_id in [group.id for group in user.groups]
-            for permission in permissions
-        ):
+            for permission in group_permissions
+        ) and user.account_type not in [
+            permission.account_type for permission in account_type_permissions
+        ]:
             raise HTTPException(
                 status_code=403,
                 detail="Unauthorized, user does not have the required permission",
