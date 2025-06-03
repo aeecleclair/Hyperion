@@ -208,7 +208,7 @@ async def delete_all_invite_tokens(
     db: AsyncSession,
 ) -> None:
     await db.execute(delete(models_raid.InviteToken))
-    await db.commit()
+    await db.flush()
 
 
 async def delete_team(
