@@ -3,6 +3,7 @@ import logging
 import os
 import re
 import secrets
+import shutil
 import unicodedata
 from collections.abc import Callable, Sequence
 from inspect import iscoroutinefunction
@@ -330,6 +331,17 @@ def delete_file_from_data(
 
     for filePath in Path().glob(f"data/{directory}/{filename}.*"):
         filePath.unlink()
+
+
+def delete_all_folder_from_data(
+    directory: str,
+) -> None:
+    """
+    WARNING: this method should never be called with a directory based on user input.
+    """
+    path = Path(f"data/{directory}")
+    if Path.exists(path):
+        shutil.rmtree(path)
 
 
 async def generate_pdf_from_template(
