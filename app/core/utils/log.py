@@ -154,7 +154,6 @@ class LogConfig:
                     "s3_access_key_id": settings.S3_ACCESS_KEY_ID,
                     "s3_secret_access_key": settings.S3_SECRET_ACCESS_KEY,
                     "folder": "",
-                    "retention": 365 * 10,
                 },
                 # There is a handler per log file #
                 # They are based on RotatingFileHandler to logs in multiple 1024 bytes files

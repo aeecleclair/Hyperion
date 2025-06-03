@@ -4,7 +4,7 @@ import urllib
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import calypsso
 from fastapi import (
@@ -87,10 +87,12 @@ templates = Jinja2Templates(directory="assets/templates")
 hyperion_error_logger = logging.getLogger("hyperion.error")
 hyperion_security_logger = logging.getLogger("hyperion.security")
 hyperion_myeclpay_logger = logging.getLogger("hyperion.myeclpay")
+hyperion_s3_logger = logging.getLogger("hyperion.s3")
 
 MYECLPAY_STRUCTURE_S3_SUBFOLDER = "structures"
 MYECLPAY_STORES_S3_SUBFOLDER = "stores"
 MYECLPAY_USERS_S3_SUBFOLDER = "users"
+MYECLPAY_DEVICES_S3_SUBFOLDER = "devices"
 MYECLPAY_LOGS_S3_SUBFOLDER = "logs"
 
 
@@ -161,7 +163,7 @@ async def create_structure(
         db=db,
     )
 
-    hyperion_myeclpay_logger.info(
+    hyperion_s3_logger.info(
         structure_db.name,
         extra={
             "s3_subfolder": MYECLPAY_STRUCTURE_S3_SUBFOLDER,
@@ -203,7 +205,7 @@ async def update_structure(
         db=db,
     )
 
-    hyperion_myeclpay_logger.info(
+    hyperion_s3_logger.info(
         structure.name,
         extra={
             "s3_subfolder": MYECLPAY_STRUCTURE_S3_SUBFOLDER,
@@ -477,7 +479,7 @@ async def create_store(
         db=db,
     )
 
-    hyperion_myeclpay_logger.info(
+    hyperion_s3_logger.info(
         f"store.name: {store_db.name}, structure_id: {store_db.structure_id}",
         extra={
             "s3_subfolder": MYECLPAY_STORES_S3_SUBFOLDER,
@@ -733,7 +735,8 @@ async def update_store(
         db=db,
     )
 
-    hyperion_myeclpay_logger.info(
+
+    hyperion_s3_logger.info(
         f"store.name: {store.name}, structure_id: {store.structure_id}",
         extra={
             "s3_subfolder": MYECLPAY_STORES_S3_SUBFOLDER,
@@ -1106,7 +1109,7 @@ async def register_user(
         db=db,
     )
 
-    hyperion_myeclpay_logger.info(
+    hyperion_s3_logger.info(
         wallet_id,
         extra={
             "s3_subfolder": MYECLPAY_USERS_S3_SUBFOLDER,
@@ -1403,6 +1406,13 @@ async def create_user_devices(
         hyperion_error_logger.warning(
             f"MyECLPay: activate your device using the token: {activation_token}",
         )
+    hyperion_s3_logger.info(
+        wallet_device_creation.ed25519_public_key,
+        extra={
+            "s3_subfolder": MYECLPAY_DEVICES_S3_SUBFOLDER,
+            "s3_filename": f"{user.id}-{str(uuid4())[:8]}",
+        },
+    )
 
     return wallet_device_db
 
