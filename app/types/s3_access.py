@@ -29,12 +29,10 @@ class S3Access:
         s3_bucket_name: str | None = None,
         s3_access_key_id: str | None = None,
         s3_secret_access_key: str | None = None,
-        retention: int = -1,
     ) -> None:
         if folder != "" and not re.match(AUTHORIZED_FOLDER_STRING, folder):
             raise InvalidS3FolderError(folder)
         self.folder = folder
-        self.retention = retention
         self.failure_logger = logging.getLogger(failure_logger)
         if (
             s3_access_key_id is None
@@ -72,6 +70,7 @@ class S3Access:
         message: str,
         filename: str,
         subfolder: str = "",
+        retention: int = 0,
     ):
         """Write in an S3 bucket with object locking if needed.
         The filename must not contain a "/" because S3 will consider it as a folder.
@@ -116,9 +115,9 @@ class S3Access:
                 ExtraArgs={
                     "ObjectLockMode": "COMPLIANCE",
                     "ObjectLockRetainUntilDate": datetime.now(UTC)
-                    + timedelta(days=self.retention),
+                    + timedelta(days=retention),
                 }
-                if self.retention > 0
+                if retention > 0
                 else {},
             )
         except botocore.exceptions.ClientError as e:

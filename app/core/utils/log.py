@@ -144,7 +144,6 @@ class LogConfig:
                     "s3_access_key_id": settings.S3_ACCESS_KEY_ID,
                     "s3_secret_access_key": settings.S3_SECRET_ACCESS_KEY,
                     "folder": "myeclpay",
-                    "retention": 365 * 10,
                 },
                 "s3": {
                     "formatter": "myeclpay",
