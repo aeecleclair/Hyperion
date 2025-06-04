@@ -2,7 +2,7 @@ import logging
 import uuid
 from datetime import UTC, date, datetime
 
-from fastapi import BackgroundTasks, Depends, File, HTTPException, UploadFile
+from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -274,7 +274,6 @@ async def create_team(
     status_code=200,
 )
 async def generate_teams_pdf(
-    background_tasks: BackgroundTasks,
     user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
     db: AsyncSession = Depends(get_db),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
@@ -284,12 +283,12 @@ async def generate_teams_pdf(
     PDF are automatically generated when a team is created or updated.
     This endpoint is used to regenerate all the PDFs.
     """
-    background_tasks.add_task(
-        generate_teams_pdf_util,
-        db,
-        drive_file_manager,
-        settings,
+    await generate_teams_pdf_util(
+        db=db,
+        drive_file_manager=drive_file_manager,
+        settings=settings,
     )
+
     return "PDF generation started"
 
 
