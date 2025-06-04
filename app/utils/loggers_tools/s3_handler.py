@@ -16,7 +16,7 @@ class S3LogHandler(StreamHandler):
         s3_access_key_id: str | None = None,
         s3_secret_access_key: str | None = None,
     ):
-        StreamHandler.__init__(self)
+        super().__init__()
         self.s3_access = S3Access(
             failure_logger,
             folder,
