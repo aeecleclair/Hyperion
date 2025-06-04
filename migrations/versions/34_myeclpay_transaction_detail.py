@@ -54,13 +54,6 @@ def upgrade() -> None:
         ["qr_code_id"],
         ["qr_code_id"],
     )
-    op.create_foreign_key(
-        "myeclpay_used_qrcode_qr_code_key_fkey",
-        "myeclpay_used_qrcode",
-        "myeclpay_wallet_device",
-        ["qr_code_key"],
-        ["id"],
-    )
     # ### end Alembic commands ###
 
 
@@ -69,11 +62,6 @@ def downgrade() -> None:
     op.drop_constraint(
         "myeclpay_transaction_qr_code_id_fkey",
         "myeclpay_transaction",
-        type_="foreignkey",
-    )
-    op.drop_constraint(
-        "myeclpay_used_qrcode_qr_code_key_fkey",
-        "myeclpay_used_qrcode",
         type_="foreignkey",
     )
     op.drop_column("myeclpay_used_qrcode", "signature")

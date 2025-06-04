@@ -343,7 +343,7 @@ async def init_objects() -> None:
     used_qr_code = models_myeclpay.UsedQRCode(
         qr_code_id=uuid4(),
         qr_code_iat=datetime.now(UTC) - timedelta(days=1),
-        qr_code_key=uuid4(),
+        qr_code_key=ecl_user2_wallet_device.id,
         qr_code_store=True,
         qr_code_tot=1000,
         signature="azertyuiop",

@@ -237,8 +237,6 @@ class UsedQRCode(Base):
     qr_code_id: Mapped[PrimaryKey]
     qr_code_tot: Mapped[int | None]
     qr_code_iat: Mapped[datetime | None]
-    qr_code_key: Mapped[UUID | None] = mapped_column(
-        ForeignKey("myeclpay_wallet_device.id"),
-    )
+    qr_code_key: Mapped[UUID | None]
     qr_code_store: Mapped[bool | None]
     signature: Mapped[str | None]
