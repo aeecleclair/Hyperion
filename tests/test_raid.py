@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from app.core.groups.groups_type import GroupType
 from app.core.users import models_users
 from app.modules.raid import coredata_raid, models_raid
-from app.modules.raid.models_raid import Document, Participant, SecurityFile, Team
+from app.modules.raid.models_raid import Participant, SecurityFile, Team
 from app.modules.raid.raid_type import (
     Difficulty,
     DocumentType,
