@@ -11,7 +11,12 @@ minimal-titan-version-code = 139
 requires-python = ">= 3.11, < 3.13"
 
 license = "MIT"
-license-files = ["LICENSE", "assets/privacy.txt", "assets/terms-and-conditions.txt", "assets/myeclpay-terms-of-service.txt"]
+license-files = [
+    "LICENSE",
+    "assets/privacy.txt",
+    "assets/terms-and-conditions.txt",
+    "assets/myeclpay-terms-of-service.txt",
+]
 
 
 [tool.ruff]
@@ -157,6 +162,7 @@ module = [
     "google_auth_oauthlib.flow",
     "googleapiclient.*",
     "sqlalchemy_utils",
+    "weasyprint",
 ]
 ignore_missing_imports = true
 
