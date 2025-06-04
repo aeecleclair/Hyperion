@@ -874,11 +874,9 @@ def mock_participant():
     )
 
 
-@pytest.fixture
-def mock_document():
-    return Mock(
-        spec=Document,
-        id="doc123",
-        type="id_card",
-        uploaded_at=datetime.datetime.now(tz=datetime.UTC),
+def test_delete_all_teams(client: TestClient):
+    response = client.delete(
+        "/raid/teams",
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
     )
+    assert response.status_code == 204
