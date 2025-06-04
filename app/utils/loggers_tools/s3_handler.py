@@ -1,4 +1,3 @@
-import logging
 from datetime import UTC, datetime
 from logging import StreamHandler
 from uuid import uuid4
@@ -6,8 +5,6 @@ from uuid import uuid4
 from typing_extensions import override
 
 from app.types.s3_access import S3Access
-
-hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 class S3LogHandler(StreamHandler):
@@ -19,6 +16,7 @@ class S3LogHandler(StreamHandler):
         s3_access_key_id: str | None = None,
         s3_secret_access_key: str | None = None,
     ):
+        StreamHandler.__init__(self)
         self.s3_access = S3Access(
             failure_logger,
             folder,
@@ -26,7 +24,6 @@ class S3LogHandler(StreamHandler):
             s3_access_key_id,
             s3_secret_access_key,
         )
-        super().__init__(self)
 
     @override
     def emit(self, record):
