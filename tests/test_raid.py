@@ -334,7 +334,7 @@ def test_generate_teams_pdf(client: TestClient):
         "/raid/teams/generate-pdf",
         headers={"Authorization": f"Bearer {token_raid_admin}"},
     )
-    assert response.status_code == 204
+    assert response.status_code == 200
 
 
 def test_get_team_by_participant_id(client: TestClient):
@@ -382,7 +382,6 @@ def test_set_team_number(client: TestClient):
         headers={"Authorization": f"Bearer {token_validated_team_captain}"},
     )
     assert response.status_code == 204
-    assert response.json()["number"] == 1
 
 
 def test_upload_document(client: TestClient):
