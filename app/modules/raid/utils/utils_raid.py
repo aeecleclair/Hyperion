@@ -11,15 +11,14 @@ from app.core.google_api.google_api import DriveGoogleAPI
 from app.core.payment import schemas_payment
 from app.core.utils.config import Settings
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
+from app.modules.raid.raid_type import Difficulty
 from app.modules.raid.schemas_raid import (
     ParticipantBase,
     ParticipantUpdate,
 )
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.pdf.pdf_writer import HTMLPDFWriter, PDFWriter
-from app.utils.tools import (
-    get_core_data,
-)
+from app.utils.tools import get_core_data
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -135,9 +134,19 @@ async def write_teams_csv(
 async def set_team_number(team: models_raid.Team, db: AsyncSession) -> None:
     if team.difficulty is None:
         return
-    new_team_number = await cruds_raid.get_number_of_team_by_difficulty(
+    number_of_team = await cruds_raid.get_number_of_team_by_difficulty(
         team.difficulty,
         db,
+    )
+    difficulty_separator = {
+        Difficulty.discovery: 0,
+        Difficulty.sports: 100,
+        Difficulty.expert: 200,
+    }
+    new_team_number = (
+        difficulty_separator[team.difficulty] + 1
+        if number_of_team == 0
+        else number_of_team + 1
     )
     updated_team: schemas_raid.TeamUpdate = schemas_raid.TeamUpdate(
         number=new_team_number,
@@ -184,31 +193,36 @@ async def save_team_info(
 
 
 async def post_update_actions(
-    team: models_raid.Team | None,
+    team: models_raid.Team,
     db: AsyncSession,
     drive_file_manager: DriveFileManager,
     settings: Settings,
+    should_generate_all_teams_csv: bool = True,
 ) -> None:
     try:
-        if team:
-            if team.validation_progress == 100:
-                await set_team_number(team, db)
+        if team.validation_progress == 100 and (
+            team.number is None or team.number == -1
+        ):
+            await set_team_number(team, db)
+
+            # Usually we want to update the csv file each team a team is updated
+            # but when we batch update teams we only want to update the csv file once, at the end
+            if should_generate_all_teams_csv:
                 all_teams = await cruds_raid.get_all_validated_teams(db)
-                if all_teams:
-                    await write_teams_csv(
-                        all_teams,
-                        db,
-                        drive_file_manager,
-                        settings=settings,
-                    )
-            await save_team_info(
-                team,
-                db,
-                drive_file_manager,
-                settings=settings,
-            )
+                await write_teams_csv(
+                    all_teams,
+                    db,
+                    drive_file_manager,
+                    settings=settings,
+                )
+        await save_team_info(
+            team,
+            db,
+            drive_file_manager,
+            settings=settings,
+        )
     except Exception:
-        hyperion_error_logger.exception("Error while creating pdf")
+        hyperion_error_logger.exception(f"Error while creating pdf for team {team.id}")
         return
 
 
@@ -269,3 +283,38 @@ async def get_participant(
     if not participant:
         raise HTTPException(status_code=404, detail="Participant not found.")
     return participant
+
+
+async def generate_teams_pdf_util(
+    db: AsyncSession,
+    drive_file_manager: DriveFileManager,
+    settings: Settings,
+):
+    teams = await cruds_raid.get_all_teams(db)
+
+    hyperion_error_logger.warning(f"RAID: Generating PDF for {len(teams)} teams")
+
+    for index, team in enumerate(teams):
+        hyperion_error_logger.info(f"RAID: team {index}/{len(teams)}")
+
+        # We reset the team number to -1 to force the update of the team number
+        await cruds_raid.update_team(team.id, schemas_raid.TeamUpdate(number=-1), db)
+        await post_update_actions(
+            team,
+            db,
+            drive_file_manager,
+            settings=settings,
+            should_generate_all_teams_csv=False,
+        )
+
+    all_teams = await cruds_raid.get_all_validated_teams(db)
+    await write_teams_csv(
+        all_teams,
+        db,
+        drive_file_manager,
+        settings=settings,
+    )
+
+    hyperion_error_logger.warning(
+        f"RAID: Successfully generated PDF for {len(teams)} teams",
+    )

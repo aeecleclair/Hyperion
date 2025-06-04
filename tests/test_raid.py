@@ -1,5 +1,7 @@
 import datetime
+import shutil
 import uuid
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -11,7 +13,13 @@ from app.core.groups.groups_type import GroupType
 from app.core.users import models_users
 from app.modules.raid import coredata_raid, models_raid
 from app.modules.raid.models_raid import Document, Participant, SecurityFile, Team
-from app.modules.raid.raid_type import DocumentType, DocumentValidation, Size
+from app.modules.raid.raid_type import (
+    Difficulty,
+    DocumentType,
+    DocumentValidation,
+    MeetingPlace,
+    Size,
+)
 from app.modules.raid.utils.pdf.pdf_writer import (
     HTMLPDFWriter,
     PDFWriter,
@@ -26,16 +34,24 @@ from tests.commons import (
 participant: models_raid.Participant
 
 team: models_raid.Team
+validated_team: models_raid.Team
+
+validated_document: models_raid.Document
 
 raid_admin_user: models_users.CoreUser
 simple_user: models_users.CoreUser
 simple_user_without_participant: models_users.CoreUser
 simple_user_without_team: models_users.CoreUser
 
+validated_team_captain: models_users.CoreUser
+validated_team_second: models_users.CoreUser
+
 token_raid_admin: str
 token_simple: str
 token_simple_without_participant: str
 token_simple_without_team: str
+
+token_validated_team_captain: str
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -64,6 +80,13 @@ async def init_objects() -> None:
     )
     token_simple_without_team = create_api_access_token(simple_user_without_team)
 
+    global validated_team_captain, token_validated_team_captain
+    validated_team_captain = await create_user_with_groups([])
+    token_validated_team_captain = create_api_access_token(validated_team_captain)
+
+    global validated_team_second
+    validated_team_second = await create_user_with_groups([])
+
     document = models_raid.Document(
         id="some_document_id",
         name="test.pdf",
@@ -71,8 +94,17 @@ async def init_objects() -> None:
         validation=DocumentValidation.pending,
         type=DocumentType.idCard,
     )
-
     await add_object_to_db(document)
+
+    validated_document = models_raid.Document(
+        id="6e9736ab-5ceb-42a8-a252-e8c66696f7b1",
+        name="validated.pdf",
+        uploaded_at=datetime.datetime.now(tz=datetime.UTC),
+        validation=DocumentValidation.accepted,
+        type=DocumentType.idCard,
+    )
+
+    await add_object_to_db(validated_document)
 
     global participant
     participant = models_raid.Participant(
@@ -105,6 +137,75 @@ async def init_objects() -> None:
         email="test@no_team.fr",
     )
     await add_object_to_db(no_team_participant)
+
+    validated_team_participant_captain = models_raid.Participant(
+        id=validated_team_captain.id,
+        firstname="Validated",
+        name="Captain",
+        address="123 rue de la rue",
+        birthday=datetime.date(2001, 1, 1),
+        phone="0606060606",
+        email="test@validated.fr",
+        t_shirt_size=Size.M,
+        bike_size=Size.M,
+        attestation_on_honour=True,
+        situation="centrale",
+        payment=True,
+        id_card_id=validated_document.id,
+        medical_certificate_id=validated_document.id,
+        student_card_id=validated_document.id,
+        raid_rules_id=validated_document.id,
+        parent_authorization_id=validated_document.id,
+    )
+
+    await add_object_to_db(validated_team_participant_captain)
+
+    validated_team_participant_second = models_raid.Participant(
+        id=validated_team_second.id,
+        firstname="Validated",
+        name="Second",
+        address="123 rue de la rue",
+        birthday=datetime.date(2001, 1, 1),
+        phone="0606060606",
+        email="test2@validated.fr",
+        t_shirt_size=Size.M,
+        bike_size=Size.M,
+        attestation_on_honour=True,
+        situation="centrale",
+        payment=True,
+        id_card_id=validated_document.id,
+        medical_certificate_id=validated_document.id,
+        student_card_id=validated_document.id,
+        raid_rules_id=validated_document.id,
+        parent_authorization_id=validated_document.id,
+    )
+
+    await add_object_to_db(validated_team_participant_second)
+
+    global validated_team
+    validated_team = models_raid.Team(
+        id=str(uuid.uuid4()),
+        name="ValidatedTeam",
+        difficulty=Difficulty.sports,
+        meeting_place=MeetingPlace.centrale,
+        captain_id=validated_team_captain.id,
+        second_id=validated_team_second.id,
+        file_id=str(uuid.uuid4()),
+    )
+
+    await add_object_to_db(validated_team)
+
+    Path("data/raid/").mkdir(parents=True, exist_ok=True)
+    default_asset = "assets/pdf/default_PDF.pdf"
+    expected_files = [
+        "-1_ValidatedTeam_Captain_Validated.pdf",
+        "-1_New Team_NoTeam_NoTeam.pdf",
+    ]
+    for path in expected_files:
+        shutil.copyfile(
+            default_asset,
+            "data/raid/" + path,
+        )
 
 
 def test_get_participant_by_id(client: TestClient):
@@ -247,7 +348,7 @@ def test_generate_teams_pdf(client: TestClient):
         "/raid/teams/generate-pdf",
         headers={"Authorization": f"Bearer {token_raid_admin}"},
     )
-    assert response.status_code == 204
+    assert response.status_code == 200
 
 
 def test_get_team_by_participant_id(client: TestClient):
@@ -283,6 +384,16 @@ def test_update_team(client: TestClient):
         f"/raid/teams/{team.id}",
         json=update_data,
         headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    assert response.status_code == 204
+
+
+def test_set_team_number(client: TestClient):
+    update_data = {"name": "Updated Validated Team"}
+    response = client.patch(
+        f"/raid/teams/{validated_team.id}",
+        json=update_data,
+        headers={"Authorization": f"Bearer {token_validated_team_captain}"},
     )
     assert response.status_code == 204
 
@@ -843,3 +954,129 @@ def test_html_pdf_writer_init():
 #         1,
 #     )
 #     assert result == f"data/raid/{mock_participant.id}.pdf"
+#     result = html_pdf_writer.write_participant_security_file(
+#         mock_participant,
+#         mock_information,
+#         1,
+#     )
+#     assert result == f"data/raid/{mock_participant.id}.pdf"
+#         mock_participant,
+#         mock_information,
+#         1,
+#     )
+#     assert result == f"data/raid/{mock_participant.id}.pdf"
+
+
+async def test_set_team_number_utility_empty_database(mocker):
+    """Test the set_team_number utility with an empty database (no existing teams)"""
+    # Create mock objects
+    mock_db = mocker.AsyncMock()
+    mock_team = mocker.Mock(
+        spec=Team,
+        id=str(uuid.uuid4()),
+        difficulty=Difficulty.sports,
+    )
+
+    # Mock the get_number_of_team_by_difficulty function to return 0
+    mocker.patch(
+        "app.modules.raid.cruds_raid.get_number_of_team_by_difficulty",
+        return_value=0,
+    )
+
+    # Mock the update_team function
+    mock_update_team = mocker.patch("app.modules.raid.cruds_raid.update_team")
+
+    # Call the function
+    from app.modules.raid.utils.utils_raid import set_team_number
+
+    await set_team_number(mock_team, mock_db)
+
+    # Assert update_team was called with correct parameters
+    mock_update_team.assert_called_once()
+    args, kwargs = mock_update_team.call_args
+    assert args[0] == mock_team.id
+    assert args[1].number == 101  # 100 (sports separator) + 1
+
+
+async def test_set_team_number_utility_existing_teams(mocker):
+    """Test the set_team_number utility with existing teams"""
+    # Create mock objects
+    mock_db = mocker.AsyncMock()
+    mock_team = mocker.Mock(
+        spec=Team,
+        id=str(uuid.uuid4()),
+        difficulty=Difficulty.expert,
+    )
+
+    # Mock the get_number_of_team_by_difficulty function to return existing team numbers
+    mocker.patch(
+        "app.modules.raid.cruds_raid.get_number_of_team_by_difficulty",
+        return_value=220,
+    )
+
+    # Mock the update_team function
+    mock_update_team = mocker.patch("app.modules.raid.cruds_raid.update_team")
+
+    # Call the function
+    from app.modules.raid.utils.utils_raid import set_team_number
+
+    await set_team_number(mock_team, mock_db)
+
+    # Assert update_team was called with correct parameters
+    mock_update_team.assert_called_once()
+    args, kwargs = mock_update_team.call_args
+    assert args[0] == mock_team.id
+    assert args[1].number == 221  # 220 + 1
+
+
+async def test_set_team_number_utility_no_difficulty(mocker):
+    """Test the set_team_number utility with a team without difficulty"""
+    # Create mock objects
+    mock_db = mocker.AsyncMock()
+    mock_team = mocker.Mock(
+        spec=Team,
+        id=str(uuid.uuid4()),
+        difficulty=None,
+    )
+
+    # Mock the update_team function
+    mock_update_team = mocker.patch("app.modules.raid.cruds_raid.update_team")
+
+    # Call the function
+    from app.modules.raid.utils.utils_raid import set_team_number
+
+    await set_team_number(mock_team, mock_db)
+
+    # Assert update_team was not called
+    mock_update_team.assert_not_called()
+
+
+async def test_set_team_number_utility_discovery_difficulty(mocker):
+    """Test the set_team_number utility with discovery difficulty"""
+    # Create mock objects
+    mock_db = mocker.AsyncMock()
+    mock_team = mocker.Mock(
+        spec=Team,
+        id=str(uuid.uuid4()),
+        difficulty=Difficulty.discovery,
+    )
+
+    # Mock the get_number_of_team_by_difficulty function
+    mocker.patch(
+        "app.modules.raid.cruds_raid.get_number_of_team_by_difficulty",
+        return_value=5,
+    )
+
+    # Mock the update_team function
+    mock_update_team = mocker.patch("app.modules.raid.cruds_raid.update_team")
+
+    # Call the function
+    from app.modules.raid.utils.utils_raid import set_team_number
+
+    await set_team_number(mock_team, mock_db)
+
+    # Assert update_team was called with correct parameters
+    mock_update_team.assert_called_once()
+    args, kwargs = mock_update_team.call_args
+    assert args[0] == mock_team.id
+    assert args[1].number == 6  # discovery (0) + 5 + 1

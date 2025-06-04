@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -105,7 +105,7 @@ async def get_all_teams(
 
 async def get_all_validated_teams(
     db: AsyncSession,
-) -> list[models_raid.Team]:
+) -> Sequence[models_raid.Team]:
     teams = await db.execute(
         select(models_raid.Team).options(
             # Since there is nested classes in the Team model, we need to load all the related data
@@ -542,9 +542,21 @@ async def get_number_of_team_by_difficulty(
     db: AsyncSession,
 ) -> int:
     result = await db.execute(
-        select(func.count()).where(models_raid.Team.difficulty == difficulty),
+        select(models_raid.Team).where(models_raid.Team.difficulty == difficulty),
     )
-    return result.scalar() or 0
+    teams_found = result.scalars().all()
+    # We can not use a where clause because the validation_progress is a Python property
+    # and is not usable in a SQL query
+    team_numbers = [
+        team.number if team.number is not None and team.number >= 0 else 0
+        for team in filter(
+            lambda team: team.validation_progress == 100
+            and team.number is not None
+            and team.number >= 0,
+            teams_found,
+        )
+    ]
+    return max(team_numbers) if team_numbers else 0
 
 
 async def create_participant_checkout(
