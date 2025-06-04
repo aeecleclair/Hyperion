@@ -1,6 +1,7 @@
 from collections.abc import Sequence
+from datetime import datetime
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.core_endpoints import models_core
@@ -169,3 +170,13 @@ async def delete_core_data_crud(
         ),
     )
     await db.flush()
+
+
+async def start_isolation_mode(
+    db: AsyncSession,
+) -> datetime:
+    await db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"))
+    now = (await db.execute(select(func.now()))).scalar()
+    if now is None:
+        raise ValueError
+    return now

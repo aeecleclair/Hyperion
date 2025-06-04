@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import and_, delete, func, or_, select, text, update
+from sqlalchemy import and_, delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import noload, selectinload
 
@@ -393,8 +393,8 @@ async def get_wallets(
             id=wallet.id,
             type=wallet.type,
             balance=wallet.balance,
-            store=None,
-            user=None,
+            store=None,  # This data is not needed as this cruds is only used for integrity checks
+            user=None,  # This data is not needed as this cruds is only used for integrity checks
         )
         for wallet in result.scalars().all()
     ]
@@ -983,13 +983,3 @@ async def delete_used_qrcode(
             models_myeclpay.UsedQRCode.qr_code_id == qr_code_id,
         ),
     )
-
-
-async def start_isolation_mode(
-    db: AsyncSession,
-) -> datetime:
-    await db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"))
-    now = (await db.execute(select(func.now()))).scalar()
-    if now is None:
-        raise ValueError
-    return now

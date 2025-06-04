@@ -19,6 +19,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.core_endpoints import cruds_core
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import schemas_memberships
 from app.core.memberships.utils_memberships import (
@@ -2542,7 +2543,7 @@ async def get_data_for_integrity_check(
             detail="Access denied",
         )
 
-    now = await cruds_myeclpay.start_isolation_mode(db)
+    now = await cruds_core.start_isolation_mode(db)
     # We use a 30 seconds delay to avoid unstable transactions
     # as they can be canceled during the 30 seconds after their creation
     security_now = now - timedelta(seconds=30)
