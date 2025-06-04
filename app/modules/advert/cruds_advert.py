@@ -66,8 +66,12 @@ async def delete_advertiser(advertiser_id: str, db: AsyncSession):
     await db.flush()
 
 
-async def get_adverts(db: AsyncSession) -> Sequence[models_advert.Advert]:
-    result = await db.execute(select(models_advert.Advert))
+async def get_adverts(db: AsyncSession, skip: int = 0, limit: int = 30) -> Sequence[models_advert.Advert]:
+    result = await db.execute(
+        select(models_advert.Advert)
+        .offset(skip)
+        .limit(limit)
+    )
     return result.scalars().all()
 
 
@@ -84,9 +88,12 @@ async def get_advert_by_id(
 async def get_adverts_by_advertisers(
     db: AsyncSession,
     advertisers: list[str],
+    skip: int = 0,
+    limit: int = 30,
 ) -> Sequence[models_advert.Advert]:
     result = await db.execute(
-        select(models_advert.Advert).where(
+        select(models_advert.Advert)
+        .where(
             or_(
                 *[
                     models_advert.Advert.advertiser.has(
@@ -95,7 +102,9 @@ async def get_adverts_by_advertisers(
                     for advertiser_id in advertisers
                 ],
             ),
-        ),
+        )
+        .offset(skip)
+        .limit(limit)
     )
     return result.scalars().all()
 

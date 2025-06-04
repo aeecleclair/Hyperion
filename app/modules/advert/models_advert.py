@@ -26,9 +26,13 @@ class Advert(Base):
 
     id: Mapped[str] = mapped_column(primary_key=True)
     advertiser_id: Mapped[str] = mapped_column(ForeignKey("advert_advertisers.id"))
+    advert_type: Mapped[str]
     title: Mapped[str]
     content: Mapped[str]
-    date: Mapped[datetime]
+    release_date: Mapped[datetime] # The date when the advert will be released
+    start_date: Mapped[datetime | None] # The date when an event starts for example
+    end_date: Mapped[datetime | None] # The date when an event ends for example
+    date: Mapped[datetime] # The date when the advert was created
     tags: Mapped[str | None]
     advertiser: Mapped[Advertiser] = relationship(
         "Advertiser",

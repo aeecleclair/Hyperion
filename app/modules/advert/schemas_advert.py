@@ -1,7 +1,13 @@
 from datetime import datetime
+from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
 
+class AdvertType(str, Enum):
+    EVENT = "event"
+    ADVERT = "advert"
+    SHOTGUN = "shotgun"
+    OTHER = "other"
 
 class AdvertiserBase(BaseModel):
     name: str
@@ -24,6 +30,10 @@ class AdvertBase(BaseModel):
     title: str
     content: str
     advertiser_id: str
+    advert_type: AdvertType
+    release_date: datetime # The date when the advert will be released
+    start_date: datetime | None # The date when an event starts for example
+    end_date: datetime | None # The date when an event ends for example
     tags: str | None = None
 
 
@@ -44,3 +54,7 @@ class AdvertUpdate(BaseModel):
     title: str | None = None
     content: str | None = None
     tags: str | None = None
+    advert_type: AdvertType
+    release_date: datetime # The date when the advert will be released
+    start_date: datetime | None # The date when an event starts for example
+    end_date: datetime | None # The date when an event ends for example

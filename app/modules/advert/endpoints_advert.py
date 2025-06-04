@@ -181,6 +181,8 @@ async def get_current_user_advertisers(
 )
 async def read_adverts(
     advertisers: list[str] = Query(default=[]),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(30, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_an_ecl_member),
 ):
@@ -194,8 +196,10 @@ async def read_adverts(
         return await cruds_advert.get_adverts_by_advertisers(
             advertisers=advertisers,
             db=db,
+            skip=skip,
+            limit=limit,
         )
-    return await cruds_advert.get_adverts(db=db)
+    return await cruds_advert.get_adverts(db=db, skip=skip, limit=limit)
 
 
 @module.router.get(
@@ -412,3 +416,70 @@ async def create_advert_image(
     )
 
     return standard_responses.Result(success=True)
+
+@module.router.post(
+    "/advert/advertisers/{advertiser_id}/picture",
+    response_model=standard_responses.Result,
+    status_code=201,
+)
+async def create_advertiser_image(
+    advertiser_id: str,
+    image: UploadFile = File(...),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    request_id: str = Depends(get_request_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Add an image to an advertiser
+
+    **This endpoint is only usable by administrators**
+    """
+    advertiser = await cruds_advert.get_advertiser_by_id(db=db, advertiser_id=advertiser_id)
+    if advertiser is None:
+        raise HTTPException(
+            status_code=404,
+            detail="The advertiser does not exist",
+        )
+
+    await save_file_as_data(
+        upload_file=image,
+        directory="advertisers",
+        filename=str(advertiser_id),
+        request_id=request_id,
+        max_file_size=4 * 1024 * 1024,
+        accepted_content_types=[
+            ContentType.jpg,
+            ContentType.png,
+            ContentType.webp,
+        ],
+    )
+
+    return standard_responses.Result(success=True)
+
+@module.router.get(
+    "/advert/advertisers/{advertiser_id}/picture",
+    response_class=FileResponse,
+    status_code=200,
+)
+async def read_advertiser_image(
+    advertiser_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+):
+    """
+    Get the image of an advertiser
+
+    **The user must be authenticated to use this endpoint**
+    """
+    advertiser = await cruds_advert.get_advertiser_by_id(db=db, advertiser_id=advertiser_id)
+    if advertiser is None:
+        raise HTTPException(
+            status_code=404,
+            detail="The advertiser does not exist",
+        )
+
+    return get_file_from_data(
+        default_asset="assets/images/default_advertiser.png",
+        directory="advertisers",
+        filename=str(advertiser_id),
+    )
