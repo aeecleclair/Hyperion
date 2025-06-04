@@ -162,6 +162,7 @@ module = [
     "google_auth_oauthlib.flow",
     "googleapiclient.*",
     "sqlalchemy_utils",
+    "weasyprint",
 ]
 ignore_missing_imports = true
 
