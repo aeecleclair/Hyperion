@@ -1,4 +1,5 @@
 import datetime
+import shutil
 import uuid
 from unittest.mock import Mock, patch
 
@@ -192,6 +193,17 @@ async def init_objects() -> None:
     )
 
     await add_object_to_db(validated_team)
+
+    default_asset = "assets/pdf/default_PDF.pdf"
+    expected_files = [
+        "-1_ValidatedTeam_Captain_Validated.pdf",
+        "-1_New Team_NoTeam_NoTeam.pdf",
+    ]
+    for path in expected_files:
+        shutil.copyfile(
+            default_asset,
+            "data/raid/" + path,
+        )
 
 
 def test_get_participant_by_id(client: TestClient):
