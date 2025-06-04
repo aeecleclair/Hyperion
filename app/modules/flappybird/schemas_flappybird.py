@@ -8,6 +8,7 @@ from app.core.users.schemas_users import CoreUserSimple
 
 class FlappyBirdScoreBase(BaseModel):
     value: int
+    key: int
 
 
 class FlappyBirdScore(FlappyBirdScoreBase):
