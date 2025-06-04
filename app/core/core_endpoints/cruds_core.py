@@ -175,6 +175,12 @@ async def delete_core_data_crud(
 async def start_isolation_mode(
     db: AsyncSession,
 ) -> datetime:
+    """
+    Set the transaction in isolation mode.
+    It ensures that the transaction will not see any changes made by other transactions
+    until it is committed or rolled back.
+    Thus, all subsequent queries in this transaction will see the same data as at the time of the transaction start.
+    """
     await db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"))
     now = (await db.execute(select(func.now()))).scalar()
     if now is None:

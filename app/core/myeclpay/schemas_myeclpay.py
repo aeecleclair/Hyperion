@@ -154,10 +154,13 @@ class ScanInfo(QRCodeContentData):
     bypass_membership: bool = False
 
 
-class Wallet(BaseModel):
+class WalletBase(BaseModel):
     id: UUID
     type: WalletType
     balance: int
+
+
+class Wallet(WalletBase):
     store: Store | None
     user: schemas_users.CoreUser | None
 
@@ -247,7 +250,7 @@ class IntegrityCheckData(BaseModel):
     """Schema for Hyperion data"""
 
     date: datetime
-    wallets: list[Wallet]
-    transactions: list[Transaction]
+    wallets: list[WalletBase]
+    transactions: list[TransactionBase]
     transfers: list[Transfer]
     refunds: list[RefundBase]

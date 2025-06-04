@@ -386,15 +386,13 @@ async def create_wallet(
 
 async def get_wallets(
     db: AsyncSession,
-) -> Sequence[schemas_myeclpay.Wallet]:
+) -> Sequence[schemas_myeclpay.WalletBase]:
     result = await db.execute(select(models_myeclpay.Wallet))
     return [
-        schemas_myeclpay.Wallet(
+        schemas_myeclpay.WalletBase(
             id=wallet.id,
             type=wallet.type,
             balance=wallet.balance,
-            store=None,  # This data is not needed as this cruds is only used for integrity checks
-            user=None,  # This data is not needed as this cruds is only used for integrity checks
         )
         for wallet in result.scalars().all()
     ]
@@ -617,7 +615,7 @@ async def get_transactions(
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     exclude_canceled: bool = False,
-) -> Sequence[schemas_myeclpay.Transaction]:
+) -> Sequence[schemas_myeclpay.TransactionBase]:
     result = await db.execute(
         select(models_myeclpay.Transaction).where(
             models_myeclpay.Transaction.creation >= start_date
@@ -632,7 +630,7 @@ async def get_transactions(
         ),
     )
     return [
-        schemas_myeclpay.Transaction(
+        schemas_myeclpay.TransactionBase(
             id=transaction.id,
             debited_wallet_id=transaction.debited_wallet_id,
             credited_wallet_id=transaction.credited_wallet_id,
