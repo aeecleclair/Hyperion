@@ -2,7 +2,7 @@ import datetime
 import shutil
 import uuid
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 import pytest_asyncio
@@ -18,10 +18,6 @@ from app.modules.raid.raid_type import (
     DocumentValidation,
     MeetingPlace,
     Size,
-)
-from app.modules.raid.utils.pdf.pdf_writer import (
-    PDFWriter,
-    maximize_image,
 )
 from tests.commons import (
     add_coredata_to_db,

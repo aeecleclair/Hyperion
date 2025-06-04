@@ -242,8 +242,10 @@ async def post_update_actions(
                     drive_file_manager,
                     settings=settings,
                 )
+        information = await get_core_data(coredata_raid.RaidInformation, db)
         await save_team_info(
             team,
+            information,
             db,
             drive_file_manager,
             settings=settings,
