@@ -8,6 +8,7 @@ ENV UV_COMPILE_BYTECODE=1
 
 WORKDIR /hyperion
 
+COPY pyproject.toml .
 COPY init.py .
 COPY alembic.ini .
 COPY migrations migrations/
