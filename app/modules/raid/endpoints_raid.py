@@ -31,7 +31,10 @@ from app.modules.raid.utils.utils_raid import (
     will_participant_be_minor_on,
 )
 from app.types.content_type import ContentType
-from app.types.exceptions import MissingHelloAssoSlugError
+from app.types.exceptions import (
+    GoogleAPIMissingConfigInDotenvError,
+    MissingHelloAssoSlugError,
+)
 from app.types.module import Module
 from app.utils.tools import (
     delete_all_folder_from_data,
@@ -427,28 +430,34 @@ async def delete_all_teams(
     """
     # First get all teams to access their file IDs
     teams = await cruds_raid.get_all_teams(db)
-    # Delete files associated with each team from Google Drive
-    async with DriveGoogleAPI(db, settings) as google_api:
-        for team in teams:
-            # Delete team PDF
-            if team.file_id:
-                google_api.delete_file(team.file_id)
-            # Delete captain's security file if exists
-            if (
-                team.captain
-                and team.captain.security_file
-                and team.captain.security_file.file_id
-            ):
-                google_api.delete_file(team.captain.security_file.file_id)
-            # Delete second member's security file if exists
-            if (
-                team.second
-                and team.second.security_file
-                and team.second.security_file.file_id
-            ):
-                google_api.delete_file(team.second.security_file.file_id)
-            # Delete team invite tokens
 
+    try:
+        # Delete files associated with each team from Google Drive
+        async with DriveGoogleAPI(db, settings) as google_api:
+            for team in teams:
+                # Delete team PDF
+                if team.file_id:
+                    google_api.delete_file(team.file_id)
+                # Delete captain's security file if exists
+                if (
+                    team.captain
+                    and team.captain.security_file
+                    and team.captain.security_file.file_id
+                ):
+                    google_api.delete_file(team.captain.security_file.file_id)
+                # Delete second member's security file if exists
+                if (
+                    team.second
+                    and team.second.security_file
+                    and team.second.security_file.file_id
+                ):
+                    google_api.delete_file(team.second.security_file.file_id)
+    except GoogleAPIMissingConfigInDotenvError:
+        hyperion_error_logger.warning(
+            "Google API configuration is missing in the .env file, raid-registering will not delete files from Google Drive.",
+        )
+
+    # Delete team invite tokens
     await cruds_raid.delete_all_invite_tokens(db)
 
     # Delete all teams from the database
