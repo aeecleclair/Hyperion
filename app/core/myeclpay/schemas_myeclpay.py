@@ -197,14 +197,7 @@ class TransactionBase(BaseModel):
     creation: datetime
     status: TransactionStatus
 
-
-class TransactionInfo(TransactionBase):
     qr_code_id: UUID | None = None
-    qr_code_tot: int | None = None
-    qr_code_iat: datetime | None = None
-    qr_code_key: UUID | None = None
-    qr_code_store: bool | None = None
-    signature: str | None = None
 
 
 class Transaction(TransactionBase):

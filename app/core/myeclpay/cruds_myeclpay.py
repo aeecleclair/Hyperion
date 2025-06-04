@@ -544,7 +544,7 @@ async def get_user_payment(
 
 
 async def create_transaction(
-    transaction: schemas_myeclpay.TransactionInfo,
+    transaction: schemas_myeclpay.TransactionBase,
     debited_wallet_device_id: UUID,
     store_note: str | None,
     db: AsyncSession,
@@ -561,11 +561,6 @@ async def create_transaction(
         status=transaction.status,
         store_note=store_note,
         qr_code_id=transaction.qr_code_id,
-        qr_code_tot=transaction.qr_code_tot,
-        qr_code_iat=transaction.qr_code_iat,
-        qr_code_key=transaction.qr_code_key,
-        qr_code_store=transaction.qr_code_store,
-        signature=transaction.signature,
     )
     db.add(transaction_db)
 
@@ -953,11 +948,16 @@ async def get_store(
 
 
 async def create_used_qrcode(
-    qr_code_id: UUID,
+    qr_code: schemas_myeclpay.ScanInfo,
     db: AsyncSession,
 ) -> None:
     wallet = models_myeclpay.UsedQRCode(
-        qr_code_id=qr_code_id,
+        qr_code_id=qr_code.id,
+        qr_code_tot=qr_code.tot,
+        qr_code_iat=qr_code.iat,
+        qr_code_key=qr_code.key,
+        qr_code_store=qr_code.store,
+        signature=qr_code.signature,
     )
     db.add(wallet)
 
