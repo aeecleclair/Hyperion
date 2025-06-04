@@ -1,6 +1,7 @@
 import datetime
 import shutil
 import uuid
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -194,6 +195,7 @@ async def init_objects() -> None:
 
     await add_object_to_db(validated_team)
 
+    Path("data/raid/").mkdir(parents=True, exist_ok=True)
     default_asset = "assets/pdf/default_PDF.pdf"
     expected_files = [
         "-1_ValidatedTeam_Captain_Validated.pdf",
