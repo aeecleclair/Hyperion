@@ -1,7 +1,7 @@
 import logging
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import AccountType
@@ -19,7 +19,6 @@ from app.modules.sport_competition.dependencies_sport_competition import (
 from app.modules.sport_competition.types_sport_competition import CompetitionGroupType
 from app.types.module import Module
 
-router = APIRouter(tags=["Sport Competition"])
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 module = Module(
@@ -29,12 +28,15 @@ module = Module(
 )
 
 
-@router.get("/competition/sports", response_model=list[competition_schemas.Sport])
+@module.router.get(
+    "/competition/sports",
+    response_model=list[competition_schemas.Sport],
+)
 async def get_sports(db: AsyncSession = Depends(get_db)):
     return await competition_cruds.load_all_sports(db)
 
 
-@router.post(
+@module.router.post(
     "/competition/sports",
     status_code=201,
     response_model=competition_schemas.Sport,
@@ -59,7 +61,7 @@ async def create_sport(
     return sport
 
 
-@router.patch("/competition/sports/{sport_id}")
+@module.router.patch("/competition/sports/{sport_id}")
 async def edit_sport(
     sport_id: UUID,
     sport: competition_schemas.SportEdit,
@@ -81,7 +83,7 @@ async def edit_sport(
     return stored
 
 
-@router.delete("/competition/sports/{sport_id}")
+@module.router.delete("/competition/sports/{sport_id}")
 async def delete_sport(
     sport_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -105,7 +107,10 @@ async def delete_sport(
     await competition_cruds.delete_sport_by_id(sport_id, db)
 
 
-@router.get("/competition/groups", response_model=list[competition_schemas.Group])
+@module.router.get(
+    "/competition/groups",
+    response_model=list[competition_schemas.Group],
+)
 async def get_groups(
     db=Depends(get_db),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
@@ -113,7 +118,7 @@ async def get_groups(
     return await competition_cruds.load_all_groups(edition.id, db)
 
 
-@router.post(
+@module.router.post(
     "/competition/groups",
     status_code=201,
     response_model=competition_schemas.Group,
@@ -135,7 +140,7 @@ async def create_group(
     return group
 
 
-@router.patch("/competition/groups/{group_id}")
+@module.router.patch("/competition/groups/{group_id}")
 async def edit_group(
     group_id: UUID,
     group: competition_schemas.GroupEdit,
@@ -153,7 +158,7 @@ async def edit_group(
     await competition_cruds.update_group(group_id, group, db)
 
 
-@router.delete("/competition/groups/{group_id}")
+@module.router.delete("/competition/groups/{group_id}")
 async def delete_group(
     group_id: UUID,
     db=Depends(get_db),
@@ -173,7 +178,7 @@ async def delete_group(
     await competition_cruds.delete_group_by_id(group_id, db)
 
 
-@router.get(
+@module.router.get(
     "/competition/sports/{sport_id}/quotas",
     response_model=list[competition_schemas.Quota],
 )
@@ -200,7 +205,7 @@ async def get_quotas_for_sport(
     )
 
 
-@router.get(
+@module.router.get(
     "/competition/schools/{school_id}/quotas",
     response_model=list[competition_schemas.Quota],
 )
@@ -222,7 +227,7 @@ async def get_quotas_for_school(
     )
 
 
-@router.post(
+@module.router.post(
     "/competition/schools/{school_id}/sports/{sport_id}/quotas",
     status_code=201,
 )
@@ -268,7 +273,7 @@ async def create_quota(
     await competition_cruds.store_quota(quota, db)
 
 
-@router.patch("/competition/schools/{school_id}/sports/{sport_id}/quotas")
+@module.router.patch("/competition/schools/{school_id}/sports/{sport_id}/quotas")
 async def edit_quota(
     school_id: UUID,
     sport_id: UUID,
@@ -308,7 +313,7 @@ async def edit_quota(
     await competition_cruds.store_quota(stored, db)
 
 
-@router.delete("/competition/schools/{school_id}/sports/{sport_id}/quotas")
+@module.router.delete("/competition/schools/{school_id}/sports/{sport_id}/quotas")
 async def delete_quota(
     school_id: UUID,
     sport_id: UUID,
@@ -339,7 +344,7 @@ async def delete_quota(
     await competition_cruds.delete_quota_by_ids(school_id, sport_id, edition.id, db)
 
 
-@router.get(
+@module.router.get(
     "/competition/schools",
     response_model=list[competition_schemas.SchoolExtension],
 )
@@ -350,7 +355,7 @@ async def get_schools(
     return await competition_cruds.load_all_schools(edition.id, db)
 
 
-@router.post(
+@module.router.post(
     "/competition/schools",
     status_code=201,
     response_model=competition_schemas.SchoolExtension,
@@ -381,7 +386,7 @@ async def create_school(
     return school
 
 
-@router.patch("/competition/schools/{school_id}")
+@module.router.patch("/competition/schools/{school_id}")
 async def edit_school(
     school_id: UUID,
     school: competition_schemas.SchoolExtensionEdit,
@@ -402,7 +407,7 @@ async def edit_school(
     await competition_cruds.update_school(school_id, school, db)
 
 
-@router.delete("/competition/schools/{school_id}")
+@module.router.delete("/competition/schools/{school_id}")
 async def delete_school(
     school_id: UUID,
     db=Depends(get_db),
@@ -460,7 +465,7 @@ async def check_team_consistency(
     return team
 
 
-@router.get(
+@module.router.get(
     "/competition/teams/sports/{sport_id}",
     response_model=list[competition_schemas.Team],
 )
@@ -483,7 +488,7 @@ async def get_teams_for_sport(
     return await competition_cruds.load_all_teams_by_sport_id(sport_id, edition.id, db)
 
 
-@router.get(
+@module.router.get(
     "/competition/teams/schools/{school_id}/sports/{sport_id}",
     response_model=list[competition_schemas.Team],
 )
@@ -513,7 +518,7 @@ async def get_sport_teams_for_school_and_sport(
     )
 
 
-@router.post(
+@module.router.post(
     "/competition/teams/schools/{school_id}/sports/{sport_id}",
     status_code=201,
     response_model=competition_schemas.Team,
@@ -565,7 +570,7 @@ async def create_team(
     await competition_cruds.store_team(team, db)
 
 
-@router.post("/competition/sports/{sport_id}/join}")
+@module.router.post("/competition/sports/{sport_id}/join}")
 async def join_team(
     sport_id: UUID,
     participant_info: competition_schemas.ParticipantInfo,
@@ -644,7 +649,7 @@ async def join_team(
     )
 
 
-@router.patch("/competition/teams/{team_id}")
+@module.router.patch("/competition/teams/{team_id}")
 async def edit_team(
     team_id: UUID,
     team_info: competition_schemas.TeamEdit,
@@ -677,7 +682,7 @@ async def edit_team(
     await competition_cruds.store_team(stored, db)
 
 
-@router.delete("/competition/teams/{team_id}")
+@module.router.delete("/competition/teams/{team_id}")
 async def delete_team(
     team_id: UUID,
     db=Depends(get_db),
@@ -698,7 +703,7 @@ async def delete_team(
     await competition_cruds.delete_team_by_id(stored.id, db)
 
 
-@router.get(
+@module.router.get(
     "/competition/sports/{sport_id}/matches",
     response_model=list[competition_schemas.Match],
 )
@@ -720,7 +725,7 @@ async def get_matches_for_sport_and_edition(
     )
 
 
-@router.get(
+@module.router.get(
     "/competition/schools/{school_id}/matches",
     response_model=list[competition_schemas.Match],
 )
@@ -789,7 +794,7 @@ def check_match_consistency(
             ) from None
 
 
-@router.post(
+@module.router.post(
     "/competition/sports/{sport_id}/matches",
     status_code=201,
     response_model=competition_schemas.Match,
@@ -840,7 +845,7 @@ async def create_match(
     await competition_cruds.store_match(match, db)
 
 
-@router.patch("/competition/matches/{match_id}")
+@module.router.patch("/competition/matches/{match_id}")
 async def edit_match(
     match_id: UUID,
     match_info: competition_schemas.MatchBase,
@@ -873,7 +878,7 @@ async def edit_match(
     await competition_cruds.store_match(match, db)
 
 
-@router.delete("/competition/matches/{match_id}")
+@module.router.delete("/competition/matches/{match_id}")
 async def delete_match(
     match_id: UUID,
     db=Depends(get_db),
