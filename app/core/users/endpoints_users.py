@@ -40,6 +40,7 @@ from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.exceptions import UserWithEmailAlreadyExistError
 from app.types.module import CoreModule
+from app.types.s3_access import S3Access
 from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
     create_and_send_email_migration,
@@ -58,8 +59,10 @@ core_module = CoreModule(
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 hyperion_security_logger = logging.getLogger("hyperion.security")
-
+hyperion_s3_logger = logging.getLogger("hyperion.s3")
 templates = Jinja2Templates(directory="assets/templates")
+
+S3_USER_SUBFOLDER = "users"
 
 
 @router.get(
@@ -418,8 +421,57 @@ async def activate_user(
     hyperion_security_logger.info(
         f"Activate_user: Activated user {confirmed_user.id} (email: {confirmed_user.email}) ({request_id})",
     )
+    # We need to create a file for the user in S3
+    # It will only contain the user email address as it is all we need to identify the person
+    hyperion_s3_logger.info(
+        confirmed_user.email,
+        {"s3_filename": confirmed_user.id, "s3_subfolder": S3_USER_SUBFOLDER},
+    )
 
     return standard_responses.Result()
+
+
+@router.post(
+    "/users/s3-init",
+    status_code=201,
+)
+async def init_s3_for_users(
+    db: AsyncSession = Depends(get_db),
+    _: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    settings: Settings = Depends(get_settings),
+):
+    """
+    This endpoint is used to initialize the S3 bucket for users.
+    It will create a file for each existing user in the S3 bucket.
+    It should be used only once, when the S3 bucket is created.
+    """
+
+    # Get all users
+    users = await cruds_users.get_users(db=db)
+
+    # Get all files in the S3 bucket
+    # We need to use the S3Access class to get the files in the bucket
+    s3_access = S3Access(
+        failure_logger="hyperion.error",
+        folder="users",
+        s3_bucket_name=settings.S3_BUCKET_NAME,
+        s3_access_key_id=settings.S3_ACCESS_KEY_ID,
+        s3_secret_access_key=settings.S3_SECRET_ACCESS_KEY,
+    )
+    stored_files = await s3_access.list_object("")
+    file_names = [obj["Key"].split("/")[-1] for obj in stored_files["Contents"]]
+    count = 0
+    for user in users:
+        if user.id not in file_names:
+            # Create a file for each user
+            s3_access.write_file(
+                message=user.email,
+                filename=user.id,
+            )
+            count += 1
+    hyperion_error_logger.info(
+        f"Created {count} files in S3 bucket for users",
+    )
 
 
 @router.post(

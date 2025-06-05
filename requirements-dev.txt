@@ -15,5 +15,5 @@ types-Authlib==1.5.0.20250516
 types-fpdf2==2.8.3.20250516
 types-redis==4.6.0.20241004
 types-requests==2.32.0.20250515
-boto3-stubs[s3]==1.38.7
+boto3-stubs[essential]==1.38.23
 google-auth-stubs==0.3.0

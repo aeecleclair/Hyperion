@@ -4,14 +4,22 @@ import urllib
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import calypsso
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    Header,
+    HTTPException,
+    Query,
+)
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.core_endpoints import cruds_core
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import schemas_memberships
 from app.core.memberships.utils_memberships import (
@@ -42,7 +50,7 @@ from app.core.myeclpay.utils_myeclpay import (
     verify_signature,
 )
 from app.core.notification.schemas_notification import Message
-from app.core.payment import cruds_payment, schemas_payment
+from app.core.payment import schemas_payment
 from app.core.payment.payment_tool import PaymentTool
 from app.core.users import cruds_users, schemas_users
 from app.core.users.models_users import CoreUser
@@ -80,6 +88,13 @@ templates = Jinja2Templates(directory="assets/templates")
 hyperion_error_logger = logging.getLogger("hyperion.error")
 hyperion_security_logger = logging.getLogger("hyperion.security")
 hyperion_myeclpay_logger = logging.getLogger("hyperion.myeclpay")
+
+MYECLPAY_STRUCTURE_S3_SUBFOLDER = "structures"
+MYECLPAY_STORES_S3_SUBFOLDER = "stores"
+MYECLPAY_USERS_S3_SUBFOLDER = "users"
+MYECLPAY_DEVICES_S3_SUBFOLDER = "devices"
+MYECLPAY_LOGS_S3_SUBFOLDER = "logs"
+RETENTION_DURATION = 10 * 365  # 10 years in days
 
 
 @router.get(
@@ -149,6 +164,14 @@ async def create_structure(
         db=db,
     )
 
+    hyperion_myeclpay_logger.info(
+        structure_db.name,
+        extra={
+            "s3_subfolder": MYECLPAY_STRUCTURE_S3_SUBFOLDER,
+            "s3_filename": str(structure_db.id),
+        },
+    )
+
     return await cruds_myeclpay.get_structure_by_id(structure_db.id, db)
 
 
@@ -181,6 +204,14 @@ async def update_structure(
         structure_id=structure_id,
         structure_update=structure_update,
         db=db,
+    )
+
+    hyperion_myeclpay_logger.info(
+        structure.name,
+        extra={
+            "s3_subfolder": MYECLPAY_STRUCTURE_S3_SUBFOLDER,
+            "s3_filename": str(structure.id),
+        },
     )
 
 
@@ -449,6 +480,14 @@ async def create_store(
         db=db,
     )
 
+    hyperion_myeclpay_logger.info(
+        f"store.name: {store_db.name}, structure_id: {store_db.structure_id}",
+        extra={
+            "s3_subfolder": MYECLPAY_STORES_S3_SUBFOLDER,
+            "s3_filename": str(store_db.id),
+        },
+    )
+
     return schemas_myeclpay.Store(
         id=store_db.id,
         name=store_db.name,
@@ -695,6 +734,14 @@ async def update_store(
         store_id=store_id,
         store_update=store_update,
         db=db,
+    )
+
+    hyperion_myeclpay_logger.info(
+        f"store.name: {store.name}, structure_id: {store.structure_id}",
+        extra={
+            "s3_subfolder": MYECLPAY_STORES_S3_SUBFOLDER,
+            "s3_filename": str(store.id),
+        },
     )
 
 
@@ -1062,6 +1109,14 @@ async def register_user(
         db=db,
     )
 
+    hyperion_myeclpay_logger.info(
+        wallet_id,
+        extra={
+            "s3_subfolder": MYECLPAY_USERS_S3_SUBFOLDER,
+            "s3_filename": str(user.id),
+        },
+    )
+
 
 @router.get(
     "/myeclpay/tos",
@@ -1351,6 +1406,13 @@ async def create_user_devices(
         hyperion_error_logger.warning(
             f"MyECLPay: activate your device using the token: {activation_token}",
         )
+    hyperion_myeclpay_logger.info(
+        wallet_device_creation.ed25519_public_key,
+        extra={
+            "s3_subfolder": MYECLPAY_DEVICES_S3_SUBFOLDER,
+            "s3_filename": f"{user.id}-{str(uuid4())[:8]}",
+        },
+    )
 
     return wallet_device_db
 
@@ -1925,7 +1987,7 @@ async def store_scan_qrcode(
     # After scanning a QR Code, we want to add it to the list of already scanned QR Code
     # even if it fail to be banked
     await cruds_myeclpay.create_used_qrcode(
-        qr_code_id=scan_info.id,
+        qr_code=scan_info,
         db=db,
     )
 
@@ -2080,7 +2142,7 @@ async def store_scan_qrcode(
         )
         transaction_id = uuid.uuid4()
         creation_date = datetime.now(UTC)
-        transaction = schemas_myeclpay.Transaction(
+        transaction = schemas_myeclpay.TransactionBase(
             id=transaction_id,
             debited_wallet_id=debited_wallet_device.wallet_id,
             credited_wallet_id=store.wallet_id,
@@ -2089,6 +2151,7 @@ async def store_scan_qrcode(
             total=scan_info.tot,
             creation=creation_date,
             status=TransactionStatus.CONFIRMED,
+            qr_code_id=scan_info.id,
         )
         # We create a transaction
         await cruds_myeclpay.create_transaction(
@@ -2098,8 +2161,13 @@ async def store_scan_qrcode(
             db=db,
         )
 
-        hyperion_myeclpay_logger.info(format_transaction_log(transaction))
-
+        hyperion_myeclpay_logger.info(
+            format_transaction_log(transaction),
+            extra={
+                "subfolder": MYECLPAY_LOGS_S3_SUBFOLDER,
+                "retention": RETENTION_DURATION,
+            },
+        )
         message = Message(
             title=f"💳 Paiement - {store.name}",
             content=f"Une transaction de {scan_info.tot / 100} € a été effectuée",
@@ -2109,7 +2177,6 @@ async def store_scan_qrcode(
             user_id=debited_wallet.user.id,
             message=message,
         )
-
         return transaction
 
 
@@ -2270,7 +2337,13 @@ async def refund_transaction(
         db=db,
     )
 
-    hyperion_myeclpay_logger.info(format_refund_log(refund))
+    hyperion_myeclpay_logger.info(
+        format_refund_log(refund),
+        extra={
+            "subfolder": MYECLPAY_LOGS_S3_SUBFOLDER,
+            "retention": RETENTION_DURATION,
+        },
+    )
 
     if wallet_previously_debited.user is not None:
         message = Message(
@@ -2414,7 +2487,13 @@ async def cancel_transaction(
         db=db,
     )
 
-    hyperion_myeclpay_logger.info(format_cancel_log(transaction_id))
+    hyperion_myeclpay_logger.info(
+        format_cancel_log(transaction_id),
+        extra={
+            "subfolder": MYECLPAY_LOGS_S3_SUBFOLDER,
+            "retention": RETENTION_DURATION,
+        },
+    )
 
     if debited_wallet.user is not None:
         message = Message(
@@ -2431,23 +2510,23 @@ async def cancel_transaction(
 @router.get(
     "/myeclpay/integrity-check",
     status_code=200,
-    response_model=tuple[
-        list[schemas_myeclpay.Wallet],
-        list[schemas_myeclpay.Transaction],
-        list[schemas_payment.CheckoutComplete],
-        list[schemas_myeclpay.Transfer],
-        list[schemas_myeclpay.Refund],
-    ],
+    response_model=schemas_myeclpay.IntegrityCheckData,
 )
 async def get_data_for_integrity_check(
-    request: Request,
+    headers: schemas_myeclpay.IntegrityCheckHeaders = Header(),
+    query_params: schemas_myeclpay.IntegrityCheckQuery = Query(),
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
     """
-    Check the integrity of the MyECL Pay database.
+    Send all the MyECL Pay data for integrity check.
+    Data includes:
+    - Wallets deducted of the last 30 seconds transactions
+    - Transactions with at least 30 seconds delay
+    - Transfers
+    - Refunds
 
-    **The header must contain the MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN defined in the settings in the `X-Data-Verifier-Token` header**
+    **The header must contain the MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN defined in the settings in the `x-data-verifier-token` field**
     """
     if settings.MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN is None:
         raise HTTPException(
@@ -2455,33 +2534,69 @@ async def get_data_for_integrity_check(
             detail="MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN is not set in the settings",
         )
 
-    if (
-        request.headers.get("X-Data-Verifier-Token")
-        != settings.MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN
-    ):
+    if headers.x_data_verifier_token != settings.MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN:
         hyperion_security_logger.warning(
-            f"A request to /myeclpay/integrity-check has been made with an invalid token, request_content: {request}",
+            f"A request to /myeclpay/integrity-check has been made with an invalid token, request_content: {headers}",
         )
         raise HTTPException(
             status_code=403,
             detail="Access denied",
         )
 
+    now = await cruds_core.start_isolation_mode(db)
+    # We use a 30 seconds delay to avoid unstable transactions
+    # as they can be canceled during the 30 seconds after their creation
+    security_now = now - timedelta(seconds=30)
+
     wallets = await cruds_myeclpay.get_wallets(
         db=db,
     )
+    to_substract_transactions = await cruds_myeclpay.get_transactions(
+        db=db,
+        start_date=security_now,
+        exclude_canceled=True,
+    )
+    # We substract the transactions that are not older than 30 seconds
+    for transaction in to_substract_transactions:
+        debited_wallet = next(
+            (w for w in wallets if w.id == transaction.debited_wallet_id),
+            None,
+        )
+        credited_wallet = next(
+            (w for w in wallets if w.id == transaction.credited_wallet_id),
+            None,
+        )
+        if debited_wallet is not None:
+            debited_wallet.balance += transaction.total
+        if credited_wallet is not None:
+            credited_wallet.balance -= transaction.total
+
+    if query_params.isInitialisation:
+        return schemas_myeclpay.IntegrityCheckData(
+            date=security_now,
+            wallets=wallets,
+            transactions=[],
+            transfers=[],
+            refunds=[],
+        )
     transactions = await cruds_myeclpay.get_transactions(
         db=db,
-    )
-    checkouts = await cruds_payment.get_checkouts(
-        module="MyECLPay",
-        db=db,
+        start_date=query_params.lastChecked,
+        end_date=security_now,
     )
     transfers = await cruds_myeclpay.get_transfers(
         db=db,
+        last_checked=query_params.lastChecked,
     )
     refunds = await cruds_myeclpay.get_refunds(
         db=db,
+        last_checked=query_params.lastChecked,
     )
 
-    return wallets, transactions, checkouts, transfers, refunds
+    return schemas_myeclpay.IntegrityCheckData(
+        date=security_now,
+        wallets=wallets,
+        transactions=transactions,
+        transfers=transfers,
+        refunds=refunds,
+    )

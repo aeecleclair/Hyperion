@@ -27,7 +27,7 @@ class MatrixHandler(StreamHandler):
         level: str = "INFO",
         enabled: bool = True,
     ) -> None:
-        StreamHandler.__init__(self)
+        super().__init__()
         self.setLevel(level)
 
         self.room_id = room_id

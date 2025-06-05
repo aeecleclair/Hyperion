@@ -154,10 +154,13 @@ class ScanInfo(QRCodeContentData):
     bypass_membership: bool = False
 
 
-class Wallet(BaseModel):
+class WalletBase(BaseModel):
     id: UUID
     type: WalletType
     balance: int
+
+
+class Wallet(WalletBase):
     store: Store | None
     user: schemas_users.CoreUser | None
 
@@ -197,6 +200,8 @@ class TransactionBase(BaseModel):
     creation: datetime
     status: TransactionStatus
 
+    qr_code_id: UUID | None = None
+
 
 class Transaction(TransactionBase):
     refund: "RefundBase | None" = None
@@ -230,3 +235,22 @@ class Refund(RefundBase):
     transaction: TransactionBase
     credited_wallet: WalletInfo
     debited_wallet: WalletInfo
+
+
+class IntegrityCheckHeaders(BaseModel):
+    x_data_verifier_token: str
+
+
+class IntegrityCheckQuery(BaseModel):
+    lastChecked: datetime | None = None
+    isInitialisation: bool = False
+
+
+class IntegrityCheckData(BaseModel):
+    """Schema for Hyperion data"""
+
+    date: datetime
+    wallets: list[WalletBase]
+    transactions: list[TransactionBase]
+    transfers: list[Transfer]
+    refunds: list[RefundBase]

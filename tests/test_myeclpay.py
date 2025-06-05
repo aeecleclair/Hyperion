@@ -272,6 +272,7 @@ async def init_objects() -> None:
         creation=datetime(2025, 5, 20, 12, 0, 0, tzinfo=UTC),
         status=TransactionStatus.CONFIRMED,
         store_note="transaction_from_ecl_user_to_store",
+        qr_code_id=None,
     )
     await add_object_to_db(transaction_from_ecl_user_to_store)
 
@@ -287,6 +288,7 @@ async def init_objects() -> None:
         creation=datetime(2025, 5, 19, 12, 0, 0, tzinfo=UTC),
         status=TransactionStatus.CONFIRMED,
         store_note="transaction_from_ecl_user_to_ecl_user2",
+        qr_code_id=None,
     )
     await add_object_to_db(transaction_from_ecl_user_to_ecl_user2)
 
@@ -302,6 +304,7 @@ async def init_objects() -> None:
         creation=datetime(2025, 5, 18, 12, 0, 0, tzinfo=UTC),
         status=TransactionStatus.CONFIRMED,
         store_note="transaction_from_store_to_ecl_user",
+        qr_code_id=None,
     )
     await add_object_to_db(transaction_from_store_to_ecl_user)
 
@@ -317,6 +320,7 @@ async def init_objects() -> None:
         creation=datetime(2025, 5, 17, 12, 0, 0, tzinfo=UTC),
         status=TransactionStatus.CONFIRMED,
         store_note="transaction_from_ecl_user2_to_ecl_user",
+        qr_code_id=None,
     )
     await add_object_to_db(transaction_from_ecl_user2_to_ecl_user)
 
@@ -338,6 +342,11 @@ async def init_objects() -> None:
     global used_qr_code
     used_qr_code = models_myeclpay.UsedQRCode(
         qr_code_id=uuid4(),
+        qr_code_iat=datetime.now(UTC) - timedelta(days=1),
+        qr_code_key=ecl_user2_wallet_device.id,
+        qr_code_store=True,
+        qr_code_tot=1000,
+        signature="azertyuiop",
     )
     await add_object_to_db(used_qr_code)
 
@@ -2419,6 +2428,7 @@ async def test_transaction_refund_unconfirmed_transaction(client: TestClient):
         seller_user_id=store_seller_can_bank_user.id,
         debited_wallet_device_id=ecl_user_wallet_device.id,
         store_note="",
+        qr_code_id=None,
     )
     await add_object_to_db(transaction_canceled)
 
@@ -2468,6 +2478,7 @@ async def test_transaction_refund_complete(client: TestClient):
         seller_user_id=store_seller_can_bank_user.id,
         debited_wallet_device_id=ecl_user_wallet_device.id,
         store_note="",
+        qr_code_id=None,
     )
     await add_object_to_db(transaction)
     response = client.post(
@@ -2587,6 +2598,7 @@ async def test_transaction_refund_partial(client: TestClient):
         seller_user_id=store_seller_can_bank_user.id,
         debited_wallet_device_id=ecl_user_wallet_device.id,
         store_note="",
+        qr_code_id=None,
     )
     await add_object_to_db(transaction)
     response = client.post(

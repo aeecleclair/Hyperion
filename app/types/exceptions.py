@@ -162,3 +162,10 @@ class InvalidS3FileNameError(Exception):
         super().__init__(
             f"Invalid S3 file name: {filename} - it should not contain '/'",
         )
+
+
+class InvalidS3FolderError(Exception):
+    def __init__(self, subfolder: str):
+        super().__init__(
+            f"Invalid S3 subfolder: {subfolder} - it should not contain '/'",
+        )
