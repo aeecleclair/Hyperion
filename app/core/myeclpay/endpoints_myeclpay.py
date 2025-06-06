@@ -4,7 +4,7 @@ import urllib
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import calypsso
 from fastapi import (
@@ -1409,8 +1409,8 @@ async def create_user_devices(
     hyperion_myeclpay_logger.info(
         wallet_device_creation.ed25519_public_key,
         extra={
-            "s3_subfolder": MYECLPAY_DEVICES_S3_SUBFOLDER,
-            "s3_filename": f"{user.id}-{str(uuid4())[:8]}",
+            "s3_subfolder": f"{MYECLPAY_DEVICES_S3_SUBFOLDER}/{user.id}",
+            "s3_filename": str(wallet_device_db.id),
         },
     )
 
@@ -2164,8 +2164,8 @@ async def store_scan_qrcode(
         hyperion_myeclpay_logger.info(
             format_transaction_log(transaction),
             extra={
-                "subfolder": MYECLPAY_LOGS_S3_SUBFOLDER,
-                "retention": RETENTION_DURATION,
+                "s3_subfolder": MYECLPAY_LOGS_S3_SUBFOLDER,
+                "s3_retention": RETENTION_DURATION,
             },
         )
         message = Message(
@@ -2340,8 +2340,8 @@ async def refund_transaction(
     hyperion_myeclpay_logger.info(
         format_refund_log(refund),
         extra={
-            "subfolder": MYECLPAY_LOGS_S3_SUBFOLDER,
-            "retention": RETENTION_DURATION,
+            "s3_subfolder": MYECLPAY_LOGS_S3_SUBFOLDER,
+            "s3_retention": RETENTION_DURATION,
         },
     )
 
@@ -2490,8 +2490,8 @@ async def cancel_transaction(
     hyperion_myeclpay_logger.info(
         format_cancel_log(transaction_id),
         extra={
-            "subfolder": MYECLPAY_LOGS_S3_SUBFOLDER,
-            "retention": RETENTION_DURATION,
+            "s3_subfolder": MYECLPAY_LOGS_S3_SUBFOLDER,
+            "s3_retention": RETENTION_DURATION,
         },
     )
 

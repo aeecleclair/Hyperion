@@ -40,7 +40,7 @@ class S3Access:
             or s3_bucket_name is None
         ):
             self.failure_logger.critical(
-                "S3_ACCESS_KEY_ID or S3_SECRET_ACCESS_KEY or S3_MYECLPAY_LOGS_BUCKET_NAME is not set. Working with fallback logger only.",
+                "S3_ACCESS_KEY_ID or S3_SECRET_ACCESS_KEY or S3_BUCKET_NAME is not set. Working with fallback logger only.",
             )
             self.s3 = None
             return
@@ -69,7 +69,7 @@ class S3Access:
         self,
         message: str,
         filename: str,
-        subfolder: str = "",
+        subfolder: str | None = None,
         retention: int = 0,
     ):
         """Write in an S3 bucket with object locking if needed.
@@ -90,14 +90,13 @@ class S3Access:
         # If there is a "/" in the filename the s3 while consider it as a folder
         if not re.match(AUTHORIZED_FILE_STRING, filename):
             raise InvalidS3FileNameError(filename)
-        if subfolder != "" and not re.match(AUTHORIZED_FOLDER_STRING, subfolder):
+        if subfolder is not None and not re.match(AUTHORIZED_FOLDER_STRING, subfolder):
             raise InvalidS3FolderError(subfolder)
 
-        filename = (
-            f"{self.folder}/{subfolder}/{filename}"
-            if self.folder != ""
-            else f"{subfolder}/{filename}"
-        )
+        if subfolder is not None:
+            filename = subfolder + "/" + filename
+        if self.folder != "":
+            filename = self.folder + "/" + filename
 
         file_object = BytesIO(message.encode("utf-8"))
 
@@ -127,7 +126,7 @@ class S3Access:
     def get_file_with_name(
         self,
         filename: str,
-        subfolder: str = "",
+        subfolder: str | None = None,
     ) -> str:
         """Get a file from S3 with a given name and subfolder.
         The filename must not contain a "/" because S3 will consider it as a folder.
@@ -145,14 +144,13 @@ class S3Access:
         # If there is a "/" in the filename the s3 while consider it as a folder
         if not re.match(AUTHORIZED_FILE_STRING, filename):
             raise InvalidS3FileNameError(filename)
-        if subfolder != "" and not re.match(AUTHORIZED_FOLDER_STRING, subfolder):
+        if subfolder is not None and not re.match(AUTHORIZED_FOLDER_STRING, subfolder):
             raise InvalidS3FolderError(subfolder)
 
-        filename = (
-            f"{self.folder}/{subfolder}/{filename}"
-            if self.folder != ""
-            else f"{subfolder}/{filename}"
-        )
+        if subfolder is not None:
+            filename = subfolder + "/" + filename
+        if self.folder != "":
+            filename = self.folder + "/" + filename
 
         file_object = BytesIO()
         if self.s3 is None:

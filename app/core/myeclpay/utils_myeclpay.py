@@ -113,7 +113,7 @@ async def validate_transfer_callback(
     hyperion_myeclpay_logger.info(
         format_transfer_log(transfer),
         extra={
-            "subfolder": MYECLPAY_LOGS_S3_SUBFOLDER,
-            "retention": RETENTION_DURATION,
+            "s3_subfolder": MYECLPAY_LOGS_S3_SUBFOLDER,
+            "s3_retention": RETENTION_DURATION,
         },
     )
