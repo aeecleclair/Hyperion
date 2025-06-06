@@ -40,7 +40,7 @@ class S3Access:
             or s3_bucket_name is None
         ):
             self.failure_logger.critical(
-                "S3_ACCESS_KEY_ID or S3_SECRET_ACCESS_KEY or S3_MYECLPAY_LOGS_BUCKET_NAME is not set. Working with fallback logger only.",
+                "S3_ACCESS_KEY_ID or S3_SECRET_ACCESS_KEY or S3_BUCKET_NAME is not set. Working with fallback logger only.",
             )
             self.s3 = None
             return
