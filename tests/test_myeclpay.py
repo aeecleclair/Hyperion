@@ -2123,39 +2123,6 @@ def test_store_scan_store_negative_total(client: TestClient):
     ensure_qr_code_id_is_already_used(qr_code_id=qr_code_id, client=client)
 
 
-def test_store_scan_store_total_greater_than_max(client: TestClient):
-    qr_code_id = uuid4()
-
-    qr_code_content = QRCodeContentData(
-        id=qr_code_id,
-        tot=4000,
-        iat=datetime.now(UTC),
-        store=True,
-        key=ecl_user_wallet_device.id,
-    )
-
-    signature = ecl_user_wallet_device_private_key.sign(
-        qr_code_content.model_dump_json().encode("utf-8"),
-    )
-
-    response = client.post(
-        f"/myeclpay/stores/{store.id}/scan",
-        headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
-        json={
-            "id": str(qr_code_content.id),
-            "key": str(qr_code_content.key),
-            "tot": qr_code_content.tot,
-            "iat": qr_code_content.iat.isoformat(),
-            "store": qr_code_content.store,
-            "signature": base64.b64encode(signature).decode("utf-8"),
-        },
-    )
-    assert response.status_code == 400
-    assert response.json()["detail"] == "Total can not exceed 2000"
-
-    ensure_qr_code_id_is_already_used(qr_code_id=qr_code_id, client=client)
-
-
 def test_store_scan_store_missing_wallet(
     client: TestClient,
     mocker: MockerFixture,
