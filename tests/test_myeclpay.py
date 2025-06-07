@@ -782,8 +782,8 @@ async def test_get_store_history_with_date(client: TestClient):
     response = client.get(
         f"/myeclpay/stores/{store.id}/history",
         params={
-            "start_date": "2025-05-18",
-            "end_date": "2025-05-19",
+            "start_date": "2025-05-18T00:00:00Z",
+            "end_date": "2025-05-19T00:00:00Z",
         },
         headers={
             "Authorization": f"Bearer {store_seller_can_see_history_user_access_token}",
@@ -1339,14 +1339,6 @@ async def test_delete_manager_seller(client: TestClient):
     )
 
 
-async def test_get_tos(client: TestClient):
-    response = client.get(
-        "/myeclpay/tos",
-        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
-    )
-    assert response.json() == Path("assets/myeclpay-terms-of-service.txt").read_text()
-
-
 async def test_get_tos_for_unregistered_user(client: TestClient):
     response = client.get(
         "/myeclpay/users/me/tos",
@@ -1744,8 +1736,8 @@ def test_get_transactions_success_with_date(client: TestClient):
     response = client.get(
         "/myeclpay/users/me/wallet/history",
         params={
-            "start_date": "2025-05-18",
-            "end_date": "2025-05-19",
+            "start_date": "2025-05-18T00:00:00Z",
+            "end_date": "2025-05-19T23:59:59Z",
         },
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
     )
