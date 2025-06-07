@@ -2,7 +2,7 @@ import base64
 import logging
 import urllib
 import uuid
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID
 
@@ -43,7 +43,6 @@ from app.core.myeclpay.types_myeclpay import (
 )
 from app.core.myeclpay.utils_myeclpay import (
     LATEST_TOS,
-    MAX_TRANSACTION_TOTAL,
     QRCODE_EXPIRATION,
     is_user_latest_tos_signed,
     validate_transfer_callback,
@@ -1149,7 +1148,6 @@ async def get_user_tos(
         accepted_tos_version=existing_user_payment.accepted_tos_version,
         latest_tos_version=LATEST_TOS,
         tos_content=Path("assets/myeclpay-terms-of-service.txt").read_text(),
-        max_transaction_total=MAX_TRANSACTION_TOTAL,
         max_wallet_balance=settings.MYECLPAY_MAXIMUM_WALLET_BALANCE,
     )
 
@@ -2037,12 +2035,6 @@ async def store_scan_qrcode(
             raise HTTPException(
                 status_code=400,
                 detail="Total must be greater than 0",
-            )
-
-        if scan_info.tot > MAX_TRANSACTION_TOTAL:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Total can not exceed {MAX_TRANSACTION_TOTAL}",
             )
 
         if scan_info.iat < datetime.now(UTC) - timedelta(

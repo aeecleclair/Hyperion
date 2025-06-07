@@ -3,6 +3,7 @@ from uuid import UUID
 
 from pydantic import (
     BaseModel,
+    Field,
 )
 
 from app.core.memberships import schemas_memberships
@@ -94,7 +95,11 @@ class TOSSignatureResponse(BaseModel):
     accepted_tos_version: int
     latest_tos_version: int
     tos_content: str
-    max_transaction_total: int
+    # TODO: remove this field in the future
+    max_transaction_total: int = Field(
+        default=0,
+        deprecated="The limit is not applied anymore",
+    )
     max_wallet_balance: int
 
 
