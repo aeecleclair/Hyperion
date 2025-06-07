@@ -583,8 +583,8 @@ async def get_store_history(
     transfers = await cruds_myeclpay.get_transfers_by_wallet_id(
         wallet_id=store.wallet_id,
         db=db,
-        start_datetime=start_datetime,
-        end_datetime=end_datetime,
+        start_datetime=start_date,
+        end_datetime=end_date,
     )
     if len(transfers) > 0:
         hyperion_error_logger.error(
@@ -595,8 +595,8 @@ async def get_store_history(
     refunds = await cruds_myeclpay.get_refunds_by_wallet_id(
         wallet_id=store.wallet_id,
         db=db,
-        start_datetime=start_datetime,
-        end_datetime=end_datetime,
+        start_datetime=start_date,
+        end_datetime=end_date,
     )
     for refund in refunds:
         if refund.debited_wallet_id == store.wallet_id:
@@ -1107,18 +1107,6 @@ async def register_user(
 
 
 @router.get(
-    "/myeclpay/tos",
-    response_model=str,
-    status_code=200,
-)
-async def get_tos(user: CoreUser = Depends(is_user())):
-    """
-    Get MyECLPay latest TOS as a string
-    """
-    return Path("assets/myeclpay-terms-of-service.txt").read_text()
-
-
-@router.get(
     "/myeclpay/users/me/tos",
     status_code=200,
     response_model=schemas_myeclpay.TOSSignatureResponse,
@@ -1619,8 +1607,8 @@ async def get_user_wallet_history(
     transfers = await cruds_myeclpay.get_transfers_by_wallet_id(
         wallet_id=user_payment.wallet_id,
         db=db,
-        start_datetime=start_datetime,
-        end_datetime=end_datetime,
+        start_datetime=start_date,
+        end_datetime=end_date,
     )
 
     for transfer in transfers:
@@ -1646,8 +1634,8 @@ async def get_user_wallet_history(
     refunds = await cruds_myeclpay.get_refunds_by_wallet_id(
         wallet_id=user_payment.wallet_id,
         db=db,
-        start_datetime=start_datetime,
-        end_datetime=end_datetime,
+        start_datetime=start_date,
+        end_datetime=end_date,
     )
     for refund in refunds:
         if refund.debited_wallet_id == user_payment.wallet_id:
