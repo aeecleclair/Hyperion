@@ -305,7 +305,7 @@ async def init_transfer_structure_manager(
         db=db,
     )
 
-    confirmation_url = f"{settings.CLIENT_URL}myeclpay/structures/confirm-transfer?token={confirmation_token}"
+    confirmation_url = f"{settings.CLIENT_URL}myeclpay/structures/confirm-manager-transfer?token={confirmation_token}"
 
     if settings.SMTP_ACTIVE:
         mail = mail_templates.get_mail_myeclpay_structure_transfer(
