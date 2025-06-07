@@ -2084,7 +2084,7 @@ async def store_scan_qrcode(
                 detail="Debited user has not signed the latest TOS",
             )
 
-        if debited_wallet.balance < scan_info.tot:
+        if debited_wallet.balance <= scan_info.tot:
             raise HTTPException(
                 status_code=400,
                 detail="Insufficient balance in the debited wallet",
