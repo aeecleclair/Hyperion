@@ -504,8 +504,8 @@ async def create_store(
 )
 async def get_store_history(
     store_id: UUID,
-    start_date: date | None = None,
-    end_date: date | None = None,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
 ):
@@ -537,22 +537,11 @@ async def get_store_history(
 
     history = []
 
-    start_datetime = (
-        datetime.combine(start_date, datetime.min.time(), tzinfo=UTC)
-        if start_date
-        else None
-    )
-    end_datetime = (
-        datetime.combine(end_date, datetime.max.time(), tzinfo=UTC)
-        if end_date
-        else None
-    )
-
     transactions = await cruds_myeclpay.get_transactions_by_wallet_id(
         wallet_id=store.wallet_id,
         db=db,
-        start_datetime=start_datetime,
-        end_datetime=end_datetime,
+        start_datetime=start_date,
+        end_datetime=end_date,
     )
     for transaction in transactions:
         history_refund: schemas_myeclpay.HistoryRefund | None = None
@@ -1563,8 +1552,8 @@ async def revoke_user_devices(
 async def get_user_wallet_history(
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
-    start_date: date | None = None,
-    end_date: date | None = None,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
 ):
     """
     Get all transactions for the current user's wallet.
@@ -1582,25 +1571,14 @@ async def get_user_wallet_history(
             detail="User is not registered for MyECL Pay",
         )
 
-    start_datetime = (
-        datetime.combine(start_date, datetime.min.time(), tzinfo=UTC)
-        if start_date
-        else None
-    )
-    end_datetime = (
-        datetime.combine(end_date, datetime.max.time(), tzinfo=UTC)
-        if end_date
-        else None
-    )
-
     history: list[schemas_myeclpay.History] = []
 
     # First we get all received and send transactions
     transactions = await cruds_myeclpay.get_transactions_by_wallet_id(
         wallet_id=user_payment.wallet_id,
         db=db,
-        start_datetime=start_datetime,
-        end_datetime=end_datetime,
+        start_datetime=start_date,
+        end_datetime=end_date,
     )
 
     for transaction in transactions:
