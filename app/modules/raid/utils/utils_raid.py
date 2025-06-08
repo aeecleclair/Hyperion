@@ -27,6 +27,7 @@ from app.modules.raid.utils.pdf.conversion_utils import (
     nullable_number_to_string,
 )
 from app.utils.tools import (
+    concat_pdf,
     delete_file_from_data,
     generate_pdf_from_template,
     get_core_data,
@@ -284,6 +285,8 @@ async def generate_security_file_pdf(
         context=context,
     )
 
+    return participant.id
+
 
 async def generate_recap_file_pdf(
     team: models_raid.Team,
@@ -336,40 +339,34 @@ async def prepare_complete_team_file(
 
     output_pdf: fitz.Document = fitz.open()
 
-    pdf_file_path = get_file_path_from_data(
-        "raid/recap",
-        recap_file_id,
+    concat_pdf(
+        source_directory="raid/recap",
+        source_filename=recap_file_id,
+        output_pdf=output_pdf,
     )
 
-    recap_pdf: fitz.Document
-    with fitz.open(pdf_file_path) as recap_pdf:
-        output_pdf.insert_pdf(recap_pdf)
-
-    await generate_security_file_pdf(
+    security_file_id = await generate_security_file_pdf(
         participant=team.captain,
         information=information,
         team_number=team.number,
     )
-    security_file_path = get_file_path_from_data(
-        directory="raid/security_file",
-        filename=team.captain.id,
+    concat_pdf(
+        source_directory="raid/security_file",
+        source_filename=security_file_id,
+        output_pdf=output_pdf,
     )
-    security_pdf: fitz.Document
-    with fitz.open(security_file_path) as security_pdf:
-        output_pdf.insert_pdf(security_pdf)
 
     if team.second:
-        await generate_security_file_pdf(
+        security_file_id = await generate_security_file_pdf(
             participant=team.second,
             information=information,
             team_number=team.number,
         )
-        security_file_path = get_file_path_from_data(
-            directory="raid/security_file",
-            filename=team.second.id,
+        concat_pdf(
+            source_directory="raid/security_file",
+            source_filename=security_file_id,
+            output_pdf=output_pdf,
         )
-        with fitz.open(security_file_path) as security_pdf:
-            output_pdf.insert_pdf(security_pdf)
 
     for participant in [team.captain, team.second] if team.second else [team.captain]:
         for document in [
@@ -471,7 +468,7 @@ async def save_security_file(
     settings: Settings,
 ) -> None:
     try:
-        await generate_security_file_pdf(
+        security_file_id = await generate_security_file_pdf(
             participant,
             information,
             team_number,
@@ -479,7 +476,7 @@ async def save_security_file(
 
         file_path = get_file_path_from_data(
             directory="raid/security_file",
-            filename=participant.id,
+            filename=security_file_id,
         )
 
         file_name = f"{str(team_number) + '_' if team_number else ''}{participant.firstname}_{participant.name}_fiche_sécurité.pdf"
