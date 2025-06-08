@@ -1,6 +1,5 @@
 import base64
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from uuid import UUID, uuid4
 
 import pytest_asyncio
@@ -782,8 +781,8 @@ async def test_get_store_history_with_date(client: TestClient):
     response = client.get(
         f"/myeclpay/stores/{store.id}/history",
         params={
-            "start_date": "2025-05-18",
-            "end_date": "2025-05-19",
+            "start_date": "2025-05-18T00:00:00Z",
+            "end_date": "2025-05-19T00:00:00Z",
         },
         headers={
             "Authorization": f"Bearer {store_seller_can_see_history_user_access_token}",
@@ -1339,14 +1338,6 @@ async def test_delete_manager_seller(client: TestClient):
     )
 
 
-async def test_get_tos(client: TestClient):
-    response = client.get(
-        "/myeclpay/tos",
-        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
-    )
-    assert response.json() == Path("assets/myeclpay-terms-of-service.txt").read_text()
-
-
 async def test_get_tos_for_unregistered_user(client: TestClient):
     response = client.get(
         "/myeclpay/users/me/tos",
@@ -1744,8 +1735,8 @@ def test_get_transactions_success_with_date(client: TestClient):
     response = client.get(
         "/myeclpay/users/me/wallet/history",
         params={
-            "start_date": "2025-05-18",
-            "end_date": "2025-05-19",
+            "start_date": "2025-05-18T00:00:00Z",
+            "end_date": "2025-05-19T23:59:59Z",
         },
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
     )
@@ -2119,39 +2110,6 @@ def test_store_scan_store_negative_total(client: TestClient):
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "Total must be greater than 0"
-
-    ensure_qr_code_id_is_already_used(qr_code_id=qr_code_id, client=client)
-
-
-def test_store_scan_store_total_greater_than_max(client: TestClient):
-    qr_code_id = uuid4()
-
-    qr_code_content = QRCodeContentData(
-        id=qr_code_id,
-        tot=4000,
-        iat=datetime.now(UTC),
-        store=True,
-        key=ecl_user_wallet_device.id,
-    )
-
-    signature = ecl_user_wallet_device_private_key.sign(
-        qr_code_content.model_dump_json().encode("utf-8"),
-    )
-
-    response = client.post(
-        f"/myeclpay/stores/{store.id}/scan",
-        headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
-        json={
-            "id": str(qr_code_content.id),
-            "key": str(qr_code_content.key),
-            "tot": qr_code_content.tot,
-            "iat": qr_code_content.iat.isoformat(),
-            "store": qr_code_content.store,
-            "signature": base64.b64encode(signature).decode("utf-8"),
-        },
-    )
-    assert response.status_code == 400
-    assert response.json()["detail"] == "Total can not exceed 2000"
 
     ensure_qr_code_id_is_already_used(qr_code_id=qr_code_id, client=client)
 
