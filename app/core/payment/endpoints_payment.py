@@ -41,7 +41,7 @@ async def webhook(
         # We validate the body of the request ourself
         # to prevent FastAPI from returning a 422 error to HelloAsso
         # without logging the error
-        type_adapter: TypeAdapter[NotificationResultContent] = TypeAdapter(
+        type_adapter: TypeAdapter = TypeAdapter(
             NotificationResultContent,
         )
         validated_content = type_adapter.validate_python(
