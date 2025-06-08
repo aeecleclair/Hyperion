@@ -18,7 +18,7 @@ Jinja2==3.1.6                       # template engine for html files
 pandas==2.2.2
 phonenumbers==8.13.43               # Used for phone number validation
 pydantic-settings==2.3.4
-pydantic==2.7.4
+pydantic==2.11.5
 pyjwt[crypto]==2.8.0                # generate and verify the JWT tokens, imported as `jwt`
 PyMuPDF==1.24.9                     # PDF processing
 pypdf==4.3.1
