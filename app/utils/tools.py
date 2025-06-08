@@ -21,7 +21,6 @@ from jellyfish import jaro_winkler_similarity
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
-from weasyprint import CSS, HTML
 
 from app.core.core_endpoints import cruds_core, models_core
 from app.core.groups import cruds_groups
@@ -37,6 +36,7 @@ from app.types.exceptions import (
     FileNameIsNotAnUUIDError,
 )
 from app.utils.mail.mailworker import send_email
+from weasyprint import CSS, HTML
 
 if TYPE_CHECKING:
     from app.core.utils.config import Settings
@@ -380,6 +380,23 @@ async def generate_pdf_from_template(
         filename=filename,
         extension="pdf",
     )
+
+
+def concat_pdf(
+    source_directory: str,
+    source_filename: str | UUID,
+    output_pdf: fitz.Document,
+) -> None:
+    """
+    Add the content of the PDF file located in data to
+    the `output_pdf` document.
+    """
+    source_file_path = get_file_path_from_data(
+        directory=source_directory,
+        filename=source_filename,
+    )
+    with fitz.open(source_file_path) as source:
+        output_pdf.insert_pdf(source)
 
 
 async def save_pdf_first_page_as_image(
