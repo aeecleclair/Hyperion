@@ -231,7 +231,6 @@ async def create_current_raffle_logo(
         upload_file=image,
         directory="raffle-pictures",
         filename=str(raffle_id),
-        request_id=request_id,
         max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,
@@ -755,7 +754,6 @@ async def create_prize_picture(
         upload_file=image,
         directory="raffle-prize_pictures",
         filename=str(prize_id),
-        request_id=request_id,
         max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,
