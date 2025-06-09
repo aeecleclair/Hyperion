@@ -43,6 +43,6 @@ def send_email(
         try:
             server.send_message(msg, settings.SMTP_EMAIL, recipient)
         except smtplib.SMTPRecipientsRefused:
-            hyperion_error_logger.exception(
+            hyperion_error_logger.error(  # noqa: TRY400
                 f'Bad email adress: "{", ".join(recipient)}". For mail with subject "{subject}".',
             )
