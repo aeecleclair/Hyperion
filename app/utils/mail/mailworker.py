@@ -40,4 +40,9 @@ def send_email(
     with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
         server.starttls(context=context)
         server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-        server.send_message(msg, settings.SMTP_EMAIL, recipient)
+        try:
+            server.send_message(msg, settings.SMTP_EMAIL, recipient)
+        except smtplib.SMTPRecipientsRefused:
+            hyperion_error_logger.exception(
+                f'Bad email adress: "{", ".join(recipient)}". For mail with subject "{subject}".',
+            )
