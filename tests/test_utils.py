@@ -76,7 +76,6 @@ async def test_save_file() -> None:
             ),
             directory="test",
             filename=valid_uuid,
-            request_id="request_id",
         )
 
 
@@ -93,7 +92,6 @@ async def test_save_file_with_invalid_content_type() -> None:
             ),
             directory="test",
             filename=valid_uuid,
-            request_id="request_id",
         )
 
 
@@ -110,7 +108,6 @@ async def test_save_file_raise_a_value_error_if_filename_isnt_an_uuid() -> None:
             upload_file=UploadFile(file),
             directory="test",
             filename=not_a_uuid,
-            request_id="request_id",
         )
 
 
@@ -122,7 +119,6 @@ async def test_save_bytes() -> None:
             directory="test",
             filename=valid_uuid,
             extension="png",
-            request_id="request_id",
         )
 
 
@@ -140,7 +136,6 @@ async def test_save_bytes_raise_a_value_error_if_filename_isnt_an_uuid() -> None
             directory="test",
             filename=not_a_uuid,
             extension="png",
-            request_id="request_id",
         )
 
 
@@ -250,7 +245,6 @@ async def test_save_pdf_first_page_as_image() -> None:
         output_image_directory="test/image",
         filename=valid_uuid,
         default_pdf_path="assets/pdf/default_pdf.pdf",
-        request_id="request_id",
     )
     assert Path(f"data/test/image/{valid_uuid}.jpg").is_file()
 

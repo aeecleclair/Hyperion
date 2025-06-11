@@ -3,11 +3,13 @@ import logging
 import os
 import re
 import secrets
+import shutil
 import unicodedata
 from collections.abc import Callable, Sequence
 from inspect import iscoroutinefunction
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar
+from uuid import UUID
 
 import aiofiles
 import calypsso
@@ -16,8 +18,10 @@ from fastapi import HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.templating import Jinja2Templates
 from jellyfish import jaro_winkler_similarity
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
+from weasyprint import CSS, HTML
 
 from app.core.core_endpoints import cruds_core, models_core
 from app.core.groups import cruds_groups
@@ -27,7 +31,11 @@ from app.core.users.models_users import CoreUser
 from app.core.utils import security
 from app.types import core_data
 from app.types.content_type import ContentType
-from app.types.exceptions import CoreDataNotFoundError, FileNameIsNotAnUUIDError
+from app.types.exceptions import (
+    CoreDataNotFoundError,
+    FileDoesNotExistError,
+    FileNameIsNotAnUUIDError,
+)
 from app.utils.mail.mailworker import send_email
 
 if TYPE_CHECKING:
@@ -126,7 +134,6 @@ async def save_file_as_data(
     upload_file: UploadFile,
     directory: str,
     filename: str,
-    request_id: str,
     max_file_size: int = 1024 * 1024 * 2,  # 2 MB
     accepted_content_types: list[ContentType] | None = None,
 ):
@@ -202,17 +209,15 @@ async def save_file_as_data(
 
     except Exception:
         hyperion_error_logger.exception(
-            f"save_file_to_the_disk: could not save file to {filename} ({request_id})",
+            f"save_file_to_the_disk: could not save file to {filename}",
         )
-        raise HTTPException(status_code=400, detail="Could not save file")
 
 
 async def save_bytes_as_data(
     file_bytes: bytes,
     directory: str,
-    filename: str,
+    filename: str | UUID,
     extension: str,
-    request_id: str,
 ):
     """
     Save bytes in file in the data folder.
@@ -226,6 +231,8 @@ async def save_bytes_as_data(
 
     WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
     """
+    if isinstance(filename, UUID):
+        filename = str(filename)
 
     if not uuid_regex.match(filename):
         hyperion_error_logger.error(
@@ -248,25 +255,28 @@ async def save_bytes_as_data(
 
     except Exception:
         hyperion_error_logger.exception(
-            f"save_file_to_the_disk: could not save file to {filename} ({request_id})",
+            f"save_file_to_the_disk: could not save file to {filename}",
         )
-        raise HTTPException(status_code=400, detail="Could not save file")
+        raise
 
 
 def get_file_path_from_data(
     directory: str,
-    filename: str,
-    default_asset: str,
+    filename: str | UUID,
+    default_asset: str | None = None,
 ) -> Path:
     """
     If there is a file with the provided filename in the data folder, return it. The file extension will be inferred from the provided content file.
     > "data/{directory}/{filename}.ext"
-    Otherwise, return the default asset.
+    Otherwise, return the default asset if provided, or raise an exception.
 
     The filename should be a uuid.
 
     WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
     """
+    if isinstance(filename, UUID):
+        filename = str(filename)
+
     if not uuid_regex.match(filename):
         hyperion_error_logger.error(
             f"get_file_from_data: security issue, the filename is not a valid UUID: {filename}. This mean that the user input was not properly checked.",
@@ -276,7 +286,10 @@ def get_file_path_from_data(
     for filePath in Path().glob(f"data/{directory}/{filename}.*"):
         return filePath
 
-    return Path(default_asset)
+    if default_asset is not None:
+        return Path(default_asset)
+
+    raise FileDoesNotExistError(name=f"{directory}/{filename}.*")
 
 
 def get_file_from_data(
@@ -320,12 +333,77 @@ def delete_file_from_data(
         filePath.unlink()
 
 
+def delete_all_folder_from_data(
+    directory: str,
+) -> None:
+    """
+    WARNING: this method should never be called with a directory based on user input.
+    """
+    path = Path(f"data/{directory}")
+    if Path.exists(path):
+        shutil.rmtree(path)
+
+
+async def generate_pdf_from_template(
+    template_name: str,
+    context: dict[str, Any],
+    directory: str,
+    filename: str | UUID,
+) -> None:
+    """
+    Generate a PDF file from a Jinja2 template using weasyprint.
+    `context` is a dictionary containing the variables to be used in the template.
+
+    Save it in the `data` folder. `filename` should be a uuid.
+
+    The template should be located in the `assets/templates` directory.
+
+    You should only provide thrusted templates to this function.
+    See [WeasyPrint security consideration](https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#security)
+    """
+    templates = Environment(
+        loader=FileSystemLoader("assets/templates"),
+        autoescape=select_autoescape(["html"]),
+    )
+    rendered_html = templates.get_template(template_name).render(context)
+
+    html = HTML(string=rendered_html)
+    css = CSS("assets/templates/output.css")
+
+    pdf = html.write_pdf(
+        stylesheets=[css],
+    )
+
+    await save_bytes_as_data(
+        file_bytes=pdf,
+        directory=directory,
+        filename=filename,
+        extension="pdf",
+    )
+
+
+def concat_pdf(
+    source_directory: str,
+    source_filename: str | UUID,
+    output_pdf: fitz.Document,
+) -> None:
+    """
+    Add the content of the PDF file located in data to
+    the `output_pdf` document.
+    """
+    source_file_path = get_file_path_from_data(
+        directory=source_directory,
+        filename=source_filename,
+    )
+    with fitz.open(source_file_path) as source:
+        output_pdf.insert_pdf(source)
+
+
 async def save_pdf_first_page_as_image(
     input_pdf_directory: str,
     output_image_directory: str,
-    filename: str,
+    filename: str | UUID,
     default_pdf_path: str,
-    request_id: str,
     jpg_quality=95,
 ):
     """
@@ -357,7 +435,6 @@ async def save_pdf_first_page_as_image(
             directory=output_image_directory,
             filename=filename,
             extension="jpg",
-            request_id=request_id,
         )
 
 
