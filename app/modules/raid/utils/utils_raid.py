@@ -13,8 +13,8 @@ from app.core.utils.config import Settings
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
 from app.modules.raid.raid_type import Difficulty
 from app.modules.raid.schemas_raid import (
-    ParticipantBase,
-    ParticipantUpdate,
+    RaidParticipantBase,
+    RaidParticipantUpdate,
 )
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.pdf.pdf_writer import HTMLPDFWriter, PDFWriter
@@ -29,7 +29,9 @@ class RaidPayementError(ValueError):
 
 
 def will_participant_be_minor_on(
-    participant: ParticipantUpdate | models_raid.Participant | ParticipantBase,
+    participant: RaidParticipantUpdate
+    | models_raid.RaidParticipant
+    | RaidParticipantBase,
     raid_start_date: date | None,
 ) -> bool:
     """
@@ -91,14 +93,16 @@ async def validate_payment(
 
 
 async def write_teams_csv(
-    teams: Sequence[models_raid.Team],
+    teams: Sequence[models_raid.RaidTeam],
     db: AsyncSession,
     drive_file_manager: DriveFileManager,
     settings: Settings,
 ) -> None:
     file_name = "Équipes - " + datetime.now(UTC).strftime("%Y-%m-%d_%H_%M_%S") + ".csv"
     file_path = "data/raid/" + file_name
-    data: list[list[str]] = [["Team name", "Captain", "Second", "Difficulty", "Number"]]
+    data: list[list[str]] = [
+        ["RaidTeam name", "Captain", "Second", "Difficulty", "Number"],
+    ]
     data.extend(
         [
             [
@@ -131,7 +135,7 @@ async def write_teams_csv(
     Path(file_path).unlink()
 
 
-async def set_team_number(team: models_raid.Team, db: AsyncSession) -> None:
+async def set_team_number(team: models_raid.RaidTeam, db: AsyncSession) -> None:
     if team.difficulty is None:
         return
     number_of_team = await cruds_raid.get_number_of_team_by_difficulty(
@@ -148,14 +152,14 @@ async def set_team_number(team: models_raid.Team, db: AsyncSession) -> None:
         if number_of_team == 0
         else number_of_team + 1
     )
-    updated_team: schemas_raid.TeamUpdate = schemas_raid.TeamUpdate(
+    updated_team: schemas_raid.RaidTeamUpdate = schemas_raid.RaidTeamUpdate(
         number=new_team_number,
     )
     await cruds_raid.update_team(team.id, updated_team, db)
 
 
 async def save_team_info(
-    team: models_raid.Team,
+    team: models_raid.RaidTeam,
     db: AsyncSession,
     drive_file_manager: DriveFileManager,
     settings: Settings,
@@ -193,7 +197,7 @@ async def save_team_info(
 
 
 async def post_update_actions(
-    team: models_raid.Team,
+    team: models_raid.RaidTeam,
     db: AsyncSession,
     drive_file_manager: DriveFileManager,
     settings: Settings,
@@ -227,7 +231,7 @@ async def post_update_actions(
 
 
 async def save_security_file(
-    participant: models_raid.Participant,
+    participant: models_raid.RaidParticipant,
     information: coredata_raid.RaidInformation,
     team_number: int | None,
     db: AsyncSession,
@@ -278,10 +282,10 @@ async def save_security_file(
 async def get_participant(
     participant_id: str,
     db: AsyncSession,
-) -> models_raid.Participant:
+) -> models_raid.RaidParticipant:
     participant = await cruds_raid.get_participant_by_id(participant_id, db)
     if not participant:
-        raise HTTPException(status_code=404, detail="Participant not found.")
+        raise HTTPException(status_code=404, detail="RaidParticipant not found.")
     return participant
 
 
@@ -298,7 +302,11 @@ async def generate_teams_pdf_util(
         hyperion_error_logger.info(f"RAID: team {index}/{len(teams)}")
 
         # We reset the team number to -1 to force the update of the team number
-        await cruds_raid.update_team(team.id, schemas_raid.TeamUpdate(number=-1), db)
+        await cruds_raid.update_team(
+            team.id,
+            schemas_raid.RaidTeamUpdate(number=-1),
+            db,
+        )
         await post_update_actions(
             team,
             db,
