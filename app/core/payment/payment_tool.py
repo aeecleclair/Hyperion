@@ -204,8 +204,11 @@ class PaymentTool:
                     # We know that HelloAsso may refuse some payer infos, like using the firstname "test"
                     # Even when prefilling the payer infos,the user will be able to edit them on the payment page,
                     # so we can safely retry without the payer infos
-                    hyperion_error_logger.exception(
-                        f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}. Retrying without payer infos",
+                    payer_user_name = ""
+                    if payer_user:
+                        payer_user_name = f"{payer_user.firstname} {payer_user.name}"
+                    hyperion_error_logger.warning(
+                        f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}. Retrying without payer {payer_user_name} infos",
                     )
 
                     init_checkout_body.payer = None
