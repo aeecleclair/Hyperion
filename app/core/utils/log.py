@@ -327,7 +327,7 @@ class LogConfig:
                     "level": MINIMUM_LOG_LEVEL,
                     "propagate": False,
                 },
-                "boto": {
+                "boto3": {
                     "handlers": [
                         "console",
                         "file_errors",
