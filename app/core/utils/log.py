@@ -345,6 +345,33 @@ class LogConfig:
                     "level": MINIMUM_LOG_LEVEL,
                     "propagate": False,
                 },
+                "s3transfer": {
+                    "handlers": [
+                        "console",
+                        "file_errors",
+                        "matrix_errors",
+                    ],
+                    "level": MINIMUM_LOG_LEVEL,
+                    "propagate": False,
+                },
+                "urllib3": {
+                    "handlers": [
+                        "console",
+                        "file_errors",
+                        "matrix_errors",
+                    ],
+                    "level": MINIMUM_LOG_LEVEL,
+                    "propagate": False,
+                },
+                "python_multipart.multipart": {
+                    "handlers": [
+                        "console",
+                        "file_errors",
+                        "matrix_errors",
+                    ],
+                    "level": MINIMUM_LOG_LEVEL,
+                    "propagate": False,
+                },
             },
         }
 
