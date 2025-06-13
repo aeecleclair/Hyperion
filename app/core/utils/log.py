@@ -327,6 +327,24 @@ class LogConfig:
                     "level": MINIMUM_LOG_LEVEL,
                     "propagate": False,
                 },
+                "boto": {
+                    "handlers": [
+                        "console",
+                        "file_errors",
+                        "matrix_errors",
+                    ],
+                    "level": MINIMUM_LOG_LEVEL,
+                    "propagate": False,
+                },
+                "botocore": {
+                    "handlers": [
+                        "console",
+                        "file_errors",
+                        "matrix_errors",
+                    ],
+                    "level": MINIMUM_LOG_LEVEL,
+                    "propagate": False,
+                },
             },
         }
 
