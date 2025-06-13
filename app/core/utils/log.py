@@ -81,6 +81,8 @@ class LogConfig:
     def get_config_dict(self, settings: Settings):
         # We can't use a dependency to access settings as this function is not an endpoint. The object must thus be passed as a parameter.
 
+        # MINIMUM_LOG_LEVEL should never be set higher than INFO
+        # as it would prevent important information to be logged, like MyECLPay operations
         MINIMUM_LOG_LEVEL: str = "DEBUG" if settings.LOG_DEBUG_MESSAGES else "INFO"
 
         return {
