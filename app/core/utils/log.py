@@ -267,14 +267,14 @@ class LogConfig:
                         "matrix_errors",
                         "console",
                     ],
-                    "level": "DEBUG",
+                    "level": MINIMUM_LOG_LEVEL,
                     "propagate": False,
                 },
                 "hyperion.myeclpay": {
                     "handlers": [
                         "myeclpay_s3",
                     ],
-                    "level": "DEBUG",
+                    "level": MINIMUM_LOG_LEVEL,
                 },
                 "hyperion.s3.fallback": {
                     "handlers": [
@@ -282,14 +282,14 @@ class LogConfig:
                         "matrix_errors",
                         "console",
                     ],
-                    "level": "DEBUG",
+                    "level": MINIMUM_LOG_LEVEL,
                     "propagate": False,
                 },
                 "hyperion.s3": {
                     "handlers": [
                         "s3",
                     ],
-                    "level": "DEBUG",
+                    "level": MINIMUM_LOG_LEVEL,
                 },
                 "hyperion.amap": {
                     "handlers": [
