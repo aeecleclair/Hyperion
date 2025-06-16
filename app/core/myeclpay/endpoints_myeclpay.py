@@ -51,6 +51,7 @@ from app.core.myeclpay.utils_myeclpay import (
 from app.core.notification.schemas_notification import Message
 from app.core.payment import schemas_payment
 from app.core.payment.payment_tool import PaymentTool
+from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.users import cruds_users, schemas_users
 from app.core.users.models_users import CoreUser
 from app.core.utils import security
@@ -67,7 +68,6 @@ from app.dependencies import (
     is_user_in,
 )
 from app.types import standard_responses
-from app.types.exceptions import MissingHelloAssoSlugError
 from app.types.module import CoreModule
 from app.utils.communication.notifications import NotificationTool
 from app.utils.mail.mailworker import send_email
@@ -1669,13 +1669,11 @@ async def init_ha_transfer(
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
-    payment_tool: PaymentTool = Depends(get_payment_tool),
+    payment_tool: PaymentTool = Depends(get_payment_tool(HelloAssoConfigName.MYECLPAY)),
 ):
     """
     Initiate HelloAsso transfer, return a payment url to complete the transaction on HelloAsso website.
     """
-    if settings.HELLOASSO_MYECLPAY_SLUG is None:
-        raise MissingHelloAssoSlugError("HELLOASSO_MYECLPAY_SLUG")
 
     if transfer_info.redirect_url not in settings.TRUSTED_PAYMENT_REDIRECT_URLS:
         hyperion_error_logger.warning(
@@ -1740,7 +1738,6 @@ async def init_ha_transfer(
     )
     checkout = await payment_tool.init_checkout(
         module="myeclpay",
-        helloasso_slug=settings.HELLOASSO_MYECLPAY_SLUG,
         checkout_amount=transfer_info.amount,
         checkout_name="Recharge MyECL Pay",
         redirection_uri=f"{settings.CLIENT_URL}myeclpay/transfer/redirect?url={transfer_info.redirect_url}",
