@@ -1097,7 +1097,7 @@ async def get_payment_url(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
-    payment_tool: PaymentTool = Depends(get_payment_tool[HelloAssoConfigName.RAID]),
+    payment_tool: PaymentTool = Depends(get_payment_tool(HelloAssoConfigName.RAID)),
 ):
     """
     Get payment url

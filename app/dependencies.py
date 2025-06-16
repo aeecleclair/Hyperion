@@ -262,7 +262,8 @@ def get_drive_file_manager() -> DriveFileManager:
     return drive_file_manage
 
 
-def _get_payment_tool(
+@lru_cache
+def get_payment_tool(
     name: HelloAssoConfigName,
 ) -> Callable[[Settings], PaymentTool]:
     def get_payment_tool(
@@ -292,19 +293,6 @@ def _get_payment_tool(
         return payment_tools[name]
 
     return get_payment_tool
-
-
-get_payment_tool: dict[HelloAssoConfigName, Callable[[Settings], PaymentTool]] = {
-    HelloAssoConfigName.CDR: _get_payment_tool(
-        name=HelloAssoConfigName.CDR,
-    ),
-    HelloAssoConfigName.RAID: _get_payment_tool(
-        name=HelloAssoConfigName.RAID,
-    ),
-    HelloAssoConfigName.MYECLPAY: _get_payment_tool(
-        name=HelloAssoConfigName.MYECLPAY,
-    ),
-}
 
 
 def get_mail_templates(

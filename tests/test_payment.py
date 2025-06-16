@@ -1,6 +1,5 @@
 import uuid
 from typing import TYPE_CHECKING
-from unittest.mock import MagicMock
 
 import pytest
 import pytest_asyncio
@@ -20,13 +19,14 @@ from app.core.payment.payment_tool import PaymentTool
 from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.schools import schemas_schools
 from app.core.users import schemas_users
-from app.dependencies import _get_payment_tool, get_payment_tool
+from app.dependencies import get_payment_tool
 from app.types.exceptions import PaymentToolCredentialsNotSetException
 from app.types.module import Module
 from tests.commons import (
     TestingSessionLocal,
     add_object_to_db,
     create_user_with_groups,
+    override_get_payment_tool,
     override_get_settings,
 )
 
@@ -392,15 +392,13 @@ def test_payment_tool_unavailable(
         PaymentToolCredentialsNotSetException,
         match="HelloAsso API credentials are not set",
     ):
-        _get_payment_tool(HelloAssoConfigName.MYECLPAY)(settings)
+        get_payment_tool(HelloAssoConfigName.MYECLPAY)(settings)
 
 
 async def test_payment_tool_get_checkout(
     client: TestClient,
 ):
-    settings = override_get_settings()
-
-    payment_tool = get_payment_tool[HelloAssoConfigName.CDR](settings)
+    payment_tool = override_get_payment_tool(HelloAssoConfigName.CDR)()
 
     async with TestingSessionLocal() as db:
         # Get existing checkout
@@ -426,7 +424,7 @@ async def test_payment_tool_init_checkout_with_unavailable_payment():
         PaymentToolCredentialsNotSetException,
         match="HelloAsso API credentials are not set",
     ):
-        _get_payment_tool(HelloAssoConfigName.MYECLPAY)(settings)
+        get_payment_tool(HelloAssoConfigName.MYECLPAY)(settings)
 
 
 async def test_payment_tool_init_checkout(
@@ -602,29 +600,3 @@ async def test_payment_tool_init_checkout_fail(
             )
 
     mocked_hyperion_security_logger.assert_called()
-
-
-# Test dependency #
-
-
-async def test_get_payment_tool(
-    mocker: MockerFixture,
-    client: TestClient,
-) -> None:
-    # We want to reset the current payment_tool to None
-    mocker.patch(
-        "app.dependencies.payment_tools",
-        None,
-    )
-    # We mock the PaymentTool class to be able to check if it was called
-    mocked_PaymentTool = mocker.patch(
-        "app.dependencies.PaymentTool",
-    )
-
-    # payment_tool should be initialized here
-    get_payment_tool[HelloAssoConfigName.CDR]
-    mocked_PaymentTool.assert_called_once()
-
-    # payment_tool should already be initialized here
-    get_payment_tool[HelloAssoConfigName.CDR]
-    mocked_PaymentTool.assert_called_once()

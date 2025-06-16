@@ -1669,7 +1669,7 @@ async def init_ha_transfer(
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
-    payment_tool: PaymentTool = Depends(get_payment_tool[HelloAssoConfigName.MYECLPAY]),
+    payment_tool: PaymentTool = Depends(get_payment_tool(HelloAssoConfigName.MYECLPAY)),
 ):
     """
     Initiate HelloAsso transfer, return a payment url to complete the transaction on HelloAsso website.
