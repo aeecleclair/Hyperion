@@ -57,7 +57,7 @@ class PaymentTool:
             token_endpoint=f"https://{helloasso_api_base}/oauth2/token",
         )
         self._helloasso_slug = config.helloasso_slug
-        self._redirection_url = config.redirection_uri
+        self._redirection_uri = config.redirection_uri
 
         # else:
         #     hyperion_error_logger.warning(
