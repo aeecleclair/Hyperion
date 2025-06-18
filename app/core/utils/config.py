@@ -9,8 +9,10 @@ from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from pydantic import computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.core.payment.types_payment import HelloAssoConfig, HelloAssoConfigName
 from app.types.exceptions import (
     DotenvInvalidAuthClientNameInError,
+    DotenvInvalidHelloAssoConfigNameError,
     DotenvInvalidVariableError,
     DotenvMissingVariableError,
     InvalidRSAKeyInDotenvError,
@@ -118,15 +120,11 @@ class Settings(BaseSettings):
     # HelloAsso provide a sandbox to be able to realize tests
     # HELLOASSO_API_BASE should have the format: `api.helloasso-sandbox.com`
     # HelloAsso only allow 20 simultaneous active access token. Note that each Hyperion worker will need its own access token.
+    HELLOASSO_CONFIGURATIONS: list[
+        tuple[str, str, str, str, str] | tuple[str, str, str, str]
+    ]  # [["name", "helloasso_client_id", "helloasso_client_secret", "helloasso_slug", "redirection_uri"]]
     HELLOASSO_API_BASE: str | None = None
-    HELLOASSO_CLIENT_ID: str | None = None
-    HELLOASSO_CLIENT_SECRET: str | None = None
 
-    HELLOASSO_SLUG: str | None = None
-    HELLOASSO_MYECLPAY_SLUG: str | None = None
-
-    CDR_PAYMENT_REDIRECTION_URL: str | None = None
-    RAID_PAYMENT_REDIRECTION_URL: str | None = None
     MYECLPAY_MAXIMUM_WALLET_BALANCE: int = 1000
 
     # Drive configuration for the raid registering app
@@ -317,6 +315,40 @@ class Settings(BaseSettings):
                 f"redis://:{cls.REDIS_PASSWORD or ''}@{cls.REDIS_HOST}:{cls.REDIS_PORT}"
             )
         return None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @cached_property
+    def PARSED_HELLOASSO_CONFIGURATIONS(cls) -> list[HelloAssoConfig]:
+        """
+        Parse the HELLOASSO_CONFIGURATIONS to return a list of HelloAssoConfigName
+        """
+        helloasso_configurations = []
+        for config_tuple in cls.HELLOASSO_CONFIGURATIONS:
+            if len(config_tuple) == 4:
+                name, helloasso_client_id, helloasso_client_secret, helloasso_slug = (
+                    config_tuple
+                )
+                redirection_uri = None
+            else:
+                (
+                    name,
+                    helloasso_client_id,
+                    helloasso_client_secret,
+                    helloasso_slug,
+                    redirection_uri,
+                ) = config_tuple
+            if name not in HelloAssoConfigName._member_names_:
+                raise DotenvInvalidHelloAssoConfigNameError(name)
+            helloasso_configurations.append(
+                HelloAssoConfig(
+                    name=name,
+                    helloasso_client_id=helloasso_client_id,
+                    helloasso_client_secret=helloasso_client_secret,
+                    helloasso_slug=helloasso_slug,
+                    redirection_uri=redirection_uri,
+                ),
+            )
+        return helloasso_configurations
 
     #######################################
     #          Fields validation          #

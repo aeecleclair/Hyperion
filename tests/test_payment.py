@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.payment import cruds_payment, models_payment, schemas_payment
 from app.core.payment.payment_tool import PaymentTool
+from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.schools import schemas_schools
 from app.core.users import schemas_users
 from app.dependencies import get_payment_tool
@@ -25,6 +26,7 @@ from tests.commons import (
     TestingSessionLocal,
     add_object_to_db,
     create_user_with_groups,
+    override_get_payment_tool,
     override_get_settings,
 )
 
@@ -381,18 +383,22 @@ async def test_webhook_payment_callback_fail(
 # Test Payment tool #
 
 
-def test_payment_tool_unavailable():
+def test_payment_tool_unavailable(
+    mocker: MockerFixture,
+):
     settings = override_get_settings()
 
-    payment_tool = PaymentTool(settings)
+    with pytest.raises(
+        PaymentToolCredentialsNotSetException,
+        match="HelloAsso API credentials are not set",
+    ):
+        get_payment_tool(HelloAssoConfigName.MYECLPAY)(settings)
 
-    assert not payment_tool.is_payment_available()
 
-
-async def test_payment_tool_get_checkout():
-    settings = override_get_settings()
-
-    payment_tool = PaymentTool(settings)
+async def test_payment_tool_get_checkout(
+    client: TestClient,
+):
+    payment_tool = override_get_payment_tool(HelloAssoConfigName.CDR)()
 
     async with TestingSessionLocal() as db:
         # Get existing checkout
@@ -411,41 +417,30 @@ async def test_payment_tool_get_checkout():
         assert unexisting_checkout is None
 
 
-async def test_payment_tool_init_checkout_with_unavailable_payment(
-    mocker: MockerFixture,
-):
+async def test_payment_tool_init_checkout_with_unavailable_payment():
     settings = override_get_settings()
-
-    payment_tool = PaymentTool(settings)
-
-    db: AsyncSession = mocker.MagicMock()
 
     with pytest.raises(
         PaymentToolCredentialsNotSetException,
         match="HelloAsso API credentials are not set",
     ):
-        await payment_tool.init_checkout(
-            module="test",
-            helloasso_slug="test",
-            checkout_amount=100,
-            checkout_name="test",
-            redirection_uri="test",
-            db=db,
-        )
+        get_payment_tool(HelloAssoConfigName.MYECLPAY)(settings)
 
 
 async def test_payment_tool_init_checkout(
     mocker: MockerFixture,
 ):
+    redirect_url = "https://example.com"
     # We create a mocked settings object with the required HelloAsso API credentials
     settings: Settings = mocker.MagicMock()
     settings.HELLOASSO_API_BASE = "https://example.com"
-    settings.HELLOASSO_CLIENT_ID = "clientid"
-    settings.HELLOASSO_CLIENT_SECRET = "secret"
-
-    redirect_url = "https://example.com"
-
-    payment_tool = PaymentTool(settings=settings)
+    settings.HELLOASSO_CONFIGURATIONS = [
+        ("CDR", "clientid", "secret", "test", redirect_url),
+    ]
+    payment_tool = PaymentTool(
+        config=settings.PARSED_HELLOASSO_CONFIGURATIONS[0],
+        helloasso_api_base=settings.HELLOASSO_API_BASE,
+    )
 
     mocker.patch.object(
         payment_tool,
@@ -469,7 +464,6 @@ async def test_payment_tool_init_checkout(
     async with TestingSessionLocal() as db:
         returned_checkout = await payment_tool.init_checkout(
             module="testtool",
-            helloasso_slug="test",
             checkout_amount=100,
             checkout_name="test",
             redirection_uri="redirect",
@@ -493,15 +487,18 @@ async def test_payment_tool_init_checkout_with_one_failure(
     """
     When HelloAsso init_checkout fail a first time, we want to retry a second time without payers infos.
     """
+    redirect_url = "https://example.com"
     # We create a mocked settings object with the required HelloAsso API credentials
     settings: Settings = mocker.MagicMock()
     settings.HELLOASSO_API_BASE = "https://example.com"
-    settings.HELLOASSO_CLIENT_ID = "clientid"
-    settings.HELLOASSO_CLIENT_SECRET = "secret"
+    settings.HELLOASSO_CONFIGURATIONS = [
+        ("CDR", "clientid", "secret", "test", redirect_url),
+    ]
 
-    redirect_url = "https://example.com"
-
-    payment_tool = PaymentTool(settings=settings)
+    payment_tool = PaymentTool(
+        config=settings.PARSED_HELLOASSO_CONFIGURATIONS[0],
+        helloasso_api_base=settings.HELLOASSO_API_BASE,
+    )
 
     # We create a side effect for the `init_a_checkout` method that will raise an error the first time
     # init_checkout is called with a payer, and return a mocked response the second time
@@ -537,7 +534,6 @@ async def test_payment_tool_init_checkout_with_one_failure(
     async with TestingSessionLocal() as db:
         returned_checkout = await payment_tool.init_checkout(
             module="testtool",
-            helloasso_slug="test",
             checkout_amount=100,
             checkout_name="test",
             redirection_uri="redirect",
@@ -566,10 +562,12 @@ async def test_payment_tool_init_checkout_fail(
     # We create a mocked settings object with the required HelloAsso API credentials
     settings: Settings = mocker.MagicMock()
     settings.HELLOASSO_API_BASE = "https://example.com"
-    settings.HELLOASSO_CLIENT_ID = "clientid"
-    settings.HELLOASSO_CLIENT_SECRET = "secret"
+    settings.HELLOASSO_CONFIGURATIONS = [("CDR", "clientid", "secret", "test")]
 
-    payment_tool = PaymentTool(settings=settings)
+    payment_tool = PaymentTool(
+        config=settings.PARSED_HELLOASSO_CONFIGURATIONS[0],
+        helloasso_api_base=settings.HELLOASSO_API_BASE,
+    )
 
     mocker.patch.object(
         payment_tool,
@@ -594,7 +592,6 @@ async def test_payment_tool_init_checkout_fail(
         async with TestingSessionLocal() as db:
             await payment_tool.init_checkout(
                 module="testtool",
-                helloasso_slug="test",
                 checkout_amount=100,
                 checkout_name="test",
                 redirection_uri="redirect",
@@ -603,31 +600,3 @@ async def test_payment_tool_init_checkout_fail(
             )
 
     mocked_hyperion_security_logger.assert_called()
-
-
-# Test dependency #
-
-
-async def test_get_payment_tool(
-    mocker: MockerFixture,
-    client: TestClient,
-) -> None:
-    # We want to reset the current payment_tool to None
-    mocker.patch(
-        "app.dependencies.payment_tool",
-        None,
-    )
-    # We mock the PaymentTool class to be able to check if it was called
-    mocked_PaymentTool = mocker.patch(
-        "app.dependencies.PaymentTool",
-    )
-
-    settings: Settings = override_get_settings()
-
-    # payment_tool should be initialized here
-    get_payment_tool(settings)
-    mocked_PaymentTool.assert_called_once()
-
-    # payment_tool should already be initialized here
-    get_payment_tool(settings)
-    mocked_PaymentTool.assert_called_once()
