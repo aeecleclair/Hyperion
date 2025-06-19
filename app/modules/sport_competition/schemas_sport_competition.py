@@ -211,3 +211,9 @@ class MatchEdit(BaseModel):
     score_team1: int | None
     score_team2: int | None
     winner_id: UUID | None
+
+
+# Importing here to avoid circular imports
+from app.core.groups.schemas_groups import CoreGroupSimple  # noqa: E402, TC001
+
+CompetitionUser.model_rebuild()
