@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, NonNegativeInt, PositiveInt
 
 from app.core.schools import schemas_schools
 from app.core.users import schemas_users
@@ -21,11 +21,11 @@ class CompetitionEdition(CompetitionEditionBase):
 
 
 class CompetitionEditionEdit(BaseModel):
-    name: str | None
-    year: int | None
-    start_date: datetime | None
-    end_date: datetime | None
-    activated: bool | None
+    name: str | None = None
+    year: PositiveInt | None = None
+    start_date: datetime | None = None
+    end_date: datetime | None = None
+    activated: bool | None = None
 
 
 class SchoolExtensionBase(BaseModel):
@@ -40,18 +40,18 @@ class SchoolExtension(SchoolExtensionBase):
 
 
 class SchoolExtensionEdit(BaseModel):
-    from_lyon: bool | None
-    activated: bool | None
+    from_lyon: bool | None = None
+    activated: bool | None = None
 
 
 class SchoolGeneralQuota(BaseModel):
     school_id: UUID
     edition: str
-    athlete_quota: int | None = None
-    cameraman_quota: int | None = None
-    pompom_quota: int | None = None
-    fanfare_quota: int | None = None
-    non_athlete_quota: int | None = None
+    athlete_quota: NonNegativeInt | None = None
+    cameraman_quota: NonNegativeInt | None = None
+    pompom_quota: NonNegativeInt | None = None
+    fanfare_quota: NonNegativeInt | None = None
+    non_athlete_quota: NonNegativeInt | None = None
 
 
 class UserGroupMembership(BaseModel):
@@ -88,8 +88,8 @@ class CompetitionUser(schemas_users.CoreUser):
 
 class SportBase(BaseModel):
     name: str
-    team_size: int
-    substitute_max: int
+    team_size: PositiveInt
+    substitute_max: NonNegativeInt | None = None
     sport_category: SportCategory | None = None
     activated: bool = True
 
@@ -99,29 +99,29 @@ class Sport(SportBase):
 
 
 class SportEdit(BaseModel):
-    name: str | None
-    team_size: int | None
-    substitute_max: int | None
-    sport_category: SportCategory | None
-    activated: bool | None
+    name: str | None = None
+    team_size: PositiveInt | None = None
+    substitute_max: NonNegativeInt | None = None
+    sport_category: SportCategory | None = None
+    activated: bool | None = None
 
 
 class QuotaInfo(BaseModel):
-    participant_quota: int
-    team_quota: int
+    participant_quota: NonNegativeInt
+    team_quota: NonNegativeInt
 
 
 class Quota(BaseModel):
     school_id: UUID
     sport_id: UUID
     edition_id: UUID
-    participant_quota: int | None = None
-    team_quota: int | None = None
+    participant_quota: NonNegativeInt | None = None
+    team_quota: NonNegativeInt | None = None
 
 
 class QuotaEdit(BaseModel):
-    participant_quota: int | None
-    team_quota: int | None
+    participant_quota: NonNegativeInt | None = None
+    team_quota: NonNegativeInt | None = None
 
 
 class ParticipantInfo(BaseModel):
@@ -142,12 +142,12 @@ class Participant(BaseModel):
 
 
 class ParticipantEdit(BaseModel):
-    license: str | None
-    team_id: UUID | None
-    sport_id: UUID | None
-    user_id: str | None
-    substitute: bool | None
-    validated: bool | None
+    license: str | None = None
+    team_id: UUID | None = None
+    sport_id: UUID | None = None
+    user_id: str | None = None
+    substitute: bool | None = None
+    validated: bool | None = None
 
 
 class ParticipantComplete(Participant):
@@ -174,8 +174,8 @@ class Team(TeamBase):
 
 
 class TeamEdit(BaseModel):
-    name: str | None
-    captain_id: str | None
+    name: str | None = None
+    captain_id: str | None = None
 
 
 class TeamComplete(Team):
@@ -202,15 +202,15 @@ class Match(MatchBase):
 
 
 class MatchEdit(BaseModel):
-    name: str | None
-    sport_id: UUID | None
-    team1_id: UUID | None
-    team2_id: UUID | None
-    date: datetime | None
-    location: str | None
-    score_team1: int | None
-    score_team2: int | None
-    winner_id: UUID | None
+    name: str | None = None
+    sport_id: UUID | None = None
+    team1_id: UUID | None = None
+    team2_id: UUID | None = None
+    date: datetime | None = None
+    location: str | None = None
+    score_team1: int | None = None
+    score_team2: int | None = None
+    winner_id: UUID | None = None
 
 
 # Importing here to avoid circular imports
