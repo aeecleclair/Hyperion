@@ -60,6 +60,16 @@ def get_ecl_account_types() -> list[AccountType]:
     ]
 
 
+def get_school_account_types() -> list[AccountType]:
+    return [
+        AccountType.student,
+        AccountType.former_student,
+        AccountType.staff,
+        AccountType.association,
+        AccountType.other_school_student,
+    ]
+
+
 def get_account_types_except_externals() -> list[AccountType]:
     return [
         AccountType.student,
