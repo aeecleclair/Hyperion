@@ -268,7 +268,9 @@ async def init_objects() -> None:
         transaction_type=TransactionType.DIRECT,
         seller_user_id=ecl_user2.id,
         total=500,  # 5€
-        creation=datetime(2025, 5, 20, 12, 0, 0, tzinfo=UTC),
+        # We want to set a date that is not before a month ago
+        # to be able to test refunds
+        creation=datetime.now(UTC) - timedelta(days=2),
         status=TransactionStatus.CONFIRMED,
         store_note="transaction_from_ecl_user_to_store",
         qr_code_id=None,
