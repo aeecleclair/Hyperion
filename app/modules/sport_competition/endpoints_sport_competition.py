@@ -51,7 +51,7 @@ async def create_sport(
     sport: schemas_sport_competition.SportBase,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_a_member_of_extended(
+        is_user_in(
             group_id=GroupType.competition_admin,
         ),
     ),
@@ -76,7 +76,7 @@ async def edit_sport(
     sport: schemas_sport_competition.SportEdit,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_a_member_of_extended(
+        is_user_in(
             group_id=GroupType.competition_admin,
         ),
     ),
@@ -109,7 +109,7 @@ async def delete_sport(
     sport_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_a_member_of_extended(
+        is_user_in(
             group_id=GroupType.competition_admin,
         ),
     ),
@@ -357,7 +357,7 @@ async def add_user_to_group(
     user_id: str,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_a_member_of_extended(
+        is_user_in(
             group_id=GroupType.competition_admin,
         ),
     ),
@@ -404,7 +404,7 @@ async def remove_user_from_group(
     user_id: str,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_a_member_of_extended(
+        is_user_in(
             group_id=GroupType.competition_admin,
         ),
     ),
@@ -439,7 +439,7 @@ async def create_school(
     school: schemas_sport_competition.SchoolExtensionBase,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_a_member_of_extended(
+        is_user_in(
             group_id=GroupType.competition_admin,
         ),
     ),
@@ -469,7 +469,7 @@ async def edit_school(
     school: schemas_sport_competition.SchoolExtensionEdit,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_a_member_of_extended(
+        is_user_in(
             group_id=GroupType.competition_admin,
         ),
     ),
@@ -494,7 +494,7 @@ async def delete_school(
     school_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_a_member_of_extended(
+        is_user_in(
             group_id=GroupType.competition_admin,
         ),
     ),
@@ -526,7 +526,7 @@ async def create_school_general_quota(
     quota_info: schemas_sport_competition.SchoolGeneralQuotaBase,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_a_member_of_extended(
+        is_user_in(
             group_id=GroupType.competition_admin,
         ),
     ),
@@ -568,7 +568,7 @@ async def edit_school_general_quota(
     quota_info: schemas_sport_competition.SchoolGeneralQuotaBase,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_a_member_of_extended(
+        is_user_in(
             group_id=GroupType.competition_admin,
         ),
     ),
@@ -608,7 +608,7 @@ async def get_quotas_for_sport(
     sport_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_a_member_of_extended(
+        is_user_in(
             group_id=GroupType.competition_admin,
         ),
     ),
@@ -664,7 +664,7 @@ async def create_sport_quota(
     quota_info: schemas_sport_competition.QuotaInfo,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_a_member_of_extended(
+        is_user_in(
             group_id=GroupType.competition_admin,
         ),
     ),
@@ -712,7 +712,7 @@ async def edit_sport_quota(
     quota_info: schemas_sport_competition.QuotaEdit,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_a_member_of_extended(
+        is_user_in(
             group_id=GroupType.competition_admin,
         ),
     ),
@@ -761,7 +761,7 @@ async def delete_sport_quota(
     sport_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_a_member_of_extended(
+        is_user_in(
             group_id=GroupType.competition_admin,
         ),
     ),
@@ -850,7 +850,7 @@ async def get_teams_for_sport(
     sport_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_a_member_of_extended(
+        is_user_in(
             group_id=GroupType.competition_admin,
         ),
     ),
@@ -1083,7 +1083,7 @@ async def get_participants_for_sport(
     sport_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_a_member_of_extended(
+        is_user_in(
             group_id=GroupType.competition_admin,
         ),
     ),
@@ -1345,7 +1345,7 @@ async def create_match(
     match_info: schemas_sport_competition.MatchBase,
     db: AsyncSession = Depends(get_db),
     user: schemas_users.CoreUser = Depends(
-        is_user_a_member_of_extended(
+        is_user_in(
             group_id=GroupType.competition_admin,
         ),
     ),
@@ -1401,7 +1401,7 @@ async def edit_match(
     match_info: schemas_sport_competition.MatchEdit,
     db: AsyncSession = Depends(get_db),
     user: schemas_users.CoreUser = Depends(
-        is_user_a_member_of_extended(
+        is_user_in(
             group_id=GroupType.competition_admin,
         ),
     ),
