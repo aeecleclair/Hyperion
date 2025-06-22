@@ -670,7 +670,9 @@ async def test_get_payment_url_no_participant(client: TestClient, mocker):
     mocker.patch(
         "app.utils.tools.get_core_data",
         return_value=coredata_raid.RaidPrice(
-            student_price=50, t_shirt_price=15, external_price=90
+            student_price=50,
+            t_shirt_price=15,
+            external_price=90,
         ),
     )
 
@@ -699,7 +701,9 @@ async def test_get_payment_url_participant_no_payment(client: TestClient, mocker
     mocker.patch(
         "app.utils.tools.get_core_data",
         return_value=coredata_raid.RaidPrice(
-            student_price=50, t_shirt_price=15, external_price=90
+            student_price=50,
+            t_shirt_price=15,
+            external_price=90,
         ),
     )
 
@@ -728,7 +732,9 @@ async def test_get_payment_url_participant_with_tshirt(client: TestClient, mocke
     mocker.patch(
         "app.utils.tools.get_core_data",
         return_value=coredata_raid.RaidPrice(
-            student_price=50, t_shirt_price=15, external_price=90
+            student_price=50,
+            t_shirt_price=15,
+            external_price=90,
         ),
     )
     mocker.patch(
@@ -782,7 +788,9 @@ async def test_get_payment_url_participant_already_paid(client: TestClient, mock
     mocker.patch(
         "app.utils.tools.get_core_data",
         return_value=coredata_raid.RaidPrice(
-            student_price=50, t_shirt_price=15, external_price=90
+            student_price=50,
+            t_shirt_price=15,
+            external_price=90,
         ),
     )
 
