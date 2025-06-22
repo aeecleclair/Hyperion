@@ -201,7 +201,6 @@ class Participant(Base):
             self.t_shirt_size,
             self.situation,
             self.attestation_on_honour,
-            self.payment,
         ]
         number_validated: float = sum(
             [condition is not None for condition in conditions],

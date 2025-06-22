@@ -1106,24 +1106,40 @@ async def get_payment_url(
         raise MissingHelloAssoSlugError("HELLOASSO_SLUG")
 
     raid_prices = await get_core_data(coredata_raid.RaidPrice, db)
-    if not raid_prices.student_price or not raid_prices.t_shirt_price:
+    if not raid_prices.student_price or not raid_prices.t_shirt_price or not raid_prices.external_price:
         raise HTTPException(status_code=404, detail="Prices not set.")
+
     price = 0
     checkout_name = ""
     participant = await cruds_raid.get_participant_by_id(user.id, db)
-    if participant:
-        if not participant.payment:
-            price += raid_prices.student_price
-            checkout_name += "Inscription Raid"
+    if not participant:
+        raise HTTPException(status_code=404, detail="Participant not found.")
+
+    if participant.validation_progress != 100:
+        raise HTTPException(
+            status_code=403,
+            detail="You must complete your registration before paying.",
+        )
+
+    if not participant.payment:
         if (
-            participant.t_shirt_size
-            and participant.t_shirt_size != Size.None_
-            and not participant.t_shirt_payment
+            participant.student_card is not None
+            and participant.student_card.validation == DocumentValidation.accepted
         ):
-            price += raid_prices.t_shirt_price
-            if not participant.payment:
-                checkout_name += " + "
-            checkout_name += "T Shirt taille" + participant.t_shirt_size.value
+            price += raid_prices.student_price
+            checkout_name = "Inscription Raid - Tarif étudiant"
+        else:
+            price += raid_prices.external_price
+            checkout_name = "Inscription Raid - Tarif externe"
+    if (
+        participant.t_shirt_size
+        and participant.t_shirt_size != Size.None_
+        and not participant.t_shirt_payment
+    ):
+        price += raid_prices.t_shirt_price
+        if not participant.payment:
+            checkout_name += " + "
+        checkout_name += "T Shirt taille" + participant.t_shirt_size.value
     user_dict = user.__dict__
     user_dict.pop("school", None)
     checkout = await payment_tool.init_checkout(
