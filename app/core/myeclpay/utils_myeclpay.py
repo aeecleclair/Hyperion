@@ -24,7 +24,6 @@ hyperion_myeclpay_logger = logging.getLogger("hyperion.myeclpay")
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 LATEST_TOS = 2
-MAX_TRANSACTION_TOTAL = 2000
 QRCODE_EXPIRATION = 5  # minutes
 MYECLPAY_LOGS_S3_SUBFOLDER = "logs"
 RETENTION_DURATION = 10 * 365  # 10 years in days
