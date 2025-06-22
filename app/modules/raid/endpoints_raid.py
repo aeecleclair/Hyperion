@@ -1106,7 +1106,11 @@ async def get_payment_url(
         raise MissingHelloAssoSlugError("HELLOASSO_SLUG")
 
     raid_prices = await get_core_data(coredata_raid.RaidPrice, db)
-    if not raid_prices.student_price or not raid_prices.t_shirt_price or not raid_prices.external_price:
+    if (
+        not raid_prices.student_price
+        or not raid_prices.t_shirt_price
+        or not raid_prices.external_price
+    ):
         raise HTTPException(status_code=404, detail="Prices not set.")
 
     price = 0
