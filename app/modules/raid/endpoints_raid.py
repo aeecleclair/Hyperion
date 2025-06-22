@@ -1121,7 +1121,7 @@ async def get_payment_url(
 
     if participant.validation_progress != 100:
         raise HTTPException(
-            status_code=403,
+            status_code=400,
             detail="You must complete your registration before paying.",
         )
 
