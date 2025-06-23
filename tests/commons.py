@@ -19,6 +19,7 @@ from app.core.users import cruds_users, models_users, schemas_users
 from app.core.utils import security
 from app.core.utils.config import Settings
 from app.dependencies import get_settings
+from app.types import core_data
 from app.types.exceptions import RedisConnectionError
 from app.types.floors_type import FloorsType
 from app.types.scheduler import OfflineScheduler, Scheduler
@@ -26,6 +27,7 @@ from app.types.sqlalchemy import Base
 from app.utils.redis import connect, disconnect
 from app.utils.tools import (
     get_random_string,
+    set_core_data,
 )
 
 
@@ -216,6 +218,23 @@ async def add_object_to_db(db_object: Base) -> None:
     async with TestingSessionLocal() as db:
         try:
             db.add(db_object)
+            await db.commit()
+        except Exception as error:
+            await db.rollback()
+            raise FailedToAddObjectToDB from error
+        finally:
+            await db.close()
+
+
+async def add_coredata_to_db(
+    core_data: core_data.BaseCoreData,
+) -> None:
+    """
+    Add a CoreData object
+    """
+    async with TestingSessionLocal() as db:
+        try:
+            await set_core_data(core_data, db=db)
             await db.commit()
         except Exception as error:
             await db.rollback()

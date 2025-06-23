@@ -8,6 +8,7 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 from PIL import Image
+from pytest_mock import MockerFixture
 
 from app.core.groups.groups_type import GroupType
 from app.core.users import models_users
@@ -26,6 +27,7 @@ from app.modules.raid.utils.pdf.pdf_writer import (
     maximize_image,
 )
 from tests.commons import (
+    add_coredata_to_db,
     add_object_to_db,
     create_api_access_token,
     create_user_with_groups,
@@ -206,6 +208,14 @@ async def init_objects() -> None:
             default_asset,
             "data/raid/" + path,
         )
+
+    await add_coredata_to_db(
+        coredata_raid.RaidPrice(
+            student_price=50,
+            t_shirt_price=15,
+            external_price=90,
+        )
+    )
 
 
 def test_get_participant_by_id(client: TestClient):
@@ -638,7 +648,7 @@ def test_get_raid_price(client: TestClient):
 
 
 def test_update_raid_price(client: TestClient):
-    price_data = {"student_price": 50, "t_shirt_price": 15}
+    price_data = {"student_price": 50, "t_shirt_price": 15, "external_price": 90}
     response = client.patch(
         "/raid/price",
         json=price_data,
@@ -664,17 +674,12 @@ def test_delete_team(client: TestClient):
     assert response.status_code == 204
 
 
-async def test_get_payment_url_no_participant(client: TestClient, mocker):
+async def test_get_payment_url_no_participant(
+    client: TestClient,
+    mocker: MockerFixture,
+):
     # Mock the necessary dependencies
     mocker.patch("app.modules.raid.cruds_raid.get_participant_by_id", return_value=None)
-    mocker.patch(
-        "app.utils.tools.get_core_data",
-        return_value=coredata_raid.RaidPrice(
-            student_price=50,
-            t_shirt_price=15,
-            external_price=90,
-        ),
-    )
 
     mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
 
@@ -682,13 +687,15 @@ async def test_get_payment_url_no_participant(client: TestClient, mocker):
         "/raid/pay",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
-    assert response.status_code == 201
-    assert "url" in response.json()
-    assert response.json()["url"] == "https://some.url.fr/checkout"
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Participant not found."
 
 
-async def test_get_payment_url_participant_no_payment(client: TestClient, mocker):
-    # Mock the necessary dependencies
+async def test_get_payment_url_participant_no_payment(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    # Mock the necessary dependenciestest_get_payment_url_participant_already_paid
     mocker.patch(
         "app.modules.raid.cruds_raid.get_participant_by_id",
         return_value=Mock(
@@ -698,14 +705,6 @@ async def test_get_payment_url_participant_no_payment(client: TestClient, mocker
             id=str(uuid.uuid4()),
         ),
     )
-    mocker.patch(
-        "app.utils.tools.get_core_data",
-        return_value=coredata_raid.RaidPrice(
-            student_price=50,
-            t_shirt_price=15,
-            external_price=90,
-        ),
-    )
 
     mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
 
@@ -718,7 +717,10 @@ async def test_get_payment_url_participant_no_payment(client: TestClient, mocker
     assert response.json()["url"] == "https://some.url.fr/checkout"
 
 
-async def test_get_payment_url_participant_with_tshirt(client: TestClient, mocker):
+async def test_get_payment_url_participant_with_tshirt(
+    client: TestClient,
+    mocker: MockerFixture,
+):
     # Mock the necessary dependencies
     mocker.patch(
         "app.modules.raid.cruds_raid.get_participant_by_id",
@@ -729,14 +731,7 @@ async def test_get_payment_url_participant_with_tshirt(client: TestClient, mocke
             id=str(uuid.uuid4()),
         ),
     )
-    mocker.patch(
-        "app.utils.tools.get_core_data",
-        return_value=coredata_raid.RaidPrice(
-            student_price=50,
-            t_shirt_price=15,
-            external_price=90,
-        ),
-    )
+
     mocker.patch(
         "app.core.payment.payment_tool.PaymentTool.init_checkout",
         return_value=Mock(
@@ -755,7 +750,7 @@ async def test_get_payment_url_participant_with_tshirt(client: TestClient, mocke
     assert response.json()["url"] == "https://some.url.fr/checkout"
 
 
-# async def test_get_payment_url_prices_not_set(client: TestClient, mocker):
+# async def test_get_payment_url_prices_not_set(client: TestClient, mocker: MockerFixture,):
 #     # Mock the necessary dependencies
 #     mocker.patch(
 #         "app.utils.tools.get_core_data",
@@ -774,7 +769,10 @@ async def test_get_payment_url_participant_with_tshirt(client: TestClient, mocke
 #     assert response.json()["detail"] == "Prices not set."
 
 
-async def test_get_payment_url_participant_already_paid(client: TestClient, mocker):
+async def test_get_payment_url_participant_already_paid(
+    client: TestClient,
+    mocker: MockerFixture,
+):
     # Mock the necessary dependencies
     mocker.patch(
         "app.modules.raid.cruds_raid.get_participant_by_id",
@@ -783,14 +781,6 @@ async def test_get_payment_url_participant_already_paid(client: TestClient, mock
             t_shirt_size=None,
             t_shirt_payment=True,
             id=str(uuid.uuid4()),
-        ),
-    )
-    mocker.patch(
-        "app.utils.tools.get_core_data",
-        return_value=coredata_raid.RaidPrice(
-            student_price=50,
-            t_shirt_price=15,
-            external_price=90,
         ),
     )
 
@@ -983,7 +973,9 @@ def test_html_pdf_writer_init():
 #     assert result == f"data/raid/{mock_participant.id}.pdf"
 
 
-async def test_set_team_number_utility_empty_database(mocker):
+async def test_set_team_number_utility_empty_database(
+    mocker: MockerFixture,
+):
     """Test the set_team_number utility with an empty database (no existing teams)"""
     # Create mock objects
     mock_db = mocker.AsyncMock()
@@ -1014,7 +1006,9 @@ async def test_set_team_number_utility_empty_database(mocker):
     assert args[1].number == 101  # 100 (sports separator) + 1
 
 
-async def test_set_team_number_utility_existing_teams(mocker):
+async def test_set_team_number_utility_existing_teams(
+    mocker: MockerFixture,
+):
     """Test the set_team_number utility with existing teams"""
     # Create mock objects
     mock_db = mocker.AsyncMock()
@@ -1045,7 +1039,9 @@ async def test_set_team_number_utility_existing_teams(mocker):
     assert args[1].number == 221  # 220 + 1
 
 
-async def test_set_team_number_utility_no_difficulty(mocker):
+async def test_set_team_number_utility_no_difficulty(
+    mocker: MockerFixture,
+):
     """Test the set_team_number utility with a team without difficulty"""
     # Create mock objects
     mock_db = mocker.AsyncMock()
@@ -1067,7 +1063,9 @@ async def test_set_team_number_utility_no_difficulty(mocker):
     mock_update_team.assert_not_called()
 
 
-async def test_set_team_number_utility_discovery_difficulty(mocker):
+async def test_set_team_number_utility_discovery_difficulty(
+    mocker: MockerFixture,
+):
     """Test the set_team_number utility with discovery difficulty"""
     # Create mock objects
     mock_db = mocker.AsyncMock()
