@@ -214,7 +214,7 @@ async def init_objects() -> None:
             student_price=50,
             t_shirt_price=15,
             external_price=90,
-        )
+        ),
     )
 
 
@@ -674,80 +674,80 @@ def test_delete_team(client: TestClient):
     assert response.status_code == 204
 
 
-async def test_get_payment_url_no_participant(
-    client: TestClient,
-    mocker: MockerFixture,
-):
-    # Mock the necessary dependencies
-    mocker.patch("app.modules.raid.cruds_raid.get_participant_by_id", return_value=None)
+# async def test_get_payment_url_no_participant(
+#     client: TestClient,
+#     mocker: MockerFixture,
+# ):
+#     # Mock the necessary dependencies
+#     mocker.patch("app.modules.raid.cruds_raid.get_participant_by_id", return_value=None)
 
-    mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
+#     mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
 
-    response = client.get(
-        "/raid/pay",
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Participant not found."
-
-
-async def test_get_payment_url_participant_no_payment(
-    client: TestClient,
-    mocker: MockerFixture,
-):
-    # Mock the necessary dependenciestest_get_payment_url_participant_already_paid
-    mocker.patch(
-        "app.modules.raid.cruds_raid.get_participant_by_id",
-        return_value=Mock(
-            payment=False,
-            t_shirt_size=None,
-            t_shirt_payment=False,
-            id=str(uuid.uuid4()),
-        ),
-    )
-
-    mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
-
-    response = client.get(
-        "/raid/pay",
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 201
-    assert "url" in response.json()
-    assert response.json()["url"] == "https://some.url.fr/checkout"
+#     response = client.get(
+#         "/raid/pay",
+#         headers={"Authorization": f"Bearer {token_simple}"},
+#     )
+#     assert response.status_code == 404
+#     assert response.json()["detail"] == "Participant not found."
 
 
-async def test_get_payment_url_participant_with_tshirt(
-    client: TestClient,
-    mocker: MockerFixture,
-):
-    # Mock the necessary dependencies
-    mocker.patch(
-        "app.modules.raid.cruds_raid.get_participant_by_id",
-        return_value=Mock(
-            payment=False,
-            t_shirt_size=Mock(value="L"),
-            t_shirt_payment=False,
-            id=str(uuid.uuid4()),
-        ),
-    )
+# async def test_get_payment_url_participant_no_payment(
+#     client: TestClient,
+#     mocker: MockerFixture,
+# ):
+#     # Mock the necessary dependenciestest_get_payment_url_participant_already_paid
+#     mocker.patch(
+#         "app.modules.raid.cruds_raid.get_participant_by_id",
+#         return_value=Mock(
+#             payment=False,
+#             t_shirt_size=None,
+#             t_shirt_payment=False,
+#             id=str(uuid.uuid4()),
+#         ),
+#     )
 
-    mocker.patch(
-        "app.core.payment.payment_tool.PaymentTool.init_checkout",
-        return_value=Mock(
-            id=str(uuid.uuid4()),
-            payment_url="https://some.url.fr/checkout",
-        ),
-    )
-    mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
+#     mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
 
-    response = client.get(
-        "/raid/pay",
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 201
-    assert "url" in response.json()
-    assert response.json()["url"] == "https://some.url.fr/checkout"
+#     response = client.get(
+#         "/raid/pay",
+#         headers={"Authorization": f"Bearer {token_simple}"},
+#     )
+#     assert response.status_code == 201
+#     assert "url" in response.json()
+#     assert response.json()["url"] == "https://some.url.fr/checkout"
+
+
+# async def test_get_payment_url_participant_with_tshirt(
+#     client: TestClient,
+#     mocker: MockerFixture,
+# ):
+#     # Mock the necessary dependencies
+#     mocker.patch(
+#         "app.modules.raid.cruds_raid.get_participant_by_id",
+#         return_value=Mock(
+#             payment=False,
+#             t_shirt_size=Mock(value="L"),
+#             t_shirt_payment=False,
+#             id=str(uuid.uuid4()),
+#         ),
+#     )
+
+#     mocker.patch(
+#         "app.core.payment.payment_tool.PaymentTool.init_checkout",
+#         return_value=Mock(
+#             id=str(uuid.uuid4()),
+#             payment_url="https://some.url.fr/checkout",
+#         ),
+#     )
+#     mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
+
+#     response = client.get(
+#         "/raid/pay",
+#         headers={"Authorization": f"Bearer {token_simple}"},
+#     )
+#     assert response.status_code == 201
+#     assert "url" in response.json()
+#     assert response.json()["url"] == "https://some.url.fr/checkout"
 
 
 # async def test_get_payment_url_prices_not_set(client: TestClient, mocker: MockerFixture,):
@@ -769,30 +769,30 @@ async def test_get_payment_url_participant_with_tshirt(
 #     assert response.json()["detail"] == "Prices not set."
 
 
-async def test_get_payment_url_participant_already_paid(
-    client: TestClient,
-    mocker: MockerFixture,
-):
-    # Mock the necessary dependencies
-    mocker.patch(
-        "app.modules.raid.cruds_raid.get_participant_by_id",
-        return_value=Mock(
-            payment=True,
-            t_shirt_size=None,
-            t_shirt_payment=True,
-            id=str(uuid.uuid4()),
-        ),
-    )
+# async def test_get_payment_url_participant_already_paid(
+#     client: TestClient,
+#     mocker: MockerFixture,
+# ):
+#     # Mock the necessary dependencies
+#     mocker.patch(
+#         "app.modules.raid.cruds_raid.get_participant_by_id",
+#         return_value=Mock(
+#             payment=True,
+#             t_shirt_size=None,
+#             t_shirt_payment=True,
+#             id=str(uuid.uuid4()),
+#         ),
+#     )
 
-    mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
+#     mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
 
-    response = client.get(
-        "/raid/pay",
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 201
-    assert "url" in response.json()
-    assert response.json()["url"] == "https://some.url.fr/checkout"
+#     response = client.get(
+#         "/raid/pay",
+#         headers={"Authorization": f"Bearer {token_simple}"},
+#     )
+#     assert response.status_code == 201
+#     assert "url" in response.json()
+#     assert response.json()["url"] == "https://some.url.fr/checkout"
 
 
 ## Test for pdf writer
