@@ -1,7 +1,7 @@
 import tomllib
 from functools import cached_property
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import jwt
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -56,6 +56,17 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    # Currently Pydantic does not support overriding the yaml file path using the `_yaml_file` parameter
+    # as it does for the `_env_file` parameter.
+    # See https://github.com/pydantic/pydantic-settings/issues/259
+    # We thus override the `_yaml_file` manually during the class instantiation
+    # This should be changed in the future when Pydantic will support it
+    _yaml_file: ClassVar[str]
+
+    def __init__(self, _yaml_file, _env_file):
+        Settings._yaml_file = _yaml_file
+        super().__init__(_env_file=_env_file)
+
     # We configure sources that should be used to fill settings.
     # This method should return a tuple of sources
     # The order of these source define their precedence:
@@ -74,7 +85,7 @@ class Settings(BaseSettings):
         return (
             init_settings,
             env_settings,
-            YamlConfigSettingsSource(settings_cls),
+            YamlConfigSettingsSource(settings_cls, yaml_file=cls._yaml_file),
             dotenv_settings,
         )
 
