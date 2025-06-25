@@ -6,7 +6,7 @@ from typing import Any, ClassVar
 import jwt
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
-from pydantic import computed_field, model_validator
+from pydantic import BaseModel, computed_field, model_validator
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -21,6 +21,18 @@ from app.types.exceptions import (
     InvalidRSAKeyInDotenvError,
 )
 from app.utils.auth import providers
+
+
+class AuthClientConfig(BaseModel):
+    """
+    Configuration for an auth client.
+    This class is used to store the configuration of an auth client.
+    It is used to create an instance of the auth client.
+    """
+
+    secret: str | None = None
+    redirect_uri: list[str]
+    auth_client: str
 
 
 class Settings(BaseSettings):
@@ -110,12 +122,21 @@ class Settings(BaseSettings):
     # NOTE: A trailing / is required
     OVERRIDDEN_CLIENT_URL_FOR_OIDC: str | None = None
 
-    # Add an AUTH_CLIENTS variable to the .env dotenv to configure auth clients
-    # This variable should have the format: [["client id", "client secret", "redirect_uri", "app.utils.auth.providers class name"]]
-    # Use an empty secret `null` or `""` to use PKCE instead of a client secret
-    # Ex: AUTH_CLIENTS=[["Nextcloudclient", "supersecret", "https://mynextcloud.instance/", "NextcloudAuthClient"], ["Piwigo", "secret2", "https://mypiwigo.instance/", "BaseAuthClient"], ["mobileapp", null, "https://titan/", "BaseAuthClient"]]
+    # Configure AuthClients, to allow services to authenticate users using OAuth2 or Openid connect
+    # The following format should be used in yaml config files:
+    # ```yml
+    # AUTH_CLIENTS_DICT:
+    #   <ClientId>:
+    #     secret: <ClientSecret>
+    #     redirect_uri:
+    #       - <RedirectUri1>
+    #       - <RedirectUri2>
+    #     auth_client: <AuthClientClassName>
+    # ```
+    # `AuthClientClassName` should be a class from `app.utils.auth.providers`
+    # `secret` may be omitted to use PKCE instead of a client secret
     # NOTE: AUTH_CLIENTS property should never be used in the code. To get an auth client, use `KNOWN_AUTH_CLIENTS`
-    AUTH_CLIENTS: list[tuple[str, str | None, list[str], str]]
+    AUTH_CLIENTS: dict[str, AuthClientConfig] = {}
 
     #####################
     # Hyperion settings #
@@ -321,15 +342,17 @@ class Settings(BaseSettings):
     @cached_property
     def KNOWN_AUTH_CLIENTS(cls) -> dict[str, providers.BaseAuthClient]:
         clients = {}
-        for client_id, secret, redirect_uri, auth_client_name in cls.AUTH_CLIENTS:
+        auth_client_class: type[providers.BaseAuthClient]
+
+        for client_id, configuration in cls.AUTH_CLIENTS.items():
             try:
-                auth_client_class: type[providers.BaseAuthClient] = getattr(
+                auth_client_class = getattr(
                     providers,
-                    auth_client_name,
+                    configuration.auth_client,
                 )
             except AttributeError as error:
                 raise DotenvInvalidAuthClientNameInError(
-                    auth_client_name,
+                    configuration.auth_client,
                 ) from error
 
             # We can create a new instance of the auth_client_class with the client id and secret
@@ -337,8 +360,8 @@ class Settings(BaseSettings):
                 client_id=client_id,
                 # If the secret is empty, this mean the client is expected to use PKCE
                 # We need to pass a None value to the auth_client_class instead of an other falsy value
-                secret=secret or None,
-                redirect_uri=redirect_uri,
+                secret=configuration.secret or None,
+                redirect_uri=configuration.redirect_uri,
             )
 
         return clients
