@@ -27,4 +27,5 @@ class RaidDriveFolders(core_data.BaseCoreData):
 class RaidPrice(core_data.BaseCoreData):
     student_price: int | None = None
     partner_price: int | None = None
+    external_price: int | None = None
     t_shirt_price: int | None = None
