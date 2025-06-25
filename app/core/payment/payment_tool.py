@@ -39,7 +39,7 @@ class PaymentTool:
     _access_token_expiry: int | None = None
 
     _auth_client: OAuth2Session
-    _hello_asso_api_base: str
+    _helloasso_api_base: str
     _helloasso_slug: str
 
     _redirection_uri: str | None = None
@@ -50,7 +50,7 @@ class PaymentTool:
         helloasso_api_base: str,
     ):
         self.name = config.name
-        self._hello_asso_api_base = helloasso_api_base
+        self._helloasso_api_base = helloasso_api_base
         self._auth_client = OAuth2Session(
             client_id=config.helloasso_client_id,
             client_secret=config.helloasso_client_secret,
@@ -109,10 +109,10 @@ class PaymentTool:
         Get a valid access token and construct an HelloAsso API configuration object
         """
         access_token = self.get_access_token()
-        if self._hello_asso_api_base is None:
+        if self._helloasso_api_base is None:
             raise PaymentToolCredentialsNotSetException
         return Configuration(
-            host="https://" + self._hello_asso_api_base + "/v5",
+            host="https://" + self._helloasso_api_base + "/v5",
             access_token=access_token,
             retries=3,
         )
