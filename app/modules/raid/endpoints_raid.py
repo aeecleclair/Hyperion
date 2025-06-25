@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.google_api.google_api import DriveGoogleAPI
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.payment.payment_tool import PaymentTool
+from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.users import models_users, schemas_users
 from app.core.utils.config import Settings
 from app.dependencies import (
@@ -1106,13 +1107,11 @@ async def get_payment_url(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
-    payment_tool: PaymentTool = Depends(get_payment_tool),
+    payment_tool: PaymentTool = Depends(get_payment_tool[HelloAssoConfigName.RAID]),
 ):
     """
     Get payment url
     """
-    if settings.HELLOASSO_SLUG is None:
-        raise MissingHelloAssoSlugError("HELLOASSO_SLUG")
 
     raid_prices = await get_core_data(coredata_raid.RaidPrice, db)
     if (
@@ -1157,10 +1156,8 @@ async def get_payment_url(
     user_dict.pop("school", None)
     checkout = await payment_tool.init_checkout(
         module=module.root,
-        helloasso_slug=settings.HELLOASSO_SLUG,
         checkout_amount=price,
         checkout_name=checkout_name,
-        redirection_uri=settings.RAID_PAYMENT_REDIRECTION_URL or "",
         payer_user=schemas_users.CoreUser(**user_dict),
         db=db,
     )
