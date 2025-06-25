@@ -115,6 +115,13 @@ class DotenvMissingVariableError(Exception):
         super().__init__(f"{variable_name} should be configured in the dotenv")
 
 
+class DotenvBothAuthClientAndAuthClientDictConfigured(Exception):
+    def __init__(self):
+        super().__init__(
+            "Both AUTH_CLIENT_DICT and the older AUTH_CLIENT are configured in the dotenv. Please remove the AUTH_CLIENT variable from the dotenv.",
+        )
+
+
 class DotenvInvalidVariableError(Exception):
     pass
 
