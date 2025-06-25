@@ -674,21 +674,21 @@ def test_delete_team(client: TestClient):
     assert response.status_code == 204
 
 
-# async def test_get_payment_url_no_participant(
-#     client: TestClient,
-#     mocker: MockerFixture,
-# ):
-#     # Mock the necessary dependencies
-#     mocker.patch("app.modules.raid.cruds_raid.get_participant_by_id", return_value=None)
+async def test_get_payment_url_no_participant(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    # Mock the necessary dependencies
+    mocker.patch("app.modules.raid.cruds_raid.get_participant_by_id", return_value=None)
 
-#     mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
+    mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
 
-#     response = client.get(
-#         "/raid/pay",
-#         headers={"Authorization": f"Bearer {token_simple}"},
-#     )
-#     assert response.status_code == 404
-#     assert response.json()["detail"] == "Participant not found."
+    response = client.get(
+        "/raid/pay",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Participant not found."
 
 
 # async def test_get_payment_url_participant_no_payment(
