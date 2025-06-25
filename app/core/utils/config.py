@@ -15,7 +15,6 @@ from pydantic_settings import (
 )
 
 from app.types.exceptions import (
-    DotenvBothAuthClientAndAuthClientDictConfigured,
     DotenvInvalidAuthClientNameInError,
     DotenvInvalidVariableError,
     DotenvMissingVariableError,
