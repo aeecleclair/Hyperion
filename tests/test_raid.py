@@ -7,6 +7,7 @@ from unittest.mock import Mock
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
+from pytest_mock import MockerFixture
 
 from app.core.groups.groups_type import GroupType
 from app.core.users import models_users
