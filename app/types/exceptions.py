@@ -73,6 +73,11 @@ class PaymentToolCredentialsNotSetException(Exception):
         super().__init__("HelloAsso API credentials are not set")
 
 
+class UnsetRedirectionUriError(Exception):
+    def __init__(self):
+        super().__init__("No redirection URI set in the PaymentTool configuration.")
+
+
 class FileNameIsNotAnUUIDError(Exception):
     def __init__(self):
         super().__init__("The filename is not a valid UUID")

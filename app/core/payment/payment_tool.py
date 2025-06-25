@@ -23,6 +23,7 @@ from app.core.utils import security
 from app.types.exceptions import (
     MissingHelloAssoCheckoutIdError,
     PaymentToolCredentialsNotSetException,
+    UnsetRedirectionUriError,
 )
 
 if TYPE_CHECKING:
@@ -58,11 +59,6 @@ class PaymentTool:
         )
         self._helloasso_slug = config.helloasso_slug
         self._redirection_uri = config.redirection_uri
-
-        # else:
-        #     hyperion_error_logger.warning(
-        #         "HelloAsso API credentials are not set, payment won't be available",
-        #     )
 
     def get_access_token(self) -> str:
         if not self._auth_client:
@@ -109,8 +105,6 @@ class PaymentTool:
         Get a valid access token and construct an HelloAsso API configuration object
         """
         access_token = self.get_access_token()
-        if self._helloasso_api_base is None:
-            raise PaymentToolCredentialsNotSetException
         return Configuration(
             host="https://" + self._helloasso_api_base + "/v5",
             access_token=access_token,
@@ -160,8 +154,9 @@ class PaymentTool:
         """
         configuration = self.get_hello_asso_configuration()
 
+        redirection_uri = redirection_uri or self._redirection_uri
         if not redirection_uri:
-            redirection_uri = self._redirection_uri or ""
+            raise UnsetRedirectionUriError
 
         # We want to ensure that any error is logged, even if modules tries to try/except this method
         # Thus we catch any exception and log it, then reraise it
