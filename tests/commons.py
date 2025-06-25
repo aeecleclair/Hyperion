@@ -13,7 +13,8 @@ from app.core.auth import schemas_auth
 from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.payment import cruds_payment, models_payment, schemas_payment
-from app.core.payment.types_payment import HelloAssoConfigName
+from app.core.payment.payment_tool import PaymentTool
+from app.core.payment.types_payment import HelloAssoConfig, HelloAssoConfigName
 from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users, models_users, schemas_users
 from app.core.utils import security
@@ -247,7 +248,16 @@ class MockedPaymentTool:
     def __init__(
         self,
     ):
-        pass
+        self.payment_tool = PaymentTool(
+            config=HelloAssoConfig(
+                name=HelloAssoConfigName.CDR,
+                helloasso_client_id="client",
+                helloasso_client_secret="secret",
+                helloasso_slug="test",
+                redirection_uri="https://example.com/redirect",
+            ),
+            helloasso_api_base="https://api.helloasso.com/v5",
+        )
 
     def is_payment_available(self) -> bool:
         return True
@@ -285,19 +295,10 @@ class MockedPaymentTool:
         checkout_id: uuid.UUID,
         db: AsyncSession,
     ) -> schemas_payment.CheckoutComplete | None:
-        checkout_model = await cruds_payment.get_checkout_by_id(
+        return await self.payment_tool.get_checkout(
             checkout_id=checkout_id,
             db=db,
         )
-        if checkout_model is None:
-            return None
-
-        checkout_dict = checkout_model.__dict__
-        checkout_dict["payments"] = [
-            schemas_payment.CheckoutPayment(**payment.__dict__)
-            for payment in checkout_dict["payments"]
-        ]
-        return schemas_payment.CheckoutComplete(**checkout_dict)
 
 
 def override_get_payment_tool(

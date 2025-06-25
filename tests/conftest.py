@@ -30,13 +30,13 @@ def client() -> TestClient:
     test_app.dependency_overrides[get_unsafe_db] = override_get_unsafe_db
     test_app.dependency_overrides[get_settings] = override_get_settings
     test_app.dependency_overrides[get_redis_client] = override_get_redis_client
-    test_app.dependency_overrides[get_payment_tool[HelloAssoConfigName.CDR]] = (
+    test_app.dependency_overrides[get_payment_tool(HelloAssoConfigName.CDR)] = (
         override_get_payment_tool(HelloAssoConfigName.CDR)
     )
-    test_app.dependency_overrides[get_payment_tool[HelloAssoConfigName.RAID]] = (
+    test_app.dependency_overrides[get_payment_tool(HelloAssoConfigName.RAID)] = (
         override_get_payment_tool(HelloAssoConfigName.RAID)
     )
-    test_app.dependency_overrides[get_payment_tool[HelloAssoConfigName.MYECLPAY]] = (
+    test_app.dependency_overrides[get_payment_tool(HelloAssoConfigName.MYECLPAY)] = (
         override_get_payment_tool(HelloAssoConfigName.MYECLPAY)
     )
     test_app.dependency_overrides[get_scheduler] = override_get_scheduler
