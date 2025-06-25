@@ -7,7 +7,12 @@ import jwt
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from pydantic import computed_field, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+    YamlConfigSettingsSource,
+)
 
 from app.core.payment.types_payment import HelloAssoConfig, HelloAssoConfigName
 from app.types.exceptions import (
@@ -23,9 +28,14 @@ from app.utils.auth import providers
 class Settings(BaseSettings):
     """
     Settings for Hyperion
-    The class is based on a dotenv file: `/.env`. All undefined variables will be populated from:
+    The class is based on a env configuration file: `/.env.yaml`.
+
+    All undefined variables will be populated from:
     1. An environment variable
-    2. The dotenv .env file
+    2. A yaml .env.yaml file
+    3. The dotenv .env file
+
+    Support for dotenv is kept for compatibility reason but is deprecated. YAML file should be used instead.
 
     See [Pydantic Settings documentation](https://docs.pydantic.dev/latest/concepts/pydantic_settings/#dotenv-env-support) for more information.
     See [FastAPI settings](https://fastapi.tiangolo.com/advanced/settings/) article for best practices with settings.
@@ -33,19 +43,40 @@ class Settings(BaseSettings):
     To access these settings, the `get_settings` dependency should be used.
     """
 
-    # By default, the settings are loaded from the `.env` file but this behaviour can be overridden by using
-    # `_env_file` parameter during instantiation
-    # Ex: `Settings(_env_file=".env.dev")`
+    # By default, the settings are loaded from the `.env.yaml` or `.env` file but this behaviour can be overridden using
+    # `_env_file` and `_yaml_file` parameter during instantiation
+    # Ex: `Settings(_env_file=".env.dev", _yaml_file=".env.dev.yaml")`
     # Without this property, @cached_property decorator raise "TypeError: cannot pickle '_thread.RLock' object"
     # See https://github.com/samuelcolvin/pydantic/issues/1241
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
+        yaml_file=".env.yaml",
         case_sensitive=False,
         extra="ignore",
     )
 
-    # NOTE: Variables without a value should not be configured in this class, but added to the dotenv .env file
+    # We configure sources that should be used to fill settings.
+    # This method should return a tuple of sources
+    # The order of these source define their precedence:
+    # parameters passed an initialization arguments will have
+    # precedence over environment variables, yaml file and dotenv
+    # See https://docs.pydantic.dev/latest/concepts/pydantic_settings/#important-notes
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        return (
+            init_settings,
+            env_settings,
+            YamlConfigSettingsSource(settings_cls),
+            dotenv_settings,
+        )
 
     #####################################
     # SMTP configuration using starttls #
@@ -431,4 +462,4 @@ def construct_prod_settings() -> Settings:
     """
     Return the production settings
     """
-    return Settings(_env_file=".env")
+    return Settings(_env_file=".env", _yaml_file=".env.yaml")
