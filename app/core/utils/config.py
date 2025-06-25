@@ -123,7 +123,6 @@ class Settings(BaseSettings):
     ############################
     # PostgreSQL configuration #
     ############################
-    # PostgreSQL configuration is needed to use the database
     # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (if possible Postgresql should be used instead)
     SQLITE_DB: str | None = None
     POSTGRES_HOST: str = ""
@@ -147,7 +146,7 @@ class Settings(BaseSettings):
     ########################
     # Redis configuration #
     ########################
-    # Redis configuration is needed to use the rate limiter
+    # Redis configuration is needed to use the rate limiter, or multiple uvicorn workers
     # We use the default redis configuration, so the protected mode is enabled by default (see https://redis.io/docs/manual/security/#protected-mode)
     # If you want to use a custom configuration, a password and a specific binds should be used to avoid security issues
     REDIS_HOST: str
@@ -195,7 +194,8 @@ class Settings(BaseSettings):
     ##############
     # Google API #
     ##############
-    # Google API is used to upload files to Google Drive and to use Google Apps Script to generate PDF from Google Sheets
+    # Google API is used to upload files to Google Drive
+    # See ./app/utils/google_api/README.md for more information
     GOOGLE_API_CLIENT_ID: str | None = None
     GOOGLE_API_CLIENT_SECRET: str | None = None
 
