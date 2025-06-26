@@ -34,7 +34,6 @@ from app.modules.raid.utils.utils_raid import (
 from app.types.content_type import ContentType
 from app.types.exceptions import (
     GoogleAPIMissingConfigInDotenvError,
-    MissingHelloAssoSlugError,
 )
 from app.types.module import Module
 from app.utils.tools import (
