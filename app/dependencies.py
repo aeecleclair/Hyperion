@@ -25,10 +25,12 @@ from sqlalchemy.ext.asyncio import (
 from app.core.auth import schemas_auth
 from app.core.groups.groups_type import AccountType, GroupType, get_ecl_account_types
 from app.core.payment.payment_tool import PaymentTool
+from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.users import models_users
 from app.core.utils import security
 from app.core.utils.config import Settings, construct_prod_settings
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
+from app.types.exceptions import PaymentToolCredentialsNotSetException
 from app.types.scheduler import OfflineScheduler, Scheduler
 from app.types.scopes_type import ScopeType
 from app.types.websocket import WebsocketConnectionManager
@@ -65,7 +67,7 @@ notification_manager: NotificationManager | None = None
 
 drive_file_manage: DriveFileManager | None = None
 
-payment_tool: PaymentTool | None = None
+payment_tools: dict[HelloAssoConfigName, PaymentTool] | None = None
 
 mail_templates: calypsso.MailTemplates | None = None
 
@@ -260,20 +262,37 @@ def get_drive_file_manager() -> DriveFileManager:
     return drive_file_manage
 
 
+@lru_cache
 def get_payment_tool(
-    settings: Settings = Depends(get_settings),
-) -> PaymentTool:
-    """
-    Dependency that returns the payment manager.
+    name: HelloAssoConfigName,
+) -> Callable[[Settings], PaymentTool]:
+    def get_payment_tool(
+        settings: Settings = Depends(get_settings),
+    ) -> PaymentTool:
+        global payment_tools
 
-    You should call `payment_tool.is_payment_available()` to know if payment credentials are set in settings.
-    """
-    global payment_tool
+        if settings.HELLOASSO_API_BASE is None:
+            hyperion_error_logger.error(
+                "HelloAsso API base URL is not set in settings, payment won't be available",
+            )
+            raise PaymentToolCredentialsNotSetException
 
-    if payment_tool is None:
-        payment_tool = PaymentTool(settings=settings)
+        if payment_tools is None:
+            payment_tools = {}
+            for helloasso_config in settings.PARSED_HELLOASSO_CONFIGURATIONS:
+                payment_tools[helloasso_config.name] = PaymentTool(
+                    config=helloasso_config,
+                    helloasso_api_base=settings.HELLOASSO_API_BASE,
+                )
+        if name not in payment_tools:
+            hyperion_error_logger.warning(
+                f"HelloAsso API credentials are not set for {name.value}, payment won't be available",
+            )
+            raise PaymentToolCredentialsNotSetException
 
-    return payment_tool
+        return payment_tools[name]
+
+    return get_payment_tool
 
 
 def get_mail_templates(

@@ -1,6 +1,6 @@
 import logging
 import uuid
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from datetime import timedelta
 from functools import lru_cache
 
@@ -14,6 +14,7 @@ from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.payment import cruds_payment, models_payment, schemas_payment
 from app.core.payment.payment_tool import PaymentTool
+from app.core.payment.types_payment import HelloAssoConfig, HelloAssoConfigName
 from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users, models_users, schemas_users
 from app.core.utils import security
@@ -244,10 +245,19 @@ async def add_coredata_to_db(
 
 
 class MockedPaymentTool:
-    original_payment_tool: PaymentTool
-
-    def __init__(self, settings: Settings):
-        self.original_payment_tool = PaymentTool(settings)
+    def __init__(
+        self,
+    ):
+        self.payment_tool = PaymentTool(
+            config=HelloAssoConfig(
+                name=HelloAssoConfigName.CDR,
+                helloasso_client_id="client",
+                helloasso_client_secret="secret",
+                helloasso_slug="test",
+                redirection_uri="https://example.com/redirect",
+            ),
+            helloasso_api_base="https://api.helloasso.com/v5",
+        )
 
     def is_payment_available(self) -> bool:
         return True
@@ -255,11 +265,10 @@ class MockedPaymentTool:
     async def init_checkout(
         self,
         module: str,
-        helloasso_slug: str,
         checkout_amount: int,
         checkout_name: str,
-        redirection_uri: str,
         db: AsyncSession,
+        redirection_uri: str | None = None,
         payer_user: schemas_users.CoreUser | None = None,
     ) -> schemas_payment.Checkout:
         checkout_id = uuid.UUID("81c9ad91-f415-494a-96ad-87bf647df82c")
@@ -286,10 +295,16 @@ class MockedPaymentTool:
         checkout_id: uuid.UUID,
         db: AsyncSession,
     ) -> schemas_payment.CheckoutComplete | None:
-        return await self.original_payment_tool.get_checkout(checkout_id, db)
+        return await self.payment_tool.get_checkout(
+            checkout_id=checkout_id,
+            db=db,
+        )
 
 
 def override_get_payment_tool(
-    settings: Settings = Depends(get_settings),
-) -> MockedPaymentTool:
-    return MockedPaymentTool(settings=settings)
+    name: HelloAssoConfigName,
+) -> Callable[..., MockedPaymentTool]:
+    def override_get_payment_tool() -> MockedPaymentTool:
+        return MockedPaymentTool()
+
+    return override_get_payment_tool

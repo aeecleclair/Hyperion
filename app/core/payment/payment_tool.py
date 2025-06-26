@@ -17,12 +17,13 @@ from helloasso_python.models.hello_asso_api_v5_models_carts_init_checkout_body i
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.payment import cruds_payment, models_payment, schemas_payment
+from app.core.payment.types_payment import HelloAssoConfig
 from app.core.users import schemas_users
 from app.core.utils import security
-from app.core.utils.config import Settings
 from app.types.exceptions import (
     MissingHelloAssoCheckoutIdError,
     PaymentToolCredentialsNotSetException,
+    UnsetRedirectionUriError,
 )
 
 if TYPE_CHECKING:
@@ -38,28 +39,26 @@ class PaymentTool:
     _refresh_token: str | None = None
     _access_token_expiry: int | None = None
 
-    _auth_client: OAuth2Session | None = None
+    _auth_client: OAuth2Session
+    _helloasso_api_base: str
+    _helloasso_slug: str
 
-    _hello_asso_api_base: str | None = None
+    _redirection_uri: str | None = None
 
-    def __init__(self, settings: Settings):
-        if (
-            settings.HELLOASSO_API_BASE
-            and settings.HELLOASSO_CLIENT_ID
-            and settings.HELLOASSO_CLIENT_SECRET
-        ):
-            self._hello_asso_api_base = settings.HELLOASSO_API_BASE
-            self._auth_client = OAuth2Session(
-                settings.HELLOASSO_CLIENT_ID,
-                settings.HELLOASSO_CLIENT_SECRET,
-                token_endpoint="https://"
-                + settings.HELLOASSO_API_BASE
-                + "/oauth2/token",
-            )
-        else:
-            hyperion_error_logger.warning(
-                "HelloAsso API credentials are not set, payment won't be available",
-            )
+    def __init__(
+        self,
+        config: HelloAssoConfig,
+        helloasso_api_base: str,
+    ):
+        self.name = config.name
+        self._helloasso_api_base = helloasso_api_base
+        self._auth_client = OAuth2Session(
+            client_id=config.helloasso_client_id,
+            client_secret=config.helloasso_client_secret,
+            token_endpoint=f"https://{helloasso_api_base}/oauth2/token",
+        )
+        self._helloasso_slug = config.helloasso_slug
+        self._redirection_uri = config.redirection_uri
 
     def get_access_token(self) -> str:
         if not self._auth_client:
@@ -106,10 +105,8 @@ class PaymentTool:
         Get a valid access token and construct an HelloAsso API configuration object
         """
         access_token = self.get_access_token()
-        if self._hello_asso_api_base is None:
-            raise PaymentToolCredentialsNotSetException
         return Configuration(
-            host="https://" + self._hello_asso_api_base + "/v5",
+            host="https://" + self._helloasso_api_base + "/v5",
             access_token=access_token,
             retries=3,
         )
@@ -122,9 +119,7 @@ class PaymentTool:
         If payment is not available, you usually should raise an HTTP Exception explaining that payment is disabled because the API credentials are not configured in settings.
         """
         return (
-            self._auth_client is not None
-            and self._hello_asso_api_base is not None
-            and self._access_token is not None
+            self._access_token is not None
             and self._access_token_expiry is not None
             and self._refresh_token is not None
         )
@@ -132,12 +127,11 @@ class PaymentTool:
     async def init_checkout(
         self,
         module: str,
-        helloasso_slug: str,
         checkout_amount: int,
         checkout_name: str,
-        redirection_uri: str,
         db: AsyncSession,
         payer_user: schemas_users.CoreUser | None = None,
+        redirection_uri: str | None = None,
     ) -> schemas_payment.Checkout:
         """
         Init an HelloAsso checkout
@@ -159,6 +153,10 @@ class PaymentTool:
         Exceptions can be imported from `helloasso_python` package.
         """
         configuration = self.get_hello_asso_configuration()
+
+        redirection_uri = redirection_uri or self._redirection_uri
+        if not redirection_uri:
+            raise UnsetRedirectionUriError
 
         # We want to ensure that any error is logged, even if modules tries to try/except this method
         # Thus we catch any exception and log it, then reraise it
@@ -197,7 +195,7 @@ class PaymentTool:
                 checkout_api = CheckoutApi(api_client)
                 try:
                     response = checkout_api.organizations_organization_slug_checkout_intents_post(
-                        helloasso_slug,
+                        self._helloasso_slug,
                         init_checkout_body,
                     )
                 except Exception:
@@ -213,7 +211,7 @@ class PaymentTool:
 
                     init_checkout_body.payer = None
                     response = checkout_api.organizations_organization_slug_checkout_intents_post(
-                        helloasso_slug,
+                        self._helloasso_slug,
                         init_checkout_body,
                     )
 

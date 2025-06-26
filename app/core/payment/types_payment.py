@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import Enum
 from typing import Any, Literal
 
 from helloasso_python.models.hello_asso_api_v5_models_api_notifications_api_notification_type import (
@@ -32,6 +33,20 @@ According to the swagger we should use a model called `Models.Orders.PaymentDeta
 The closest model in term of field is `HelloAssoApiV5ModelsStatisticsPaymentDetail`
 which does not contain the field `date` expected in the documentation example: https://dev.helloasso.com/docs/notification-exemple#paiement-autoris%C3%A9-sur-un-checkout
 """
+
+
+class HelloAssoConfigName(Enum):
+    CDR = "CDR"
+    RAID = "RAID"
+    MYECLPAY = "MYECLPAY"
+
+
+class HelloAssoConfig(BaseModel):
+    name: HelloAssoConfigName
+    helloasso_client_id: str
+    helloasso_client_secret: str
+    helloasso_slug: str
+    redirection_uri: str | None = None
 
 
 class PaymentDetail(BaseModel):

@@ -2,6 +2,8 @@ from typing import Any
 
 from fastapi import HTTPException
 
+from app.core.payment.types_payment import HelloAssoConfigName
+
 
 class CoreDataNotFoundError(Exception):
     pass
@@ -71,6 +73,11 @@ class PaymentToolCredentialsNotSetException(Exception):
         super().__init__("HelloAsso API credentials are not set")
 
 
+class UnsetRedirectionUriError(Exception):
+    def __init__(self):
+        super().__init__("No redirection URI set in the PaymentTool configuration.")
+
+
 class FileNameIsNotAnUUIDError(Exception):
     def __init__(self):
         super().__init__("The filename is not a valid UUID")
@@ -116,6 +123,14 @@ class DotenvInvalidAuthClientNameInError(Exception):
     def __init__(self, auth_client_name: str):
         super().__init__(
             f"client name {auth_client_name} of AUTH_CLIENTS list from the dotenv is not a valid auth client. It should be an instance from app.utils.auth.providers",
+        )
+
+
+class DotenvInvalidHelloAssoConfigNameError(Exception):
+    def __init__(self, helloasso_config_name: str):
+        super().__init__(
+            f"HelloAsso config name {helloasso_config_name} is not a valid HelloAsso config. Possible values are: "
+            f"{', '.join([name.value for name in HelloAssoConfigName])}",
         )
 
 

@@ -18,6 +18,7 @@ from app.core.groups import cruds_groups, schemas_groups
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import cruds_memberships, schemas_memberships
 from app.core.payment.payment_tool import PaymentTool
+from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.users import cruds_users, models_users, schemas_users
 from app.core.users.cruds_users import get_user_by_id, get_users
 from app.core.utils.config import Settings
@@ -44,7 +45,6 @@ from app.modules.cdr.utils_cdr import (
     is_user_in_a_seller_group,
     validate_payment,
 )
-from app.types.exceptions import MissingHelloAssoSlugError
 from app.types.module import Module
 from app.types.websocket import (
     HyperionWebsocketsRoom,
@@ -2373,13 +2373,11 @@ async def get_payment_url(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
-    payment_tool: PaymentTool = Depends(get_payment_tool),
+    payment_tool: PaymentTool = Depends(get_payment_tool(HelloAssoConfigName.CDR)),
 ):
     """
     Get payment url
     """
-    if settings.HELLOASSO_SLUG is None:
-        raise MissingHelloAssoSlugError("HELLOASSO_SLUG")
 
     purchases = await cruds_cdr.get_purchases_by_user_id(db=db, user_id=user.id)
     payments = await cruds_cdr.get_payments_by_user_id(db=db, user_id=user.id)
@@ -2420,10 +2418,8 @@ async def get_payment_url(
     )
     checkout = await payment_tool.init_checkout(
         module=module.root,
-        helloasso_slug=settings.HELLOASSO_SLUG,
         checkout_amount=amount,
         checkout_name="Chaine de rentrée",
-        redirection_uri=settings.CDR_PAYMENT_REDIRECTION_URL or "",
         payer_user=user_schema,
         db=db,
     )
