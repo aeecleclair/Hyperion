@@ -890,7 +890,9 @@ def test_delete_all_teams(client: TestClient):
     assert len(response.json()) == 0
 
 
-async def test_set_team_number_utility_empty_database(mocker):
+async def test_set_team_number_utility_empty_database(
+    mocker: MockerFixture,
+):
     """Test the set_team_number utility with an empty database (no existing teams)"""
     # Create mock objects
     mock_db = mocker.AsyncMock()
@@ -921,7 +923,9 @@ async def test_set_team_number_utility_empty_database(mocker):
     assert args[1].number == 101  # 100 (sports separator) + 1
 
 
-async def test_set_team_number_utility_existing_teams(mocker):
+async def test_set_team_number_utility_existing_teams(
+    mocker: MockerFixture,
+):
     """Test the set_team_number utility with existing teams"""
     # Create mock objects
     mock_db = mocker.AsyncMock()
@@ -952,7 +956,9 @@ async def test_set_team_number_utility_existing_teams(mocker):
     assert args[1].number == 221  # 220 + 1
 
 
-async def test_set_team_number_utility_no_difficulty(mocker):
+async def test_set_team_number_utility_no_difficulty(
+    mocker: MockerFixture,
+):
     """Test the set_team_number utility with a team without difficulty"""
     # Create mock objects
     mock_db = mocker.AsyncMock()
@@ -974,7 +980,9 @@ async def test_set_team_number_utility_no_difficulty(mocker):
     mock_update_team.assert_not_called()
 
 
-async def test_set_team_number_utility_discovery_difficulty(mocker):
+async def test_set_team_number_utility_discovery_difficulty(
+    mocker: MockerFixture,
+):
     """Test the set_team_number utility with discovery difficulty"""
     # Create mock objects
     mock_db = mocker.AsyncMock()
