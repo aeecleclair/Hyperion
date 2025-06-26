@@ -6,7 +6,7 @@ authors = [{ name = "AEECL ECLAIR" }]
 
 # Hyperion follows Semantic Versioning
 # https://semver.org/
-version = "4.5.4"
+version = "4.6.0"
 minimal-titan-version-code = 139
 requires-python = ">= 3.11, < 3.13"
 
