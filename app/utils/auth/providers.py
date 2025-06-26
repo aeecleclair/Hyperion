@@ -8,7 +8,7 @@ from app.core.groups.groups_type import (
     GroupType,
     get_account_types_except_externals,
     get_ecl_account_types,
-    get_school_account_types,
+    get_schools_account_types,
 )
 from app.core.users import models_users
 from app.types.floors_type import FloorsType
@@ -204,7 +204,7 @@ class WikijsAuthClient(BaseAuthClient):
     # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
 
-    allowed_account_types: list[AccountType] | None = get_school_account_types()
+    allowed_account_types: list[AccountType] | None = get_schools_account_types()
 
     @classmethod
     def get_userinfo(cls, user: models_users.CoreUser):
