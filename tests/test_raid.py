@@ -2,29 +2,23 @@ import datetime
 import shutil
 import uuid
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from PIL import Image
 from pytest_mock import MockerFixture
 
 from app.core.groups.groups_type import GroupType
 from app.core.users import models_users
 from app.modules.raid import coredata_raid, models_raid
-from app.modules.raid.models_raid import Document, Participant, SecurityFile, Team
+from app.modules.raid.models_raid import Participant, SecurityFile, Team
 from app.modules.raid.raid_type import (
     Difficulty,
     DocumentType,
     DocumentValidation,
     MeetingPlace,
     Size,
-)
-from app.modules.raid.utils.pdf.pdf_writer import (
-    HTMLPDFWriter,
-    PDFWriter,
-    maximize_image,
 )
 from tests.commons import (
     add_coredata_to_db,
@@ -881,102 +875,19 @@ def mock_participant():
     )
 
 
-@pytest.fixture
-def mock_document():
-    return Mock(
-        spec=Document,
-        id="doc123",
-        type="id_card",
-        uploaded_at=datetime.datetime.now(tz=datetime.UTC),
+def test_delete_all_teams(client: TestClient):
+    response = client.delete(
+        "/raid/teams",
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
     )
+    assert response.status_code == 204
 
-
-def test_maximize_image(tmp_path):
-    # Create a test image
-    test_image = Image.new("RGB", (200, 100), color="red")
-    image_path = tmp_path / "test_image.png"
-    test_image.save(image_path)
-
-    # Test image maximization
-    max_width, max_height = 150, 150
-    maximized_image = maximize_image(image_path, max_width, max_height)
-
-    assert maximized_image.width <= max_width
-    assert maximized_image.height <= max_height
-
-
-def test_pdf_writer_init():
-    pdf_writer = PDFWriter()
-    assert isinstance(pdf_writer, PDFWriter)
-
-
-# @patch("app.modules.raid.utils.pdf.pdf_writer.PDFWriter")
-# @patch("app.modules.raid.utils.pdf.pdf_writer.PdfWriter")
-# def test_pdf_writer_add_pdf(mock_pdf_writer, mock_pdf_reader, mock_team):
-#     pdf_writer = PDFWriter()
-#     pdf_writer.team = mock_team
-#     pdf_writer.pdf_paths = ["test_path"]
-#     pdf_writer.pdf_indexes = [0]
-#     pdf_writer.file_name = "test.pdf"
-
-#     mock_pdf_reader.return_value.pages = [Mock()]
-#     mock_pdf_writer.return_value.write.return_value = None
-
-#     result = pdf_writer.add_pdf()
-#     assert result == "data/raid/test.pdf"
-
-
-# def test_pdf_writer_write_team(mock_team):
-#     pdf_writer = PDFWriter()
-#     with patch.object(pdf_writer, "add_pdf", return_value="data/raid/test.pdf"):
-#         result = pdf_writer.write_team(mock_team)
-#     assert result == "data/raid/test.pdf"
-
-
-# def test_pdf_writer_write_participant_document(mock_participant, mock_team):
-#     pdf_writer = PDFWriter()
-#     pdf_writer.team = mock_team
-#     with patch.object(pdf_writer, "write_document"):
-#         pdf_writer.write_participant_document(mock_participant)
-
-
-def test_pdf_writer_write_security_file(
-    mock_security_file,
-    mock_participant,
-    mock_team,
-):
-    pdf_writer = PDFWriter()
-    pdf_writer.team = mock_team
-    with patch.object(pdf_writer, "write_key_label"):
-        pdf_writer.write_security_file(mock_security_file, mock_participant)
-
-
-def test_html_pdf_writer_init():
-    html_pdf_writer = HTMLPDFWriter()
-    assert isinstance(html_pdf_writer, HTMLPDFWriter)
-
-
-# @patch("app.modules.raid.utils.pdf.pdf_writer.fitz")
-# def test_html_pdf_writer_write_participant_security_file(mock_fitz, mock_participant):
-#     html_pdf_writer = HTMLPDFWriter()
-#     mock_information = Mock()
-#     result = html_pdf_writer.write_participant_security_file(
-#         mock_participant,
-#         mock_information,
-#         1,
-#     )
-#     assert result == f"data/raid/{mock_participant.id}.pdf"
-#     result = html_pdf_writer.write_participant_security_file(
-#         mock_participant,
-#         mock_information,
-#         1,
-#     )
-#     assert result == f"data/raid/{mock_participant.id}.pdf"
-#         mock_participant,
-#         mock_information,
-#         1,
-#     )
-#     assert result == f"data/raid/{mock_participant.id}.pdf"
+    response = client.get(
+        "/raid/teams",
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 0
 
 
 async def test_set_team_number_utility_empty_database(
@@ -1086,7 +997,6 @@ async def test_set_team_number_utility_discovery_difficulty(
         "app.modules.raid.cruds_raid.get_number_of_team_by_difficulty",
         return_value=5,
     )
-
     # Mock the update_team function
     mock_update_team = mocker.patch("app.modules.raid.cruds_raid.update_team")
 

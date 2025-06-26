@@ -33,3 +33,5 @@ tests/jinja_test_outputs/
 
 # Local testing
 scripts/
+
+node_modules

@@ -13,7 +13,6 @@ from app.core.users import models_users
 from app.dependencies import (
     get_db,
     get_notification_tool,
-    get_request_id,
     is_user_an_ecl_member,
     is_user_in,
 )
@@ -383,7 +382,6 @@ async def create_advert_image(
     advert_id: str,
     image: UploadFile = File(...),
     user: models_users.CoreUser = Depends(is_user_an_ecl_member),
-    request_id: str = Depends(get_request_id),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -402,7 +400,6 @@ async def create_advert_image(
         upload_file=image,
         directory="adverts",
         filename=str(advert_id),
-        request_id=request_id,
         max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,

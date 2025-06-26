@@ -10,7 +10,6 @@ from app.core.groups.groups_type import AccountType, GroupType
 from app.core.users import cruds_users, models_users
 from app.dependencies import (
     get_db,
-    get_request_id,
     is_user_an_ecl_member,
     is_user_in,
 )
@@ -593,7 +592,6 @@ async def delete_membership(
 async def create_association_logo(
     association_id: str,
     image: UploadFile = File(),
-    request_id: str = Depends(get_request_id),
     user: models_users.CoreUser = Depends(is_user_an_ecl_member),
     db: AsyncSession = Depends(get_db),
 ):
@@ -626,7 +624,6 @@ async def create_association_logo(
         upload_file=image,
         directory="associations",
         filename=association_id,
-        request_id=request_id,
         max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,

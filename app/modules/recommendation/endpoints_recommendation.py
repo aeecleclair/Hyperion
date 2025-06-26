@@ -9,7 +9,6 @@ from app.core.groups.groups_type import AccountType, GroupType
 from app.core.users import models_users
 from app.dependencies import (
     get_db,
-    get_request_id,
     is_user_a_member,
     is_user_in,
 )
@@ -168,7 +167,6 @@ async def create_recommendation_image(
     recommendation_id: uuid.UUID,
     image: UploadFile = File(),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.BDE)),
-    request_id: str = Depends(get_request_id),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -188,7 +186,6 @@ async def create_recommendation_image(
         upload_file=image,
         directory="recommendations",
         filename=str(recommendation_id),
-        request_id=request_id,
         max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,

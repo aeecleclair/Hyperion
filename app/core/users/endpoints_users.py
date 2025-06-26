@@ -995,7 +995,6 @@ async def create_current_user_profile_picture(
         upload_file=image,
         directory="profile-pictures",
         filename=str(user.id),
-        request_id=request_id,
         max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,
