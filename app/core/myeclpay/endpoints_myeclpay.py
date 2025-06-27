@@ -1188,7 +1188,10 @@ async def sign_tos(
     if settings.SMTP_ACTIVE:
         mail = mail_templates.get_mail_myeclpay_tos_signed(
             tos_version=signature.accepted_tos_version,
-            tos_url=calypsso.get_asset_relative_url(asset="myeclpay_terms_of_service"),
+            tos_url=settings.CLIENT_URL
+            + calypsso.get_asset_relative_url(
+                asset=calypsso.Asset.myeclpay_terms_of_service,
+            ),
         )
 
         background_tasks.add_task(
