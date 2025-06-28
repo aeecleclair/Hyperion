@@ -2545,11 +2545,11 @@ async def get_ticket_secret(
 
 
 @module.router.get(
-    "/cdr/sellers/{seller_id}/products/{product_id}/ticket/",
+    "/cdr/sellers/{seller_id}/products/{product_id}/tickets/",
     response_model=list[schemas_cdr.GenerateProductTicket],
     status_code=200,
 )
-async def get_tickets(
+async def get_tickets_generators_by_product(
     seller_id: UUID,
     product_id: UUID,
     db: AsyncSession = Depends(get_db),
