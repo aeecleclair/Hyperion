@@ -85,6 +85,10 @@ class GenerateTicketEdit(BaseModel):
     expiration: datetime | None = None
 
 
+class GenerateProductTicket(GenerateTicketComplete):
+    product_id: UUID
+
+
 class ProductVariantBase(BaseModel):
     name_fr: str
     name_en: str | None = None

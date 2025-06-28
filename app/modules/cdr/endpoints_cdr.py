@@ -2545,6 +2545,26 @@ async def get_ticket_secret(
 
 
 @module.router.get(
+    "/cdr/sellers/{seller_id}/products/{product_id}/ticket/",
+    response_model=list[schemas_cdr.GenerateProductTicket],
+    status_code=200,
+)
+async def get_tickets(
+    seller_id: UUID,
+    product_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_a_member),
+):
+    await is_user_in_a_seller_group(
+        seller_id,
+        user,
+        db=db,
+    )
+    await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
+    return await cruds_cdr.get_product_ticket_generators(db=db, product_id=product_id)
+
+
+@module.router.get(
     "/cdr/sellers/{seller_id}/products/{product_id}/tickets/{generator_id}/{secret}/",
     response_model=schemas_cdr.Ticket,
     status_code=200,
