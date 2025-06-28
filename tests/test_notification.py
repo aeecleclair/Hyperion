@@ -156,3 +156,48 @@ def test_get_topic_identifier(client: TestClient) -> None:
     )
     assert response.status_code == 200
     assert response.json() == [TOPIC_2]
+
+
+def test_send_notification_to_group(client: TestClient) -> None:
+    response = client.post(
+        "/notification/send",
+        json={
+            "title": "Test Notification",
+            "content": "This is a test notification.",
+            "group_id": GroupType.admin.value,
+        },
+        headers={
+            "Authorization": f"Bearer {admin_user_token}",
+        },
+    )
+    assert response.status_code == 204
+
+
+def test_send_test_future_notification(client: TestClient) -> None:
+    response = client.post(
+        "/notification/test/send/future",
+        headers={
+            "Authorization": f"Bearer {admin_user_token}",
+        },
+    )
+    assert response.status_code == 204
+
+
+def test_send_test_notification_topic(client: TestClient) -> None:
+    response = client.post(
+        "/notification/test/send/topic",
+        headers={
+            "Authorization": f"Bearer {admin_user_token}",
+        },
+    )
+    assert response.status_code == 204
+
+
+def test_send_test_future_notification_topic(client: TestClient) -> None:
+    response = client.post(
+        "/notification/test/send/topic/future",
+        headers={
+            "Authorization": f"Bearer {admin_user_token}",
+        },
+    )
+    assert response.status_code == 204

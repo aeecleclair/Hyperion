@@ -244,9 +244,34 @@ async def get_topic_identifier(
 
 @router.post(
     "/notification/send",
-    status_code=201,
+    status_code=204,
 )
 async def send_notification(
+    notification_request: schemas_notification.GroupNotificationRequest,
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
+):
+    """
+    Send a notification to a group.
+
+    **Only admins can use this endpoint**
+    """
+    message = schemas_notification.Message(
+        title=notification_request.title,
+        content=notification_request.content,
+        action_module="",
+    )
+    await notification_tool.send_notification_to_group(
+        group_id=notification_request.group_id,
+        message=message,
+    )
+
+
+@router.post(
+    "/notification/test/send",
+    status_code=201,
+)
+async def send_test_notification(
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
@@ -267,10 +292,10 @@ async def send_notification(
 
 
 @router.post(
-    "/notification/send/future",
-    status_code=201,
+    "/notification/test/send/future",
+    status_code=204,
 )
-async def send_future_notification(
+async def send_test_future_notification(
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     scheduler: Scheduler = Depends(get_scheduler),
@@ -295,10 +320,10 @@ async def send_future_notification(
 
 
 @router.post(
-    "/notification/send/topic",
-    status_code=201,
+    "/notification/test/send/topic",
+    status_code=204,
 )
-async def send_notification_topic(
+async def send_test_notification_topic(
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
@@ -319,10 +344,10 @@ async def send_notification_topic(
 
 
 @router.post(
-    "/notification/send/topic/future",
-    status_code=201,
+    "/notification/test/send/topic/future",
+    status_code=204,
 )
-async def send_future_notification_topic(
+async def send_test_future_notification_topic(
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     scheduler: Scheduler = Depends(get_scheduler),
