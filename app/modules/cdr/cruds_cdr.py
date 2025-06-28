@@ -797,6 +797,18 @@ async def get_ticket_by_secret(
     return result.scalars().first()
 
 
+async def get_product_ticket_generators(
+    db: AsyncSession,
+    product_id: UUID,
+) -> Sequence[models_cdr.TicketGenerator]:
+    result = await db.execute(
+        select(models_cdr.TicketGenerator).where(
+            models_cdr.TicketGenerator.product_id == product_id,
+        ),
+    )
+    return result.scalars().all()
+
+
 async def scan_ticket(db: AsyncSession, ticket_id: UUID, scan: int, tags: str):
     await db.execute(
         update(models_cdr.Ticket)
