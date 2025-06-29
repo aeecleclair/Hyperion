@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import AccountType
+from app.core.groups.groups_type import get_account_types_except_externals
 from app.core.schools import cruds_schools
 from app.core.users import cruds_users, schemas_users
 from app.dependencies import get_db, is_user
@@ -24,7 +24,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 module = Module(
     root="sport_competition",
     tag="Sport Competition",
-    default_allowed_account_types=list(AccountType),
+    default_allowed_account_types=get_account_types_except_externals(),
 )
 
 
@@ -32,7 +32,7 @@ module = Module(
     "/competition/sports",
     response_model=list[competition_schemas.Sport],
 )
-async def get_sports(db: AsyncSession = Depends(get_db)):
+async def get_sports(db: AsyncSession = Depends(get_db), user=Depends(is_user)):
     return await competition_cruds.load_all_sports(db)
 
 
@@ -114,6 +114,7 @@ async def delete_sport(
 async def get_groups(
     db=Depends(get_db),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
+    user=Depends(is_user),
 ):
     return await competition_cruds.load_all_groups(edition.id, db)
 
@@ -213,6 +214,7 @@ async def get_quotas_for_school(
     school_id: UUID,
     db=Depends(get_db),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
+    user=Depends(is_user),
 ):
     school = await competition_cruds.load_school_by_id(school_id, edition.id, db)
     if school is None:
@@ -323,8 +325,8 @@ async def delete_quota(
             comptition_group_id=CompetitionGroupType.competition_admin,
         ),
     ),
+    edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
 ):
-    edition = await competition_cruds.load_active_edition(db)
     if edition is None:
         raise HTTPException(
             status_code=404,
@@ -351,6 +353,7 @@ async def delete_quota(
 async def get_schools(
     db=Depends(get_db),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
+    user=Depends(is_user),
 ):
     return await competition_cruds.load_all_schools(edition.id, db)
 
@@ -497,6 +500,7 @@ async def get_sport_teams_for_school_and_sport(
     sport_id: UUID,
     db=Depends(get_db),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
+    user=Depends(is_user),
 ):
     school = await competition_cruds.load_school_by_id(school_id, edition.id, db)
     if school is None:
@@ -711,6 +715,7 @@ async def get_matches_for_sport_and_edition(
     sport_id: UUID,
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
     db=Depends(get_db),
+    user=Depends(is_user),
 ):
     sport = await competition_cruds.load_sport_by_id(sport_id, db)
     if sport is None:
@@ -734,6 +739,7 @@ async def get_matches_for_school_sport_and_edition(
     sport_id: UUID,
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
     db=Depends(get_db),
+    user=Depends(is_user),
 ):
     school = await competition_cruds.load_school_by_id(school_id, edition.id, db)
     if school is None:
