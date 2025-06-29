@@ -1,11 +1,12 @@
 import logging
+from uuid import UUID
 
 from sqlalchemy import and_, delete, select, update
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core import models_core, schemas_core
+from app.core.schools import schemas_schools
+from app.core.users import models_users, schemas_users
 from app.modules.sport_competition import models_sport_competition as models_competition
 from app.modules.sport_competition import (
     schemas_sport_competition as schemas_competition,
@@ -17,29 +18,29 @@ from app.modules.sport_competition.types_sport_competition import (
 logger = logging.getLogger("challenger")
 
 
-async def store_group(
+async def add_group(
     group: schemas_competition.Group,
     db: AsyncSession,
 ):
-    stored_group = await load_group_by_id(group.id, "", db)
-    if stored_group is None:
-        db.add(models_competition.CompetitionGroup(**group.model_dump()))
-    else:
-        await db.execute(
-            update(models_competition.CompetitionGroup)
-            .where(models_competition.CompetitionGroup.id == group.id)
-            .values(**group.model_dump()),
-        )
-    try:
-        await db.commit()
-    except IntegrityError as error:
-        logger.exception("Could not store group")
-        await db.rollback()
-        raise error from None
+    db.add(models_competition.CompetitionGroup(**group.model_dump()))
+    await db.flush()
+
+
+async def update_group(
+    group_id: UUID,
+    group: schemas_competition.GroupEdit,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_competition.CompetitionGroup)
+        .where(models_competition.CompetitionGroup.id == group_id)
+        .values(**group.model_dump(exclude_unset=True)),
+    )
+    await db.flush()
 
 
 async def delete_group_by_id(
-    group_id: str,
+    group_id: UUID,
     db: AsyncSession,
 ):
     await db.execute(
@@ -47,12 +48,12 @@ async def delete_group_by_id(
             models_competition.CompetitionGroup.id == group_id,
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def load_group_by_id(
-    group_id: str,
-    edition_id: str,
+    group_id: UUID,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> schemas_competition.GroupComplete | None:
     group = (
@@ -78,7 +79,7 @@ async def load_group_by_id(
             id=group.id,
             name=group.name,
             members=[
-                schemas_core.CoreUser(**member.__dict__) for member in group.members
+                schemas_users.CoreUser(**member.__dict__) for member in group.members
             ],
         )
         if group
@@ -106,7 +107,7 @@ async def load_group_by_name(
 
 
 async def load_all_groups(
-    edition_id: str,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> list[schemas_competition.Group]:
     groups = await db.execute(select(models_competition.CompetitionGroup))
@@ -117,8 +118,8 @@ async def load_all_groups(
 
 async def load_user_membership_with_group_id(
     user_id: str,
-    group_id: str,
-    edition_id: str,
+    group_id: UUID,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> schemas_competition.UserGroupMembership | None:
     membership = await db.get(
@@ -138,7 +139,7 @@ async def load_user_membership_with_group_id(
 
 async def load_active_user_memberships(
     user_id: str,
-    edition_id: str,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> list[schemas_competition.UserGroupMembership]:
     memberships = (
@@ -165,8 +166,8 @@ async def load_active_user_memberships(
 
 async def add_user_to_group(
     user_id: str,
-    group_id: str,
-    edition_id: str,
+    group_id: UUID,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> None:
     db.add(
@@ -176,17 +177,13 @@ async def add_user_to_group(
             edition_id=edition_id,
         ),
     )
-    try:
-        await db.commit()
-    except IntegrityError as error:
-        await db.rollback()
-        raise error from None
+    await db.flush()
 
 
 async def remove_user_from_group(
     user_id: str,
-    group_id: str,
-    edition_id: str,
+    group_id: UUID,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> None:
     await db.delete(
@@ -196,35 +193,32 @@ async def remove_user_from_group(
             edition_id=edition_id,
         ),
     )
-    try:
-        await db.commit()
-    except IntegrityError as error:
-        await db.rollback()
-        raise error from None
+    await db.flush()
 
 
-async def store_school(
+async def add_school(
     school: schemas_competition.SchoolExtension,
     db: AsyncSession,
 ):
-    stored_school = await load_school_by_id(school.school_id, "", db)
-    if stored_school is None:
-        db.add(models_competition.SchoolExtension(**school.model_dump()))
-    else:
-        await db.execute(
-            update(models_competition.SchoolExtension)
-            .where(models_competition.SchoolExtension.school_id == school.school_id)
-            .values(**school.model_dump()),
-        )
-    try:
-        await db.commit()
-    except IntegrityError as error:
-        await db.rollback()
-        raise error from None
+    db.add(models_competition.SchoolExtension(**school.model_dump()))
+    await db.flush()
+
+
+async def update_school(
+    school_id: UUID,
+    school: schemas_competition.SchoolExtensionEdit,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_competition.SchoolExtension)
+        .where(models_competition.SchoolExtension.school_id == school_id)
+        .values(**school.model_dump(exclude_unset=True)),
+    )
+    await db.flush()
 
 
 async def delete_school_by_id(
-    school_id: str,
+    school_id: UUID,
     db: AsyncSession,
 ):
     await db.execute(
@@ -232,12 +226,12 @@ async def delete_school_by_id(
             models_competition.SchoolExtension.school_id == school_id,
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def load_school_by_id(
-    school_id: str,
-    edition_id: str,
+    school_id: UUID,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> schemas_competition.SchoolExtension | None:
     school_extension = (
@@ -262,7 +256,7 @@ async def load_school_by_id(
     if school_extension is None:
         return None
     school_dict = school_extension.__dict__
-    school = schemas_core.CoreSchool(**school_dict["school"].__dict__)
+    school = schemas_schools.CoreSchool(**school_dict["school"].__dict__)
     general_quota = schemas_competition.SchoolGeneralQuota(
         **school_dict["general_quota"].__dict__,
     )
@@ -277,7 +271,7 @@ async def load_school_by_id(
 
 async def load_school_by_name(
     name: str,
-    edition_id: str,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> schemas_competition.SchoolExtension | None:
     school_extension = (
@@ -304,7 +298,7 @@ async def load_school_by_name(
             school_id=school_extension.school_id,
             from_lyon=school_extension.from_lyon,
             activated=school_extension.activated,
-            school=schemas_core.CoreSchool(**school_extension.school.__dict__),
+            school=schemas_schools.CoreSchool(**school_extension.school.__dict__),
             general_quota=schemas_competition.SchoolGeneralQuota(
                 **school_extension.general_quota.__dict__,
             ),
@@ -315,7 +309,7 @@ async def load_school_by_name(
 
 
 async def load_all_schools(
-    edition_id: str,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> list[schemas_competition.SchoolExtension]:
     school_extensions = await db.execute(
@@ -334,7 +328,7 @@ async def load_all_schools(
             school_id=school_extension.school_id,
             from_lyon=school_extension.from_lyon,
             activated=school_extension.activated,
-            school=schemas_core.CoreSchool(**school_extension.school.__dict__),
+            school=schemas_schools.CoreSchool(**school_extension.school.__dict__),
             general_quota=schemas_competition.SchoolGeneralQuota(
                 **school_extension.general_quota.__dict__,
             ),
@@ -364,17 +358,13 @@ async def store_participant(
             )
             .values(**participant.model_dump()),
         )
-    try:
-        await db.commit()
-    except IntegrityError as error:
-        await db.rollback()
-        raise error from None
+    await db.flush()
 
 
 async def delete_participant_by_ids(
     user_id: str,
-    sport_id: str,
-    edition_id: str,
+    sport_id: UUID,
+    edition_id: UUID,
     db: AsyncSession,
 ):
     await db.execute(
@@ -384,13 +374,13 @@ async def delete_participant_by_ids(
             models_competition.Participant.edition_id == edition_id,
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def load_participant_by_ids(
     user_id: str,
-    sport_id: str,
-    edition_id: str,
+    sport_id: UUID,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> schemas_competition.ParticipantComplete | None:
     participant = (
@@ -418,7 +408,7 @@ async def load_participant_by_ids(
             team_id=participant.team_id,
             substitute=participant.substitute,
             license=participant.license,
-            user=schemas_core.CoreUser(**participant.user.__dict__),
+            user=schemas_users.CoreUser(**participant.user.__dict__),
         )
         if participant
         else None
@@ -426,7 +416,7 @@ async def load_participant_by_ids(
 
 
 async def load_all_participants(
-    edition_id: str,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> list[schemas_competition.ParticipantComplete]:
     participants = await db.execute(
@@ -446,15 +436,15 @@ async def load_all_participants(
             team_id=participant.team_id,
             substitute=participant.substitute,
             license=participant.license,
-            user=schemas_core.CoreUser(**participant.user.__dict__),
+            user=schemas_users.CoreUser(**participant.user.__dict__),
         )
         for participant in participants.scalars().all()
     ]
 
 
 async def load_participants_by_school_id(
-    school_id: str,
-    edition_id: str,
+    school_id: UUID,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> list[schemas_competition.ParticipantComplete]:
     participants = (
@@ -464,8 +454,8 @@ async def load_participants_by_school_id(
                 .where(
                     models_competition.Participant.edition_id == edition_id,
                     models_competition.Participant.user_id.in_(
-                        select(models_core.CoreUser.id).where(
-                            models_core.CoreUser.school_id == school_id,
+                        select(models_users.CoreUser.id).where(
+                            models_users.CoreUser.school_id == school_id,
                         ),
                     ),
                 )
@@ -485,15 +475,15 @@ async def load_participants_by_school_id(
             team_id=participant.team_id,
             substitute=participant.substitute,
             license=participant.license,
-            user=schemas_core.CoreUser(**participant.user.__dict__),
+            user=schemas_users.CoreUser(**participant.user.__dict__),
         )
         for participant in participants
     ]
 
 
 async def load_participants_by_sport_id(
-    sport_id: str,
-    edition_id: str,
+    sport_id: UUID,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> list[schemas_competition.ParticipantComplete]:
     participants = (
@@ -520,16 +510,16 @@ async def load_participants_by_sport_id(
             team_id=participant.team_id,
             substitute=participant.substitute,
             license=participant.license,
-            user=schemas_core.CoreUser(**participant.user.__dict__),
+            user=schemas_users.CoreUser(**participant.user.__dict__),
         )
         for participant in participants
     ]
 
 
 async def load_participants_by_school_and_sport_ids(
-    school_id: str,
-    sport_id: str,
-    edition_id: str,
+    school_id: UUID,
+    sport_id: UUID,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> list[schemas_competition.ParticipantComplete]:
     participants = (
@@ -540,8 +530,8 @@ async def load_participants_by_school_and_sport_ids(
                     models_competition.Participant.sport_id == sport_id,
                     models_competition.Participant.edition_id == edition_id,
                     models_competition.Participant.user_id.in_(
-                        select(models_core.CoreUser.id).where(
-                            models_core.CoreUser.school_id == school_id,
+                        select(models_users.CoreUser.id).where(
+                            models_users.CoreUser.school_id == school_id,
                         ),
                     ),
                 )
@@ -561,7 +551,7 @@ async def load_participants_by_school_and_sport_ids(
             team_id=participant.team_id,
             substitute=participant.substitute,
             license=participant.license,
-            user=schemas_core.CoreUser(**participant.user.__dict__),
+            user=schemas_users.CoreUser(**participant.user.__dict__),
         )
         for participant in participants
     ]
@@ -588,17 +578,13 @@ async def store_quota(
             )
             .values(**quota.model_dump()),
         )
-    try:
-        await db.commit()
-    except IntegrityError as error:
-        await db.rollback()
-        raise error from None
+    await db.flush()
 
 
 async def delete_quota_by_ids(
-    school_id: str,
-    sport_id: str,
-    edition_id: str,
+    school_id: UUID,
+    sport_id: UUID,
+    edition_id: UUID,
     db: AsyncSession,
 ):
     await db.execute(
@@ -608,13 +594,13 @@ async def delete_quota_by_ids(
             models_competition.SchoolSportQuota.edition_id == edition_id,
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def load_quota_by_ids(
-    school_id: str,
-    sport_id: str,
-    edition_id: str,
+    school_id: UUID,
+    sport_id: UUID,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> schemas_competition.Quota | None:
     quota = await db.get(
@@ -625,8 +611,8 @@ async def load_quota_by_ids(
 
 
 async def load_all_quotas_by_school_id(
-    school_id: str,
-    edition_id: str,
+    school_id: UUID,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> list[schemas_competition.Quota]:
     quotas = await db.execute(
@@ -641,8 +627,8 @@ async def load_all_quotas_by_school_id(
 
 
 async def load_all_quotas_by_sport_id(
-    sport_id: str,
-    edition_id: str,
+    sport_id: UUID,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> list[schemas_competition.Quota]:
     quotas = await db.execute(
@@ -669,25 +655,21 @@ async def store_sport(
             .where(models_competition.Sport.id == sport.id)
             .values(**sport.model_dump()),
         )
-    try:
-        await db.commit()
-    except IntegrityError as error:
-        await db.rollback()
-        raise error from None
+    await db.flush()
 
 
 async def delete_sport_by_id(
-    sport_id: str,
+    sport_id: UUID,
     db: AsyncSession,
 ):
     await db.execute(
         delete(models_competition.Sport).where(models_competition.Sport.id == sport_id),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def load_sport_by_id(
-    sport_id: str,
+    sport_id: UUID,
     db: AsyncSession,
 ) -> schemas_competition.Sport | None:
     sport = await db.get(models_competition.Sport, sport_id)
@@ -724,21 +706,17 @@ async def store_team(
             .where(models_competition.Team.id == team.id)
             .values(**team.model_dump()),
         )
-    try:
-        await db.commit()
-    except IntegrityError as error:
-        await db.rollback()
-        raise error from None
+    await db.flush()
 
 
 async def delete_team_by_id(
-    team_id: str,
+    team_id: UUID,
     db: AsyncSession,
 ):
     await db.execute(
         delete(models_competition.Team).where(models_competition.Team.id == team_id),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def load_team_by_id(
@@ -778,7 +756,7 @@ async def load_team_by_id(
 
 async def load_team_by_name(
     name: str,
-    edition_id: str,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> schemas_competition.TeamComplete | None:
     team = (
@@ -815,7 +793,7 @@ def team_model_to_schemas(
     for participant in team.participants:
         participant_dict = participant.__dict__
         participant_dict.pop("user")
-        user = schemas_core.CoreUser(**participant.user.__dict__)
+        user = schemas_users.CoreUser(**participant.user.__dict__)
         participants.append(
             schemas_competition.ParticipantComplete(
                 **participant_dict,
@@ -834,8 +812,8 @@ def team_model_to_schemas(
 
 
 async def load_all_teams_by_sport_id(
-    sport_id: str,
-    edition_id: str,
+    sport_id: UUID,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> list[schemas_competition.TeamComplete]:
     db_teams = await db.execute(
@@ -852,8 +830,8 @@ async def load_all_teams_by_sport_id(
 
 
 async def load_all_teams_by_school_id(
-    school_id: str,
-    edition_id: str,
+    school_id: UUID,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> list[schemas_competition.TeamComplete]:
     teams = await db.execute(
@@ -870,9 +848,9 @@ async def load_all_teams_by_school_id(
 
 
 async def load_all_teams_by_school_and_sport_ids(
-    school_id: str,
-    team_id: str,
-    edition_id: str,
+    school_id: UUID,
+    team_id: UUID,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> list[schemas_competition.TeamComplete]:
     teams = await db.execute(
@@ -906,15 +884,11 @@ async def store_edition(
         if active and active.id != edition.id and edition.activated:
             raise MultipleEditions
 
-    try:
-        await db.commit()
-    except IntegrityError as error:
-        await db.rollback()
-        raise error from None
+    await db.flush()
 
 
 async def delete_edition_by_id(
-    edition_id: str,
+    edition_id: UUID,
     db: AsyncSession,
 ):
     await db.execute(
@@ -922,7 +896,7 @@ async def delete_edition_by_id(
             models_competition.CompetitionEdition.id == edition_id,
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def load_edition_by_id(
@@ -977,21 +951,17 @@ async def store_match(
             .where(models_competition.Match.id == match.id)
             .values(**match.model_dump()),
         )
-    try:
-        await db.commit()
-    except IntegrityError as error:
-        await db.rollback()
-        raise error from None
+    await db.flush()
 
 
 async def delete_match_by_id(
-    match_id: str,
+    match_id: UUID,
     db: AsyncSession,
 ):
     await db.execute(
         delete(models_competition.Match).where(models_competition.Match.id == match_id),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def load_match_by_id(
@@ -1003,8 +973,8 @@ async def load_match_by_id(
 
 
 async def load_all_matches_by_sport_id(
-    sport_id: str,
-    edition_id: str,
+    sport_id: UUID,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> list[schemas_competition.Match]:
     matches = await db.execute(
@@ -1040,8 +1010,8 @@ async def load_all_matches_by_sport_id(
 
 
 async def load_all_matches_by_school_id(
-    school_id: str,
-    edition_id: str,
+    school_id: UUID,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> list[schemas_competition.Match]:
     matches = await db.execute(
@@ -1088,8 +1058,8 @@ async def load_all_matches_by_school_id(
 
 
 async def load_match_by_teams_ids(
-    team1_id: str,
-    team2_id: str,
+    team1_id: UUID,
+    team2_id: UUID,
     db: AsyncSession,
 ) -> schemas_competition.Match | None:
     match = (
