@@ -89,7 +89,7 @@ class SchoolExtension(Base):
 
     school: Mapped[CoreSchool] = relationship(
         "CoreSchool",
-        lazy="selectin",
+        lazy="joined",
         init=False,
     )
     general_quota: Mapped["SchoolGeneralQuota | None"] = relationship(
@@ -120,7 +120,6 @@ class SchoolGeneralQuota(Base):
     cameraman_quota: Mapped[int | None]
     pompom_quota: Mapped[int | None]
     fanfare_quota: Mapped[int | None]
-    non_athlete_quota: Mapped[int | None]
 
 
 class SchoolSportQuota(Base):
