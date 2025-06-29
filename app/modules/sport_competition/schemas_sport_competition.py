@@ -1,12 +1,13 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, NonNegativeInt, PositiveInt
+from pydantic import BaseModel, NonNegativeInt, PositiveInt, model_validator
 
 from app.core.schools import schemas_schools
 from app.core.users import schemas_users
 from app.modules.sport_competition.types_sport_competition import (
     CompetitionGroupType,
+    InvalidUserType,
     SportCategory,
 )
 
@@ -70,6 +71,37 @@ class UserGroupMembership(BaseModel):
 
 class CompetitionUserBase(BaseModel):
     sport_category: SportCategory | None = None
+    is_pompom: bool = False
+    is_fanfare: bool = False
+    is_cameraman: bool = False
+    is_athlete: bool = False
+    is_volunteer: bool = False
+
+    @model_validator(mode="after")
+    def validate_sport_category(self) -> "CompetitionUserBase":
+        if (
+            sum(
+                [
+                    self.is_pompom,
+                    self.is_fanfare,
+                    self.is_cameraman,
+                ],
+            )
+            > 1
+        ):
+            raise InvalidUserType("too_many")
+
+        if not any(
+            [
+                self.is_pompom,
+                self.is_fanfare,
+                self.is_cameraman,
+                self.is_athlete,
+                self.is_volunteer,
+            ],
+        ):
+            raise InvalidUserType("none")
+        return self
 
 
 class CompetitionUserSimple(CompetitionUserBase):
@@ -91,6 +123,11 @@ class CompetitionUser(CompetitionUserSimple):
 class CompetitionUserEdit(BaseModel):
     sport_category: SportCategory | None = None
     validated: bool | None = None
+    is_pompom: bool | None = None
+    is_fanfare: bool | None = None
+    is_cameraman: bool | None = None
+    is_athlete: bool | None = None
+    is_volunteer: bool | None = None
 
 
 class SportBase(BaseModel):

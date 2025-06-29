@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from enum import Enum
+from typing import Literal
 
 
 class InconsistentData(Exception):
@@ -11,6 +12,17 @@ class InconsistentData(Exception):
         if self.complement:
             return f"Inconsistent data: {self.complement}"
         return "Inconsistent data"
+
+
+class InvalidUserType(Exception):
+    def __init__(self, complement: Literal["too_many", "none"], *args: object) -> None:
+        super().__init__(*args)
+        self.complement: Literal["too_many", "none"] = complement
+
+    def __str__(self) -> str:
+        if self.complement == "too_many":
+            return "Invalid user type: too many types selected"
+        return "Invalid user type: no type selected"
 
 
 class UnauthorizedAction(Exception):
