@@ -64,9 +64,8 @@ class Sport(Base):
 class SchoolExtension(Base):
     __tablename__ = "competition_school_extension"
 
-    school_id: Mapped[UUID] = mapped_column(
+    school_id: Mapped[PrimaryKey] = mapped_column(
         ForeignKey("core_school.id"),
-        primary_key=True,
     )
     from_lyon: Mapped[bool]
     activated: Mapped[bool]
