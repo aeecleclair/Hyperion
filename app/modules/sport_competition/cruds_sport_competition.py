@@ -250,6 +250,8 @@ async def load_competition_user_by_id(
     )
     if core_user is None:
         return None
+    if competition_user is None:
+        return None
     return schemas_sport_competition.CompetitionUser(
         id=core_user.id,
         account_type=core_user.account_type,
@@ -271,10 +273,11 @@ async def load_competition_user_by_id(
                 name=group.name,
             )
             for group in competition_user.competition_groups
-        ]
-        if competition_user
-        else [],
-        sport_category=competition_user.sport_category if competition_user else None,
+        ],
+        sport_category=competition_user.sport_category,
+        edition_id=edition_id,
+        validated=competition_user.validated,
+        created_at=competition_user.created_at,
     )
 
 
@@ -425,8 +428,6 @@ async def add_participant(
             school_id=participant.school_id,
             substitute=participant.substitute,
             license=participant.license,
-            validated=participant.validated,
-            created_at=participant.created_at,
         ),
     )
     await db.flush()
@@ -509,7 +510,7 @@ async def load_participant_by_ids(
                     == edition_id,
                 )
                 .options(
-                    selectinload(models_sport_competition.CompetitionParticipant.user),
+                    selectinload(models_sport_competition.CompetitionUser.user),
                 ),
             )
         )
@@ -529,7 +530,7 @@ async def load_all_participants(
             models_sport_competition.CompetitionParticipant.edition_id == edition_id,
         )
         .options(
-            selectinload(models_sport_competition.CompetitionParticipant.user),
+            selectinload(models_sport_competition.CompetitionUser.user),
         ),
     )
     return [
@@ -553,9 +554,7 @@ async def load_participants_by_school_id(
                     models_sport_competition.CompetitionParticipant.school_id
                     == school_id,
                 )
-                .options(
-                    selectinload(models_sport_competition.CompetitionParticipant.user),
-                ),
+                .options(selectinload(models_sport_competition.CompetitionUser.user)),
             )
         )
         .scalars()
@@ -583,7 +582,7 @@ async def load_participants_by_sport_id(
                     == edition_id,
                 )
                 .options(
-                    selectinload(models_sport_competition.CompetitionParticipant.user),
+                    selectinload(models_sport_competition.CompetitionUser.user),
                 ),
             )
         )
@@ -615,7 +614,7 @@ async def load_participants_by_school_and_sport_ids(
                     == school_id,
                 )
                 .options(
-                    selectinload(models_sport_competition.CompetitionParticipant.user),
+                    selectinload(models_sport_competition.CompetitionUser.user),
                 ),
             )
         )
@@ -642,7 +641,7 @@ async def load_validated_participants_number_by_school_and_sport_ids(
             models_sport_competition.CompetitionParticipant.sport_id == sport_id,
             models_sport_competition.CompetitionParticipant.edition_id == edition_id,
             models_sport_competition.CompetitionParticipant.school_id == school_id,
-            models_sport_competition.CompetitionParticipant.validated,
+            models_sport_competition.CompetitionUser.validated,
         ),
     )
     return result.scalar() or 0
