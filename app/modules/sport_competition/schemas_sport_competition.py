@@ -28,11 +28,13 @@ class CompetitionEditionEdit(BaseModel):
     activated: bool | None
 
 
-class SchoolExtension(BaseModel):
+class SchoolExtensionBase(BaseModel):
     school_id: UUID
     from_lyon: bool
     activated: bool = True
 
+
+class SchoolExtension(SchoolExtensionBase):
     school: schemas_schools.CoreSchool
     general_quota: "SchoolGeneralQuota"
 
@@ -80,6 +82,7 @@ class CompetitionUser(schemas_users.CoreUser):
     This is used to represent a user in the context of a competition.
     """
 
+    competition_category: SportCategory | None = None
     competition_groups: list[Group] = []
 
 
