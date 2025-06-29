@@ -40,7 +40,7 @@ class SchoolExtensionBase(BaseModel):
 
 class SchoolExtension(SchoolExtensionBase):
     school: schemas_schools.CoreSchool
-    general_quota: "SchoolGeneralQuota"
+    general_quota: "SchoolGeneralQuota | None" = None
 
 
 class SchoolExtensionEdit(BaseModel):
