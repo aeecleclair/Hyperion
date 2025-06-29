@@ -1,9 +1,10 @@
 from datetime import datetime
+from uuid import UUID
 
 from pydantic import BaseModel
 
-from app.core import schemas_core
-from app.core.models_core import CoreUser
+from app.core.schools import schemas_schools
+from app.core.users import schemas_users
 from app.modules.sport_competition.types_sport_competition import SportCategory
 
 
@@ -16,15 +17,15 @@ class CompetitionEditionBase(BaseModel):
 
 
 class CompetitionEdition(CompetitionEditionBase):
-    id: str
+    id: UUID
 
 
 class SchoolExtension(BaseModel):
-    school_id: str
+    school_id: UUID
     from_lyon: bool
     activated: bool = True
 
-    school: schemas_core.CoreSchool
+    school: schemas_schools.CoreSchool
     general_quota: "SchoolGeneralQuota"
 
 
@@ -34,7 +35,7 @@ class SchoolExtensionEdit(BaseModel):
 
 
 class SchoolGeneralQuota(BaseModel):
-    school_id: str
+    school_id: UUID
     edition: str
     athlete_quota: int | None
     cameraman_quota: int | None
@@ -44,14 +45,14 @@ class SchoolGeneralQuota(BaseModel):
 
 
 class GroupMembership(BaseModel):
-    user: schemas_core.CoreUser
-    edition_id: str
+    user: schemas_users.CoreUser
+    edition_id: UUID
 
 
 class UserGroupMembership(BaseModel):
     user_id: str
-    group_id: str
-    edition_id: str
+    group_id: UUID
+    edition_id: UUID
 
 
 class GroupBase(BaseModel):
@@ -59,11 +60,11 @@ class GroupBase(BaseModel):
 
 
 class Group(GroupBase):
-    id: str
+    id: UUID
 
 
 class GroupComplete(Group):
-    members: list[CoreUser]
+    members: list[schemas_users.CoreUser]
 
 
 class GroupEdit(BaseModel):
@@ -79,7 +80,7 @@ class SportBase(BaseModel):
 
 
 class Sport(SportBase):
-    id: str
+    id: UUID
 
 
 class SportEdit(BaseModel):
@@ -96,9 +97,9 @@ class QuotaInfo(BaseModel):
 
 
 class Quota(BaseModel):
-    school_id: str
-    sport_id: str
-    edition_id: str
+    school_id: UUID
+    sport_id: UUID
+    edition_id: UUID
     participant_quota: int
     team_quota: int
 
@@ -111,48 +112,48 @@ class QuotaEdit(BaseModel):
 class ParticipantInfo(BaseModel):
     license: str
     substitute: bool = False
-    team_id: str | None
+    team_id: UUID | None
 
 
 class Participant(BaseModel):
     user_id: str
-    sport_id: str
-    edition_id: str
+    sport_id: UUID
+    edition_id: UUID
     license: str
     substitute: bool = False
-    team_id: str | None
+    team_id: UUID | None
 
 
 class ParticipantEdit(BaseModel):
     license: str | None
-    team_id: str | None
-    sport_id: str | None
+    team_id: UUID | None
+    sport_id: UUID | None
     user_id: str | None
     substitute: bool | None
     validated: bool | None
 
 
 class ParticipantComplete(Participant):
-    user: schemas_core.CoreUser
+    user: schemas_users.CoreUser
 
 
 class TeamBase(BaseModel):
     name: str
-    edition_id: str
-    school_id: str
-    sport_id: str
-    captain_id: str
+    edition_id: UUID
+    school_id: UUID
+    sport_id: UUID
+    captain_id: UUID
 
 
 class TeamInfo(BaseModel):
     name: str
-    school_id: str | None
-    sport_id: str | None
-    captain_id: str | None
+    school_id: UUID | None
+    sport_id: UUID | None
+    captain_id: UUID | None
 
 
 class Team(TeamBase):
-    id: str
+    id: UUID
 
 
 class TeamEdit(BaseModel):
@@ -165,31 +166,31 @@ class TeamComplete(Team):
 
 
 class MatchBase(BaseModel):
-    edition_id: str
+    edition_id: UUID
     name: str
-    sport_id: str
-    team1_id: str
-    team2_id: str
+    sport_id: UUID
+    team1_id: UUID
+    team2_id: UUID
     date: datetime | None = None
     location: str | None = None
     score_team1: int | None = None
     score_team2: int | None = None
-    winner_id: str | None = None
+    winner_id: UUID | None = None
 
 
 class Match(MatchBase):
-    id: str
+    id: UUID
     team1: Team
     team2: Team
 
 
 class MatchEdit(BaseModel):
     name: str | None
-    sport_id: str | None
-    team1_id: str | None
-    team2_id: str | None
+    sport_id: UUID | None
+    team1_id: UUID | None
+    team2_id: UUID | None
     date: datetime | None
     location: str | None
     score_team1: int | None
     score_team2: int | None
-    winner_id: str | None
+    winner_id: UUID | None
