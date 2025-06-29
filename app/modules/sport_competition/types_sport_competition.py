@@ -36,7 +36,6 @@ class CompetitionGroupType(Enum):
     non_athlete = UUID("84a9972c-56b0-4024-86ec-a284058e1cb1")
     sport_manager = UUID("a3f48a0b-ada1-4fe0-b987-f4170d8896c4")
     schools_bds = UUID("96f8ffb8-c585-4ca5-8360-dc3881f9f1e2")
-    competition_admin = UUID("41b8735a-1702-4a9e-8486-a453572f6b5c")
 
 
 class DefaultCoreData(Enum):
