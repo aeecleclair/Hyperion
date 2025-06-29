@@ -185,7 +185,6 @@ async def init_objects() -> None:
         cameraman_quota=None,
         pompom_quota=None,
         fanfare_quota=None,
-        non_athlete_quota=None,
     )
     await add_object_to_db(ecl_general_quota)
     school_general_quota = models_sport_competition.SchoolGeneralQuota(
@@ -195,7 +194,6 @@ async def init_objects() -> None:
         cameraman_quota=1,
         pompom_quota=1,
         fanfare_quota=1,
-        non_athlete_quota=1,
     )
     await add_object_to_db(school_general_quota)
 
@@ -960,7 +958,6 @@ async def test_post_school_extension_as_admin(
     )
     assert schools.status_code == 200, schools.json()
     schools_json = schools.json()
-    print(schools_json)
     new_school_extension = next(
         (s for s in schools_json if s["school_id"] == str(school2.id)),
         None,
@@ -1026,3 +1023,290 @@ async def test_patch_school_extension_as_admin(
     assert updated_school["from_lyon"] is True
     assert updated_school["active"] is False
     assert updated_school["inscription_enabled"] is True
+
+
+async def test_post_school_general_quota_as_random(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        f"/competition/schools/{school2.id}/general-quota",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json={
+            "athlete_quota": 10,
+            "cameraman_quota": 5,
+            "pompom_quota": 3,
+            "fanfare_quota": 2,
+        },
+    )
+    assert response.status_code == 403, response.json()
+
+    school = client.get(
+        f"/competition/schools/{school2.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert school.status_code == 200, school.json()
+    school_json = school.json()
+    assert school_json["general_quota"] is None, school_json
+
+
+async def test_post_school_general_quota_as_admin(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        f"/competition/schools/{school2.id}/general-quota",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "athlete_quota": 10,
+            "cameraman_quota": 5,
+            "pompom_quota": 3,
+            "fanfare_quota": 2,
+        },
+    )
+    assert response.status_code == 201, response.json()
+
+    school = client.get(
+        f"/competition/schools/{school2.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert school.status_code == 200, school.json()
+    school_json = school.json()
+    assert school is not None, school_json
+    assert school_json["general_quota"] is not None, school_json
+    assert school_json["general_quota"]["athlete_quota"] == 10, school_json
+    assert school_json["general_quota"]["cameraman_quota"] == 5, school_json
+    assert school_json["general_quota"]["pompom_quota"] == 3, school_json
+    assert school_json["general_quota"]["fanfare_quota"] == 2, school_json
+
+
+async def test_patch_school_general_quota_as_random(
+    client: TestClient,
+) -> None:
+    response = client.patch(
+        f"/competition/schools/{school1.id}/general-quota",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json={
+            "athlete_quota": 5,
+            "cameraman_quota": 3,
+            "pompom_quota": 2,
+            "fanfare_quota": 1,
+        },
+    )
+    assert response.status_code == 403, response.json()
+
+    school = client.get(
+        f"/competition/schools/{school1.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert school.status_code == 200, school.json()
+    school_json = school.json()
+    assert school_json["general_quota"] is not None, school_json
+    assert school_json["general_quota"]["athlete_quota"] == 1, school_json
+    assert school_json["general_quota"]["cameraman_quota"] == 1, school_json
+    assert school_json["general_quota"]["pompom_quota"] == 1, school_json
+    assert school_json["general_quota"]["fanfare_quota"] == 1, school_json
+
+
+async def test_patch_school_general_quota_as_admin(
+    client: TestClient,
+) -> None:
+    response = client.patch(
+        f"/competition/schools/{school1.id}/general-quota",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "athlete_quota": 5,
+            "cameraman_quota": 3,
+            "pompom_quota": 2,
+            "fanfare_quota": 1,
+        },
+    )
+    assert response.status_code == 204, response.json()
+
+    school = client.get(
+        f"/competition/schools/{school1.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert school.status_code == 200, school.json()
+    school_json = school.json()
+    assert school_json["general_quota"] is not None, school_json
+    assert school_json["general_quota"]["athlete_quota"] == 5, school_json
+    assert school_json["general_quota"]["cameraman_quota"] == 3, school_json
+    assert school_json["general_quota"]["pompom_quota"] == 2, school_json
+    assert school_json["general_quota"]["fanfare_quota"] == 1, school_json
+
+
+async def test_get_school_sport_quota(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        f"/competition/schools/{school1.id}/quotas",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200, response.json()
+    quotas = response.json()
+    assert len(quotas) > 0
+
+
+async def test_get_sport_quota(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        f"/competition/sports/{sport_free_quota.id}/quotas",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200, response.json()
+    quota = response.json()
+    assert len(quota) > 0
+
+
+async def test_post_school_sport_quota_as_random(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        f"/competition/schools/{school2.id}/sports/{sport_free_quota.id}/quotas",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json={
+            "participant_quota": 5,
+            "team_quota": 2,
+        },
+    )
+    assert response.status_code == 403, response.json()
+
+    quota = client.get(
+        f"/competition/schools/{school2.id}/quotas",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert quota.status_code == 200, quota.json()
+    quota_json = quota.json()
+    sport_quota = next(
+        (q for q in quota_json if q["sport_id"] == str(sport_free_quota.id)),
+        None,
+    )
+    assert sport_quota is None, quota_json
+
+
+async def test_post_school_sport_quota_as_admin(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        f"/competition/schools/{school2.id}/sports/{sport_free_quota.id}/quotas",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "participant_quota": 5,
+            "team_quota": 2,
+        },
+    )
+    assert response.status_code == 204, response.text
+
+    quota = client.get(
+        f"/competition/schools/{school2.id}/quotas",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert quota.status_code == 200, quota.json()
+    quota_json = quota.json()
+    sport_quota = next(
+        (q for q in quota_json if q["sport_id"] == str(sport_free_quota.id)),
+        None,
+    )
+    assert sport_quota is not None, quota_json
+    assert sport_quota["participant_quota"] == 5, quota_json
+    assert sport_quota["team_quota"] == 2, quota_json
+
+
+async def test_patch_school_sport_quota_as_random(
+    client: TestClient,
+) -> None:
+    response = client.patch(
+        f"/competition/schools/{school1.id}/sports/{sport_free_quota.id}/quotas",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json={
+            "participant_quota": 3,
+            "team_quota": 1,
+        },
+    )
+    assert response.status_code == 403, response.json()
+
+    quota = client.get(
+        f"/competition/schools/{school1.id}/quotas",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert quota.status_code == 200, quota.json()
+    quota_json = quota.json()
+    sport_quota = next(
+        (q for q in quota_json if q["sport_id"] == str(sport_free_quota.id)),
+        None,
+    )
+    assert sport_quota is not None, quota_json
+    assert sport_quota["participant_quota"] == 2, quota_json
+    assert sport_quota["team_quota"] == 1, quota_json
+
+
+# async def test_patch_school_sport_quota_as_admin(
+#     client: TestClient,
+# ) -> None:
+#     response = client.patch(
+#         f"/competition/schools/{school2.id}/sports/{sport_free_quota.id}/quotas",
+#         headers={"Authorization": f"Bearer {admin_token}"},
+#         json={
+#             "participant_quota": 3,
+#             "team_quota": 1,
+#         },
+#     )
+#     assert response.status_code == 204, response.json()
+
+#     quota = client.get(
+#         f"/competition/schools/{school2.id}/quotas",
+#         headers={"Authorization": f"Bearer {admin_token}"},
+#     )
+#     assert quota.status_code == 200, quota.json()
+#     quota_json = quota.json()
+#     sport_quota = next(
+#         (q for q in quota_json if q["sport_id"] == str(sport_free_quota.id)),
+#         None,
+#     )
+#     assert sport_quota is not None, quota_json
+#     assert sport_quota["participant_quota"] == 3, quota_json
+#     assert sport_quota["team_quota"] == 1, quota_json
+
+
+async def test_delete_school_sport_quota_as_random(
+    client: TestClient,
+) -> None:
+    response = client.delete(
+        f"/competition/schools/{school1.id}/sports/{sport_free_quota.id}/quotas",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 403, response.json()
+
+    quota = client.get(
+        f"/competition/schools/{school1.id}/quotas",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert quota.status_code == 200, quota.json()
+    quota_json = quota.json()
+    sport_quota = next(
+        (q for q in quota_json if q["sport_id"] == str(sport_free_quota.id)),
+        None,
+    )
+    assert sport_quota is not None, quota_json
+
+
+# async def test_delete_school_sport_quota_as_admin(
+#     client: TestClient,
+# ) -> None:
+#     response = client.delete(
+#         f"/competition/schools/{school2.id}/sports/{sport_free_quota.id}/quotas",
+#         headers={"Authorization": f"Bearer {admin_token}"},
+#     )
+#     assert response.status_code == 204, response.json()
+
+#     quota = client.get(
+#         f"/competition/schools/{school2.id}/quotas",
+#         headers={"Authorization": f"Bearer {admin_token}"},
+#     )
+#     assert quota.status_code == 200, quota.json()
+#     quota_json = quota.json()
+#     sport_quota = next(
+#         (q for q in quota_json if q["sport_id"] == str(sport_free_quota.id)),
+#         None,
+#     )
+#     assert sport_quota is None, quota_json
