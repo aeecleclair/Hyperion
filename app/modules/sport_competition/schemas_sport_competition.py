@@ -20,6 +20,14 @@ class CompetitionEdition(CompetitionEditionBase):
     id: UUID
 
 
+class CompetitionEditionEdit(BaseModel):
+    name: str | None
+    year: int | None
+    start_date: datetime | None
+    end_date: datetime | None
+    activated: bool | None
+
+
 class SchoolExtension(BaseModel):
     school_id: UUID
     from_lyon: bool
