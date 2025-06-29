@@ -18,7 +18,7 @@ class CompetitionEdition(Base):
     name: Mapped[str]
     start_date: Mapped[datetime]
     end_date: Mapped[datetime]
-    activated: Mapped[bool]
+    active: Mapped[bool]
 
 
 class CompetitionGroup(Base):
@@ -79,7 +79,7 @@ class Sport(Base):
     __tablename__ = "competition_sport"
 
     id: Mapped[PrimaryKey]
-    activated: Mapped[bool]
+    active: Mapped[bool]
     name: Mapped[str]
     team_size: Mapped[int]
     substitute_max: Mapped[int | None]
@@ -93,7 +93,7 @@ class SchoolExtension(Base):
         ForeignKey("core_school.id"),
     )
     from_lyon: Mapped[bool]
-    activated: Mapped[bool]
+    active: Mapped[bool]
 
     school: Mapped[CoreSchool] = relationship(
         "CoreSchool",
@@ -144,7 +144,7 @@ class SchoolSportQuota(Base):
     team_quota: Mapped[int | None]
 
 
-class Team(Base):
+class CompetitionTeam(Base):
     __tablename__ = "competition_team"
 
     id: Mapped[PrimaryKey]
@@ -158,15 +158,15 @@ class Team(Base):
     name: Mapped[str]
     captain_id: Mapped[str] = mapped_column(ForeignKey("competition_user.user_id"))
 
-    participants: Mapped[list["Participant"]] = relationship(
-        "Participant",
+    participants: Mapped[list["CompetitionParticipant"]] = relationship(
+        "CompetitionParticipant",
         lazy="selectin",
         viewonly=True,
         init=False,
     )
 
 
-class Participant(Base):
+class CompetitionParticipant(Base):
     __tablename__ = "competition_participant"
 
     user_id: Mapped[str] = mapped_column(
@@ -214,14 +214,14 @@ class Match(Base):
     score_team2: Mapped[int | None]
     winner_id: Mapped[UUID | None] = mapped_column(ForeignKey("competition_team.id"))
 
-    team1: Mapped[Team] = relationship(
-        "Team",
+    team1: Mapped[CompetitionTeam] = relationship(
+        "CompetitionTeam",
         foreign_keys=[team1_id],
         lazy="selectin",
         init=False,
     )
-    team2: Mapped[Team] = relationship(
-        "Team",
+    team2: Mapped[CompetitionTeam] = relationship(
+        "CompetitionTeam",
         foreign_keys=[team2_id],
         lazy="selectin",
         init=False,
