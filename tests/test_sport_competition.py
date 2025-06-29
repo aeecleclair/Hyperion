@@ -536,7 +536,6 @@ async def test_delete_sport_as_random(
     )
     assert sports.status_code == 200, sports.json()
     sports_json = sports.json()
-    print(sports_json)
     deleted_sport_check = next(
         (s for s in sports_json if s["id"] == str(sport_free_quota.id)),
         None,
