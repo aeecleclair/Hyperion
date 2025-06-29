@@ -24,12 +24,12 @@ class UnauthorizedAction(Exception):
         return "Unauthorized action"
 
 
-class SportCategory(str, Enum):
+class SportCategory(Enum):
     masculine = "masculine"
     feminine = "feminine"
 
 
-class CompetitionGroupType(UUID, Enum):
+class CompetitionGroupType(Enum):
     fanfaron = UUID("c69ed623-1cf5-4769-acc7-ddbc6490fb07")
     pompom = UUID("22af0472-0a15-4f05-a670-fa02eda5e33f")
     cameraman = UUID("9cb535c7-ca19-4dbc-8b04-8b34017b5cff")
@@ -39,5 +39,5 @@ class CompetitionGroupType(UUID, Enum):
     competition_admin = UUID("41b8735a-1702-4a9e-8486-a453572f6b5c")
 
 
-class DefaultCoreData(str, Enum):
+class DefaultCoreData(Enum):
     challenge_year = datetime.now(tz=UTC).year
