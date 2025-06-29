@@ -41,6 +41,9 @@ class SchoolExtensionBase(BaseModel):
 
 class SchoolExtension(SchoolExtensionBase):
     school: schemas_schools.CoreSchool
+
+
+class SchoolExtensionComplete(SchoolExtension):
     general_quota: "SchoolGeneralQuota | None" = None
 
 
@@ -55,7 +58,6 @@ class SchoolGeneralQuotaBase(BaseModel):
     cameraman_quota: NonNegativeInt | None = None
     pompom_quota: NonNegativeInt | None = None
     fanfare_quota: NonNegativeInt | None = None
-    non_athlete_quota: NonNegativeInt | None = None
 
 
 class SchoolGeneralQuota(SchoolGeneralQuotaBase):
