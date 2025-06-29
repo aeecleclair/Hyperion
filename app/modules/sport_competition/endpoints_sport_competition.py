@@ -37,7 +37,7 @@ module = Module(
 )
 async def get_sports(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     return await competition_cruds.load_all_sports(db)
 
@@ -134,7 +134,7 @@ async def get_editions(
 )
 async def get_active_edition(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Get the currently active competition edition.
@@ -204,7 +204,7 @@ async def edit_edition(
 async def get_groups(
     db: AsyncSession = Depends(get_db),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
-    user: models_users.CoreUser = Depends(is_user),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     return await competition_cruds.load_all_groups(edition.id, db)
 
@@ -383,7 +383,7 @@ async def get_quotas_for_school(
     school_id: UUID,
     db: AsyncSession = Depends(get_db),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
-    user: models_users.CoreUser = Depends(is_user),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     school = await competition_cruds.load_school_by_id(school_id, edition.id, db)
     if school is None:
@@ -522,7 +522,7 @@ async def delete_quota(
 async def get_schools(
     db: AsyncSession = Depends(get_db),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
-    user: models_users.CoreUser = Depends(is_user),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     return await competition_cruds.load_all_schools(edition.id, db)
 
@@ -533,7 +533,7 @@ async def get_schools(
     response_model=competition_schemas.SchoolExtension,
 )
 async def create_school(
-    school: competition_schemas.SchoolExtension,
+    school: competition_schemas.SchoolExtensionBase,
     db: AsyncSession = Depends(get_db),
     user: competition_schemas.CompetitionUser = Depends(
         is_user_a_member_of_extended(
@@ -669,7 +669,7 @@ async def get_sport_teams_for_school_and_sport(
     sport_id: UUID,
     db: AsyncSession = Depends(get_db),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
-    user: models_users.CoreUser = Depends(is_user),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     school = await competition_cruds.load_school_by_id(school_id, edition.id, db)
     if school is None:
@@ -700,7 +700,7 @@ async def create_team(
     team_info: competition_schemas.TeamInfo,
     db: AsyncSession = Depends(get_db),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
-    user: schemas_users.CoreUser = Depends(is_user),
+    user: schemas_users.CoreUser = Depends(is_user()),
 ):
     if user.id != team_info.captain_id and GroupType.competition_admin.value not in [
         group.id for group in user.groups
@@ -744,7 +744,7 @@ async def edit_team(
     team_id: UUID,
     team_info: competition_schemas.TeamEdit,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user),
+    user: schemas_users.CoreUser = Depends(is_user()),
 ):
     stored = await competition_cruds.load_team_by_id(team_id, db)
     if stored is None:
@@ -785,7 +785,7 @@ async def edit_team(
 async def delete_team(
     team_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user),
+    user: schemas_users.CoreUser = Depends(is_user()),
 ):
     stored = await competition_cruds.load_team_by_id(team_id, db)
     if stored is None:
@@ -808,7 +808,7 @@ async def join_team(
     sport_id: UUID,
     participant_info: competition_schemas.ParticipantInfo,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user),
+    user: schemas_users.CoreUser = Depends(is_user()),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
 ):
     sport = await competition_cruds.load_sport_by_id(sport_id, db)
@@ -1010,7 +1010,7 @@ async def get_matches_for_sport_and_edition(
     sport_id: UUID,
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     sport = await competition_cruds.load_sport_by_id(sport_id, db)
     if sport is None:
@@ -1034,7 +1034,7 @@ async def get_matches_for_school_sport_and_edition(
     sport_id: UUID,
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     school = await competition_cruds.load_school_by_id(school_id, edition.id, db)
     if school is None:
@@ -1104,7 +1104,7 @@ async def create_match(
     sport_id: UUID,
     match_info: competition_schemas.MatchBase,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user),
+    user: schemas_users.CoreUser = Depends(is_user()),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
 ):
     sport = await competition_cruds.load_sport_by_id(sport_id, db)
@@ -1151,7 +1151,7 @@ async def edit_match(
     match_id: UUID,
     match_info: competition_schemas.MatchBase,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user),
+    user: schemas_users.CoreUser = Depends(is_user()),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
 ):
     match = await competition_cruds.load_match_by_id(match_id, db)
@@ -1183,7 +1183,7 @@ async def edit_match(
 async def delete_match(
     match_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user),
+    user: schemas_users.CoreUser = Depends(is_user()),
 ):
     match = await competition_cruds.load_match_by_id(match_id, db)
     if match is None:
