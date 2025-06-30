@@ -6,9 +6,13 @@ from fastapi import Body, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import GroupType, get_account_types_except_externals
+from app.core.payment import schemas_payment
+from app.core.payment.payment_tool import PaymentTool
+from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.schools import cruds_schools
 from app.core.users import cruds_users, models_users, schemas_users
-from app.dependencies import get_db, is_user, is_user_in
+from app.core.utils.config import Settings
+from app.dependencies import get_db, get_payment_tool, get_settings, is_user, is_user_in
 from app.modules.sport_competition import (
     cruds_sport_competition,
     schemas_sport_competition,
@@ -21,6 +25,7 @@ from app.modules.sport_competition.types_sport_competition import (
     CompetitionGroupType,
 )
 from app.types.module import Module
+from app.utils.tools import is_user_member_of_any_group
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -29,6 +34,8 @@ module = Module(
     tag="Sport Competition",
     default_allowed_account_types=get_account_types_except_externals(),
 )
+
+# region: Sport
 
 
 @module.router.get(
@@ -126,6 +133,10 @@ async def delete_sport(
             detail="Sport is activated and cannot be deleted",
         ) from None
     await cruds_sport_competition.delete_sport_by_id(sport_id, db)
+
+
+# endregion: Sport
+# region: Edition
 
 
 @module.router.get(
@@ -264,6 +275,10 @@ async def edit_edition(
             detail="Edition not found in the database",
         ) from None
     await cruds_sport_competition.update_edition(edition_id, edition_edit, db)
+
+
+# endregion: Edition
+# region: Competition User
 
 
 @module.router.get(
@@ -455,6 +470,10 @@ async def edit_competition_user(
     await cruds_sport_competition.update_competition_user(user_id, edition.id, user, db)
 
 
+# endregion: Competition User
+# region: Competition Groups
+
+
 @module.router.get(
     "/competition/groups/{group}",
     response_model=list[schemas_sport_competition.UserGroupMembership],
@@ -614,6 +633,10 @@ async def remove_user_from_group(
     )
 
 
+# endregion: Competition Groups
+# region: Schools
+
+
 @module.router.get(
     "/competition/schools",
     response_model=list[schemas_sport_competition.SchoolExtension],
@@ -735,6 +758,10 @@ async def delete_school(
     await cruds_sport_competition.delete_school_by_id(school_id, db)
 
 
+# endregion: Schools
+# region: School General Quota
+
+
 @module.router.post(
     "/competition/schools/{school_id}/general-quota",
     status_code=201,
@@ -817,6 +844,10 @@ async def edit_school_general_quota(
         quota_info,
         db,
     )
+
+
+# endregion: School General Quota
+# region: Sport Quotas
 
 
 @module.router.get(
@@ -939,18 +970,6 @@ async def edit_sport_quota(
         get_current_edition,
     ),
 ) -> None:
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
-    if school is None:
-        raise HTTPException(
-            status_code=404,
-            detail="School not found in the database",
-        ) from None
-    sport = await cruds_sport_competition.load_sport_by_id(sport_id, db)
-    if sport is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Sport not found in the database",
-        ) from None
     stored = await cruds_sport_competition.load_sport_quota_by_ids(
         school_id,
         sport_id,
@@ -988,11 +1007,6 @@ async def delete_sport_quota(
         get_current_edition,
     ),
 ) -> None:
-    if edition is None:
-        raise HTTPException(
-            status_code=404,
-            detail="No active edition found in the database",
-        ) from None
     stored = await cruds_sport_competition.load_sport_quota_by_ids(
         school_id,
         sport_id,
@@ -1010,6 +1024,10 @@ async def delete_sport_quota(
         edition.id,
         db,
     )
+
+
+# endregion: Sport Quotas
+# region: Teams
 
 
 async def check_team_consistency(
@@ -1055,9 +1073,7 @@ async def get_teams_for_sport(
     sport_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(
-            group_id=GroupType.competition_admin,
-        ),
+        is_user(),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -1077,7 +1093,7 @@ async def get_teams_for_sport(
 
 
 @module.router.get(
-    "/competition/teams/schools/{school_id}/sports/{sport_id}",
+    "/competition/teams/sports/{sport_id}/schools/{school_id}",
     response_model=list[schemas_sport_competition.TeamComplete],
 )
 async def get_sport_teams_for_school_and_sport(
@@ -1225,6 +1241,34 @@ async def delete_team(
     ]:
         raise HTTPException(status_code=403, detail="Unauthorized action") from None
     await cruds_sport_competition.delete_team_by_id(stored.id, db)
+
+
+# endregion: Teams
+# region: Participants
+
+
+@module.router.get(
+    "/competition/participants/me",
+    response_model=schemas_sport_competition.ParticipantComplete,
+)
+async def get_current_user_participant(
+    db: AsyncSession = Depends(get_db),
+    user: schemas_users.CoreUser = Depends(is_user()),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> schemas_sport_competition.ParticipantComplete:
+    participant = await cruds_sport_competition.load_participant_by_user_id(
+        user.id,
+        edition.id,
+        db,
+    )
+    if participant is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Participant not found in the database",
+        ) from None
+    return participant
 
 
 @module.router.post(
@@ -1444,6 +1488,10 @@ async def validate_participant(
     )
 
 
+# endregion: Participants
+# region: Matches
+
+
 @module.router.get(
     "/competition/sports/{sport_id}/matches",
     response_model=list[schemas_sport_competition.Match],
@@ -1653,3 +1701,746 @@ async def delete_match(
             detail="Match not found in the database",
         ) from None
     await cruds_sport_competition.delete_match_by_id(match_id, db)
+
+
+# endregion: Matches
+# region: Products
+
+
+@module.router.get(
+    "/competition/products/",
+    response_model=list[schemas_sport_competition.ProductComplete],
+    status_code=200,
+)
+async def get_all_products(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Get all products.
+    """
+    return await cruds_sport_competition.get_products(edition.id, db)
+
+
+@module.router.post(
+    "/competition/products/",
+    response_model=schemas_sport_competition.ProductComplete,
+    status_code=201,
+)
+async def create_product(
+    product: schemas_sport_competition.ProductBase,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_in(
+            group_id=GroupType.competition_admin,
+        ),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Create a product.
+    """
+    db_product = schemas_sport_competition.ProductComplete(
+        id=uuid4(),
+        edition_id=edition.id,
+        name=product.name,
+        description=product.description,
+    )
+    await cruds_sport_competition.add_product(
+        db_product,
+        db,
+    )
+
+
+@module.router.patch(
+    "/competition/products/{product_id}/",
+    status_code=204,
+)
+async def update_product(
+    product_id: UUID,
+    product: schemas_sport_competition.ProductEdit,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_in(
+            group_id=GroupType.competition_admin,
+        ),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Edit a product.
+
+    **User must be part of the seller's group to use this endpoint**
+    """
+    db_product = await cruds_sport_competition.load_product_by_id(
+        product_id,
+        db,
+    )
+    if db_product is None or db_product.edition_id != edition.id:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found.",
+        )
+
+    await cruds_sport_competition.update_product(
+        product_id,
+        product,
+        db,
+    )
+
+
+@module.router.delete(
+    "/competition/products/{product_id}/",
+    status_code=204,
+)
+async def delete_product(
+    product_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_in(
+            group_id=GroupType.competition_admin,
+        ),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Delete a product.
+
+    **User must be part of the seller's group to use this endpoint**
+    """
+    variants = await cruds_sport_competition.load_product_variants(
+        product_id,
+        db,
+    )
+    if variants:
+        raise HTTPException(
+            status_code=403,
+            detail="You can't delete this product because some variants are related to it.",
+        )
+    db_product = await cruds_sport_competition.load_product_by_id(
+        product_id,
+        db,
+    )
+    if db_product is None or db_product.edition_id != edition.id:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found.",
+        )
+
+    await cruds_sport_competition.delete_product_by_id(
+        product_id,
+        db,
+    )
+
+
+# endregion: Products
+# region: Product Variants
+
+
+@module.router.post(
+    "/competition/products/{product_id}/variants/",
+    response_model=schemas_sport_competition.ProductVariantComplete,
+    status_code=201,
+)
+async def create_product_variant(
+    product_id: UUID,
+    product_variant: schemas_sport_competition.ProductVariantBase,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_in(
+            group_id=GroupType.competition_admin,
+        ),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Create a product variant.
+
+    **User must be part of the seller's group to use this endpoint**
+    """
+    db_product = await cruds_sport_competition.load_product_by_id(
+        product_id,
+        db,
+    )
+    if db_product is None or db_product.edition_id != edition.id:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found.",
+        )
+
+    db_product_variant = schemas_sport_competition.ProductVariantComplete(
+        id=uuid4(),
+        product_id=product_id,
+        name=product_variant.name,
+        description=product_variant.description,
+        price=product_variant.price,
+        enabled=product_variant.enabled,
+        unique=product_variant.unique,
+        public_type=product_variant.public_type,
+    )
+
+    await cruds_sport_competition.add_product_variant(
+        db_product_variant,
+        db,
+    )
+
+
+@module.router.patch(
+    "/competition/products/variants/{variant_id}/",
+    status_code=204,
+)
+async def update_product_variant(
+    variant_id: UUID,
+    product_variant: schemas_sport_competition.ProductVariantEdit,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_in(
+            group_id=GroupType.competition_admin,
+        ),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Edit a product variant.
+
+    **User must be part of the seller's group to use this endpoint**
+    """
+    db_product_variant = await cruds_sport_competition.load_product_variant_by_id(
+        variant_id,
+        db,
+    )
+    if db_product_variant is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Product variant not found.",
+        )
+    db_product = await cruds_sport_competition.load_product_by_id(
+        db_product_variant.product_id,
+        db,
+    )
+    if db_product is None or db_product.edition_id != edition.id:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found.",
+        )
+
+    await cruds_sport_competition.update_product_variant(
+        variant_id,
+        product_variant,
+        db,
+    )
+
+
+@module.router.delete(
+    "/competition/products/variants/{variant_id}/",
+    status_code=204,
+)
+async def delete_product_variant(
+    product_id: UUID,
+    variant_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_in(
+            group_id=GroupType.competition_admin,
+        ),
+    ),
+):
+    """
+    Delete a product variant.
+
+    **User must be part of the seller's group to use this endpoint**
+    """
+    db_product_variant = await cruds_sport_competition.load_product_variant_by_id(
+        variant_id,
+        db,
+    )
+    if db_product_variant is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Product variant not found.",
+        )
+    db_product = await cruds_sport_competition.load_product_by_id(
+        db_product_variant.product_id,
+        db,
+    )
+    if db_product is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found.",
+        )
+    await cruds_sport_competition.delete_product_variant_by_id(
+        variant_id,
+        db,
+    )
+
+
+# endregion: Product Variants
+# region: Purchases
+
+
+@module.router.get(
+    "/competition/purchases/users/{user_id}",
+    response_model=list[schemas_sport_competition.Purchase],
+    status_code=200,
+)
+async def get_purchases_by_user_id(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Get a user's purchases.
+
+    **User must get his own purchases or be CDR Admin to use this endpoint**
+    """
+    if not (
+        user_id == user.id
+        or is_user_member_of_any_group(user, [GroupType.competition_admin])
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You're not allowed to see other users purchases.",
+        )
+    return await cruds_sport_competition.load_purchases_by_user_id(
+        user_id,
+        edition.id,
+        db,
+    )
+
+
+@module.router.get(
+    "/competition/purchases/me/",
+    response_model=list[schemas_sport_competition.Purchase],
+    status_code=200,
+)
+async def get_my_purchases(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
+):
+    return await get_purchases_by_user_id(user.id, db, user)
+
+
+@module.router.post(
+    "/competition/purchases/users/{user_id}/",
+    response_model=schemas_sport_competition.Purchase,
+    status_code=201,
+)
+async def create_purchase(
+    user_id: str,
+    purchase: schemas_sport_competition.PurchaseBase,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Create a purchase.
+
+    **User must create a purchase for themself and for an online available product or be part of the seller's group to use this endpoint**
+    """
+
+    product_variant = await cruds_sport_competition.load_product_variant_by_id(
+        purchase.product_variant_id,
+        db,
+    )
+    if not product_variant:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid product_variant_id",
+        )
+    db_product = await cruds_sport_competition.load_product_by_id(
+        product_variant.product_id,
+        db,
+    )
+    if not db_product or db_product.edition_id != edition.id:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid product_id",
+        )
+    existing_db_purchase = await cruds_sport_competition.load_purchase_by_ids(
+        user_id,
+        purchase.product_variant_id,
+        db,
+    )
+
+    db_purchase = schemas_sport_competition.Purchase(
+        user_id=user_id,
+        product_variant_id=purchase.product_variant_id,
+        edition_id=edition.id,
+        validated=False,
+        quantity=purchase.quantity,
+        purchased_on=datetime.now(UTC),
+    )
+    if existing_db_purchase:
+        await cruds_sport_competition.update_purchase(
+            db=db,
+            user_id=user_id,
+            product_variant_id=product_variant.id,
+            purchase=schemas_sport_competition.PurchaseEdit(
+                quantity=purchase.quantity,
+            ),
+        )
+        # cruds_sport_competition.create_action(db, db_action)
+        await db.flush()
+        return db_purchase
+
+    await cruds_sport_competition.add_purchase(
+        db_purchase,
+        db,
+    )
+    # cruds_sport_competition.create_action(db, db_action)
+    await db.flush()
+    return db_purchase
+
+
+@module.router.patch(
+    "/competition/users/{user_id}/purchases/{product_variant_id}/validated",
+    status_code=204,
+)
+async def mark_purchase_as_validated(
+    user_id: str,
+    product_variant_id: UUID,
+    validated: bool,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.competition_admin)),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Validate a purchase.
+
+    **User must be CDR Admin to use this endpoint**
+    """
+    db_purchase = await cruds_sport_competition.load_purchase_by_ids(
+        user_id,
+        product_variant_id,
+        db,
+    )
+    if not db_purchase:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid purchase",
+        )
+
+    await cruds_sport_competition.mark_purchase_as_validated(
+        db=db,
+        user_id=user_id,
+        product_variant_id=product_variant_id,
+        validated=validated,
+    )
+    await db.flush()
+    return db_purchase
+
+
+@module.router.delete(
+    "/competition/users/{user_id}/purchases/{product_variant_id}/",
+    status_code=204,
+)
+async def delete_purchase(
+    user_id: str,
+    product_variant_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Delete a purchase.
+
+    **User must create a purchase for themself and for an online available product or be part of the seller's group to use this endpoint**
+    """
+
+    db_purchase = await cruds_sport_competition.load_purchase_by_ids(
+        user_id,
+        product_variant_id,
+        db,
+    )
+    if not db_purchase or db_purchase.edition_id != edition.id:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid purchase_id",
+        )
+    if db_purchase.validated:
+        raise HTTPException(
+            status_code=403,
+            detail="You can't remove a validated purchase",
+        )
+
+    # Check if a validated purchase depends on this purchase
+
+    await cruds_sport_competition.delete_purchase(
+        user_id,
+        product_variant_id,
+        db,
+    )
+    # cruds_sport_competition.create_action(db, db_action)
+
+
+# endregion: Purchases
+# region: Payments
+
+
+@module.router.get(
+    "/competition/users/{user_id}/payments/",
+    response_model=list[schemas_sport_competition.PaymentComplete],
+    status_code=200,
+)
+async def get_payments_by_user_id(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Get a user's payments.
+
+    **User must get his own payments or be CDR Admin to use this endpoint**
+    """
+    if not (
+        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_cdr])
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You're not allowed to see other users payments.",
+        )
+    return await cruds_sport_competition.load_user_payments(
+        user_id,
+        edition.id,
+        db,
+    )
+
+
+@module.router.post(
+    "/competition/users/{user_id}/payments/",
+    response_model=schemas_sport_competition.PaymentComplete,
+    status_code=201,
+)
+async def create_payment(
+    user_id: str,
+    payment: schemas_sport_competition.PaymentBase,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Create a payment.
+
+    **User must be CDR Admin to use this endpoint**
+    """
+    db_payment = schemas_sport_competition.PaymentComplete(
+        id=uuid4(),
+        user_id=user_id,
+        total=payment.total,
+        edition_id=edition.id,
+    )
+
+    await cruds_sport_competition.add_payment(db_payment, db)
+    # cruds_sport_competition.create_action(db, db_action)
+    await db.flush()
+    return db_payment
+
+
+@module.router.delete(
+    "/competition/users/{user_id}/payments/{payment_id}/",
+    status_code=204,
+)
+async def delete_payment(
+    user_id: str,
+    payment_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.competition_admin)),
+):
+    """
+    Remove a payment.
+
+    **User must be CDR Admin to use this endpoint**
+    """
+    db_payment = await cruds_sport_competition.load_payment_by_id(
+        payment_id,
+        db,
+    )
+    if not db_payment:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid payment_id",
+        )
+    if db_payment.user_id != user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="user_id and payment are not related.",
+        )
+
+    await cruds_sport_competition.delete_payment(
+        payment_id=payment_id,
+        db=db,
+    )
+    # cruds_sport_competition.create_action(db, db_action)
+
+
+@module.router.post(
+    "/competition/pay/",
+    response_model=schemas_sport_competition.PaymentUrl,
+    status_code=200,
+)
+async def get_payment_url(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
+    settings: Settings = Depends(get_settings),
+    payment_tool: PaymentTool = Depends(
+        get_payment_tool(HelloAssoConfigName.CHALLENGER),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Get payment url
+    """
+
+    purchases = await cruds_sport_competition.load_purchases_by_user_id(
+        user.id,
+        edition.id,
+        db,
+    )
+    payments = await cruds_sport_competition.load_user_payments(
+        user.id,
+        edition.id,
+        db,
+    )
+
+    purchases_total = sum(
+        purchase.product_variant.price * purchase.quantity for purchase in purchases
+    )
+    payments_total = sum(payment.total for payment in payments)
+
+    amount = purchases_total - payments_total
+
+    if amount < 100:
+        raise HTTPException(
+            status_code=403,
+            detail="Please give an amount in cents, greater than 1€.",
+        )
+    user_schema = schemas_users.CoreUser(
+        account_type=user.account_type,
+        school_id=user.school_id,
+        id=user.id,
+        email=user.email,
+        name=user.name,
+        firstname=user.firstname,
+        created_on=user.created_on,
+        groups=[],
+    )
+    checkout = await payment_tool.init_checkout(
+        module=module.root,
+        checkout_amount=amount,
+        checkout_name=f"Challenge {edition.name}",
+        payer_user=user_schema,
+        db=db,
+    )
+    hyperion_error_logger.info(f"CDR: Logging Checkout id {checkout.id}")
+    cruds_sport_competition.create_checkout(
+        db=db,
+        checkout=schemas_sport_competition.Checkout(
+            id=uuid4(),
+            user_id=user.id,
+            edition_id=edition.id,
+            checkout_id=checkout.id,
+        ),
+    )
+
+    return schemas_sport_competition.PaymentUrl(
+        url=checkout.payment_url,
+    )
+
+
+async def validate_payment(
+    checkout_payment: schemas_payment.CheckoutPayment,
+    db: AsyncSession,
+) -> None:
+    paid_amount = checkout_payment.paid_amount
+    checkout_id = checkout_payment.checkout_id
+
+    checkout = await cruds_sport_competition.get_checkout_by_checkout_id(
+        checkout_id,
+        db,
+    )
+    if not checkout:
+        hyperion_error_logger.error(
+            f"CDR payment callback: user checkout {checkout_id} not found.",
+        )
+        raise ValueError(f"User checkout {checkout_id} not found.")  # noqa: TRY003
+
+    db_payment = schemas_sport_competition.PaymentComplete(
+        id=uuid4(),
+        user_id=checkout.user_id,
+        total=paid_amount,
+        edition_id=checkout.edition_id,
+    )
+    purchases = await cruds_sport_competition.load_purchases_by_user_id(
+        checkout.user_id,
+        checkout.edition_id,
+        db,
+    )
+    payments = await cruds_sport_competition.load_user_payments(
+        checkout.user_id,
+        checkout.edition_id,
+        db,
+    )
+
+    purchases_total = sum(
+        purchase.product_variant.price * purchase.quantity for purchase in purchases
+    )
+    payments_total = sum(payment.total for payment in payments)
+
+    amount = purchases_total - payments_total
+    if amount == checkout_payment.paid_amount:
+        for purchase in purchases:
+            await cruds_sport_competition.mark_purchase_as_validated(
+                purchase.user_id,
+                purchase.product_variant_id,
+                True,
+                db,
+            )
+    else:
+        purchases.sort(key=lambda x: x.purchased_on)
+        for purchase in purchases:
+            if amount == 0:
+                break
+            if purchase.product_variant.price * purchase.quantity <= amount:
+                await cruds_sport_competition.mark_purchase_as_validated(
+                    purchase.user_id,
+                    purchase.product_variant_id,
+                    True,
+                    db,
+                )
+                amount -= purchase.product_variant.price * purchase.quantity
+
+    await cruds_sport_competition.add_payment(db_payment, db)
+    # cruds_sport_competition.create_action(db=db, action=db_action)
+    await db.flush()
+
+
+# endregion: Payments
