@@ -3,6 +3,7 @@
 Create Date: 2025-02-24 15:41:08.215026
 """
 
+import uuid
 from collections.abc import Sequence
 from enum import Enum
 from typing import TYPE_CHECKING
@@ -10,6 +11,7 @@ from typing import TYPE_CHECKING
 import sqlalchemy as sa
 from alembic import op
 
+from app.core.groups.groups_type import GroupType
 from app.types.sqlalchemy import TZDateTime
 
 if TYPE_CHECKING:
@@ -78,6 +80,44 @@ def upgrade() -> None:
     op.drop_table("notification_message")
 
     sa.Enum(Topic, name="topic").drop(op.get_bind())
+
+    # We can manually create a topic for each advertisers
+    # Define the advertiser table so we can query it
+    advertiser_table = sa.table(
+        "advert_advertisers",
+        sa.column("id", sa.String),
+        sa.column("name", sa.String),
+    )
+
+    # Query all advertisers
+    conn = op.get_bind()
+    advertisers = conn.execute(
+        sa.select(advertiser_table.c.id, advertiser_table.c.name),
+    ).fetchall()
+
+    # Define the notification_topic table to allow insertions
+    notification_topic_table = sa.table(
+        "notification_topic",
+        sa.column("id", sa.Uuid),
+        sa.column("name", sa.String),
+        sa.column("module_root", sa.String),
+        sa.column("topic_identifier", sa.String),
+        sa.column("restrict_to_group_id", sa.String),
+        sa.column("restrict_to_members", sa.Boolean),
+    )
+
+    # Insert a topic for each advertiser
+    for advertiser_id, advertiser_name in advertisers:
+        conn.execute(
+            notification_topic_table.insert().values(
+                id=uuid.uuid4(),
+                name=f"📣 Annonce - {advertiser_name}",
+                module_root="advert",
+                topic_identifier=advertiser_id,
+                restrict_to_group_id=None,
+                restrict_to_members=True,
+            ),
+        )
 
 
 def downgrade() -> None:
@@ -150,11 +190,22 @@ def pre_test_upgrade(
     alembic_runner: "MigrationContext",
     alembic_connection: sa.Connection,
 ) -> None:
-    pass
+    alembic_runner.insert_into(
+        "advert_advertisers",
+        {
+            "id": uuid.uuid4(),
+            "name": "test_advertiser",
+            "group_manager_id": GroupType.admin.value,
+        },
+    )
 
 
 def test_upgrade(
     alembic_runner: "MigrationContext",
     alembic_connection: sa.Connection,
 ) -> None:
-    pass
+    memberships = alembic_connection.execute(
+        sa.text("SELECT * FROM notification_topic"),
+    ).all()
+    assert len(memberships) == 1
+    assert memberships[0][1] == "📣 Annonce - test_advertiser"
