@@ -21,7 +21,7 @@ async def create_notification_topic(
     """Register a new topic in database and return it"""
 
     db.add(notification_topic)
-    db.flush()
+    await db.flush()
     return notification_topic
 
 
