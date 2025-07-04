@@ -403,10 +403,32 @@ async def init_lifespan(
 ) -> tuple[Scheduler, WebsocketConnectionManager]:
     hyperion_error_logger.info("Startup: Initializing application")
 
+    # Init the Redis client
     redis_client: redis.Redis | bool | None = app.dependency_overrides.get(
         get_redis_client,
         get_redis_client,
     )(settings=settings)
+
+    # Initialization steps should only be run once across all workers
+    # We use Redis locks to ensure that the initialization steps are only run once
+    if initialization.get_number_of_workers() > 1 and not isinstance(
+        redis_client,
+        Redis,
+    ):
+        raise MultipleWorkersWithoutRedisInitializationError
+
+    # We need to run the database initialization only once across all the workers
+    # Other workers have to wait for the db to be initialized
+    await initialization.use_lock_for_workers(
+        init_db,
+        "init_db",
+        redis_client,
+        hyperion_error_logger,
+        unlock_key="db_initialized",
+        settings=settings,
+        hyperion_error_logger=hyperion_error_logger,
+        drop_db=drop_db,
+    )
 
     await initialization.use_lock_for_workers(
         test_configuration,
@@ -498,33 +520,6 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
 
     # We need to init the database engine to be able to use it in dependencies
     init_and_get_db_engine(settings)
-
-    # Init the Redis client
-    redis_client: redis.Redis | bool | None = app.dependency_overrides.get(
-        get_redis_client,
-        get_redis_client,
-    )(settings=settings)
-
-    # Initialization steps should only be run once across all workers
-    # We use Redis locks to ensure that the initialization steps are only run once
-    if initialization.get_number_of_workers() > 1 and not isinstance(
-        redis_client,
-        Redis,
-    ):
-        raise MultipleWorkersWithoutRedisInitializationError
-
-    # We need to run the database initialization only once across all the workers
-    # Other workers have to wait for the db to be initialized
-    initialization.sync_use_lock_for_workers(
-        init_db,
-        "init_db",
-        redis_client,
-        hyperion_error_logger,
-        unlock_key="db_initialized",
-        settings=settings,
-        hyperion_error_logger=hyperion_error_logger,
-        drop_db=drop_db,
-    )
 
     @app.middleware("http")
     async def logging_middleware(
