@@ -1,7 +1,8 @@
+from uuid import UUID
+
 from pydantic import BaseModel, ConfigDict
 
 from app.core.users.schemas_users import CoreUserSimple
-from app.modules.phonebook.types_phonebook import Kinds
 
 
 class RoleTagsReturn(BaseModel):
@@ -19,7 +20,7 @@ class RoleTagsBase(BaseModel):
 
 class AssociationBase(BaseModel):
     name: str
-    kind: Kinds
+    groupement_id: UUID
     mandate_year: int
     description: str | None = None
     associated_groups: list[str] = []  # Should be a list of ids
@@ -34,7 +35,7 @@ class AssociationComplete(AssociationBase):
 
 class AssociationEdit(BaseModel):
     name: str | None = None
-    kind: Kinds | None = None
+    groupement_id: UUID | None = None
     description: str | None = None
     mandate_year: int | None = None
 
@@ -48,7 +49,7 @@ class MembershipBase(BaseModel):
     association_id: str
     mandate_year: int
     role_name: str
-    role_tags: str | None = None  # "roletag1;roletag2;..."
+    role_tags: str = ""  # "roletag1;roletag2;..."
     member_order: int
 
     model_config = ConfigDict(from_attributes=True)
@@ -80,5 +81,13 @@ class MemberComplete(MemberBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class KindsReturn(BaseModel):
-    kinds: list[Kinds]
+class AssociationGroupementBase(BaseModel):
+    name: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AssociationGroupement(AssociationGroupementBase):
+    id: UUID
+
+    model_config = ConfigDict(from_attributes=True)
