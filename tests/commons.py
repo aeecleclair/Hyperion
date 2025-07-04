@@ -2,6 +2,7 @@ import logging
 import uuid
 from collections.abc import AsyncGenerator, Callable
 from datetime import timedelta
+from functools import lru_cache
 
 import redis
 from fastapi import Depends, HTTPException
@@ -40,12 +41,13 @@ class FailedToAddObjectToDB(Exception):
 
 
 @lru_cache
-def override_get_settings() -> Settings:
+def override_get_settings(params=None) -> Callable[[], Settings]:
     """Override the get_settings function to use the testing session"""
+    if params is None:
+        params = {}
 
     def override_get_settings() -> Settings:
-        settings = Settings(_env_file=".env.test", _env_file_encoding="utf-8", **params)
-        return settings
+        return Settings(_env_file=".env.test", _env_file_encoding="utf-8", **params)
 
     return override_get_settings
 
