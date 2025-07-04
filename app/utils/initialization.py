@@ -315,10 +315,10 @@ async def use_lock_for_workers(
             redis_client.set(unlock_key, "1")
 
             # After 20 seconds, we assume that the job is done and we can release the lock
-            redis_client.expire(unlock_key, 20)
+            redis_client.expire(unlock_key, 60)
 
         # After 20 seconds, we assume that the job is done and we can release the lock
-        redis_client.expire(key, 20)
+        redis_client.expire(key, 60)
 
     elif unlock_key:
         # As an `unlock_key` is provided, we will wait until an other worker has finished executing `job_function`
