@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 from datetime import date
+from uuid import UUID
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,15 +15,52 @@ async def get_notification_topic(
     return result.scalars().all()
 
 
+async def get_notification_topic_by_id(
+    topic_id: UUID,
+    db: AsyncSession,
+) -> models_notification.NotificationTopic | None:
+    result = await db.execute(
+        select(models_notification.NotificationTopic).where(
+            models_notification.NotificationTopic.id == topic_id,
+        ),
+    )
+    return result.scalars().first()
+
+
+async def get_topics_restricted_to_group_id(
+    group_id: str,
+    db: AsyncSession,
+) -> Sequence[models_notification.NotificationTopic]:
+    result = await db.execute(
+        select(models_notification.NotificationTopic).where(
+            models_notification.NotificationTopic.restrict_to_group_id == group_id,
+        ),
+    )
+    return result.scalars().all()
+
+
+async def get_notification_topic_by_root_and_identifier(
+    module_root: str,
+    topic_identifier: str | None,
+    db: AsyncSession,
+) -> models_notification.NotificationTopic | None:
+    result = await db.execute(
+        select(models_notification.NotificationTopic).where(
+            models_notification.NotificationTopic.module_root == module_root,
+            models_notification.NotificationTopic.topic_identifier == topic_identifier,
+        ),
+    )
+    return result.scalars().first()
+
+
 async def create_notification_topic(
     notification_topic: models_notification.NotificationTopic,
     db: AsyncSession,
-) -> models_notification.NotificationTopic:
+) -> None:
     """Register a new topic in database and return it"""
 
     db.add(notification_topic)
     await db.flush()
-    return notification_topic
 
 
 async def get_firebase_devices_by_user_id(
@@ -128,7 +166,7 @@ async def create_topic_membership(
 
 async def delete_topic_membership(
     user_id: str,
-    topic_id: str,
+    topic_id: UUID,
     db: AsyncSession,
 ):
     await db.execute(
@@ -138,18 +176,6 @@ async def delete_topic_membership(
         ),
     )
     await db.flush()
-
-
-async def get_topic_memberships_by_topic_id(
-    topic_id: str,
-    db: AsyncSession,
-) -> Sequence[models_notification.TopicMembership]:
-    result = await db.execute(
-        select(models_notification.TopicMembership).where(
-            models_notification.TopicMembership.topic_id == topic_id,
-        ),
-    )
-    return result.scalars().all()
 
 
 async def get_topic_memberships_by_topic_id(
@@ -192,7 +218,7 @@ async def get_topic_memberships_with_identifiers_by_user_id_and_topic_id(
 
 async def get_topic_membership_by_user_id_and_topic_id(
     user_id: str,
-    topic_id: str,
+    topic_id: UUID,
     db: AsyncSession,
 ) -> models_notification.TopicMembership | None:
     result = await db.execute(
@@ -205,7 +231,7 @@ async def get_topic_membership_by_user_id_and_topic_id(
 
 
 async def get_user_ids_by_topic_id(
-    topic_id: str,
+    topic_id: UUID,
     db: AsyncSession,
 ) -> list[str]:
     result = await db.execute(

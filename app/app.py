@@ -28,6 +28,7 @@ from app.core.core_endpoints import coredata_core, models_core
 from app.core.google_api.google_api import GoogleAPI
 from app.core.groups import models_groups
 from app.core.groups.groups_type import GroupType
+from app.core.notification.cruds_notification import get_notification_topic
 from app.core.schools import models_schools
 from app.core.schools.schools_type import SchoolType
 from app.core.utils.config import Settings
@@ -36,6 +37,7 @@ from app.dependencies import (
     disconnect_state,
     get_app_state,
     get_db,
+    get_notification_manager,
     get_redis_client,
     init_app_state,
 )
@@ -47,8 +49,9 @@ from app.types.exceptions import (
 )
 from app.types.sqlalchemy import Base
 from app.utils import initialization
+from app.utils.communication.notifications import NotificationManager
 from app.utils.redis import limiter
-from app.utils.state import LifespanState
+from app.utils.state import LifespanState, RuntimeLifespanState
 
 if TYPE_CHECKING:
     import redis
@@ -293,6 +296,32 @@ def initialize_module_visibility(
             )
 
 
+async def initialize_notification_topics(
+    db: AsyncSession,
+    hyperion_error_logger: logging.Logger,
+    notification_manager: NotificationManager,
+) -> None:
+    existing_topics = await get_notification_topic(db=db)
+    existing_topics_id = [topic.id for topic in existing_topics]
+    for module in module_list:
+        if module.registred_topics:
+            for registred_topic in module.registred_topics:
+                if registred_topic.id not in existing_topics_id:
+                    # We want to register this new topic
+                    hyperion_error_logger.info(
+                        f"Registering topic {registred_topic.name} ({registred_topic.id})",
+                    )
+                    await notification_manager.register_new_topic(
+                        topic_id=registred_topic.id,
+                        name=registred_topic.name,
+                        module_root=registred_topic.module_root,
+                        topic_identifier=registred_topic.topic_identifier,
+                        restrict_to_group_id=registred_topic.restrict_to_group_id,
+                        restrict_to_members=registred_topic.restrict_to_members,
+                        db=db,
+                    )
+
+
 def use_route_path_as_operation_ids(app: FastAPI) -> None:
     """
     Simplify operation IDs so that generated API clients have simpler function names.
@@ -404,7 +433,7 @@ async def init_lifespan(
 
     # We get `init_app_state` as a dependency, as tests
     # should override it to provide their own state
-    state = await app.dependency_overrides.get(
+    state: LifespanState = await app.dependency_overrides.get(
         init_app_state,
         init_app_state,
     )(
@@ -412,9 +441,8 @@ async def init_lifespan(
         settings=settings,
         hyperion_error_logger=hyperion_error_logger,
     )
-    state = cast("LifespanState", state)
 
-    redis_client = app.dependency_overrides.get(
+    redis_client: Redis | None = app.dependency_overrides.get(
         get_redis_client,
         get_redis_client,
     )(state=state)
@@ -452,10 +480,15 @@ async def init_lifespan(
         hyperion_error_logger=hyperion_error_logger,
     )
 
-    async for db in app.dependency_overrides.get(
+    get_db_dependency: Callable[
+        [LifespanState],
+        AsyncGenerator[AsyncSession, None],
+    ] = app.dependency_overrides.get(
         get_db,
         get_db,
-    )(state=state):
+    )
+
+    async for db in get_db_dependency(state):
         await initialization.use_lock_for_workers(
             init_google_API,
             "init_google_API",
@@ -465,6 +498,22 @@ async def init_lifespan(
             db=db,
             settings=settings,
         )
+
+    async for db in get_db_dependency(state):
+        async for notification_manager in app.dependency_overrides.get(
+            get_notification_manager,
+            get_notification_manager,
+        )(settings=settings):
+            await initialization.use_lock_for_workers(
+                initialize_notification_topics,
+                "initialize_notification_topics",
+                redis_client,
+                number_of_workers,
+                hyperion_error_logger,
+                db=db,
+                hyperion_error_logger=hyperion_error_logger,
+                notification_manager=notification_manager,
+            )
 
     return state
 
