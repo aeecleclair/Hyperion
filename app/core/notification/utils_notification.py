@@ -1,11 +1,9 @@
 from collections.abc import Sequence
-from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.notification import cruds_notification, schemas_notification
 from app.core.notification.models_notification import NotificationTopic
-from app.core.users.cruds_users import get_users
 from app.core.users.models_users import CoreUser
 from app.utils.tools import is_user_external, is_user_member_of_any_group
 
@@ -65,7 +63,7 @@ async def get_topics_restricted_to_group_id(
 
 
 async def get_topic_by_root_and_identifier(
-    module_root: str, topic_identifier: str | None, db: AsyncSession
+    module_root: str, topic_identifier: str | None, db: AsyncSession,
 ) -> NotificationTopic | None:
     return await cruds_notification.get_notification_topic_by_root_and_identifier(
         module_root=module_root,
