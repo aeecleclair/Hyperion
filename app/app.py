@@ -37,7 +37,7 @@ from app.dependencies import (
     get_websocket_connection_manager,
     init_and_get_db_engine,
 )
-from app.modules.module_list import module_list
+from app.module import module_list
 from app.types.exceptions import ContentHTTPException, GoogleAPIInvalidCredentialsError
 from app.types.sqlalchemy import Base
 from app.utils import initialization
