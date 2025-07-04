@@ -1,5 +1,3 @@
-from collections.abc import Generator
-
 import pytest
 from fastapi.testclient import TestClient
 
@@ -12,7 +10,6 @@ from app.dependencies import (
     get_scheduler,
     get_settings,
     get_unsafe_db,
-    get_websocket_connection_manager,
 )
 from tests.commons import (
     override_get_db,
@@ -21,13 +18,12 @@ from tests.commons import (
     override_get_scheduler,
     override_get_settings,
     override_get_unsafe_db,
-    override_get_websocket_connection_manager,
     settings,
 )
 
 
 @pytest.fixture(scope="module", autouse=True)
-def client() -> Generator[TestClient, None]:
+def client() -> TestClient:
     test_app = get_application(settings=settings, drop_db=True)  # Create the test's app
 
     test_app.dependency_overrides[get_db] = override_get_db
@@ -44,9 +40,6 @@ def client() -> Generator[TestClient, None]:
         override_get_payment_tool(HelloAssoConfigName.MYECLPAY)
     )
     test_app.dependency_overrides[get_scheduler] = override_get_scheduler
-    test_app.dependency_overrides[get_websocket_connection_manager] = (
-        override_get_websocket_connection_manager
-    )
 
     # The TestClient should be used as a context manager in order for the lifespan to be called
     # See https://www.starlette.io/lifespan/#running-lifespan-in-tests
