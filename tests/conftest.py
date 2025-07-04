@@ -1,3 +1,5 @@
+from collections.abc import Generator
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -23,7 +25,7 @@ from tests.commons import (
 
 
 @pytest.fixture(scope="module", autouse=True)
-def client() -> TestClient:
+def client() -> Generator[TestClient, None, None]:
     test_app = get_application(settings=settings, drop_db=True)  # Create the test's app
 
     test_app.dependency_overrides[get_db] = override_get_db
