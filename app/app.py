@@ -38,6 +38,7 @@ from app.dependencies import (
     get_scheduler,
     get_websocket_connection_manager,
     init_and_get_db_engine,
+    init_websocket_connection_manager,
 )
 from app.module import module_list
 from app.types.exceptions import (
@@ -452,6 +453,7 @@ async def init_lifespan(
             settings=settings,
         )
 
+    init_websocket_connection_manager(WebsocketConnectionManager(settings=settings))
     ws_manager: WebsocketConnectionManager = app.dependency_overrides.get(
         get_websocket_connection_manager,
         get_websocket_connection_manager,
@@ -494,6 +496,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         )
 
         yield
+
         hyperion_error_logger.info("Shutting down")
         await arq_scheduler.close()
         await ws_manager.disconnect_broadcaster()
