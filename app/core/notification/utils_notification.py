@@ -63,7 +63,9 @@ async def get_topics_restricted_to_group_id(
 
 
 async def get_topic_by_root_and_identifier(
-    module_root: str, topic_identifier: str | None, db: AsyncSession,
+    module_root: str,
+    topic_identifier: str | None,
+    db: AsyncSession,
 ) -> NotificationTopic | None:
     return await cruds_notification.get_notification_topic_by_root_and_identifier(
         module_root=module_root,
