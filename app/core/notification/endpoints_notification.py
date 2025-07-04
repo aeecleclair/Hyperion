@@ -29,6 +29,7 @@ core_module = CoreModule(
     root="notification",
     tag="Notifications",
     router=router,
+    factory=None,
 )
 
 

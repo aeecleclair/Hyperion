@@ -16,7 +16,12 @@ from app.dependencies import (
     is_user_an_ecl_member,
     is_user_in,
 )
-from app.modules.booking import cruds_booking, models_booking, schemas_booking
+from app.modules.booking import (
+    cruds_booking,
+    models_booking,
+    schemas_booking,
+)
+from app.modules.booking.factory_booking import BookingFactory
 from app.modules.booking.types_booking import Decision
 from app.types.module import Module
 from app.utils.communication.notifications import NotificationTool
@@ -26,6 +31,7 @@ module = Module(
     root="booking",
     tag="Booking",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    factory=BookingFactory(),
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
