@@ -224,9 +224,11 @@ class Settings(BaseSettings):
     # HelloAsso provide a sandbox to be able to realize tests
     # HELLOASSO_API_BASE should have the format: `api.helloasso-sandbox.com`
     # HelloAsso only allow 20 simultaneous active access token. Note that each Hyperion worker will need its own access token.
+
+    # [["name", "helloasso_client_id", "helloasso_client_secret", "helloasso_slug", "redirection_uri"]]
     HELLOASSO_CONFIGURATIONS: list[
         tuple[str, str, str, str, str] | tuple[str, str, str, str]
-    ]  # [["name", "helloasso_client_id", "helloasso_client_secret", "helloasso_slug", "redirection_uri"]]
+    ] = []
     HELLOASSO_API_BASE: str | None = None
 
     # Maximum wallet balance for MyECLPay in cents, we will prevent user from adding more money to their wallet if it will make their balance exceed this value
