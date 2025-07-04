@@ -372,7 +372,7 @@ def init_db(
 
 # We wrap the application in a function to be able to pass the settings and drop_db parameters
 # The drop_db parameter is used to drop the database tables before creating them again
-def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
+def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:  # noqa: C901
     # Initialize loggers
     LogConfig().initialize_loggers(settings=settings)
 
