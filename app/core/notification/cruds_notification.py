@@ -21,13 +21,8 @@ async def create_notification_topic(
     """Register a new topic in database and return it"""
 
     db.add(notification_topic)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return notification_topic
+    db.flush()
+    return notification_topic
 
 
 async def get_firebase_devices_by_user_id(
