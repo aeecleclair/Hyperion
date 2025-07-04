@@ -166,6 +166,9 @@ class NotificationManager:
         if not self.use_firebase:
             return
 
+        if len(tokens) == 0:
+            return
+
         topic = str(topic_id)
         response = messaging.subscribe_to_topic(tokens, topic)
         if response.failure_count > 0:
