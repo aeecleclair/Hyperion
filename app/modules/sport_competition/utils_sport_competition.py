@@ -1,10 +1,25 @@
-from app.core.groups import schemas_groups
 from app.core.schools import schemas_schools
 from app.core.users import schemas_users
 from app.modules.sport_competition import (
     models_sport_competition,
     schemas_sport_competition,
+    types_sport_competition,
 )
+
+
+def checksport_category_compatibility(
+    sport_category1: types_sport_competition.SportCategory | None,
+    sport_category2: types_sport_competition.SportCategory | None,
+):
+    """
+    Check if two sport categories are compatible.
+    If one of the categories is None, they are compatible.
+    If both categories are the same, they are compatible.
+    If both categories are different, they are not compatible.
+    """
+    if sport_category1 is None or sport_category2 is None:
+        return True
+    return sport_category1 == sport_category2
 
 
 def competition_user_model_to_schema(
