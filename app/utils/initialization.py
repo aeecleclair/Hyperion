@@ -1,5 +1,9 @@
-from typing import TypeVar
+import asyncio
+import logging
+from collections.abc import Callable
+from typing import Any, TypeVar
 
+import redis
 from pydantic import ValidationError
 from sqlalchemy import Connection, MetaData, delete, select
 from sqlalchemy.engine import Engine, create_engine
@@ -13,6 +17,7 @@ from app.core.utils.config import Settings
 from app.types import core_data
 from app.types.exceptions import CoreDataNotFoundError
 from app.types.sqlalchemy import Base
+from app.utils.tools import execute_async_or_sync_method
 
 # These utils are used at startup to run database initializations & migrations
 
@@ -269,3 +274,43 @@ def drop_db_sync(conn: Connection):
     my_metadata: MetaData = MetaData(schema=Base.metadata.schema)
     my_metadata.reflect(bind=conn, resolve_fks=False)
     my_metadata.drop_all(bind=conn)
+
+
+async def use_lock_for_workers(
+    job_function: Callable[..., Any],
+    key: str,
+    redis_client: redis.Redis,
+    logger: logging.Logger,
+    unlock_key: str | None = None,
+    **kwargs,
+) -> None:
+    """
+    Aquires a Redis lock to ensure that `func` is only executed by one worker.
+
+    Using `unlock_key` allows to wait for a worker to have finished executing `func` before continuing execution.
+    If provided, the function will wait until this unlock key is set before continuing
+
+    The job may be a sync or async function. This util will pass `kwargs` as arguments to the `job_function`.
+    We assume that the function execution won't take more than 20 seconds.
+    """
+    if redis_client.setnx(key, "1"):
+        # We acquired the lock, we execute the function
+        logger.info(f"Running {job_function.__name__}")
+
+        await execute_async_or_sync_method(job_function, **kwargs)
+
+        if unlock_key is not None:
+            # We set the unlock_key for other workers to resume operation
+            redis_client.set(unlock_key, "1")
+
+            # After 20 seconds, we assume that the job is done and we can release the lock
+            redis_client.expire(unlock_key, 20)
+
+        # After 20 seconds, we assume that the job is done and we can release the lock
+        redis_client.expire(key, 20)
+
+    elif unlock_key:
+        # As an `unlock_key` is provided, we will wait until an other worker has finished executing `job_function`
+        while redis_client.get(unlock_key) is not None:
+            logger.debug(f"Waiting for {job_function.__name__} to finish")
+            await asyncio.sleep(1)
