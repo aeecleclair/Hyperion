@@ -438,15 +438,15 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:  # no
             get_db,
             get_db,
         )():
-            async for notification_manager in app.dependency_overrides.get(
+            notification_manager = app.dependency_overrides.get(
                 get_notification_manager,
                 get_notification_manager,
-            )(settings=settings):
-                await initialize_notification_topics(
-                    db=db,
-                    hyperion_error_logger=hyperion_error_logger,
-                    notification_manager=notification_manager,
-                )
+            )(settings=settings)
+            await initialize_notification_topics(
+                db=db,
+                hyperion_error_logger=hyperion_error_logger,
+                notification_manager=notification_manager,
+            )
 
         yield
         hyperion_error_logger.info("Shutting down")
