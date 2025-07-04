@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 from collections.abc import Callable
-from typing import Any, ParamSpec, TypeVar
+from typing import ParamSpec, TypeVar
 
 import psutil
 import redis
