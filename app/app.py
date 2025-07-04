@@ -367,6 +367,34 @@ async def init_google_API(
             pass
 
 
+def test_configuration(
+    settings: Settings,
+    hyperion_error_logger: logging.Logger,
+) -> None:
+    """
+    Test configuration and log warnings if some settings are not configured correctly.
+    """
+
+    # We use warning level so that the message is not sent to matrix again
+    if not settings.MATRIX_TOKEN:
+        hyperion_error_logger.warning(
+            "Matrix handlers are not configured in the .env file",
+        )
+    else:
+        if not settings.MATRIX_LOG_ERROR_ROOM_ID:
+            hyperion_error_logger.warning(
+                "Matrix handler is disabled for the error room",
+            )
+        if not settings.MATRIX_LOG_AMAP_ROOM_ID:
+            hyperion_error_logger.warning(
+                "Matrix handler is disabled for the AMAP room",
+            )
+
+    # Create folder for calendars if they don't already exists
+    Path("data/ics/").mkdir(parents=True, exist_ok=True)
+    Path("data/core/").mkdir(parents=True, exist_ok=True)
+
+
 async def init_lifespan(
     app: FastAPI,
     settings: Settings,
@@ -374,7 +402,6 @@ async def init_lifespan(
     drop_db: bool,
 ) -> tuple[Scheduler, WebsocketConnectionManager]:
     hyperion_error_logger.info("Startup: Initializing application")
-    hyperion_error_logger.info(settings)
 
     # Init the Redis client
     redis_client: redis.Redis | bool | None = app.dependency_overrides.get(
@@ -401,6 +428,15 @@ async def init_lifespan(
         settings=settings,
         hyperion_error_logger=hyperion_error_logger,
         drop_db=drop_db,
+    )
+
+    await initialization.use_lock_for_workers(
+        test_configuration,
+        "test_configuration",
+        redis_client,
+        hyperion_error_logger,
+        settings=settings,
+        hyperion_error_logger=hyperion_error_logger,
     )
 
     async for db in app.dependency_overrides.get(
@@ -445,25 +481,6 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     hyperion_access_logger = logging.getLogger("hyperion.access")
     hyperion_security_logger = logging.getLogger("hyperion.security")
     hyperion_error_logger = logging.getLogger("hyperion.error")
-
-    # We use warning level so that the message is not sent to matrix again
-    if not settings.MATRIX_TOKEN:
-        hyperion_error_logger.warning(
-            "Matrix handlers are not configured in the .env file",
-        )
-    else:
-        if not settings.MATRIX_LOG_ERROR_ROOM_ID:
-            hyperion_error_logger.warning(
-                "Matrix handler is disabled for the error room",
-            )
-        if not settings.MATRIX_LOG_AMAP_ROOM_ID:
-            hyperion_error_logger.warning(
-                "Matrix handler is disabled for the AMAP room",
-            )
-
-    # Create folder for calendars if they don't already exists
-    Path("data/ics/").mkdir(parents=True, exist_ok=True)
-    Path("data/core/").mkdir(parents=True, exist_ok=True)
 
     # Creating a lifespan which will be called when the application starts then shuts down
     # https://fastapi.tiangolo.com/advanced/events/
