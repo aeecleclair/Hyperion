@@ -319,10 +319,12 @@ async def use_lock_for_workers(
             # We set the unlock_key for other workers to resume operation
             redis_client.set(unlock_key, "1")
 
-            # After 20 seconds, we assume that the job is done and we can release the lock
+            # After 60 seconds we remove the key for both performance and reloading issues
+            # we assume other jobs won't take more than 60 seconds and will check this key before expiration
             redis_client.expire(unlock_key, 60)
 
-        # After 20 seconds, we assume that the job is done and we can release the lock
+        # After 60 seconds we remove the key for both performance and reloading issues
+        # we assume other jobs won't take more than 60 seconds and will check this key before expiration
         redis_client.expire(key, 60)
 
     elif unlock_key:
