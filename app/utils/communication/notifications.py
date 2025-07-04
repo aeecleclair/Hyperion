@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.notification import cruds_notification, models_notification
 from app.core.notification.notification_types import CustomTopic
 from app.core.notification.schemas_notification import Message
+from app.core.users import cruds_users
 from app.core.utils.config import Settings
 from app.types.scheduler import Scheduler
 
@@ -326,6 +327,28 @@ class NotificationTool:
         self.notification_manager = notification_manager
         self.db = db
         # self.scheduler = scheduler
+
+    async def send_notification_to_group(
+        self,
+        group_id: str,
+        message: Message,
+        scheduler: Scheduler | None = None,
+        defer_date: datetime | None = None,
+        job_id: str | None = None,
+    ):
+        users = await cruds_users.get_users(
+            included_groups=[group_id],
+            db=self.db,
+        )
+        user_ids = [user.id for user in users]
+
+        await self.send_notification_to_users(
+            user_ids=user_ids,
+            message=message,
+            scheduler=scheduler,
+            defer_date=defer_date,
+            job_id=job_id,
+        )
 
     async def send_notification_to_users(
         self,
