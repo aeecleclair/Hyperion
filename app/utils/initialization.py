@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 from collections.abc import Callable
-from typing import Any, TypeVar
+from typing import Any, ParamSpec, TypeVar
 
 import psutil
 import redis
@@ -278,13 +278,18 @@ def drop_db_sync(conn: Connection):
     my_metadata.drop_all(bind=conn)
 
 
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
 async def use_lock_for_workers(
-    job_function: Callable[..., Any],
+    job_function: Callable[P, R],
     key: str,
     redis_client: redis.Redis | bool | None,
     logger: logging.Logger,
     unlock_key: str | None = None,
-    **kwargs,
+    *args: P.args,
+    **kwargs: P.kwargs,
 ) -> None:
     """
     Aquires a Redis lock to ensure that `func` is only executed by one worker.
@@ -302,13 +307,13 @@ async def use_lock_for_workers(
         redis.Redis,
     ):
         # If a Redis is not provided, we execute the function directly
-        await execute_async_or_sync_method(job_function, **kwargs)
+        await execute_async_or_sync_method(job_function, *args, **kwargs)
 
     elif redis_client.setnx(key, "1"):
         # We acquired the lock, we execute the function
         logger.info(f"Running {job_function.__name__}")
 
-        await execute_async_or_sync_method(job_function, **kwargs)
+        await execute_async_or_sync_method(job_function, *args, **kwargs)
 
         if unlock_key is not None:
             # We set the unlock_key for other workers to resume operation
