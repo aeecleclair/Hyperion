@@ -1,3 +1,5 @@
+from collections.abc import Generator
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -23,7 +25,7 @@ from tests.commons import (
 
 
 @pytest.fixture(scope="module", autouse=True)
-def client() -> TestClient:
+def client() -> Generator[TestClient, None, None]:
     test_app = get_application(settings=settings, drop_db=True)  # Create the test's app
 
     test_app.dependency_overrides[get_db] = override_get_db
@@ -41,4 +43,7 @@ def client() -> TestClient:
     )
     test_app.dependency_overrides[get_scheduler] = override_get_scheduler
 
-    return TestClient(test_app)  # Create a client to execute tests
+    # The TestClient should be used as a context manager in order for the lifespan to be called
+    # See https://www.starlette.io/lifespan/#running-lifespan-in-tests
+    with TestClient(test_app) as client:
+        yield client

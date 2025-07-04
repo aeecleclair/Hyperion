@@ -9,13 +9,12 @@ from helloasso_python.models.hello_asso_api_v5_models_api_notifications_api_noti
 from pydantic import TypeAdapter, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.core_module_list import core_module_list
 from app.core.payment import cruds_payment, models_payment, schemas_payment
 from app.core.payment.types_payment import (
     NotificationResultContent,
 )
 from app.dependencies import get_db
-from app.modules.module_list import module_list
+from app.module import all_modules
 from app.types.module import CoreModule
 
 router = APIRouter(tags=["Payments"])
@@ -133,7 +132,7 @@ async def webhook(
 
         # If a callback is defined for the module, we want to call it
         try:
-            for module in module_list + core_module_list:
+            for module in all_modules:
                 if module.root == checkout.module:
                     if module.payment_callback is not None:
                         hyperion_error_logger.info(

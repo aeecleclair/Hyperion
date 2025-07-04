@@ -2,14 +2,10 @@
 
 from fastapi import APIRouter
 
-from app.core.core_module_list import core_module_list
-from app.modules.module_list import module_list
+from app.module import all_modules
 
 api_router = APIRouter()
 
 
-for core_module in core_module_list:
+for core_module in all_modules:
     api_router.include_router(core_module.router)
-
-for module in module_list:
-    api_router.include_router(module.router)
