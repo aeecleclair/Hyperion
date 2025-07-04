@@ -1,7 +1,6 @@
 """File defining the Metadata. And the basic functions creating the database tables and calling the router"""
 
 import logging
-import os
 import uuid
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
@@ -53,8 +52,8 @@ from app.utils.redis import limiter
 if TYPE_CHECKING:
     import redis
 
-    from app.types.scheduler import Scheduler
-    from app.types.websocket import WebsocketConnectionManager
+from app.types.scheduler import Scheduler
+from app.types.websocket import WebsocketConnectionManager
 
 # NOTE: We can not get loggers at the top of this file like we do in other files
 # as the loggers are not yet initialized
