@@ -16,7 +16,4 @@ COPY migrations migrations/
 COPY assets assets/
 COPY app app/
 
-COPY start.sh .
-RUN chmod +x start.sh
-
-ENTRYPOINT ["./start.sh"]
+ENTRYPOINT ["fastapi", "run", "app/main.py", "--workers", "${NB_WORKERS:-1}"]

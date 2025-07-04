@@ -377,6 +377,7 @@ async def init_lifespan(
     hyperion_error_logger.info("Startup: Initializing application")
     hyperion_error_logger.info(settings)
 
+    # Init the Redis client
     redis_client: redis.Redis | bool | None = app.dependency_overrides.get(
         get_redis_client,
         get_redis_client,
@@ -409,7 +410,7 @@ async def init_lifespan(
     )():
         await initialization.use_lock_for_workers(
             init_google_API,
-            "factories_run",
+            "init_google_API",
             redis_client,
             hyperion_error_logger,
             db=db,
@@ -500,12 +501,6 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
 
     calypsso = get_calypsso_app()
     app.mount("/calypsso", calypsso, "Calypsso")
-
-    # Initialize Redis
-    if not app.dependency_overrides.get(get_redis_client, get_redis_client)(
-        settings=settings,
-    ):
-        hyperion_error_logger.info("Redis client not configured")
 
     # We need to init the database engine to be able to use it in dependencies
     init_and_get_db_engine(settings)
