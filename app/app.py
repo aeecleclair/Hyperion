@@ -514,8 +514,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         raise MultipleWorkersWithoutRedisInitializationError
 
     # We need to run the database initialization only once across all the workers
-    # Other workers have to wait for the db to be initialized as they may need to access the database and groups.
-    # The initialization must be run before we start the lifespan as tests will need to add objects to the database before the TestClient creation
+    # Other workers have to wait for the db to be initialized
     initialization.sync_use_lock_for_workers(
         init_db,
         "init_db",
