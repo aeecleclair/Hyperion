@@ -285,7 +285,8 @@ R = TypeVar("R")
 async def use_lock_for_workers(
     job_function: Callable[P, R],
     key: str,
-    redis_client: redis.Redis | bool | None,
+    redis_client: redis.Redis | None,
+    number_of_workers: int,
     logger: logging.Logger,
     unlock_key: str | None = None,
     *args: P.args,
@@ -301,10 +302,16 @@ async def use_lock_for_workers(
     We assume that the function execution won't take more than 20 seconds.
 
     If the Redis client is not provided, the function will execute `job_function` directly without acquiring a lock.
+
+    If `number_of_workers` is less than or equal to 1, the function will execute `job_function` directly without acquiring a lock.
     """
-    if not isinstance(
-        redis_client,
-        redis.Redis,
+
+    if (
+        not isinstance(
+            redis_client,
+            redis.Redis,
+        )
+        or number_of_workers <= 1
     ):
         # If a Redis is not provided, we execute the function directly
         await execute_async_or_sync_method(job_function, *args, **kwargs)
