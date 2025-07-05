@@ -38,7 +38,6 @@ from app.types.exceptions import (
 )
 from app.utils.mail.mailworker import send_email
 
-
 if TYPE_CHECKING:
     from app.core.utils.config import Settings
 
