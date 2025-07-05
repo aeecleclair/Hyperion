@@ -61,6 +61,8 @@ from app.utils.tools import (
 hyperion_access_logger = logging.getLogger("hyperion.access")
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
+GLOBAL_APP_STATE: LifespanState
+
 
 async def init_app_state(
     app: FastAPI,
@@ -112,7 +114,8 @@ async def init_app_state(
 
     mail_templates = init_mail_templates(settings=settings)
 
-    return LifespanState(
+    global GLOBAL_APP_STATE
+    GLOBAL_APP_STATE = LifespanState(
         engine=engine,
         SessionLocal=SessionLocal,
         redis_client=redis_client,
@@ -123,6 +126,8 @@ async def init_app_state(
         payment_tools=payment_tools,
         mail_templates=mail_templates,
     )
+
+    return GLOBAL_APP_STATE
 
 
 async def disconnect_state(
@@ -151,22 +156,18 @@ def get_app_state(request: Request) -> RuntimeLifespanState:
     # `state` should be a RuntimeLifespanState object injected in the state by our middleware
     # We force Mypy to consider it as a RuntimeLifespanState instead of Any
 
-    if isinstance(request.state, dict):
-        return cast("RuntimeLifespanState", request.state)
-    if isinstance(request.state, starlette.datastructures.State):
-        return cast("RuntimeLifespanState", request.state.__dict__["_state"])
-    raise InvalidAppStateTypeError
+    return GLOBAL_APP_STATE
 
 
 AppState = Annotated[RuntimeLifespanState, Depends(get_app_state)]
 
 
-async def get_request_id(state: AppState) -> str:
+async def get_request_id(request: Request) -> str:
     """
     The request identifier is a unique UUID which is used to associate logs saved during the same request
     """
 
-    return state["request_id"]
+    return cast("str", request.state.request_id)
 
 
 @lru_cache
