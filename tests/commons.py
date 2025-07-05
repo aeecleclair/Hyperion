@@ -28,6 +28,7 @@ from app.dependencies import AppState
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.types import core_data
 from app.types.floors_type import FloorsType
+from app.types.scheduler import OfflineScheduler
 from app.types.sqlalchemy import Base
 from app.utils.communication.notifications import NotificationManager
 from app.utils.state import (
@@ -64,10 +65,10 @@ async def override_init_app_state(
         hyperion_error_logger=hyperion_error_logger,
     )
 
-    scheduler = await init_scheduler(
-        settings=settings,
-        app=app,
-    )
+    # Even if we have a Redis client, we still want to use the OfflineScheduler for tests
+    # as tests are not able to run tasks in the future. The event loop of the test may not be running long enough
+    # to execute the tasks.
+    scheduler = OfflineScheduler()
 
     ws_manager = await init_websocket_connection_manager(
         settings=settings,
