@@ -5,7 +5,7 @@ from datetime import timedelta
 from functools import lru_cache
 
 import redis
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from sqlalchemy import NullPool
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -33,7 +33,6 @@ from app.types.sqlalchemy import Base
 from app.utils.communication.notifications import NotificationManager
 from app.utils.state import (
     LifespanState,
-    RuntimeLifespanState,
     init_mail_templates,
     init_redis_client,
     init_scheduler,
@@ -47,9 +46,6 @@ from app.utils.tools import (
 
 class FailedToAddObjectToDB(Exception):
     """Exception raised when an object cannot be added to the database."""
-
-
-GLOBAL_APP_STATE: LifespanState
 
 
 async def override_init_app_state(
@@ -86,8 +82,7 @@ async def override_init_app_state(
 
     mail_templates = init_mail_templates(settings=settings)
 
-    global GLOBAL_APP_STATE
-    GLOBAL_APP_STATE = LifespanState(
+    return LifespanState(
         engine=engine,
         SessionLocal=SessionLocal,
         redis_client=redis_client,
@@ -98,20 +93,6 @@ async def override_init_app_state(
         payment_tools=payment_tools,
         mail_templates=mail_templates,
     )
-    return GLOBAL_APP_STATE
-
-
-def override_get_app_state(request: Request) -> RuntimeLifespanState:
-    """
-    Get the application state from the request. The state is injected by our middleware.
-    """
-    # `request.state` may be a TypedDict or a starlette State object
-    # depending if it is accessed in an endpoint or the lifespan
-
-    # `state` should be a RuntimeLifespanState object injected in the state by our middleware
-    # We force Mypy to consider it as a RuntimeLifespanState instead of Any
-
-    return GLOBAL_APP_STATE
 
 
 @lru_cache
