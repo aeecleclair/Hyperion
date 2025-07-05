@@ -10,7 +10,6 @@ from app.modules.raffle import models_raffle
 from app.modules.raffle.types_raffle import RaffleStatusType
 from tests.commons import (
     add_object_to_db,
-    change_redis_client_status,
     create_api_access_token,
     create_user_with_groups,
 )
@@ -317,9 +316,6 @@ def test_get_tickets_by_user_id(client: TestClient) -> None:
 
 
 def test_buy_tickets(client: TestClient) -> None:
-    # Enable Redis client for locker
-    change_redis_client_status(activated=True)
-
     token = create_api_access_token(student_user)
 
     response = client.post(
@@ -327,8 +323,6 @@ def test_buy_tickets(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
 
-    # Disable Redis client (to avoid rate-limit)
-    change_redis_client_status(activated=False)
     assert response.status_code == 201
 
 

@@ -10,7 +10,6 @@ from app.modules.amap import models_amap
 from app.modules.amap.types_amap import AmapSlotType, DeliveryStatusType
 from tests.commons import (
     add_object_to_db,
-    change_redis_client_status,
     create_api_access_token,
     create_user_with_groups,
 )
@@ -265,9 +264,6 @@ def test_make_delivery_orderable(client: TestClient) -> None:
 
 
 def test_add_order_to_delivery(client: TestClient) -> None:
-    # Enable Redis client for locker
-    change_redis_client_status(activated=True)
-
     token = create_api_access_token(student_user)
 
     response = client.post(
@@ -283,16 +279,10 @@ def test_add_order_to_delivery(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
 
-    # Disable Redis client (to avoid rate-limit)
-    change_redis_client_status(activated=False)
-
     assert response.status_code == 201
 
 
 def test_edit_order(client: TestClient) -> None:
-    # Enable Redis client for locker
-    change_redis_client_status(activated=True)
-
     token = create_api_access_token(student_user)
 
     response = client.patch(
@@ -309,16 +299,10 @@ def test_edit_order(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
 
-    # Disable Redis client (to avoid rate-limit)
-    change_redis_client_status(activated=False)
-
     assert response.status_code == 204
 
 
 def test_remove_order(client: TestClient) -> None:
-    # Enable Redis client for locker
-    change_redis_client_status(activated=True)
-
     token = create_api_access_token(student_user)
 
     response = client.delete(
@@ -326,35 +310,24 @@ def test_remove_order(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
 
-    # Disable Redis client (to avoid rate-limit)
-    change_redis_client_status(activated=False)
-
     assert response.status_code == 204
 
 
 def test_remove_order_by_admin(client: TestClient) -> None:
-    # Enable Redis client for locker
-    change_redis_client_status(activated=True)
+    token = create_api_access_token(student_user)
+    token_amap = create_api_access_token(amap_user)
 
-    try:
-        token = create_api_access_token(student_user)
-        token_amap = create_api_access_token(amap_user)
+    response = client.delete(
+        f"/amap/orders/{deletable_order_by_admin.order_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 400
 
-        response = client.delete(
-            f"/amap/orders/{deletable_order_by_admin.order_id}",
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        assert response.status_code == 400
-
-        response = client.delete(
-            f"/amap/orders/{deletable_order_by_admin.order_id}",
-            headers={"Authorization": f"Bearer {token_amap}"},
-        )
-        assert response.status_code == 204
-
-    # Disable Redis client (to avoid rate-limit)
-    finally:
-        change_redis_client_status(activated=False)
+    response = client.delete(
+        f"/amap/orders/{deletable_order_by_admin.order_id}",
+        headers={"Authorization": f"Bearer {token_amap}"},
+    )
+    assert response.status_code == 204
 
 
 def test_get_users_cash(client: TestClient) -> None:
