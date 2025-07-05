@@ -427,7 +427,8 @@ async def init_lifespan(
 
     # Initialization steps should only be run once across all workers
     # We use Redis locks to ensure that the initialization steps are only run once
-    if initialization.get_number_of_workers() > 1 and not isinstance(
+    number_of_workers = initialization.get_number_of_workers()
+    if number_of_workers > 1 and not isinstance(
         redis_client,
         Redis,
     ):
@@ -439,6 +440,7 @@ async def init_lifespan(
         init_db,
         "init_db",
         redis_client,
+        number_of_workers,
         hyperion_error_logger,
         unlock_key="db_initialized",
         settings=settings,
@@ -450,6 +452,7 @@ async def init_lifespan(
         test_configuration,
         "test_configuration",
         redis_client,
+        number_of_workers,
         hyperion_error_logger,
         settings=settings,
         hyperion_error_logger=hyperion_error_logger,
@@ -463,6 +466,7 @@ async def init_lifespan(
             init_google_API,
             "init_google_API",
             redis_client,
+            number_of_workers,
             hyperion_error_logger,
             db=db,
             settings=settings,
