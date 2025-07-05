@@ -20,14 +20,11 @@ from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.schools import schemas_schools
 from app.core.users import schemas_users
 from app.dependencies import get_payment_tool
-from app.types.exceptions import PaymentToolCredentialsNotSetException
 from app.types.module import Module
 from tests.commons import (
     TestingSessionLocal,
     add_object_to_db,
     create_user_with_groups,
-    override_get_payment_tool,
-    override_get_settings,
 )
 
 if TYPE_CHECKING:
@@ -383,22 +380,10 @@ async def test_webhook_payment_callback_fail(
 # Test Payment tool #
 
 
-def test_payment_tool_unavailable(
-    mocker: MockerFixture,
-):
-    settings = override_get_settings()
-
-    with pytest.raises(
-        PaymentToolCredentialsNotSetException,
-        match="HelloAsso API credentials are not set",
-    ):
-        get_payment_tool(HelloAssoConfigName.MYECLPAY)(settings)
-
-
 async def test_payment_tool_get_checkout(
     client: TestClient,
 ):
-    payment_tool = override_get_payment_tool(HelloAssoConfigName.CDR)()
+    payment_tool = get_payment_tool(name=HelloAssoConfigName.CDR)()
 
     async with TestingSessionLocal() as db:
         # Get existing checkout
@@ -415,16 +400,6 @@ async def test_payment_tool_get_checkout(
             db=db,
         )
         assert unexisting_checkout is None
-
-
-async def test_payment_tool_init_checkout_with_unavailable_payment():
-    settings = override_get_settings()
-
-    with pytest.raises(
-        PaymentToolCredentialsNotSetException,
-        match="HelloAsso API credentials are not set",
-    ):
-        get_payment_tool(HelloAssoConfigName.MYECLPAY)(settings)
 
 
 async def test_payment_tool_init_checkout(
