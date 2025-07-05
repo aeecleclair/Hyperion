@@ -193,11 +193,11 @@ class Settings(BaseSettings):
     # Redis configuration is needed to use the rate limiter, or multiple uvicorn workers
     # We use the default redis configuration, so the protected mode is enabled by default (see https://redis.io/docs/manual/security/#protected-mode)
     # If you want to use a custom configuration, a password and a specific binds should be used to avoid security issues
-    REDIS_HOST: str
-    REDIS_PORT: int
+    REDIS_HOST: str | None = None
+    REDIS_PORT: int = 6379
     REDIS_PASSWORD: str | None = None
-    REDIS_LIMIT: int
-    REDIS_WINDOW: int
+    REDIS_LIMIT: int = 1000
+    REDIS_WINDOW: int = 60
 
     ##########################
     # Firebase Configuration #
