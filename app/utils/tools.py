@@ -21,6 +21,7 @@ from jellyfish import jaro_winkler_similarity
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
+from weasyprint import CSS, HTML
 
 from app.core.core_endpoints import cruds_core, models_core
 from app.core.groups import cruds_groups
@@ -36,7 +37,7 @@ from app.types.exceptions import (
     FileNameIsNotAnUUIDError,
 )
 from app.utils.mail.mailworker import send_email
-from weasyprint import CSS, HTML
+
 
 if TYPE_CHECKING:
     from app.core.utils.config import Settings
