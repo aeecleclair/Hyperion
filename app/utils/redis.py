@@ -1,23 +1,5 @@
 import redis
 
-from app.core.utils.config import Settings
-
-
-def connect(settings: Settings) -> redis.Redis | bool:
-    redis_client = redis.Redis(
-        host=settings.REDIS_HOST,
-        port=settings.REDIS_PORT,
-        password=settings.REDIS_PASSWORD,
-        socket_keepalive=True,
-    )
-    redis_client.ping()  # Test the connection
-
-    return redis_client
-
-
-def disconnect(redis_client: redis.Redis) -> None:
-    redis_client.close()
-
 
 def limiter(redis_client: redis.Redis, key: str, limit: int, window: int):
     """Simple fixed window rate limiter, returns a couple of booleans: the first is True if the request can be processed, False otherwise; the second indicates if an alert should be issued. key should be an ip address or a user id"""

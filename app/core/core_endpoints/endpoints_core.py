@@ -2,7 +2,7 @@ import logging
 from os import path
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,6 +37,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
     status_code=200,
 )
 async def read_information(
+    request: Request,
     settings: Settings = Depends(get_settings),
 ):
     """

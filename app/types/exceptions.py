@@ -12,6 +12,13 @@ class MultipleWorkersWithoutRedisInitializationError(Exception):
         )
 
 
+class InvalidAppStateTypeError(Exception):
+    def __init__(self):
+        super().__init__(
+            "The type of the app state is not a TypedDict or a starlette State object.",
+        )
+
+
 class CoreDataNotFoundError(Exception):
     pass
 
