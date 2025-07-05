@@ -19,19 +19,23 @@ from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from app import api
 from app.core.core_endpoints import coredata_core, models_core
+from app.core.core_module_list import core_module_list
 from app.core.google_api.google_api import GoogleAPI
 from app.core.groups import models_groups
 from app.core.groups.groups_type import GroupType
+from app.core.notification.cruds_notification import get_notification_topic
 from app.core.schools import models_schools
 from app.core.schools.schools_type import SchoolType
 from app.core.utils.config import Settings
 from app.core.utils.log import LogConfig
 from app.dependencies import (
     get_db,
+    get_notification_manager,
     get_redis_client,
     get_scheduler,
     get_websocket_connection_manager,
@@ -41,6 +45,7 @@ from app.modules.module_list import module_list
 from app.types.exceptions import ContentHTTPException, GoogleAPIInvalidCredentialsError
 from app.types.sqlalchemy import Base
 from app.utils import initialization
+from app.utils.communication.notifications import NotificationManager
 from app.utils.redis import limiter
 
 if TYPE_CHECKING:
@@ -288,6 +293,33 @@ def initialize_module_visibility(
             )
 
 
+async def initialize_notification_topics(
+    db: AsyncSession,
+    hyperion_error_logger: logging.Logger,
+    notification_manager: NotificationManager,
+) -> None:
+    existing_topics = await get_notification_topic(db=db)
+    existing_topics_id = [topic.id for topic in existing_topics]
+    modules = core_module_list + module_list
+    for module in modules:
+        if module.registred_topics:
+            for registred_topic in module.registred_topics:
+                if registred_topic.id not in existing_topics_id:
+                    # We want to register this new topic
+                    hyperion_error_logger.info(
+                        f"Registering topic {registred_topic.name} ({registred_topic.id})",
+                    )
+                    await notification_manager.register_new_topic(
+                        topic_id=registred_topic.id,
+                        name=registred_topic.name,
+                        module_root=registred_topic.module_root,
+                        topic_identifier=registred_topic.topic_identifier,
+                        restrict_to_group_id=registred_topic.restrict_to_group_id,
+                        restrict_to_members=registred_topic.restrict_to_members,
+                        db=db,
+                    )
+
+
 def use_route_path_as_operation_ids(app: FastAPI) -> None:
     """
     Simplify operation IDs so that generated API clients have simpler function names.
@@ -342,7 +374,7 @@ def init_db(
 
 # We wrap the application in a function to be able to pass the settings and drop_db parameters
 # The drop_db parameter is used to drop the database tables before creating them again
-def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
+def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:  # noqa: C901
     # Initialize loggers
     LogConfig().initialize_loggers(settings=settings)
 
@@ -403,6 +435,20 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
             redis_password=settings.REDIS_PASSWORD,
             _dependency_overrides=app.dependency_overrides,
         )
+
+        async for db in app.dependency_overrides.get(
+            get_db,
+            get_db,
+        )():
+            notification_manager = app.dependency_overrides.get(
+                get_notification_manager,
+                get_notification_manager,
+            )(settings=settings)
+            await initialize_notification_topics(
+                db=db,
+                hyperion_error_logger=hyperion_error_logger,
+                notification_manager=notification_manager,
+            )
 
         yield
         hyperion_error_logger.info("Shutting down")
