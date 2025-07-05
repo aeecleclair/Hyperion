@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 
 from app import api
 from app.core.core_endpoints import coredata_core, models_core
+from app.core.core_module_list import core_module_list
 from app.core.google_api.google_api import GoogleAPI
 from app.core.groups import models_groups
 from app.core.groups.groups_type import GroupType
@@ -303,7 +304,8 @@ async def initialize_notification_topics(
 ) -> None:
     existing_topics = await get_notification_topic(db=db)
     existing_topics_id = [topic.id for topic in existing_topics]
-    for module in module_list:
+    modules = core_module_list + module_list
+    for module in modules:
         if module.registred_topics:
             for registred_topic in module.registred_topics:
                 if registred_topic.id not in existing_topics_id:
