@@ -4,7 +4,6 @@ from collections.abc import Callable
 from datetime import timedelta
 from functools import lru_cache
 
-import redis
 from fastapi import FastAPI
 from sqlalchemy import NullPool
 from sqlalchemy.ext.asyncio import (
@@ -24,7 +23,6 @@ from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users, models_users, schemas_users
 from app.core.utils import security
 from app.core.utils.config import Settings
-from app.dependencies import AppState
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.types import core_data
 from app.types.floors_type import FloorsType
@@ -35,7 +33,6 @@ from app.utils.state import (
     LifespanState,
     init_mail_templates,
     init_redis_client,
-    init_scheduler,
     init_websocket_connection_manager,
 )
 from app.utils.tools import (
