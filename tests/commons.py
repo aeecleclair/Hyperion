@@ -155,25 +155,7 @@ TestingSessionLocal = async_sessionmaker(
 )
 
 
-# By default the Redis client should be deactivated as we don't want the rate limiter to be activated during tests
-# We add an "activate"/"deactivate" option to be able to enable Redis during specific tests
-redis_client_enabled: bool = False
-
 hyperion_error_logger = logging.getLogger("hyperion.error")
-
-
-def override_get_redis_client(state: AppState) -> redis.Redis | None:
-    if redis_client_enabled:
-        return state["redis_client"]
-    return None
-
-
-def change_redis_client_status(activated: bool) -> None:
-    """
-    Enable or disable the Redis client for testing purposes.
-    """
-    global redis_client_enabled
-    redis_client_enabled = activated
 
 
 async def create_user_with_groups(

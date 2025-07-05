@@ -199,6 +199,10 @@ class Settings(BaseSettings):
     REDIS_LIMIT: int = 1000
     REDIS_WINDOW: int = 60
 
+    # Rate limit requests based on REDIS_LIMIT and REDIS_WINDOW
+    # A working Redis client is required to use the rate limiter
+    ENABLE_RATE_LIMITER: bool = True
+
     ##########################
     # Firebase Configuration #
     ##########################

@@ -1,10 +1,11 @@
 from fastapi.testclient import TestClient
 
-from tests.commons import change_redis_client_status, settings
+from tests.commons import settings
 
 
 def test_limiter(client: TestClient) -> None:
-    change_redis_client_status(activated=True)
+    # Enable the rate limiter for this test
+    settings.ENABLE_RATE_LIMITER = True
     try:
         for _ in range(settings.REDIS_LIMIT - 1):
             response = client.get("/information")
@@ -13,4 +14,4 @@ def test_limiter(client: TestClient) -> None:
             response = client.get("/information")
             assert response.status_code == 429
     finally:
-        change_redis_client_status(activated=False)
+        settings.ENABLE_RATE_LIMITER = False

@@ -565,7 +565,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
 
         # We test the ip address with the redis limiter
         process = True
-        if redis_client:  # If redis is configured
+        if redis_client and settings.ENABLE_RATE_LIMITER:  # If redis is configured
             process, log = limiter(
                 redis_client,
                 ip_address,
