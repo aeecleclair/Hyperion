@@ -16,6 +16,7 @@ from pydantic_settings import (
 
 from app.core.payment.types_payment import HelloAssoConfig, HelloAssoConfigName
 from app.types.exceptions import (
+    DotenvBothAuthClientAndAuthClientDictConfigured,
     DotenvInvalidAuthClientNameInError,
     DotenvInvalidHelloAssoConfigNameError,
     DotenvInvalidVariableError,
