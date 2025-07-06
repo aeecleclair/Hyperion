@@ -527,6 +527,15 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     calypsso = get_calypsso_app()
     app.mount("/calypsso", calypsso, "Calypsso")
 
+    get_app_state_dependency = app.dependency_overrides.get(
+        get_app_state,
+        get_app_state,
+    )
+    get_redis_client_dependency = app.dependency_overrides.get(
+        get_redis_client,
+        get_redis_client,
+    )
+
     @app.middleware("http")
     async def logging_middleware(
         request: Request,
@@ -557,15 +566,9 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         port = request.client.port
         client_address = f"{ip_address}:{port}"
 
-        state = app.dependency_overrides.get(
-            get_app_state,
-            get_app_state,
-        )(request)
-
-        redis_client: redis.Redis | None = app.dependency_overrides.get(
-            get_redis_client,
-            get_redis_client,
-        )(state=state)
+        redis_client: redis.Redis | None = get_redis_client_dependency(
+            state=get_app_state_dependency(request),
+        )
 
         # We test the ip address with the redis limiter
         process = True
