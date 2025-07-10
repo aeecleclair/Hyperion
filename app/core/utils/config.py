@@ -309,11 +309,6 @@ class Settings(BaseSettings):
     # Automatically generated parameters #
     ######################################
 
-    # If Hyperion should initialize the database on startup
-    # This environment variable is set by our init Python file to tell the workers to avoid initializing the database
-    # You don't want to set this variable manually
-    HYPERION_INIT_DB: bool = True
-
     # The following properties can not be instantiated as class variables as them need to be computed using another property from the class,
     # which won't be available before the .env file parsing.
     # We thus decide to use the decorator `@property` to make these methods usable as properties and not functions: as properties: Settings.RSA_PRIVATE_KEY, Settings.RSA_PUBLIC_KEY and Settings.RSA_PUBLIC_JWK

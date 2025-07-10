@@ -17,8 +17,10 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
+from redis import Redis
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from app import api
@@ -36,9 +38,14 @@ from app.dependencies import (
     get_scheduler,
     get_websocket_connection_manager,
     init_and_get_db_engine,
+    init_websocket_connection_manager,
 )
-from app.modules.module_list import module_list
-from app.types.exceptions import ContentHTTPException, GoogleAPIInvalidCredentialsError
+from app.module import module_list
+from app.types.exceptions import (
+    ContentHTTPException,
+    GoogleAPIInvalidCredentialsError,
+    MultipleWorkersWithoutRedisInitializationError,
+)
 from app.types.sqlalchemy import Base
 from app.utils import initialization
 from app.utils.redis import limiter
@@ -46,8 +53,8 @@ from app.utils.redis import limiter
 if TYPE_CHECKING:
     import redis
 
-    from app.types.scheduler import Scheduler
-    from app.types.websocket import WebsocketConnectionManager
+from app.types.scheduler import Scheduler
+from app.types.websocket import WebsocketConnectionManager
 
 # NOTE: We can not get loggers at the top of this file like we do in other files
 # as the loggers are not yet initialized
@@ -330,6 +337,10 @@ def init_db(
         sync_engine=sync_engine,
         hyperion_error_logger=hyperion_error_logger,
     )
+
+    # TODO: we may allow the following steps to be run by other workers
+    # and may not need to wait for them
+    # These two steps could use an async database connection
     initialize_schools(
         sync_engine=sync_engine,
         hyperion_error_logger=hyperion_error_logger,
@@ -340,15 +351,30 @@ def init_db(
     )
 
 
-# We wrap the application in a function to be able to pass the settings and drop_db parameters
-# The drop_db parameter is used to drop the database tables before creating them again
-def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
-    # Initialize loggers
-    LogConfig().initialize_loggers(settings=settings)
+async def init_google_API(
+    db: AsyncSession,
+    settings: Settings,
+) -> None:
+    # Init Google API credentials
 
-    hyperion_access_logger = logging.getLogger("hyperion.access")
-    hyperion_security_logger = logging.getLogger("hyperion.security")
-    hyperion_error_logger = logging.getLogger("hyperion.error")
+    google_api = GoogleAPI()
+
+    if google_api.is_google_api_configured(settings):
+        try:
+            await google_api.get_credentials(db, settings)
+
+        except GoogleAPIInvalidCredentialsError:
+            # We expect this error to be raised if the credentials were never set before
+            pass
+
+
+def test_configuration(
+    settings: Settings,
+    hyperion_error_logger: logging.Logger,
+) -> None:
+    """
+    Test configuration and log warnings if some settings are not configured correctly.
+    """
 
     # We use warning level so that the message is not sent to matrix again
     if not settings.MATRIX_TOKEN:
@@ -369,42 +395,108 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     Path("data/ics/").mkdir(parents=True, exist_ok=True)
     Path("data/core/").mkdir(parents=True, exist_ok=True)
 
+
+async def init_lifespan(
+    app: FastAPI,
+    settings: Settings,
+    hyperion_error_logger: logging.Logger,
+    drop_db: bool,
+) -> tuple[Scheduler, WebsocketConnectionManager]:
+    hyperion_error_logger.info("Startup: Initializing application")
+
+    # Init the Redis client
+    redis_client: redis.Redis | bool | None = app.dependency_overrides.get(
+        get_redis_client,
+        get_redis_client,
+    )(settings=settings)
+
+    # Initialization steps should only be run once across all workers
+    # We use Redis locks to ensure that the initialization steps are only run once
+    if initialization.get_number_of_workers() > 1 and not isinstance(
+        redis_client,
+        Redis,
+    ):
+        raise MultipleWorkersWithoutRedisInitializationError
+
+    # We need to run the database initialization only once across all the workers
+    # Other workers have to wait for the db to be initialized
+    await initialization.use_lock_for_workers(
+        init_db,
+        "init_db",
+        redis_client,
+        hyperion_error_logger,
+        unlock_key="db_initialized",
+        settings=settings,
+        hyperion_error_logger=hyperion_error_logger,
+        drop_db=drop_db,
+    )
+
+    await initialization.use_lock_for_workers(
+        test_configuration,
+        "test_configuration",
+        redis_client,
+        hyperion_error_logger,
+        settings=settings,
+        hyperion_error_logger=hyperion_error_logger,
+    )
+
+    async for db in app.dependency_overrides.get(
+        get_db,
+        get_db,
+    )():
+        await initialization.use_lock_for_workers(
+            init_google_API,
+            "init_google_API",
+            redis_client,
+            hyperion_error_logger,
+            db=db,
+            settings=settings,
+        )
+
+    init_websocket_connection_manager(WebsocketConnectionManager(settings=settings))
+    ws_manager: WebsocketConnectionManager = app.dependency_overrides.get(
+        get_websocket_connection_manager,
+        get_websocket_connection_manager,
+    )(settings=settings)
+
+    arq_scheduler: Scheduler = app.dependency_overrides.get(
+        get_scheduler,
+        get_scheduler,
+    )(settings=settings)
+
+    await ws_manager.connect_broadcaster()
+    await arq_scheduler.start(
+        redis_host=settings.REDIS_HOST,
+        redis_port=settings.REDIS_PORT,
+        redis_password=settings.REDIS_PASSWORD,
+        _dependency_overrides=app.dependency_overrides,
+    )
+    return arq_scheduler, ws_manager
+
+
+# We wrap the application in a function to be able to pass the settings and drop_db parameters
+# The drop_db parameter is used to drop the database tables before creating them again
+def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
+    # Initialize loggers
+    LogConfig().initialize_loggers(settings=settings)
+
+    hyperion_access_logger = logging.getLogger("hyperion.access")
+    hyperion_security_logger = logging.getLogger("hyperion.security")
+    hyperion_error_logger = logging.getLogger("hyperion.error")
+
     # Creating a lifespan which will be called when the application starts then shuts down
     # https://fastapi.tiangolo.com/advanced/events/
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator:
-        # Init Google API credentials
-        google_api = GoogleAPI()
-        if google_api.is_google_api_configured(settings):
-            async for db in app.dependency_overrides.get(
-                get_db,
-                get_db,
-            )():
-                try:
-                    await google_api.get_credentials(db, settings)
-                except GoogleAPIInvalidCredentialsError:
-                    # We expect this error to be raised if the credentials were never set before
-                    pass
-
-        ws_manager: WebsocketConnectionManager = app.dependency_overrides.get(
-            get_websocket_connection_manager,
-            get_websocket_connection_manager,
-        )(settings=settings)
-
-        arq_scheduler: Scheduler = app.dependency_overrides.get(
-            get_scheduler,
-            get_scheduler,
-        )(settings=settings)
-
-        await ws_manager.connect_broadcaster()
-        await arq_scheduler.start(
-            redis_host=settings.REDIS_HOST,
-            redis_port=settings.REDIS_PORT,
-            redis_password=settings.REDIS_PASSWORD,
-            _dependency_overrides=app.dependency_overrides,
+        arq_scheduler, ws_manager = await init_lifespan(
+            app=app,
+            settings=settings,
+            hyperion_error_logger=hyperion_error_logger,
+            drop_db=drop_db,
         )
 
         yield
+
         hyperion_error_logger.info("Shutting down")
         await arq_scheduler.close()
         await ws_manager.disconnect_broadcaster()
@@ -428,21 +520,6 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
 
     calypsso = get_calypsso_app()
     app.mount("/calypsso", calypsso, "Calypsso")
-
-    if settings.HYPERION_INIT_DB:
-        init_db(
-            settings=settings,
-            hyperion_error_logger=hyperion_error_logger,
-            drop_db=drop_db,
-        )
-    else:
-        hyperion_error_logger.info("Database initialization skipped")
-
-    # Initialize Redis
-    if not app.dependency_overrides.get(get_redis_client, get_redis_client)(
-        settings=settings,
-    ):
-        hyperion_error_logger.info("Redis client not configured")
 
     # We need to init the database engine to be able to use it in dependencies
     init_and_get_db_engine(settings)

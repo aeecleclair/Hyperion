@@ -205,14 +205,16 @@ def get_scheduler(settings: Settings = Depends(get_settings)) -> Scheduler:
     return scheduler
 
 
+def init_websocket_connection_manager(
+    wscm: WebsocketConnectionManager,
+) -> None:
+    global websocket_connection_manager
+    websocket_connection_manager = wscm
+
+
 def get_websocket_connection_manager(
     settings: Settings = Depends(get_settings),
 ):
-    global websocket_connection_manager
-
-    if websocket_connection_manager is None:
-        websocket_connection_manager = WebsocketConnectionManager(settings=settings)
-
     return websocket_connection_manager
 
 

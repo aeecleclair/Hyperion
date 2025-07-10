@@ -16,6 +16,7 @@ jellyfish==1.0.4                    # String Matching
 Jinja2==3.1.6                       # template engine for html files
 pandas==2.2.2
 phonenumbers==8.13.43               # Used for phone number validation
+psutil==7.0.0                       # psutil is used to determine the number of Hyperion workers  
 pydantic-settings==2.3.4
 pydantic==2.7.4
 pyjwt[crypto]==2.8.0                # generate and verify the JWT tokens, imported as `jwt`
