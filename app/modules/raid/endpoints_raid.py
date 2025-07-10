@@ -546,7 +546,7 @@ async def read_document(
         information = await get_core_data(coredata_raid.RaidInformation, db)
         if document_id in {information.raid_rules_id, information.raid_information_id}:
             return get_file_from_data(
-                default_asset="assets/documents/raid_rules.pdf",
+                default_asset="assets/pdf/default_PDF.pdf",
                 directory="raid",
                 filename=str(document_id),
             )
