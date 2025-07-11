@@ -5,7 +5,7 @@ import uuid
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import alembic.command as alembic_command
 import alembic.config as alembic_config
@@ -25,7 +25,6 @@ from sqlalchemy.orm import Session
 
 from app import api
 from app.core.core_endpoints import coredata_core, models_core
-from app.core.core_module_list import core_module_list
 from app.core.google_api.google_api import GoogleAPI
 from app.core.groups import models_groups
 from app.core.groups.groups_type import GroupType
@@ -42,7 +41,7 @@ from app.dependencies import (
     get_redis_client,
     init_app_state,
 )
-from app.module import module_list
+from app.module import all_modules, module_list
 from app.types.exceptions import (
     ContentHTTPException,
     GoogleAPIInvalidCredentialsError,
@@ -52,7 +51,7 @@ from app.types.sqlalchemy import Base
 from app.utils import initialization
 from app.utils.communication.notifications import NotificationManager
 from app.utils.redis import limiter
-from app.utils.state import LifespanState, RuntimeLifespanState
+from app.utils.state import LifespanState
 
 if TYPE_CHECKING:
     import redis
@@ -304,8 +303,7 @@ async def initialize_notification_topics(
 ) -> None:
     existing_topics = await get_notification_topic(db=db)
     existing_topics_id = [topic.id for topic in existing_topics]
-    modules = core_module_list + module_list
-    for module in modules:
+    for module in all_modules:
         if module.registred_topics:
             for registred_topic in module.registred_topics:
                 if registred_topic.id not in existing_topics_id:
