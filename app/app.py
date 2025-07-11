@@ -5,7 +5,7 @@ import uuid
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, cast
 
 import alembic.command as alembic_command
 import alembic.config as alembic_config
@@ -33,12 +33,11 @@ from app.core.schools.schools_type import SchoolType
 from app.core.utils.config import Settings
 from app.core.utils.log import LogConfig
 from app.dependencies import (
+    disconnect_state,
+    get_app_state,
     get_db,
     get_redis_client,
-    get_scheduler,
-    get_websocket_connection_manager,
-    init_and_get_db_engine,
-    init_websocket_connection_manager,
+    init_app_state,
 )
 from app.module import module_list
 from app.types.exceptions import (
@@ -49,12 +48,11 @@ from app.types.exceptions import (
 from app.types.sqlalchemy import Base
 from app.utils import initialization
 from app.utils.redis import limiter
+from app.utils.state import LifespanState
 
 if TYPE_CHECKING:
     import redis
 
-from app.types.scheduler import Scheduler
-from app.types.websocket import WebsocketConnectionManager
 
 # NOTE: We can not get loggers at the top of this file like we do in other files
 # as the loggers are not yet initialized
@@ -401,18 +399,30 @@ async def init_lifespan(
     settings: Settings,
     hyperion_error_logger: logging.Logger,
     drop_db: bool,
-) -> tuple[Scheduler, WebsocketConnectionManager]:
+) -> LifespanState:
     hyperion_error_logger.info("Startup: Initializing application")
 
-    # Init the Redis client
-    redis_client: redis.Redis | bool | None = app.dependency_overrides.get(
+    # We get `init_app_state` as a dependency, as tests
+    # should override it to provide their own state
+    state = await app.dependency_overrides.get(
+        init_app_state,
+        init_app_state,
+    )(
+        app=app,
+        settings=settings,
+        hyperion_error_logger=hyperion_error_logger,
+    )
+    state = cast("LifespanState", state)
+
+    redis_client = app.dependency_overrides.get(
         get_redis_client,
         get_redis_client,
-    )(settings=settings)
+    )(state=state)
 
     # Initialization steps should only be run once across all workers
     # We use Redis locks to ensure that the initialization steps are only run once
-    if initialization.get_number_of_workers() > 1 and not isinstance(
+    number_of_workers = initialization.get_number_of_workers()
+    if number_of_workers > 1 and not isinstance(
         redis_client,
         Redis,
     ):
@@ -424,6 +434,7 @@ async def init_lifespan(
         init_db,
         "init_db",
         redis_client,
+        number_of_workers,
         hyperion_error_logger,
         unlock_key="db_initialized",
         settings=settings,
@@ -435,6 +446,7 @@ async def init_lifespan(
         test_configuration,
         "test_configuration",
         redis_client,
+        number_of_workers,
         hyperion_error_logger,
         settings=settings,
         hyperion_error_logger=hyperion_error_logger,
@@ -443,35 +455,18 @@ async def init_lifespan(
     async for db in app.dependency_overrides.get(
         get_db,
         get_db,
-    )():
+    )(state=state):
         await initialization.use_lock_for_workers(
             init_google_API,
             "init_google_API",
             redis_client,
+            number_of_workers,
             hyperion_error_logger,
             db=db,
             settings=settings,
         )
 
-    init_websocket_connection_manager(WebsocketConnectionManager(settings=settings))
-    ws_manager: WebsocketConnectionManager = app.dependency_overrides.get(
-        get_websocket_connection_manager,
-        get_websocket_connection_manager,
-    )(settings=settings)
-
-    arq_scheduler: Scheduler = app.dependency_overrides.get(
-        get_scheduler,
-        get_scheduler,
-    )(settings=settings)
-
-    await ws_manager.connect_broadcaster()
-    await arq_scheduler.start(
-        redis_host=settings.REDIS_HOST,
-        redis_port=settings.REDIS_PORT,
-        redis_password=settings.REDIS_PASSWORD,
-        _dependency_overrides=app.dependency_overrides,
-    )
-    return arq_scheduler, ws_manager
+    return state
 
 
 # We wrap the application in a function to be able to pass the settings and drop_db parameters
@@ -487,19 +482,24 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     # Creating a lifespan which will be called when the application starts then shuts down
     # https://fastapi.tiangolo.com/advanced/events/
     @asynccontextmanager
-    async def lifespan(app: FastAPI) -> AsyncGenerator:
-        arq_scheduler, ws_manager = await init_lifespan(
+    async def lifespan(app: FastAPI) -> AsyncGenerator[LifespanState, None]:
+        state = await init_lifespan(
             app=app,
             settings=settings,
             hyperion_error_logger=hyperion_error_logger,
             drop_db=drop_db,
         )
 
-        yield
+        yield state
 
         hyperion_error_logger.info("Shutting down")
-        await arq_scheduler.close()
-        await ws_manager.disconnect_broadcaster()
+        await app.dependency_overrides.get(
+            disconnect_state,
+            disconnect_state,
+        )(
+            state=state,
+            hyperion_error_logger=hyperion_error_logger,
+        )
 
     # Initialize app
     app = FastAPI(
@@ -521,8 +521,14 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     calypsso = get_calypsso_app()
     app.mount("/calypsso", calypsso, "Calypsso")
 
-    # We need to init the database engine to be able to use it in dependencies
-    init_and_get_db_engine(settings)
+    get_app_state_dependency = app.dependency_overrides.get(
+        get_app_state,
+        get_app_state,
+    )
+    get_redis_client_dependency = app.dependency_overrides.get(
+        get_redis_client,
+        get_redis_client,
+    )
 
     @app.middleware("http")
     async def logging_middleware(
@@ -540,6 +546,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         # This identifier will allow combining logs associated with the same request
         # https://www.starlette.io/requests/#other-state
         request_id = str(uuid.uuid4())
+
         request.state.request_id = request_id
 
         # This should never happen, but we log it just in case
@@ -553,16 +560,13 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         port = request.client.port
         client_address = f"{ip_address}:{port}"
 
-        redis_client: redis.Redis | Literal[False] | None = (
-            app.dependency_overrides.get(
-                get_redis_client,
-                get_redis_client,
-            )(settings=settings)
+        redis_client: redis.Redis | None = get_redis_client_dependency(
+            state=get_app_state_dependency(request),
         )
 
         # We test the ip address with the redis limiter
         process = True
-        if redis_client:  # If redis is configured
+        if redis_client and settings.ENABLE_RATE_LIMITER:  # If redis is configured
             process, log = limiter(
                 redis_client,
                 ip_address,
