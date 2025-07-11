@@ -7,8 +7,7 @@ from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import AccountType, GroupType
-from app.core.notification.notification_types import CustomTopic, Topic
-from app.core.notification.schemas_notification import Message
+from app.core.notification.schemas_notification import Message, Topic
 from app.core.users import cruds_users, models_users, schemas_users
 from app.core.users.endpoints_users import read_user
 from app.dependencies import (
@@ -26,10 +25,20 @@ from app.utils.communication.notifications import NotificationTool
 from app.utils.redis import locker_get, locker_set
 from app.utils.tools import is_user_member_of_any_group
 
+root = "amap"
+amap_topic = Topic(
+    id=uuid.UUID("8d7e6e89-5096-4d41-8781-9a2d43fcd01b"),
+    module_root=root,
+    name="🛒 AMAP",
+    topic_identifier=None,
+    restrict_to_group_id=None,
+    restrict_to_members=True,
+)
 module = Module(
-    root="amap",
+    root=root,
     tag="AMAP",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    registred_topics=[amap_topic],
 )
 
 hyperion_amap_logger = logging.getLogger("hyperion.amap")
@@ -704,7 +713,7 @@ async def open_ordering_of_delivery(
         action_module="amap",
     )
     await notification_tool.send_notification_to_topic(
-        custom_topic=CustomTopic(Topic.amap),
+        topic_id=amap_topic.id,
         message=message,
     )
 

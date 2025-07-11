@@ -1,6 +1,7 @@
 from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Path
+from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import GroupType
@@ -9,7 +10,7 @@ from app.core.notification import (
     models_notification,
     schemas_notification,
 )
-from app.core.notification.notification_types import CustomTopic, Topic
+from app.core.notification.utils_notification import get_user_notification_topics
 from app.core.users import models_users
 from app.dependencies import (
     get_db,
@@ -22,13 +23,24 @@ from app.dependencies import (
 from app.types.module import CoreModule
 from app.types.scheduler import Scheduler
 from app.utils.communication.notifications import NotificationManager, NotificationTool
+from app.utils.tools import is_user_external, is_user_member_of_any_group
 
 router = APIRouter(tags=["Notifications"])
 
+root = "notification"
+notification_test_topic = schemas_notification.Topic(
+    id=UUID("f60581d0-84da-46b4-9df1-10efad450eaf"),
+    module_root=root,
+    name="🛠️ Notification Test",
+    topic_identifier="test",
+    restrict_to_group_id=GroupType.admin,
+    restrict_to_members=True,
+)
 core_module = CoreModule(
-    root="notification",
+    root=root,
     tag="Notifications",
     router=router,
+    registred_topics=[notification_test_topic],
 )
 
 
@@ -74,9 +86,9 @@ async def register_firebase_device(
         user_id=user.id,
         db=db,
     )
-    for topic in user_topics:
+    for topic_membership in user_topics:
         await notification_manager.subscribe_tokens_to_topic(
-            custom_topic=CustomTopic(topic.topic),
+            topic_id=topic_membership.topic_id,
             tokens=[firebase_token],
         )
 
@@ -114,56 +126,71 @@ async def unregister_firebase_device(
         db=db,
     )
 
-    user_topics = await cruds_notification.get_topic_memberships_by_user_id(
+    topic_memberships = await cruds_notification.get_topic_memberships_by_user_id(
         user_id=user.id,
         db=db,
     )
-    for topic in user_topics:
+    for topic_membership in topic_memberships:
         await notification_manager.unsubscribe_tokens_to_topic(
-            custom_topic=CustomTopic(topic.topic),
+            topic_id=topic_membership.topic_id,
             tokens=[firebase_token],
         )
 
 
 @router.post(
-    "/notification/topics/{topic_str}/subscribe",
+    "/notification/topics/{topic_id}/subscribe",
     status_code=204,
 )
 async def subscribe_to_topic(
-    topic_str: str = Path(
-        description="The topic to subscribe to. The Topic may be followed by an additional identifier (ex: cinema_4c029b5f-2bf7-4b70-85d4-340a4bd28653)",
-    ),
+    topic_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
-    Subscribe to a topic
+    Subscribe to a topic.
+
+    If the topic define restrictions, the user must be in the corresponding group or be a member.
 
     **The user must be authenticated to use this endpoint**
     """
 
-    try:
-        custom_topic = CustomTopic.from_str(topic_str)
-    except Exception as error:
+    topic = await cruds_notification.get_notification_topic_by_id(topic_id, db)
+
+    if topic is None:
         raise HTTPException(
-            status_code=422,
-            detail=f"Invalid custom topic: {error}",
+            status_code=404,
+            detail="The topic does not exist.",
+        )
+
+    if topic.restrict_to_group_id is not None:
+        if not is_user_member_of_any_group(
+            user=user,
+            allowed_groups=[topic.restrict_to_group_id],
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="You are not in a group allowed to subscribe to this topic.",
+            )
+    if topic.restrict_to_members and is_user_external(user):
+        raise HTTPException(
+            status_code=400,
+            detail="External users are not allowed to subscribe to this topic.",
         )
 
     await notification_manager.subscribe_user_to_topic(
         user_id=user.id,
-        custom_topic=custom_topic,
+        topic_id=topic_id,
         db=db,
     )
 
 
 @router.post(
-    "/notification/topics/{topic_str}/unsubscribe",
+    "/notification/topics/{topic_id}/unsubscribe",
     status_code=204,
 )
 async def unsubscribe_to_topic(
-    topic_str: str,
+    topic_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
@@ -174,11 +201,9 @@ async def unsubscribe_to_topic(
     **The user must be authenticated to use this endpoint**
     """
 
-    custom_topic = CustomTopic.from_str(topic_str)
-
     await notification_manager.unsubscribe_user_to_topic(
         user_id=user.id,
-        custom_topic=custom_topic,
+        topic_id=topic_id,
         db=db,
     )
 
@@ -186,60 +211,18 @@ async def unsubscribe_to_topic(
 @router.get(
     "/notification/topics",
     status_code=200,
-    response_model=list[str],
+    response_model=list[schemas_notification.TopicUser],
 )
-async def get_topic(
+async def get_topics(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
 ):
     """
-    Get topics the user is subscribed to
-    Does not return session topics (those with a topic_identifier)
+    Return all available topics for a user
 
     **The user must be authenticated to use this endpoint**
     """
-
-    memberships = await cruds_notification.get_topic_memberships_by_user_id(
-        user_id=user.id,
-        db=db,
-    )
-
-    return [
-        CustomTopic(topic=membership.topic).to_str()
-        for membership in memberships
-        if not membership.topic_identifier
-    ]
-
-
-@router.get(
-    "/notification/topics/{topic}",
-    status_code=200,
-    response_model=list[str],
-)
-async def get_topic_identifier(
-    topic: Topic,
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
-):
-    """
-    Get custom topic (with identifiers) the user is subscribed to
-
-    **The user must be authenticated to use this endpoint**
-    """
-
-    memberships = await cruds_notification.get_topic_memberships_with_identifiers_by_user_id_and_topic(
-        user_id=user.id,
-        db=db,
-        topic=topic,
-    )
-
-    return [
-        CustomTopic(
-            topic=membership.topic,
-            topic_identifier=membership.topic_identifier,
-        ).to_str()
-        for membership in memberships
-    ]
+    return await get_user_notification_topics(user=user, db=db)
 
 
 @router.post(
@@ -338,7 +321,7 @@ async def send_test_notification_topic(
         action_module="test",
     )
     await notification_tool.send_notification_to_topic(
-        custom_topic=CustomTopic.from_str("test"),
+        topic_id=notification_test_topic.id,
         message=message,
     )
 
@@ -363,7 +346,7 @@ async def send_test_future_notification_topic(
         action_module="test",
     )
     await notification_tool.send_notification_to_topic(
-        custom_topic=CustomTopic.from_str("test"),
+        topic_id=notification_test_topic.id,
         message=message,
         defer_date=datetime.now(UTC) + timedelta(seconds=10),
         job_id="test26",
