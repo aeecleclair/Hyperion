@@ -104,6 +104,7 @@ def upgrade() -> None:
         "competition_school_extension",
         sa.Column("school_id", sa.Uuid(), nullable=False),
         sa.Column("from_lyon", sa.Boolean(), nullable=False),
+        sa.Column("ffsu_id", sa.String(), nullable=True),
         sa.Column("active", sa.Boolean(), nullable=False),
         sa.Column("inscription_enabled", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(["school_id"], ["core_school.id"]),
@@ -216,6 +217,7 @@ def upgrade() -> None:
         sa.Column("team_id", sa.Uuid(), nullable=True),
         sa.Column("substitute", sa.Boolean(), nullable=False),
         sa.Column("license", sa.String(), nullable=True),
+        sa.Column("is_licence_valid", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(["edition_id"], ["competition_edition.id"]),
         sa.ForeignKeyConstraint(["sport_id"], ["competition_sport.id"]),
         sa.ForeignKeyConstraint(
