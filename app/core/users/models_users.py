@@ -88,7 +88,7 @@ class CoreUserRecoverRequest(Base):
 
 
 class CoreUserEmailMigrationRequest(Base):
-    __tablename__ = "core_user_email_migration_request"
+    __tablename__ = "core_user_email_migration_code"
 
     confirmation_token: Mapped[str] = mapped_column(primary_key=True)
     # There can be only one request per user at a time
