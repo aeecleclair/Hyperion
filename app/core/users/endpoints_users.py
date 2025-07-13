@@ -663,25 +663,6 @@ async def migrate_mail(
     """
     This endpoint will send a confirmation code to the user's new email address. He will need to use this code to confirm the change with `/users/confirm-mail-migration` endpoint.
     """
-
-    existing_user = await cruds_users.get_user_by_email(
-        db=db,
-        email=mail_migration.new_email,
-    )
-    if existing_user is not None:
-        hyperion_security_logger.info(
-            f"Email migration: There is already an account with the email {mail_migration.new_email}",
-        )
-        if settings.SMTP_ACTIVE:
-            mail = mail_templates.get_mail_mail_migration_already_exist()
-            send_email(
-                recipient=mail_migration.new_email,
-                subject="MyECL - Confirm your new email address",
-                content=mail,
-                settings=settings,
-            )
-        return
-
     # We need to make sur the user will keep the same school if he is not a no_school user
     _, new_school_id = await get_account_type_and_school_id_from_email(
         email=mail_migration.new_email,
@@ -692,6 +673,24 @@ async def migrate_mail(
             status_code=400,
             detail="New email address is not compatible with the current school",
         )
+
+    user_with_new_email = await cruds_users.get_user_by_email(
+        db=db,
+        email=mail_migration.new_email,
+    )
+    if user_with_new_email is not None:
+        hyperion_security_logger.info(
+            f"Email migration: There is already an account with the email {mail_migration.new_email}",
+        )
+        if settings.SMTP_ACTIVE:
+            mail = mail_templates.get_mail_mail_migration_already_exist()
+            send_email(
+                recipient=mail_migration.new_email,
+                subject="MyECL - Email address conflict",
+                content=mail,
+                settings=settings,
+            )
+        return
 
     await create_and_send_email_migration(
         user_id=user.id,
@@ -711,39 +710,49 @@ async def migrate_mail(
 async def migrate_mail_confirm(
     token: str,
     db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     """
     This endpoint will updates the user new email address.
     The user will need to use the confirmation code sent by the `/users/migrate-mail` endpoint.
     """
 
-    migration_object = await cruds_users.get_email_migration_code_by_token(
+    migration_request = await cruds_users.get_email_migration_request_by_token(
         confirmation_token=token,
         db=db,
     )
 
-    if migration_object is None:
+    if migration_request is None:
         raise HTTPException(
             status_code=404,
             detail="Invalid confirmation token for this user",
         )
 
-    existing_user = await cruds_users.get_user_by_email(
+    # We need to make sure the mail migration is still valid
+    if migration_request.expire_on < datetime.now(UTC):
+        return RedirectResponse(
+            url=settings.CLIENT_URL
+            + calypsso.get_message_relative_url(
+                message_type=calypsso.TypeMessage.token_expired,
+            ),
+        )
+
+    user_with_new_email = await cruds_users.get_user_by_email(
         db=db,
-        email=migration_object.new_email,
+        email=migration_request.new_email,
     )
-    if existing_user is not None:
+    if user_with_new_email is not None:
         hyperion_security_logger.info(
-            f"Email migration: There is already an account with the email {migration_object.new_email}",
+            f"Email migration: There is already an account with the email {migration_request.new_email}",
         )
         raise HTTPException(
             status_code=400,
-            detail=f"There is already an account with the email {migration_object.new_email}",
+            detail=f"There is already an account with the email {migration_request.new_email}",
         )
 
     user = await cruds_users.get_user_by_id(
         db=db,
-        user_id=migration_object.user_id,
+        user_id=migration_request.user_id,
     )
     if user is None:
         raise HTTPException(
@@ -752,15 +761,15 @@ async def migrate_mail_confirm(
         )
 
     account, new_school_id = await get_account_type_and_school_id_from_email(
-        email=migration_object.new_email,
+        email=migration_request.new_email,
         db=db,
     )
 
     await cruds_users.update_user(
         db=db,
-        user_id=migration_object.user_id,
+        user_id=migration_request.user_id,
         user_update=schemas_users.CoreUserUpdateAdmin(
-            email=migration_object.new_email,
+            email=migration_request.new_email,
             account_type=account,
             school_id=new_school_id,
         ),
@@ -768,8 +777,9 @@ async def migrate_mail_confirm(
 
     await db.flush()
 
-    await cruds_users.delete_email_migration_code_by_token(
-        confirmation_token=token,
+    # Delete all requests from a user in case there were multiple (should not happen)
+    await cruds_users.delete_email_migration_request_by_user_id(
+        user_id=user.id,
         db=db,
     )
 
@@ -778,10 +788,10 @@ async def migrate_mail_confirm(
         mode="a",
     ) as file:
         await file.write(
-            f"{migration_object.user_id},{migration_object.old_email},{migration_object.new_email}\n",
+            f"{migration_request.user_id},{migration_request.old_email},{migration_request.new_email},{datetime.now(UTC)}\n",
         )
 
-    return "The email address has been successfully updated"
+    return standard_responses.Result()
 
 
 @router.post(

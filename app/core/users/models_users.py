@@ -90,22 +90,17 @@ class CoreUserRecoverRequest(Base):
     expire_on: Mapped[datetime]
 
 
-class CoreUserEmailMigrationCode(Base):
-    """
-    The ECL changed the email format for student users, requiring them to migrate their email.
-    """
+class CoreUserEmailMigrationRequest(Base):
+    __tablename__ = "core_user_email_migration_request"
 
-    __tablename__ = "core_user_email_migration_code"
-
-    user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
+    confirmation_token: Mapped[str] = mapped_column(primary_key=True)
+    # There can be only one request per user at a time
+    # If a new request is made, old ones are removed
+    user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), unique=True)
     new_email: Mapped[str]
     old_email: Mapped[str]
-
-    confirmation_token: Mapped[str] = mapped_column(
-        String,
-        nullable=False,
-        primary_key=True,
-    )
+    created_on: Mapped[datetime]
+    expire_on: Mapped[datetime]
 
     # If the user should become an external or a member user after the email change
     make_user_external: Mapped[bool] = mapped_column(default=False)

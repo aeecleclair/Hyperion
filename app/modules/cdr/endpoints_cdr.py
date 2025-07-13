@@ -266,6 +266,7 @@ async def update_cdr_user(
                 db=db,
                 email=user_update.email,
             )
+            # No worry about exposing existing email adresses since user is an admin
             if existing_user is not None:
                 raise HTTPException(
                     status_code=400,

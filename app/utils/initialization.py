@@ -345,6 +345,7 @@ def get_number_of_workers() -> int:
     """
     Get the number of active Hyperion workers
     """
+    return 1
     # We use the parent process to get the workers
     parent_pid = os.getppid()  # PID du parent (FastAPI master process)
     parent_process = psutil.Process(parent_pid)

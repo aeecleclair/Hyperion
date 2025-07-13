@@ -6,6 +6,7 @@ import secrets
 import shutil
 import unicodedata
 from collections.abc import Callable, Sequence
+from datetime import UTC, datetime, timedelta
 from inspect import iscoroutinefunction
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar
@@ -535,15 +536,29 @@ async def create_and_send_email_migration(
     """
     confirmation_token = security.generate_token()
 
-    migration_object = models_users.CoreUserEmailMigrationCode(
+    migration_object = models_users.CoreUserEmailMigrationRequest(
         user_id=user_id,
         new_email=new_email,
         old_email=old_email,
         confirmation_token=confirmation_token,
         make_user_external=make_user_external,
+        created_on=datetime.now(UTC),
+        expire_on=datetime.now(UTC)
+        + timedelta(hours=settings.EMAIL_MIGRATION_TOKEN_EXPIRE_HOURS),
     )
 
-    await cruds_users.create_email_migration_code(
+    # Preventing two migrations for a same user from existing at the same time
+    existing_request = await cruds_users.get_email_migration_request_by_user_id(
+        user_id=user_id,
+        db=db,
+    )
+    if existing_request:
+        await cruds_users.delete_email_migration_request_by_user_id(
+            user_id=user_id,
+            db=db,
+        )
+
+    await cruds_users.create_email_migration_request(
         migration_object=migration_object,
         db=db,
     )

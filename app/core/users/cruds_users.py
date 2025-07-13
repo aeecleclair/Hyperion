@@ -224,47 +224,69 @@ async def get_recover_request_by_reset_token(
     return result.scalars().first()
 
 
-async def create_email_migration_code(
-    migration_object: models_users.CoreUserEmailMigrationCode,
+async def create_email_migration_request(
+    migration_object: models_users.CoreUserEmailMigrationRequest,
     db: AsyncSession,
-) -> models_users.CoreUserEmailMigrationCode:
+) -> models_users.CoreUserEmailMigrationRequest:
     db.add(migration_object)
     await db.flush()
     return migration_object
 
 
-async def get_email_migration_code_by_token(
+async def get_email_migration_request_by_token(
     confirmation_token: str,
     db: AsyncSession,
-) -> models_users.CoreUserEmailMigrationCode | None:
+) -> models_users.CoreUserEmailMigrationRequest | None:
     result = await db.execute(
-        select(models_users.CoreUserEmailMigrationCode).where(
-            models_users.CoreUserEmailMigrationCode.confirmation_token
+        select(models_users.CoreUserEmailMigrationRequest).where(
+            models_users.CoreUserEmailMigrationRequest.confirmation_token
             == confirmation_token,
         ),
     )
     return result.scalars().first()
 
 
-async def delete_email_migration_code_by_token(
+async def delete_recover_request_by_email(db: AsyncSession, email: str):
+    await db.execute(
+        delete(models_users.CoreUserRecoverRequest).where(
+            models_users.CoreUserRecoverRequest.email == email,
+        ),
+    )
+    await db.flush()
+
+
+async def get_email_migration_request_by_user_id(
+    user_id: str,
+    db: AsyncSession,
+) -> models_users.CoreUserEmailMigrationRequest | None:
+    result = await db.execute(
+        select(models_users.CoreUserEmailMigrationRequest).where(
+            models_users.CoreUserEmailMigrationRequest.user_id == user_id,
+        ),
+    )
+    return result.scalars().first()
+
+
+async def delete_email_migration_request_by_token(
     confirmation_token: str,
     db: AsyncSession,
 ):
     await db.execute(
-        delete(models_users.CoreUserEmailMigrationCode).where(
-            models_users.CoreUserEmailMigrationCode.confirmation_token
+        delete(models_users.CoreUserEmailMigrationRequest).where(
+            models_users.CoreUserEmailMigrationRequest.confirmation_token
             == confirmation_token,
         ),
     )
     await db.flush()
 
 
-async def delete_recover_request_by_email(db: AsyncSession, email: str):
-    """Delete a user from database by id"""
-
+async def delete_email_migration_request_by_user_id(
+    user_id: str,
+    db: AsyncSession,
+):
     await db.execute(
-        delete(models_users.CoreUserRecoverRequest).where(
-            models_users.CoreUserRecoverRequest.email == email,
+        delete(models_users.CoreUserEmailMigrationRequest).where(
+            models_users.CoreUserEmailMigrationRequest.user_id == user_id,
         ),
     )
     await db.flush()
