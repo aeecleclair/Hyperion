@@ -546,7 +546,7 @@ async def recover_user(
             )
             send_email(
                 recipient=email,
-                subject="MyECL - reset your password",
+                subject="MyECL - Reset your password",
                 content=mail,
                 settings=settings,
             )
@@ -559,8 +559,18 @@ async def recover_user(
         # The user exists, we can send a password reset invitation
         reset_token = security.generate_token()
 
+        # Prevent multiple recover tokens from coexisting
+        existing_request = await cruds_users.get_recover_request_by_user_id(
+            db=db,
+            user_id=db_user.id,
+        )
+        if existing_request:
+            await cruds_users.delete_recover_request_by_user_id(
+                db=db,
+                user_id=db_user.id,
+            )
+
         recover_request = models_users.CoreUserRecoverRequest(
-            email=email,
             user_id=db_user.id,
             reset_token=reset_token,
             created_on=datetime.now(UTC),
@@ -616,6 +626,14 @@ async def reset_password(
     if recover_request is None:
         raise HTTPException(status_code=404, detail="Invalid reset token")
 
+    user = await cruds_users.get_user_by_id(db=db, user_id=recover_request.user_id)
+    # If user has been deleted after token emission for example
+    if user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found",
+        )
+
     # We need to make sure the unconfirmed user is still valid
     if recover_request.expire_on < datetime.now(UTC):
         return RedirectResponse(
@@ -628,14 +646,14 @@ async def reset_password(
     new_password_hash = security.get_password_hash(reset_password_request.new_password)
     await cruds_users.update_user_password_by_id(
         db=db,
-        user_id=recover_request.user_id,
+        user_id=user.id,
         new_password_hash=new_password_hash,
     )
 
     # As the user has reset its password, all other recovery requests can be deleted from the table
-    await cruds_users.delete_recover_request_by_email(
+    await cruds_users.delete_recover_request_by_user_id(
         db=db,
-        email=recover_request.email,
+        user_id=user.id,
     )
 
     # Revoke existing auth refresh tokens
@@ -754,6 +772,7 @@ async def migrate_mail_confirm(
         db=db,
         user_id=migration_request.user_id,
     )
+    # If user has been deleted after token emission for example
     if user is None:
         raise HTTPException(
             status_code=404,

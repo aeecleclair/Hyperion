@@ -224,6 +224,27 @@ async def get_recover_request_by_reset_token(
     return result.scalars().first()
 
 
+async def get_recover_request_by_user_id(
+    db: AsyncSession,
+    user_id: str,
+) -> models_users.CoreUserRecoverRequest | None:
+    result = await db.execute(
+        select(models_users.CoreUserRecoverRequest).where(
+            models_users.CoreUserRecoverRequest.user_id == user_id,
+        ),
+    )
+    return result.scalars().first()
+
+
+async def delete_recover_request_by_user_id(db: AsyncSession, user_id: str):
+    await db.execute(
+        delete(models_users.CoreUserRecoverRequest).where(
+            models_users.CoreUserRecoverRequest.user_id == user_id,
+        ),
+    )
+    await db.flush()
+
+
 async def create_email_migration_request(
     migration_object: models_users.CoreUserEmailMigrationRequest,
     db: AsyncSession,
@@ -244,15 +265,6 @@ async def get_email_migration_request_by_token(
         ),
     )
     return result.scalars().first()
-
-
-async def delete_recover_request_by_email(db: AsyncSession, email: str):
-    await db.execute(
-        delete(models_users.CoreUserRecoverRequest).where(
-            models_users.CoreUserRecoverRequest.email == email,
-        ),
-    )
-    await db.flush()
 
 
 async def get_email_migration_request_by_user_id(
