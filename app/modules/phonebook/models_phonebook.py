@@ -1,10 +1,10 @@
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.modules.phonebook.types_phonebook import Kinds
-from app.types.sqlalchemy import Base
+from app.types.sqlalchemy import Base, PrimaryKey
 
 if TYPE_CHECKING:
     from app.core.groups.models_groups import CoreGroup
@@ -31,13 +31,23 @@ class Membership(Base):
     member_order: Mapped[int]
 
 
+class AssociationGroupement(Base):
+    __tablename__ = "phonebook_association_groupement"
+
+    id: Mapped[PrimaryKey]
+    name: Mapped[str] = mapped_column(index=True, unique=True)
+
+
 class Association(Base):
     __tablename__ = "phonebook_association"
 
     id: Mapped[str] = mapped_column(primary_key=True, index=True)
     name: Mapped[str] = mapped_column(index=True)
     description: Mapped[str | None]
-    kind: Mapped[Kinds]
+    groupement_id: Mapped[UUID] = mapped_column(
+        ForeignKey("phonebook_association_groupement.id"),
+        index=True,
+    )
     mandate_year: Mapped[int]
     deactivated: Mapped[bool]
     associated_groups: Mapped[list["CoreGroup"]] = relationship(
