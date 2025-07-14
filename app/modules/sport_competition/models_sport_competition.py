@@ -231,18 +231,14 @@ class CompetitionLocation(Base):
     __tablename__ = "competition_location"
 
     id: Mapped[PrimaryKey]
+    edition_id: Mapped[UUID] = mapped_column(
+        ForeignKey("competition_edition.id"),
+    )
     name: Mapped[str]
     address: Mapped[str | None]
     latitude: Mapped[float | None]
     longitude: Mapped[float | None]
     description: Mapped[str | None]
-
-    matches: Mapped[list["Match"]] = relationship(
-        "Match",
-        lazy="selectin",
-        default_factory=list,
-        back_populates="location",
-    )
 
 
 class Match(Base):
