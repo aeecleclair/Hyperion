@@ -57,6 +57,7 @@ sport_feminine: models_sport_competition.Sport
 ecl_sport_free_quota: models_sport_competition.SchoolSportQuota
 ecl_sport_used_quota: models_sport_competition.SchoolSportQuota
 
+team_admin_user: models_sport_competition.CompetitionTeam
 team1: models_sport_competition.CompetitionTeam
 team2: models_sport_competition.CompetitionTeam
 
@@ -233,6 +234,12 @@ async def init_objects() -> None:
         cameraman_quota=None,
         pompom_quota=None,
         fanfare_quota=None,
+        athlete_cameraman_quota=None,
+        athlete_pompom_quota=None,
+        athlete_fanfare_quota=None,
+        non_athlete_cameraman_quota=None,
+        non_athlete_pompom_quota=None,
+        non_athlete_fanfare_quota=None,
     )
     await add_object_to_db(ecl_general_quota)
     school_general_quota = models_sport_competition.SchoolGeneralQuota(
@@ -242,6 +249,12 @@ async def init_objects() -> None:
         cameraman_quota=1,
         pompom_quota=1,
         fanfare_quota=1,
+        athlete_cameraman_quota=1,
+        athlete_pompom_quota=1,
+        athlete_fanfare_quota=1,
+        non_athlete_cameraman_quota=1,
+        non_athlete_pompom_quota=1,
+        non_athlete_fanfare_quota=1,
     )
     await add_object_to_db(school_general_quota)
 
@@ -315,7 +328,7 @@ async def init_objects() -> None:
     )
     await add_object_to_db(ecl_sport_used_quota)
 
-    global team1, team2
+    global team1, team2, team_admin_user
     team1 = models_sport_competition.CompetitionTeam(
         id=uuid4(),
         sport_id=sport_with_team.id,
@@ -336,6 +349,16 @@ async def init_objects() -> None:
         created_at=datetime.now(UTC),
     )
     await add_object_to_db(team2)
+    team_admin_user = models_sport_competition.CompetitionTeam(
+        id=uuid4(),
+        sport_id=sport_free_quota.id,
+        school_id=SchoolType.centrale_lyon.value,
+        edition_id=active_edition.id,
+        name="Admin Team",
+        captain_id=admin_user.id,
+        created_at=datetime.now(UTC),
+    )
+    await add_object_to_db(team_admin_user)
 
     global participant1, participant2, participant3
     participant1 = models_sport_competition.CompetitionParticipant(
@@ -343,7 +366,7 @@ async def init_objects() -> None:
         school_id=SchoolType.centrale_lyon.value,
         edition_id=active_edition.id,
         sport_id=sport_free_quota.id,
-        team_id=None,
+        team_id=team_admin_user.id,
         substitute=False,
         license="1234567890",
         is_licence_valid=True,
