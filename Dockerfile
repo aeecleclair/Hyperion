@@ -10,7 +10,6 @@ EXPOSE 8000
 WORKDIR /hyperion
 
 COPY pyproject.toml .
-COPY init.py .
 COPY alembic.ini .
 COPY migrations migrations/
 COPY assets assets/
