@@ -61,6 +61,12 @@ class SchoolGeneralQuotaBase(BaseModel):
     cameraman_quota: NonNegativeInt | None = None
     pompom_quota: NonNegativeInt | None = None
     fanfare_quota: NonNegativeInt | None = None
+    athlete_cameraman_quota: NonNegativeInt | None = None
+    athlete_pompom_quota: NonNegativeInt | None = None
+    athlete_fanfare_quota: NonNegativeInt | None = None
+    non_athlete_cameraman_quota: NonNegativeInt | None = None
+    non_athlete_pompom_quota: NonNegativeInt | None = None
+    non_athlete_fanfare_quota: NonNegativeInt | None = None
 
 
 class SchoolGeneralQuota(SchoolGeneralQuotaBase):
@@ -75,7 +81,7 @@ class UserGroupMembership(BaseModel):
 
 
 class CompetitionUserBase(BaseModel):
-    sport_category: SportCategory | None = None
+    sport_category: SportCategory
     is_pompom: bool = False
     is_fanfare: bool = False
     is_cameraman: bool = False
@@ -155,12 +161,12 @@ class SportEdit(BaseModel):
     active: bool | None = None
 
 
-class QuotaInfo(BaseModel):
+class SportQuotaInfo(BaseModel):
     participant_quota: NonNegativeInt
     team_quota: NonNegativeInt
 
 
-class Quota(BaseModel):
+class SportQuota(BaseModel):
     school_id: UUID
     sport_id: UUID
     edition_id: UUID
@@ -168,7 +174,7 @@ class Quota(BaseModel):
     team_quota: NonNegativeInt | None = None
 
 
-class QuotaEdit(BaseModel):
+class SportQuotaEdit(BaseModel):
     participant_quota: NonNegativeInt | None = None
     team_quota: NonNegativeInt | None = None
 
@@ -187,7 +193,7 @@ class Participant(BaseModel):
     license: str
     is_licence_valid: bool
     substitute: bool = False
-    team_id: UUID | None = None
+    team_id: UUID
 
 
 class ParticipantEdit(BaseModel):
@@ -288,42 +294,29 @@ class MatchEdit(BaseModel):
     winner_id: UUID | None = None
 
 
-class SportPodiumBase(BaseModel):
-    first_place_points: NonNegativeInt
-    second_place_points: NonNegativeInt
-    third_place_points: NonNegativeInt
-
-
-class SportPodium(SportPodiumBase):
+class TeamSportResultBase(BaseModel):
+    school_id: UUID
     sport_id: UUID
+    team_id: UUID
+    points: NonNegativeInt
+
+
+class TeamSportResult(TeamSportResultBase):
     edition_id: UUID
-    team1_id: UUID | None = None
-    team2_id: UUID | None = None
-    team3_id: UUID | None = None
-    user1_id: str | None = None
-    user2_id: str | None = None
-    user3_id: str | None = None
+    rank: PositiveInt
 
 
-class SportPodiumComplete(SportPodium):
-    team1: Team | None = None
-    team2: Team | None = None
-    team3: Team | None = None
-    user1: schemas_users.CoreUser | None = None
-    user2: schemas_users.CoreUser | None = None
-    user3: schemas_users.CoreUser | None = None
+class TeamSportResultComplete(TeamSportResult):
+    team: Team
 
 
-class SportPodiumEdit(BaseModel):
-    first_place_points: NonNegativeInt | None = None
-    second_place_points: NonNegativeInt | None = None
-    third_place_points: NonNegativeInt | None = None
-    team1_id: UUID | None = None
-    team2_id: UUID | None = None
-    team3_id: UUID | None = None
-    user1_id: str | None = None
-    user2_id: str | None = None
-    user3_id: str | None = None
+class SportPodiumRankings(BaseModel):
+    rankings: list[TeamSportResultBase]
+
+
+class SchoolResult(BaseModel):
+    school_id: UUID
+    total_points: NonNegativeInt
 
 
 class ProductVariantBase(BaseModel):
