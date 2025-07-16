@@ -228,7 +228,7 @@ def test_get_participant_by_id(client: TestClient):
 def test_create_participant(client: TestClient):
     participant_data = {
         "firstname": "New",
-        "name": "RaidParticipant",
+        "name": "Participant",
         "birthday": "2000-01-01",
         "phone": "0123456789",
         "email": "new@participant.com",
@@ -341,14 +341,14 @@ def test_update_participant_invalid_security_file_id(client: TestClient):
 
 
 def test_create_team(client: TestClient):
-    team_data = {"name": "New RaidTeam"}
+    team_data = {"name": "New Team"}
     response = client.post(
         "/raid/teams",
         json=team_data,
         headers={"Authorization": f"Bearer {token_simple_without_team}"},
     )
     assert response.status_code == 201
-    assert response.json()["name"] == "New RaidTeam"
+    assert response.json()["name"] == "New Team"
 
 
 def test_generate_teams_pdf(client: TestClient):
@@ -387,7 +387,7 @@ def test_get_team_by_id(client: TestClient):
 
 
 def test_update_team(client: TestClient):
-    update_data = {"name": "Updated RaidTeam"}
+    update_data = {"name": "Updated Team"}
     response = client.patch(
         f"/raid/teams/{team.id}",
         json=update_data,
@@ -397,7 +397,7 @@ def test_update_team(client: TestClient):
 
 
 def test_set_team_number(client: TestClient):
-    update_data = {"name": "Updated Validated RaidTeam"}
+    update_data = {"name": "Updated Validated Team"}
     response = client.patch(
         f"/raid/teams/{validated_team.id}",
         json=update_data,
@@ -449,7 +449,7 @@ def test_read_document_participant_not_found(client: TestClient):
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 404
-    assert response.json()["detail"] == "RaidParticipant owning the document not found."
+    assert response.json()["detail"] == "Participant owning the document not found."
 
 
 # requires a document to be added
@@ -586,7 +586,7 @@ def test_merge_teams(client: TestClient):
 
     team2_response = client.post(
         "/raid/teams",
-        json={"name": "RaidTeam 2"},
+        json={"name": "Team 2"},
         headers={"Authorization": f"Bearer {token_simple_without_participant}"},
     )
     assert team2_response.status_code == 201
@@ -806,7 +806,7 @@ async def test_get_payment_url_participant_already_paid(
 def mock_team():
     return Mock(
         spec=RaidTeam,
-        name="Test RaidTeam",
+        name="Test Team",
         number=1,
         captain=Mock(
             spec=RaidParticipant,
