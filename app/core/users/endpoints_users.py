@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.auth import cruds_auth
 from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import AccountType, GroupType
+from app.core.notification.utils_notification import get_user_notification_topics
 from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users, models_users, schemas_users
 from app.core.users.tools_users import get_account_type_and_school_id_from_email
@@ -30,6 +31,7 @@ from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
     get_mail_templates,
+    get_notification_manager,
     get_request_id,
     get_settings,
     is_user,
@@ -41,6 +43,7 @@ from app.types.content_type import ContentType
 from app.types.exceptions import UserWithEmailAlreadyExistError
 from app.types.module import CoreModule
 from app.types.s3_access import S3Access
+from app.utils.communication.notifications import NotificationManager
 from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
     create_and_send_email_migration,
@@ -349,6 +352,7 @@ async def activate_user(
     db: AsyncSession = Depends(get_db),
     request_id: str = Depends(get_request_id),
     settings: Settings = Depends(get_settings),
+    notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
     Activate the previously created account.
@@ -418,6 +422,8 @@ async def activate_user(
         email=unconfirmed_user.email,
     )
 
+    await db.flush()
+
     hyperion_security_logger.info(
         f"Activate_user: Activated user {confirmed_user.id} (email: {confirmed_user.email}) ({request_id})",
     )
@@ -427,6 +433,15 @@ async def activate_user(
         confirmed_user.email,
         {"s3_filename": confirmed_user.id, "s3_subfolder": S3_USER_SUBFOLDER},
     )
+
+    # We want to subscribe the user to all topics by default
+    topics = await get_user_notification_topics(user=confirmed_user, db=db)
+    for topic in topics:
+        await notification_manager.subscribe_user_to_topic(
+            topic_id=topic.id,
+            user_id=confirmed_user.id,
+            db=db,
+        )
 
     return standard_responses.Result()
 
