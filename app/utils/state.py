@@ -144,7 +144,7 @@ def init_payment_tools(
         hyperion_error_logger.error(
             "HelloAsso API base URL is not set in settings, payment won't be available",
         )
-        raise PaymentToolCredentialsNotSetException
+        return {}
 
     payment_tools: dict[HelloAssoConfigName, PaymentTool] = {}
     for helloasso_config in settings.PARSED_HELLOASSO_CONFIGURATIONS:
