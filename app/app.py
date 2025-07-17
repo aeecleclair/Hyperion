@@ -500,20 +500,20 @@ async def init_lifespan(
         )
 
     async for db in get_db_dependency(state):
-        async for notification_manager in app.dependency_overrides.get(
+        notification_manager = app.dependency_overrides.get(
             get_notification_manager,
             get_notification_manager,
-        )(settings=settings):
-            await initialization.use_lock_for_workers(
-                initialize_notification_topics,
-                "initialize_notification_topics",
-                redis_client,
-                number_of_workers,
-                hyperion_error_logger,
-                db=db,
-                hyperion_error_logger=hyperion_error_logger,
-                notification_manager=notification_manager,
-            )
+        )(state)
+        await initialization.use_lock_for_workers(
+            initialize_notification_topics,
+            "initialize_notification_topics",
+            redis_client,
+            number_of_workers,
+            hyperion_error_logger,
+            db=db,
+            hyperion_error_logger=hyperion_error_logger,
+            notification_manager=notification_manager,
+        )
 
     return state
 
