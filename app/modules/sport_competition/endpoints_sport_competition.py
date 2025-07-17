@@ -27,7 +27,7 @@ from app.modules.sport_competition.types_sport_competition import (
     ProductSchoolType,
 )
 from app.modules.sport_competition.utils.ffsu_scrapper import (
-    validate_participant_ffsu_licence,
+    validate_participant_ffsu_license,
 )
 from app.modules.sport_competition.utils_sport_competition import (
     checksport_category_compatibility,
@@ -1455,9 +1455,9 @@ async def join_sport(
             name=f"{user.user.firstname} {user.user.name} - {school.school.name}",
         )
         await cruds_sport_competition.add_team(new_team, db)
-    is_licence_valid = False
+    is_license_valid = False
     if participant_info.license:
-        is_licence_valid = validate_participant_ffsu_licence(
+        is_license_valid = validate_participant_ffsu_license(
             school,
             user,
             participant_info.license,
@@ -1469,7 +1469,7 @@ async def join_sport(
         school_id=user.user.school_id,
         license=participant_info.license,
         substitute=participant_info.substitute,
-        is_licence_valid=is_licence_valid,
+        is_license_valid=is_license_valid,
         team_id=participant_info.team_id or new_team.id,
         created_at=datetime.now(UTC),
     )
@@ -1508,10 +1508,10 @@ async def validate_participant(
             status_code=404,
             detail="Participant not found in the database",
         )
-    if participant.is_licence_valid is False:
+    if participant.is_license_valid is False:
         raise HTTPException(
             status_code=400,
-            detail="Participant licence is not valid",
+            detail="Participant license is not valid",
         )
     if (
         GroupType.competition_admin.value

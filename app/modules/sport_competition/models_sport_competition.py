@@ -216,7 +216,7 @@ class CompetitionParticipant(Base):
     team_id: Mapped[UUID] = mapped_column(ForeignKey("competition_team.id"))
     substitute: Mapped[bool]
     license: Mapped[str | None]
-    is_licence_valid: Mapped[bool]
+    is_license_valid: Mapped[bool]
 
     user: Mapped[CompetitionUser] = relationship(
         "CompetitionUser",
