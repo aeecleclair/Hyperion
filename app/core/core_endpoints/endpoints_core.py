@@ -311,3 +311,20 @@ async def delete_module_account_type_visibility(
         allowed_account_type=account_type,
         db=db,
     )
+
+
+@router.get(
+    "/settings-json-schema.json",
+    status_code=200,
+)
+async def get_settings_json_schema():
+    """
+    Return Settings JSON schema.
+
+    It can be used in vscode:
+    ```yml
+    # yaml-language-server: $schema=https://hyperion.myecl.fr/settings-json-schema.json
+    ```
+    """
+
+    return Settings.model_json_schema()
