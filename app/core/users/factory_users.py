@@ -38,7 +38,6 @@ class CoreUsersFactory(Factory):
             if settings.FACTORIES_DEMO_USERS
             else [
                 UserDemoFactoryConfig(
-                    id=str(uuid.uuid4()),
                     firstname="Alice",
                     name="Dupont",
                     nickname="alice",
@@ -46,7 +45,6 @@ class CoreUsersFactory(Factory):
                     password=Faker().password(16, True, True, True, True),
                 ),
                 UserDemoFactoryConfig(
-                    id=str(uuid.uuid4()),
                     firstname="Bob",
                     name="Martin",
                     nickname="bob",
@@ -55,7 +53,7 @@ class CoreUsersFactory(Factory):
                 ),
             ]
         )
-        cls.demo_users_id = [user.id for user in cls.demo_users]
+        cls.demo_users_id = [str(uuid.uuid4()) for _ in cls.demo_users]
 
     @classmethod
     async def create_core_users(cls, db: AsyncSession):
@@ -109,9 +107,9 @@ class CoreUsersFactory(Factory):
             )
             await cruds_users.create_user(db=db, user=user)
 
-        for user_info in cls.demo_users:
+        for i, user_info in enumerate(cls.demo_users):
             user = CoreUser(
-                id=user_info.id,
+                id=cls.demo_users_id[i],
                 password_hash=security.get_password_hash(
                     user_info.password or faker.password(16, True, True, True, True),
                 ),
@@ -133,7 +131,7 @@ class CoreUsersFactory(Factory):
                     db=db,
                     membership=CoreMembership(
                         group_id=group,
-                        user_id=user_info.id,
+                        user_id=user.id,
                         description=None,
                     ),
                 )

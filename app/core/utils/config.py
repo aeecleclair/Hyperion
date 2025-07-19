@@ -45,7 +45,6 @@ class UserDemoFactoryConfig(BaseModel):
     It is used to create an instance of the user demo factory.
     """
 
-    id: str
     firstname: str
     name: str
     nickname: str | None
