@@ -59,6 +59,7 @@ if TYPE_CHECKING:
 
     from app.types.factory import Factory
 
+
 # NOTE: We can not get loggers at the top of this file like we do in other files
 # as the loggers are not yet initialized
 
