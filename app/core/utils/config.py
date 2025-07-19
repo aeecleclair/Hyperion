@@ -38,6 +38,22 @@ class AuthClientConfig(BaseModel):
     auth_client: str
 
 
+class UserDemoFactoryConfig(BaseModel):
+    """
+    Configuration for the user demo factory.
+    This class is used to store the configuration of the user demo factory.
+    It is used to create an instance of the user demo factory.
+    """
+
+    id: str
+    firstname: str
+    name: str
+    nickname: str | None
+    email: str
+    password: str | None  # If None, the password will be generated randomly
+    groups: list[str] = []  # Groups to which the user will be added
+
+
 class Settings(BaseSettings):
     """
     Settings for Hyperion
@@ -178,7 +194,10 @@ class Settings(BaseSettings):
     USE_FACTORIES: bool = (
         False  # If True, the database will be populated with fake data
     )
-    FACTORIES_DEMO_USERS_PASSWORD: str | None = None
+    FACTORIES_DEMO_USERS_DICT: list[UserDemoFactoryConfig] = []
+    FACTORIES_DEMO_USERS_INFO: list[
+        tuple[str, str, str, str | None, str, str | None, str]
+    ] = []  # Deprecated, use FACTORIES_DEMO_USERS_DICT instead
 
     #####################################
     # SMTP configuration using starttls #
@@ -457,6 +476,29 @@ class Settings(BaseSettings):
             )
         return helloasso_configurations
 
+    @computed_field  # type: ignore[prop-decorator]
+    @cached_property
+    def FACTORIES_DEMO_USERS(cls) -> list[UserDemoFactoryConfig]:
+        """
+        Parse the FACTORIES_DEMO_USERS_DICT or FACTORIES_DEMO_USERS_INFO to return a list of UserDemoFactoryConfig
+        """
+        if cls.FACTORIES_DEMO_USERS_DICT:
+            return cls.FACTORIES_DEMO_USERS_DICT
+        if cls.FACTORIES_DEMO_USERS_INFO:
+            return [
+                UserDemoFactoryConfig(
+                    id=user_id,
+                    firstname=firstname,
+                    name=name,
+                    nickname=nickname,
+                    email=email,
+                    password=password,
+                    groups=groups,
+                )
+                for user_id, firstname, name, nickname, email, password, groups in cls.FACTORIES_DEMO_USERS_INFO
+            ]
+        return []
+
     #######################################
     #          Fields validation          #
     #######################################
@@ -513,18 +555,6 @@ class Settings(BaseSettings):
         if not self.RSA_PRIVATE_PEM_STRING:
             raise DotenvMissingVariableError(
                 "RSA_PRIVATE_PEM_STRING",
-            )
-
-        return self
-
-    @model_validator(mode="after")
-    def check_factories_demo_password(self) -> "Settings":
-        """
-        Check that the factories demo passwords are set if USE_FACTORIES is True
-        """
-        if self.USE_FACTORIES and not self.FACTORIES_DEMO_USERS_PASSWORD:
-            raise DotenvMissingVariableError(
-                "FACTORIES_DEMO_USERS_PASSWORDS",
             )
 
         return self

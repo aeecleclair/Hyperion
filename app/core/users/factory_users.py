@@ -13,7 +13,7 @@ from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users
 from app.core.users.models_users import CoreUser
 from app.core.utils import security
-from app.core.utils.config import Settings
+from app.core.utils.config import Settings, UserDemoFactoryConfig
 from app.dependencies import get_settings
 from app.types.factory import Factory
 from app.types.floors_type import FloorsType
@@ -33,37 +33,29 @@ except Exception:
 
 
 class CoreUsersFactory(Factory):
-    demo_users_id = [
-        str(uuid.uuid4()),
-        str(uuid.uuid4()),
-        str(uuid.uuid4()),
-        str(uuid.uuid4()),
-        str(uuid.uuid4()),
-    ]
-    demo_nicknames = [
-        "Khurzs",
-        "Jhobahtes",
-        "Thonyk",
-        "Schïbah",
-        "Askoh",
-    ]
-    demo_groups = [
-        groups_type.GroupType.admin,
-        groups_type.GroupType.admin_cdr,
-        groups_type.GroupType.BDE,
-        groups_type.GroupType.raid_admin,
-        groups_type.GroupType.BDS,
-    ]
-    if settings and settings.USE_FACTORIES and settings.FACTORIES_DEMO_USERS_PASSWORD:
-        demo_passwords = [
-            security.get_password_hash(settings.FACTORIES_DEMO_USERS_PASSWORD)
-            for _ in range(len(demo_users_id))
+    demo_users = (
+        settings.FACTORIES_DEMO_USERS
+        if settings and settings.FACTORIES_DEMO_USERS
+        else [
+            UserDemoFactoryConfig(
+                id=str(uuid.uuid4()),
+                firstname="Alice",
+                name="Dupont",
+                nickname="alice",
+                email="demo1@test.fr",
+                password=Faker().password(16, True, True, True, True),
+            ),
+            UserDemoFactoryConfig(
+                id=str(uuid.uuid4()),
+                firstname="Bob",
+                name="Martin",
+                nickname="bob",
+                email="demo2@test.fr",
+                password=Faker().password(16, True, True, True, True),
+            ),
         ]
-    else:
-        demo_passwords = [
-            security.get_password_hash(faker.password(16, True, True, True, True))
-            for _ in range(len(demo_users_id))
-        ]
+    )
+    demo_users_id = [user.id for user in demo_users]
 
     other_users_id = [str(uuid.uuid4()) for _ in range(NB_USERS)]
 
@@ -123,14 +115,16 @@ class CoreUsersFactory(Factory):
             )
             await cruds_users.create_user(db=db, user=user)
 
-        for i in range(len(self.demo_users_id)):
+        for user_info in self.demo_users:
             user = CoreUser(
-                id=self.demo_users_id[i],
-                password_hash=self.demo_passwords[i],
-                firstname="Demo " + str(i),
-                nickname=self.demo_nicknames[i],
-                name="Salut",
-                email="demo" + str(i) + "@etu.ec-lyon.fr",
+                id=user_info.id,
+                password_hash=security.get_password_hash(
+                    user_info.password or faker.password(16, True, True, True, True),
+                ),
+                firstname=user_info.firstname,
+                nickname=user_info.nickname,
+                name=user_info.name,
+                email=user_info.email,
                 floor=None,
                 phone=None,
                 promo=None,
@@ -140,30 +134,18 @@ class CoreUsersFactory(Factory):
                 created_on=datetime.now(tz=UTC),
             )
             await cruds_users.create_user(db=db, user=user)
-            await cruds_groups.create_membership(
-                db=db,
-                membership=CoreMembership(
-                    group_id=self.demo_groups[i],
-                    user_id=self.demo_users_id[i],
-                    description=None,
-                ),
-            )
+            for group in user_info.groups:
+                await cruds_groups.create_membership(
+                    db=db,
+                    membership=CoreMembership(
+                        group_id=group,
+                        user_id=user_info.id,
+                        description=None,
+                    ),
+                )
 
     async def run(self, db: AsyncSession):
         await self.create_core_users(db=db)
 
     async def should_run(self, db: AsyncSession):
-        result = len(await cruds_users.get_users(db=db)) == 0
-        if not result:
-            registered_users = await cruds_users.get_users(db=db)
-            self.other_users_id = [
-                user.id
-                for user in registered_users
-                if user.nickname not in self.demo_nicknames
-            ]
-            self.demo_users_id = [
-                user.id
-                for user in registered_users
-                if user.nickname in self.demo_nicknames
-            ]
-        return result
+        return len(await cruds_users.get_users(db=db)) == 0
