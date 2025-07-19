@@ -1,7 +1,6 @@
 """File defining the Metadata. And the basic functions creating the database tables and calling the router"""
 
 import logging
-import os
 import uuid
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
@@ -11,7 +10,6 @@ from typing import TYPE_CHECKING
 import alembic.command as alembic_command
 import alembic.config as alembic_config
 import alembic.migration as alembic_migration
-import psutil
 import redis
 from calypsso import get_calypsso_app
 from fastapi import FastAPI, HTTPException, Request, Response, status
@@ -51,7 +49,6 @@ from app.types.exceptions import (
     MultipleWorkersWithoutRedisInitializationError,
 )
 from app.types.sqlalchemy import Base
-from app.types.websocket import WebsocketConnectionManager
 from app.utils import initialization
 from app.utils.communication.notifications import NotificationManager
 from app.utils.redis import limiter
@@ -549,15 +546,17 @@ async def init_lifespan(
         get_db,
         get_db,
     )
-# We need to run the factories only once across all the workers
+    # We need to run the factories only once across all the workers
     async for db in get_db_dependency(state):
-    	await initialization.use_lock_for_workers(
+        await initialization.use_lock_for_workers(
             run_factories,
-            [db, settings],
             "factories_run",
-                    redis_client,
-                hyperion_error_logger,
-	            )
+            redis_client,
+            number_of_workers,
+            hyperion_error_logger,
+            db=db,
+            settings=settings,
+        )
     async for db in get_db_dependency(state):
         await initialization.use_lock_for_workers(
             init_google_API,

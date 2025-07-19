@@ -76,9 +76,9 @@ class Settings(BaseSettings):
     # This should be changed in the future when Pydantic will support it
     _yaml_file: ClassVar[str]
 
-    def __init__(self, _yaml_file, _env_file):
+    def __init__(self, _yaml_file, _env_file, **kwargs):
         Settings._yaml_file = _yaml_file
-        super().__init__(_env_file=_env_file)
+        super().__init__(_env_file=_env_file, **kwargs)
 
     # We configure sources that should be used to fill settings.
     # This method should return a tuple of sources

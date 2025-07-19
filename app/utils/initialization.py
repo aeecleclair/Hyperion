@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 from collections.abc import Callable
-from typing import Any, ParamSpec, TypeVar
+from typing import ParamSpec, TypeVar
 
 import psutil
 import redis
@@ -19,7 +19,6 @@ from app.core.utils.config import Settings
 from app.types import core_data
 from app.types.exceptions import (
     CoreDataNotFoundError,
-    WaitUnlockMissingUnlockKey,
 )
 from app.types.sqlalchemy import Base
 from app.utils.tools import execute_async_or_sync_method
