@@ -5,6 +5,20 @@ from fastapi import HTTPException
 from app.core.payment.types_payment import HelloAssoConfigName
 
 
+class MultipleWorkersWithoutRedisInitializationError(Exception):
+    def __init__(self):
+        super().__init__(
+            "Initialization steps could not be run with multiple workers as no Redis client were configured",
+        )
+
+
+class InvalidAppStateTypeError(Exception):
+    def __init__(self):
+        super().__init__(
+            "The type of the app state is not a TypedDict or a starlette State object.",
+        )
+
+
 class CoreDataNotFoundError(Exception):
     pass
 
@@ -113,6 +127,13 @@ class MissingTZInfoInDatetimeError(TypeError):
 class DotenvMissingVariableError(Exception):
     def __init__(self, variable_name: str):
         super().__init__(f"{variable_name} should be configured in the dotenv")
+
+
+class DotenvBothAuthClientAndAuthClientDictConfigured(Exception):
+    def __init__(self):
+        super().__init__(
+            "Both AUTH_CLIENT_DICT and the older AUTH_CLIENT are configured in the dotenv. Please remove the AUTH_CLIENT variable from the dotenv.",
+        )
 
 
 class DotenvInvalidVariableError(Exception):

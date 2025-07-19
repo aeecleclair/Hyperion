@@ -1,8 +1,10 @@
 import asyncio
 import logging
-from collections.abc import Callable, Coroutine
-from typing import Any, TypeVar
+import os
+from collections.abc import Callable
+from typing import Any, ParamSpec, TypeVar
 
+import psutil
 import redis
 from pydantic import ValidationError
 from sqlalchemy import Connection, MetaData, delete, select
@@ -20,6 +22,7 @@ from app.types.exceptions import (
     WaitUnlockMissingUnlockKey,
 )
 from app.types.sqlalchemy import Base
+from app.utils.tools import execute_async_or_sync_method
 
 # These utils are used at startup to run database initializations & migrations
 
@@ -278,39 +281,77 @@ def drop_db_sync(conn: Connection):
     my_metadata.drop_all(bind=conn)
 
 
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
 async def use_lock_for_workers(
-    func: Callable[..., Coroutine[Any, Any, Any]] | Callable[..., Any],
-    params: list[Any],
+    job_function: Callable[P, R],
     key: str,
-    redis_client: redis.Redis,
+    redis_client: redis.Redis | None,
+    number_of_workers: int,
     logger: logging.Logger,
-    wait_unlock: bool = False,
     unlock_key: str | None = None,
-):
-    if not wait_unlock:
-        if redis_client.setnx(key, "1"):
-            logger.info(f"Running {func.__name__}")
-            result = func(*params)
-            if isinstance(result, Coroutine):
-                result = await result
-            redis_client.expire(key, 20)
-            return result
-        return
+    *args: P.args,
+    **kwargs: P.kwargs,
+) -> None:
+    """
+    Aquires a Redis lock to ensure that `func` is only executed by one worker.
 
-    elif not unlock_key:
-        raise WaitUnlockMissingUnlockKey()
+    Using `unlock_key` allows to wait for a worker to have finished executing `func` before continuing execution.
+    If provided, the function will wait until this unlock key is set before continuing
 
-    while redis_client.get(unlock_key) is None:
-        if redis_client.setnx(key, "1"):
-            logger.info(f"Running {func.__name__}")
-            result = func(*params)
-            if isinstance(result, Coroutine):
-                result = await result
+    The job may be a sync or async function. This util will pass `kwargs` as arguments to the `job_function`.
+    We assume that the function execution won't take more than 20 seconds.
+
+    If the Redis client is not provided, the function will execute `job_function` directly without acquiring a lock.
+
+    If `number_of_workers` is less than or equal to 1, the function will execute `job_function` directly without acquiring a lock.
+    """
+
+    if (
+        not isinstance(
+            redis_client,
+            redis.Redis,
+        )
+        or number_of_workers <= 1
+    ):
+        # If a Redis is not provided, we execute the function directly
+        await execute_async_or_sync_method(job_function, *args, **kwargs)
+
+    elif redis_client.set(key, "1", nx=True, ex=120):
+        # We acquired the lock, we execute the function
+        logger.info(f"Running {job_function.__name__}")
+
+        await execute_async_or_sync_method(job_function, *args, **kwargs)
+
+        if unlock_key is not None:
+            # We set the unlock_key for other workers to resume operation
             redis_client.set(unlock_key, "1")
-            redis_client.expire(unlock_key, 20)
-            redis_client.expire(key, 20)
-            return result
 
-        else:
-            logger.info(f"Waiting for {func.__name__} to finish")
+            # After 60 seconds we remove the key for both performance and reloading issues
+            # we assume other jobs won't take more than 60 seconds and will check this key before expiration
+            redis_client.expire(unlock_key, 60)
+
+        # After 60 seconds we remove the key for both performance and reloading issues
+        # we assume other jobs won't take more than 60 seconds and will check this key before expiration
+        redis_client.expire(key, 60)
+
+    elif unlock_key:
+        # As an `unlock_key` is provided, we will wait until an other worker has finished executing `job_function`
+        while redis_client.get(unlock_key) is not None:
+            logger.debug(f"Waiting for {job_function.__name__} to finish")
             await asyncio.sleep(1)
+
+
+def get_number_of_workers() -> int:
+    """
+    Get the number of active Hyperion workers
+    """
+    # We use the parent process to get the workers
+    parent_pid = os.getppid()  # PID du parent (FastAPI master process)
+    parent_process = psutil.Process(parent_pid)
+    workers = [
+        p for p in parent_process.children() if p.status() != psutil.STATUS_ZOMBIE
+    ]
+    return len(workers)

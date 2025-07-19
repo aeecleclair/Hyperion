@@ -6,8 +6,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import AccountType, GroupType
-from app.core.notification.notification_types import CustomTopic, Topic
-from app.core.notification.schemas_notification import Message
+from app.core.notification.schemas_notification import Message, Topic
 from app.core.users import models_users
 from app.dependencies import (
     get_db,
@@ -29,10 +28,20 @@ from app.utils.tools import (
     save_pdf_first_page_as_image,
 )
 
+root = "ph"
+ph_topic = Topic(
+    id=uuid.UUID("b493c745-adb3-4822-9d1d-1fc6d5152681"),
+    module_root=root,
+    name="📗 PH",
+    topic_identifier=None,
+    restrict_to_group_id=None,
+    restrict_to_members=True,
+)
 module = Module(
-    root="ph",
+    root=root,
     tag="ph",
     default_allowed_account_types=[AccountType.student],
+    registred_topics=[ph_topic],
     factory=None,
 )
 
@@ -132,14 +141,14 @@ async def create_paper(
         )
         if paper_db.release_date == now.date():
             await notification_tool.send_notification_to_topic(
-                custom_topic=CustomTopic(topic=Topic.ph),
+                topic_id=ph_topic.id,
                 message=message,
             )
         else:
             delivery_time = time(11, 00, 00, tzinfo=UTC)
             release_date = datetime.combine(paper_db.release_date, delivery_time)
             await notification_tool.send_notification_to_topic(
-                custom_topic=CustomTopic(topic=Topic.ph),
+                topic_id=ph_topic.id,
                 message=message,
                 scheduler=scheduler,
                 defer_date=release_date,

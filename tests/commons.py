@@ -1,13 +1,17 @@
 import logging
 import uuid
-from collections.abc import AsyncGenerator, Callable
+from collections.abc import Callable
 from datetime import timedelta
 from functools import lru_cache
 
-import redis
-from fastapi import Depends, HTTPException
+from fastapi import FastAPI
 from sqlalchemy import NullPool
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from app.core.auth import schemas_auth
 from app.core.groups import cruds_groups, models_groups
@@ -19,17 +23,18 @@ from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users, models_users, schemas_users
 from app.core.utils import security
 from app.core.utils.config import Settings
-from app.dependencies import get_settings
+from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.types import core_data
-from app.types.exceptions import RedisConnectionError
 from app.types.floors_type import FloorsType
-from app.types.scheduler import OfflineScheduler, Scheduler
+from app.types.scheduler import OfflineScheduler
 from app.types.sqlalchemy import Base
-from app.types.websocket import (
-    OfflineWebsocketConnectionManager,
-    WebsocketConnectionManager,
+from app.utils.communication.notifications import NotificationManager
+from app.utils.state import (
+    LifespanState,
+    init_mail_templates,
+    init_redis_client,
+    init_websocket_connection_manager,
 )
-from app.utils.redis import connect, disconnect
 from app.utils.tools import (
     get_random_string,
     set_core_data,
@@ -40,6 +45,53 @@ class FailedToAddObjectToDB(Exception):
     """Exception raised when an object cannot be added to the database."""
 
 
+async def override_init_app_state(
+    app: FastAPI,
+    settings: Settings,
+    hyperion_error_logger: logging.Logger,
+) -> LifespanState:
+    """
+    Initialize the state of the application. This dependency should be used at the start of the application lifespan.
+    """
+    engine = init_test_engine()
+
+    SessionLocal = init_test_SessionLocal()
+
+    redis_client = init_redis_client(
+        settings=settings,
+        hyperion_error_logger=hyperion_error_logger,
+    )
+
+    # Even if we have a Redis client, we still want to use the OfflineScheduler for tests
+    # as tests are not able to run tasks in the future. The event loop of the test may not be running long enough
+    # to execute the tasks.
+    scheduler = OfflineScheduler()
+
+    ws_manager = await init_websocket_connection_manager(
+        settings=settings,
+    )
+
+    notification_manager = NotificationManager(settings=settings)
+
+    drive_file_manager = DriveFileManager()
+
+    payment_tools = init_test_payment_tools()
+
+    mail_templates = init_mail_templates(settings=settings)
+
+    return LifespanState(
+        engine=engine,
+        SessionLocal=SessionLocal,
+        redis_client=redis_client,
+        scheduler=scheduler,
+        ws_manager=ws_manager,
+        notification_manager=notification_manager,
+        drive_file_manager=drive_file_manager,
+        payment_tools=payment_tools,
+        mail_templates=mail_templates,
+    )
+
+
 @lru_cache
 def override_get_settings(params=None) -> Callable[[], Settings]:
     """Override the get_settings function to use the testing session"""
@@ -47,7 +99,7 @@ def override_get_settings(params=None) -> Callable[[], Settings]:
         params = {}
 
     def override_get_settings() -> Settings:
-        return Settings(_env_file=".env.test", _env_file_encoding="utf-8", **params)
+        return Settings(_env_file=".env.test", _yaml_file=".env.test.yaml", **params)
 
     return override_get_settings
 
@@ -76,79 +128,38 @@ TestingSessionLocal = async_sessionmaker(
     engine,
     class_=AsyncSession,
     expire_on_commit=False,
-)  # Create a session for testing purposes
+)
 
 
-async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
-    """Override the get_db function to use the testing session"""
+def init_test_engine() -> AsyncEngine:
+    """
+    Return the (asynchronous) database engine, if the engine doesn't exit yet it will create one based on the settings
+    """
 
-    async with TestingSessionLocal() as db:
-        try:
-            yield db
-        except HTTPException:
-            await db.commit()
-            raise
-        except Exception:
-            await db.rollback()
-            raise
-        else:
-            await db.commit()
-        finally:
-            await db.close()
+    return engine
 
 
-async def override_get_unsafe_db() -> AsyncGenerator[AsyncSession, None]:
-    """Override the get_db function to use the testing session"""
-
-    async with TestingSessionLocal() as db:
-        yield db
+def init_test_SessionLocal() -> Callable[[], AsyncSession]:
+    return TestingSessionLocal
 
 
-# By default the redis client is deactivated
-redis_client: redis.Redis | None | bool = False
+def init_test_payment_tools() -> dict[HelloAssoConfigName, PaymentTool]:
+    payment_tools: dict[HelloAssoConfigName, PaymentTool] = {}
+    for helloasso_config_name in HelloAssoConfigName:
+        payment_tools[helloasso_config_name] = MockedPaymentTool()
+
+    return payment_tools
+
+
+# Create a session for testing purposes
+TestingSessionLocal = async_sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
+
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
-
-
-def override_get_redis_client(
-    settings: Settings = Depends(get_settings),
-) -> (
-    redis.Redis | None | bool
-):  # As we don't want the limiter to be activated, except during the designed test, we add an "activate"/"deactivate" option
-    """Override the get_redis_client function to use the testing session"""
-    return redis_client
-
-
-def change_redis_client_status(activated: bool) -> None:
-    global redis_client
-    if activated:
-        if settings.REDIS_HOST != "":
-            try:
-                redis_client = connect(settings)
-            except redis.exceptions.ConnectionError as err:
-                raise RedisConnectionError() from err
-    else:
-        if isinstance(redis_client, redis.Redis):
-            redis_client.flushdb()
-            disconnect(redis_client)
-        redis_client = False
-
-
-def override_get_scheduler(
-    settings: Settings = Depends(get_settings),
-) -> Scheduler:  # As we don't want the limiter to be activated, except during the designed test, we add an "activate"/"deactivate" option
-    """Override the get_redis_client function to use the testing session"""
-    return OfflineScheduler()
-
-
-def override_get_websocket_connection_manager(
-    settings: Settings = Depends(get_settings),
-) -> WebsocketConnectionManager:
-    """
-    Override the get_websocket_connection_manager function to use the testing session
-    """
-
-    return OfflineWebsocketConnectionManager(settings=settings)
 
 
 async def create_user_with_groups(
@@ -264,7 +275,7 @@ async def add_coredata_to_db(
             await db.close()
 
 
-class MockedPaymentTool:
+class MockedPaymentTool(PaymentTool):
     def __init__(
         self,
     ):
@@ -288,8 +299,8 @@ class MockedPaymentTool:
         checkout_amount: int,
         checkout_name: str,
         db: AsyncSession,
-        redirection_uri: str | None = None,
         payer_user: schemas_users.CoreUser | None = None,
+        redirection_uri: str | None = None,
     ) -> schemas_payment.Checkout:
         checkout_id = uuid.UUID("81c9ad91-f415-494a-96ad-87bf647df82c")
 
@@ -319,12 +330,3 @@ class MockedPaymentTool:
             checkout_id=checkout_id,
             db=db,
         )
-
-
-def override_get_payment_tool(
-    name: HelloAssoConfigName,
-) -> Callable[..., MockedPaymentTool]:
-    def override_get_payment_tool() -> MockedPaymentTool:
-        return MockedPaymentTool()
-
-    return override_get_payment_tool

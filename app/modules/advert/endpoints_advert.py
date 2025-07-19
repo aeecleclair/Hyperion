@@ -7,11 +7,12 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import AccountType, GroupType
-from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
+from app.core.notification.utils_notification import get_topic_by_root_and_identifier
 from app.core.users import models_users
 from app.dependencies import (
     get_db,
+    get_notification_manager,
     get_notification_tool,
     is_user_an_ecl_member,
     is_user_in,
@@ -25,7 +26,7 @@ from app.modules.advert.factory_advert import AdvertFactory
 from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
-from app.utils.communication.notifications import NotificationTool
+from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.tools import (
     get_file_from_data,
     is_group_id_valid,
@@ -33,8 +34,9 @@ from app.utils.tools import (
     save_file_as_data,
 )
 
+root = "advert"
 module = Module(
-    root="advert",
+    root=root,
     tag="Advert",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
     factory=AdvertFactory(),
@@ -70,6 +72,7 @@ async def create_advertiser(
     advertiser: schemas_advert.AdvertiserBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
     Create a new advertiser.
@@ -92,7 +95,19 @@ async def create_advertiser(
         group_manager_id=advertiser.group_manager_id,
     )
 
-    return await cruds_advert.create_advertiser(db_advertiser=db_advertiser, db=db)
+    result = await cruds_advert.create_advertiser(db_advertiser=db_advertiser, db=db)
+
+    await notification_manager.register_new_topic(
+        topic_id=uuid.uuid4(),
+        name=f"📣 Annonce - {db_advertiser.name}",
+        module_root=root,
+        topic_identifier=db_advertiser.id,
+        restrict_to_group_id=None,
+        restrict_to_members=True,
+        db=db,
+    )
+
+    return result
 
 
 @module.router.delete(
@@ -271,10 +286,16 @@ async def create_advert(
         action_module=module.root,
     )
 
-    await notification_tool.send_notification_to_topic(
-        custom_topic=CustomTopic(Topic.advert),
-        message=message,
+    topic = await get_topic_by_root_and_identifier(
+        module_root=root,
+        topic_identifier=advertiser.id,
+        db=db,
     )
+    if topic is not None:
+        await notification_tool.send_notification_to_topic(
+            topic_id=topic.id,
+            message=message,
+        )
 
     return result
 
