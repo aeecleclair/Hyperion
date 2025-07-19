@@ -229,9 +229,12 @@ def initialize_schools(
                     )
 
 
-async def run_factories(db: AsyncSession, settings: Settings) -> None:
+async def run_factories(
+    db: AsyncSession,
+    settings: Settings,
+    hyperion_error_logger: logging.Logger,
+) -> None:
     """Run the factories to create default data in the database"""
-    hyperion_error_logger = logging.getLogger("hyperion.error")
     if not settings.USE_FACTORIES:
         return
 
@@ -265,7 +268,7 @@ async def run_factories(db: AsyncSession, settings: Settings) -> None:
                         f"Startup: Running factory {factory.__class__.__name__}",
                     )
                     try:
-                        await factory.run(db)
+                        await factory.run(db, settings)
                     except Exception as error:
                         hyperion_error_logger.fatal(
                             f"Startup: Could not run factories: {error}",
@@ -551,12 +554,13 @@ async def init_lifespan(
     async for db in get_db_dependency(state):
         await initialization.use_lock_for_workers(
             run_factories,
-            "factories_run",
+            "run_factories",
             redis_client,
             number_of_workers,
             hyperion_error_logger,
             db=db,
             settings=settings,
+            hyperion_error_logger=hyperion_error_logger,
         )
     async for db in get_db_dependency(state):
         await initialization.use_lock_for_workers(

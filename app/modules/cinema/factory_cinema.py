@@ -4,17 +4,16 @@ from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.utils.config import Settings
 from app.modules.cinema import cruds_cinema, schemas_cinema
 from app.types.factory import Factory
 
 
 class CinemaFactory(Factory):
-    def __init__(self):
-        super().__init__(
-            depends_on=[],
-        )
+    depends_on = []
 
-    async def create_movies(self, db: AsyncSession):
+    @classmethod
+    async def create_movies(cls, db: AsyncSession):
         movies = {
             "The Matrix": {
                 "overview": "Le premier film de la trilogie",
@@ -57,9 +56,11 @@ class CinemaFactory(Factory):
                 db=db,
             )
 
-    async def run(self, db: AsyncSession):
-        await self.create_movies(db)
+    @classmethod
+    async def run(cls, db: AsyncSession, settings: Settings) -> None:
+        await cls.create_movies(db)
 
-    async def should_run(self, db: AsyncSession):
+    @classmethod
+    async def should_run(cls, db: AsyncSession):
         films = await cruds_cinema.get_sessions(db=db)
         return len(films) == 0

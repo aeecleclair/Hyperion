@@ -4,16 +4,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.schools import cruds_schools
 from app.core.schools.models_schools import CoreSchool
+from app.core.utils.config import Settings
 from app.types.factory import Factory
 
 
 class CoreSchoolsFactory(Factory):
-    def __init__(self):
-        super().__init__(
-            depends_on=[],
-        )
+    depends_on = []
 
-    async def run(self, db: AsyncSession):
+    @classmethod
+    async def run(cls, db: AsyncSession, settings: Settings) -> None:
         await cruds_schools.create_school(
             CoreSchool(
                 id=uuid4(),
@@ -23,5 +22,6 @@ class CoreSchoolsFactory(Factory):
             db,
         )
 
-    async def should_run(self, db: AsyncSession):
+    @classmethod
+    async def should_run(cls, db: AsyncSession):
         return len(await cruds_schools.get_schools(db)) == 2

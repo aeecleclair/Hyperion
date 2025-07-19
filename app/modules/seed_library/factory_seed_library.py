@@ -6,6 +6,7 @@ from faker import Faker
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.users.factory_users import CoreUsersFactory
+from app.core.utils.config import Settings
 from app.modules.seed_library import coredata_seed_library, cruds_seed_library
 from app.modules.seed_library.schemas_seed_library import PlantComplete, SpeciesComplete
 from app.modules.seed_library.types_seed_library import (
@@ -68,13 +69,11 @@ class SeedLibraryFactory(Factory):
         150,
     ]
 
-    def __init__(self):
-        super().__init__(
-            depends_on=[CoreUsersFactory],
-        )
+    depends_on = [CoreUsersFactory]
 
+    @classmethod
     async def create_species(
-        self,
+        cls,
         db: AsyncSession,
     ):
         for (
@@ -87,14 +86,14 @@ class SeedLibraryFactory(Factory):
             time_maturation,
             i,
         ) in zip(
-            self.species_ids,
-            self.species_names,
-            self.species_prefixes,
-            self.species_types,
-            self.species_start_seasons,
-            self.species_end_seasons,
-            self.species_time_maturations,
-            range(len(self.species_names)),
+            cls.species_ids,
+            cls.species_names,
+            cls.species_prefixes,
+            cls.species_types,
+            cls.species_start_seasons,
+            cls.species_end_seasons,
+            cls.species_time_maturations,
+            range(len(cls.species_names)),
             strict=True,
         ):
             species = SpeciesComplete(
@@ -114,20 +113,21 @@ class SeedLibraryFactory(Factory):
                 species=species,
             )
 
+    @classmethod
     async def create_plants(
-        self,
+        cls,
         db: AsyncSession,
     ):
         states = list(PlantState)
-        for i in range(len(self.species_ids)):
+        for i in range(len(cls.species_ids)):
             for j in range(3):
                 await cruds_seed_library.create_plant(
                     db=db,
                     plant=PlantComplete(
                         id=uuid4(),
-                        reference=f"{self.species_prefixes[i]}-{j}",
+                        reference=f"{cls.species_prefixes[i]}-{j}",
                         state=states[j],
-                        species_id=self.species_ids[i],
+                        species_id=cls.species_ids[i],
                         propagation_method=random.choice(  # noqa: S311
                             list(PropagationMethod),
                         ),
@@ -140,9 +140,10 @@ class SeedLibraryFactory(Factory):
                     ),
                 )
 
-    async def run(self, db: AsyncSession):
-        await self.create_species(db=db)
-        await self.create_plants(db=db)
+    @classmethod
+    async def run(cls, db: AsyncSession, settings: Settings) -> None:
+        await cls.create_species(db=db)
+        await cls.create_plants(db=db)
         await tools.set_core_data(
             db=db,
             core_data=coredata_seed_library.SeedLibraryInformation(
@@ -153,5 +154,6 @@ class SeedLibraryFactory(Factory):
             ),
         )
 
-    async def should_run(self, db: AsyncSession):
+    @classmethod
+    async def should_run(cls, db: AsyncSession):
         return len(await cruds_seed_library.get_all_species(db)) == 0

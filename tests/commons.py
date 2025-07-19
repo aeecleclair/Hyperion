@@ -93,7 +93,7 @@ async def override_init_app_state(
 
 
 @lru_cache
-def override_get_settings(**kwargs) -> Callable[[], Settings]:
+def get_override_get_settings(**kwargs) -> Callable[[], Settings]:
     """Override the get_settings function to use the testing session"""
 
     def override_get_settings() -> Settings:
@@ -102,7 +102,7 @@ def override_get_settings(**kwargs) -> Callable[[], Settings]:
     return override_get_settings
 
 
-settings = override_get_settings()()
+settings = get_override_get_settings()()
 
 
 # Connect to the test's database

@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.utils.config import Settings
+
 
 class Factory(ABC):
     """
@@ -23,40 +25,36 @@ class Factory(ABC):
 
 
     class YourModuleFactory(Factory):
-        def __init__(self):
+        def __init__(cls):
             super().__init__(
                 name="module",
                 depends_on=[],
             )
 
-        async def run(self, db: AsyncSession):
+        @classmethod
+    async def run(cls, db: AsyncSession):
             pass
 
-        async def should_run(self, db: AsyncSession):
+        @classmethod
+    async def should_run(cls, db: AsyncSession):
             return True
     ```
     The `should_run` method should return True if the factory should run, and False if it should not.
     """
 
-    def __init__(
-        self,
-        depends_on: list[type["Factory"]],
-    ) -> None:
-        """
-        Initialize a new Factory object.
-        :param depends_on: a list of factories that should be run before this factory
-        """
-        self.depends_on = depends_on
+    depends_on: list[type["Factory"]]
 
+    @classmethod
     @abstractmethod
-    async def should_run(self, db: AsyncSession) -> bool:
+    async def should_run(cls, db: AsyncSession) -> bool:
         """
         Check if the factory should run.
         This prevent duplicate runs of the same factory as it may cause SQL unique constraint errors or add too much data.
         """
 
+    @classmethod
     @abstractmethod
-    async def run(self, db: AsyncSession) -> None:
+    async def run(cls, db: AsyncSession, settings: Settings) -> None:
         """
         Logic to add data to the database.
         This should be the main logic of the factory.

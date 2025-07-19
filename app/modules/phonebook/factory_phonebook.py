@@ -5,18 +5,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.users import cruds_users
 from app.core.users.factory_users import CoreUsersFactory
+from app.core.utils.config import Settings
 from app.modules.phonebook import cruds_phonebook, models_phonebook
 from app.modules.phonebook.types_phonebook import Kinds, RoleTags
 from app.types.factory import Factory
 
 
 class PhonebookFactory(Factory):
-    def __init__(self):
-        super().__init__(
-            depends_on=[CoreUsersFactory],
-        )
+    depends_on = [CoreUsersFactory]
 
-    async def create_association(self, db: AsyncSession):
+    @classmethod
+    async def create_association(cls, db: AsyncSession):
         association_id_1 = str(uuid.uuid4())
         await cruds_phonebook.create_association(
             association=models_phonebook.Association(
@@ -72,9 +71,11 @@ class PhonebookFactory(Factory):
                 db=db,
             )
 
-    async def run(self, db: AsyncSession):
-        await self.create_association(db)
+    @classmethod
+    async def run(cls, db: AsyncSession, settings: Settings) -> None:
+        await cls.create_association(db)
 
-    async def should_run(self, db: AsyncSession):
+    @classmethod
+    async def should_run(cls, db: AsyncSession):
         assos = await cruds_phonebook.get_all_associations(db=db)
         return len(assos) == 0

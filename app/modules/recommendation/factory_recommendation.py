@@ -4,6 +4,7 @@ from uuid import uuid4
 from faker import Faker
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.utils.config import Settings
 from app.modules.recommendation import cruds_recommendation
 from app.modules.recommendation.models_recommendation import Recommendation
 from app.types.factory import Factory
@@ -12,12 +13,10 @@ faker = Faker("fr_FR")
 
 
 class RecommendationFactory(Factory):
-    def __init__(self):
-        super().__init__(
-            depends_on=[],
-        )
+    depends_on = []
 
-    async def run(self, db: AsyncSession):
+    @classmethod
+    async def run(cls, db: AsyncSession, settings: Settings) -> None:
         titles = [
             faker.sentence(nb_words=3),
             faker.sentence(nb_words=3),
@@ -55,5 +54,6 @@ class RecommendationFactory(Factory):
                 db=db,
             )
 
-    async def should_run(self, db: AsyncSession):
+    @classmethod
+    async def should_run(cls, db: AsyncSession):
         return len(await cruds_recommendation.get_recommendations(db=db)) == 0

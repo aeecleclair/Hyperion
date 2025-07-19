@@ -2,18 +2,17 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.utils.config import Settings
 from app.modules.campaign import cruds_campaign, models_campaign
 from app.modules.campaign.types_campaign import ListType
 from app.types.factory import Factory
 
 
 class CampaignFactory(Factory):
-    def __init__(self):
-        super().__init__(
-            depends_on=[],
-        )
+    depends_on = []
 
-    async def run(self, db: AsyncSession):
+    @classmethod
+    async def run(cls, db: AsyncSession, settings: Settings) -> None:
         section_id = str(uuid.uuid4())
         await cruds_campaign.add_section(
             db=db,
@@ -60,5 +59,6 @@ class CampaignFactory(Factory):
             ),
         )
 
-    async def should_run(self, db: AsyncSession):
+    @classmethod
+    async def should_run(cls, db: AsyncSession):
         return len(await cruds_campaign.get_lists(db=db)) == 0

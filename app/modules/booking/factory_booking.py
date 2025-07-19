@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import GroupType
 from app.core.users.factory_users import CoreUsersFactory
+from app.core.utils.config import Settings
 from app.modules.booking import (
     cruds_booking,
     models_booking,
@@ -15,12 +16,10 @@ from app.types.factory import Factory
 
 
 class BookingFactory(Factory):
-    def __init__(self):
-        super().__init__(
-            depends_on=[CoreUsersFactory],
-        )
+    depends_on = [CoreUsersFactory]
 
-    async def run(self, db: AsyncSession):
+    @classmethod
+    async def run(cls, db: AsyncSession, settings: Settings) -> None:
         booking_manager_id = str(uuid.uuid4())
         room_id_1 = str(uuid.uuid4())
         await cruds_booking.create_manager(
@@ -61,5 +60,6 @@ class BookingFactory(Factory):
             ),
         )
 
-    async def should_run(self, db: AsyncSession):
+    @classmethod
+    async def should_run(cls, db: AsyncSession):
         return len(await cruds_booking.get_rooms(db=db)) == 0

@@ -14,7 +14,6 @@ from app.core.users import cruds_users
 from app.core.users.models_users import CoreUser
 from app.core.utils import security
 from app.core.utils.config import Settings, UserDemoFactoryConfig
-from app.dependencies import get_settings
 from app.types.factory import Factory
 from app.types.floors_type import FloorsType
 
@@ -22,49 +21,44 @@ NB_USERS = 100
 
 faker = Faker("fr_FR")
 hyperion_error_logger = logging.getLogger("hyperion.error")
-try:
-    settings: Settings | None = get_settings()
-except Exception:
-    settings = None
-    hyperion_error_logger.warning(
-        "Settings not available, using default values for factories. "
-        "This is expected if you are running this code outside of the app context. Such as in a test or a script.",
-    )
 
 
 class CoreUsersFactory(Factory):
-    demo_users = (
-        settings.FACTORIES_DEMO_USERS
-        if settings and settings.FACTORIES_DEMO_USERS
-        else [
-            UserDemoFactoryConfig(
-                id=str(uuid.uuid4()),
-                firstname="Alice",
-                name="Dupont",
-                nickname="alice",
-                email="demo1@test.fr",
-                password=Faker().password(16, True, True, True, True),
-            ),
-            UserDemoFactoryConfig(
-                id=str(uuid.uuid4()),
-                firstname="Bob",
-                name="Martin",
-                nickname="bob",
-                email="demo2@test.fr",
-                password=Faker().password(16, True, True, True, True),
-            ),
-        ]
-    )
-    demo_users_id = [user.id for user in demo_users]
+    demo_users: list[UserDemoFactoryConfig]
+    demo_users_id: list[str]
 
     other_users_id = [str(uuid.uuid4()) for _ in range(NB_USERS)]
 
-    def __init__(self):
-        super().__init__(
-            depends_on=[],
-        )
+    depends_on = []
 
-    async def create_core_users(self, db: AsyncSession):
+    @classmethod
+    def init_demo_users(cls, settings: Settings) -> None:
+        cls.demo_users = (
+            settings.FACTORIES_DEMO_USERS
+            if settings.FACTORIES_DEMO_USERS
+            else [
+                UserDemoFactoryConfig(
+                    id=str(uuid.uuid4()),
+                    firstname="Alice",
+                    name="Dupont",
+                    nickname="alice",
+                    email="demo1@test.fr",
+                    password=Faker().password(16, True, True, True, True),
+                ),
+                UserDemoFactoryConfig(
+                    id=str(uuid.uuid4()),
+                    firstname="Bob",
+                    name="Martin",
+                    nickname="bob",
+                    email="demo2@test.fr",
+                    password=Faker().password(16, True, True, True, True),
+                ),
+            ]
+        )
+        cls.demo_users_id = [user.id for user in cls.demo_users]
+
+    @classmethod
+    async def create_core_users(cls, db: AsyncSession):
         password = [faker.password(16, True, True, True, True) for _ in range(NB_USERS)]
         firstname = [faker.first_name() for _ in range(NB_USERS)]
         name = [faker.last_name() for _ in range(NB_USERS)]
@@ -99,7 +93,7 @@ class CoreUsersFactory(Factory):
                 account_type = groups_type.AccountType.external
 
             user = CoreUser(
-                id=self.other_users_id[i],
+                id=cls.other_users_id[i],
                 password_hash=password[i],
                 firstname=firstname[i],
                 nickname=nickname[i],
@@ -115,7 +109,7 @@ class CoreUsersFactory(Factory):
             )
             await cruds_users.create_user(db=db, user=user)
 
-        for user_info in self.demo_users:
+        for user_info in cls.demo_users:
             user = CoreUser(
                 id=user_info.id,
                 password_hash=security.get_password_hash(
@@ -144,8 +138,11 @@ class CoreUsersFactory(Factory):
                     ),
                 )
 
-    async def run(self, db: AsyncSession):
-        await self.create_core_users(db=db)
+    @classmethod
+    async def run(cls, db: AsyncSession, settings: Settings) -> None:
+        cls.init_demo_users(settings)
+        await cls.create_core_users(db=db)
 
-    async def should_run(self, db: AsyncSession):
+    @classmethod
+    async def should_run(cls, db: AsyncSession) -> bool:
         return len(await cruds_users.get_users(db=db)) == 0

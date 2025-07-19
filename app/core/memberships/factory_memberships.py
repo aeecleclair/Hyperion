@@ -11,6 +11,7 @@ from app.core.memberships.schemas_memberships import (
     UserMembershipSimple,
 )
 from app.core.users.factory_users import CoreUsersFactory
+from app.core.utils.config import Settings
 from app.types.factory import Factory
 
 
@@ -28,19 +29,17 @@ class CoreMembershipsFactory(Factory):
         GroupType.BDS.value,
     ]
 
-    def __init__(self):
-        super().__init__(
-            depends_on=[CoreUsersFactory],
-        )
+    depends_on = [CoreUsersFactory]
 
-    async def run(self, db: AsyncSession):
-        for i in range(len(self.memberships_ids)):
+    @classmethod
+    async def run(cls, db: AsyncSession, settings: Settings) -> None:
+        for i in range(len(cls.memberships_ids)):
             await cruds_memberships.create_association_membership(
                 db,
                 MembershipSimple(
-                    id=self.memberships_ids[i],
-                    name=self.memberships_names[i],
-                    manager_group_id=self.memberships_manager_group_id[i],
+                    id=cls.memberships_ids[i],
+                    name=cls.memberships_names[i],
+                    manager_group_id=cls.memberships_manager_group_id[i],
                 ),
             )
 
@@ -54,7 +53,7 @@ class CoreMembershipsFactory(Factory):
                     user_membership=UserMembershipSimple(
                         id=uuid4(),
                         user_id=user_id,
-                        association_membership_id=self.memberships_ids[i],
+                        association_membership_id=cls.memberships_ids[i],
                         start_date=datetime.datetime(
                             random.randint(2020, 2023),  # noqa: S311
                             random.randint(1, 12),  # noqa: S311
@@ -71,7 +70,8 @@ class CoreMembershipsFactory(Factory):
                 )
         await db.commit()
 
-    async def should_run(self, db: AsyncSession):
+    @classmethod
+    async def should_run(cls, db: AsyncSession):
         result = (
             len(
                 await cruds_memberships.get_association_memberships(
@@ -86,6 +86,6 @@ class CoreMembershipsFactory(Factory):
                     db=db,
                 )
             )
-            self.memberships_ids = [
+            cls.memberships_ids = [
                 membership.id for membership in registered_memberships
             ]
