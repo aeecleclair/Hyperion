@@ -51,7 +51,7 @@ class UserDemoFactoryConfig(BaseModel):
     nickname: str | None
     email: str
     password: str | None  # If None, the password will be generated randomly
-    groups: list[str] = []  # Groups to which the user will be added
+    groups: list[str] = []  # Groups id to which the user will be added
 
 
 class Settings(BaseSettings):
@@ -194,11 +194,7 @@ class Settings(BaseSettings):
     USE_FACTORIES: bool = (
         False  # If True, the database will be populated with fake data
     )
-    FACTORIES_DEMO_USERS_DICT: list[UserDemoFactoryConfig] = []
-    FACTORIES_DEMO_USERS_INFO: list[
-        tuple[str, str, str, str | None, str, str | None, str]
-    ] = []  # Deprecated, use FACTORIES_DEMO_USERS_DICT instead
-
+    FACTORIES_DEMO_USERS: list[UserDemoFactoryConfig] = []
     #####################################
     # SMTP configuration using starttls #
     #####################################
@@ -475,29 +471,6 @@ class Settings(BaseSettings):
                 ),
             )
         return helloasso_configurations
-
-    @computed_field  # type: ignore[prop-decorator]
-    @cached_property
-    def FACTORIES_DEMO_USERS(cls) -> list[UserDemoFactoryConfig]:
-        """
-        Parse the FACTORIES_DEMO_USERS_DICT or FACTORIES_DEMO_USERS_INFO to return a list of UserDemoFactoryConfig
-        """
-        if cls.FACTORIES_DEMO_USERS_DICT:
-            return cls.FACTORIES_DEMO_USERS_DICT
-        if cls.FACTORIES_DEMO_USERS_INFO:
-            return [
-                UserDemoFactoryConfig(
-                    id=user_id,
-                    firstname=firstname,
-                    name=name,
-                    nickname=nickname,
-                    email=email,
-                    password=password,
-                    groups=groups,
-                )
-                for user_id, firstname, name, nickname, email, password, groups in cls.FACTORIES_DEMO_USERS_INFO
-            ]
-        return []
 
     #######################################
     #          Fields validation          #

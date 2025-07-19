@@ -25,19 +25,15 @@ class Factory(ABC):
 
 
     class YourModuleFactory(Factory):
-        def __init__(cls):
-            super().__init__(
-                name="module",
-                depends_on=[],
-            )
+        depends_on = []  # List of factories that should be run before this factory
 
         @classmethod
-    async def run(cls, db: AsyncSession):
-            pass
+        async def run(cls, db: AsyncSession):
+                pass
 
         @classmethod
-    async def should_run(cls, db: AsyncSession):
-            return True
+        async def should_run(cls, db: AsyncSession):
+                return True
     ```
     The `should_run` method should return True if the factory should run, and False if it should not.
     """
