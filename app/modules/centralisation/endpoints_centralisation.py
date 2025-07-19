@@ -5,4 +5,5 @@ module = Module(
     root="centralisation",
     tag="Centralisation",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    factory=None,
 )

@@ -79,6 +79,7 @@ core_module = CoreModule(
     tag="MyECLPay",
     router=router,
     payment_callback=validate_transfer_callback,
+    factory=None,
 )
 
 templates = Jinja2Templates(directory="assets/templates")

@@ -23,6 +23,7 @@ core_module = CoreModule(
     root="payment",
     tag="Payments",
     router=router,
+    factory=None,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")

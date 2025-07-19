@@ -79,7 +79,7 @@ async def get_association_membership_by_id(
     )
 
 
-def create_association_membership(
+async def create_association_membership(
     db: AsyncSession,
     membership: schemas_memberships.MembershipSimple,
 ):
@@ -347,7 +347,7 @@ async def get_user_membership_by_id(
     )
 
 
-def create_user_membership(
+async def create_user_membership(
     db: AsyncSession,
     user_membership: schemas_memberships.UserMembershipSimple,
 ):

@@ -1,4 +1,3 @@
-import logging
 from os import path
 from pathlib import Path
 
@@ -23,12 +22,11 @@ from app.utils.tools import is_group_id_valid
 router = APIRouter(tags=["Core"])
 
 core_module = CoreModule(
-    root="",
+    root="core",
     tag="Core",
     router=router,
+    factory=None,
 )
-
-hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 @router.get(

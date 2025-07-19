@@ -5,4 +5,5 @@ module = Module(
     root="purchases",
     tag="Purchases",
     default_allowed_account_types=[AccountType.student, AccountType.external],
+    factory=None,
 )

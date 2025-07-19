@@ -17,7 +17,12 @@ from app.dependencies import (
     is_user_an_ecl_member,
     is_user_in,
 )
-from app.modules.advert import cruds_advert, models_advert, schemas_advert
+from app.modules.advert import (
+    cruds_advert,
+    models_advert,
+    schemas_advert,
+)
+from app.modules.advert.factory_advert import AdvertFactory
 from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
@@ -34,6 +39,7 @@ module = Module(
     root=root,
     tag="Advert",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    factory=AdvertFactory(),
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
