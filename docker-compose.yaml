@@ -35,8 +35,10 @@ services:
         condition: service_started
     ports:
       - 8000:8000
+    env_file:
+      - .env
     volumes:
       - ./logs:/app/logs:Z
       - ./data:/app/data:Z
-      - ./.env:/app/.env:Z
+      - ./config.yaml:/app/config.yaml:Z
       - ./firebase.json:/app/firebase.json:Z

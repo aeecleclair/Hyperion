@@ -146,7 +146,7 @@ def init_payment_tools(
         return {}
 
     payment_tools: dict[HelloAssoConfigName, PaymentTool] = {}
-    for helloasso_config in settings.PARSED_HELLOASSO_CONFIGURATIONS:
+    for helloasso_config in settings.HELLOASSO_CONFIGURATIONS:
         payment_tools[helloasso_config.name] = PaymentTool(
             config=helloasso_config,
             helloasso_api_base=settings.HELLOASSO_API_BASE,
