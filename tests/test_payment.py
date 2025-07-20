@@ -49,7 +49,7 @@ async def init_objects() -> None:
         name="Test Payment",
         amount=100,
         hello_asso_checkout_id=1,
-        secret="payment helloasso_secret",
+        secret="secret",
     )
     await add_object_to_db(checkout_with_existing_checkout_payment)
 
@@ -69,7 +69,7 @@ async def init_objects() -> None:
         name="Test Payment",
         amount=100,
         hello_asso_checkout_id=2,
-        secret="helloasso_secret",
+        secret="secret",
     )
     await add_object_to_db(checkout)
 
@@ -134,7 +134,7 @@ def test_webhook_payment_for_already_received_payment(
             },
             "metadata": {
                 "hyperion_checkout_id": str(checkout_with_existing_checkout_payment.id),
-                "helloasso_secret": checkout_with_existing_checkout_payment.secret,
+                "secret": checkout_with_existing_checkout_payment.secret,
             },
         },
     )
@@ -184,7 +184,7 @@ def test_webhook_payment_with_non_existing_checkout(
             "metadata": {
                 # Non existing hyperion_checkout_id
                 "hyperion_checkout_id": "8e7afb08-a152-4e8e-b1f1-251666d96dbb",
-                "helloasso_secret": "helloasso_secret",
+                "secret": "secret",
             },
         },
     )
@@ -212,13 +212,13 @@ def test_webhook_payment_with_invalid_helloasso_secret(
             },
             "metadata": {
                 "hyperion_checkout_id": str(checkout.id),
-                "helloasso_secret": "invalid helloasso_secret",
+                "secret": "invalid secret",
             },
         },
     )
 
     assert response.status_code == 400
-    assert response.json() == {"detail": "helloasso_secret mismatch"}
+    assert response.json() == {"detail": "Secret mismatch"}
 
 
 async def test_webhook_payment(
@@ -236,7 +236,7 @@ async def test_webhook_payment(
             },
             "metadata": {
                 "hyperion_checkout_id": str(checkout.id),
-                "helloasso_secret": "helloasso_secret",
+                "secret": "secret",
             },
         },
     )
@@ -262,7 +262,7 @@ async def test_webhook_payment(
             },
             "metadata": {
                 "hyperion_checkout_id": str(checkout.id),
-                "helloasso_secret": "helloasso_secret",
+                "secret": "secret",
             },
         },
     )
@@ -320,7 +320,7 @@ async def test_webhook_payment_callback(
             },
             "metadata": {
                 "hyperion_checkout_id": str(checkout.id),
-                "helloasso_secret": "helloasso_secret",
+                "secret": "secret",
             },
         },
     )
@@ -365,12 +365,12 @@ async def test_webhook_payment_callback_fail(
             },
             "metadata": {
                 "hyperion_checkout_id": str(checkout.id),
-                "helloasso_secret": "helloasso_secret",
+                "secret": "secret",
             },
         },
     )
 
-    assert response.status_code == 204
+    assert response.status_code == 204, response.text
     mocked_callback.assert_called_once()
     mocked_hyperion_security_logger.assert_called_with(
         f"Payment: call to module {TEST_MODULE_ROOT} payment callback for checkout (hyperion_checkout_id: {checkout.id}, HelloAsso checkout_id: {checkout.id}) failed",
@@ -413,7 +413,7 @@ async def test_payment_tool_init_checkout(
         HelloAssoConfig(
             name="CDR",
             helloasso_client_id="clientid",
-            helloasso_client_secret="helloasso_client_secret",
+            helloasso_client_secret="secret",
             helloasso_slug="test",
             redirect_url=redirect_url,
         ),
@@ -476,7 +476,7 @@ async def test_payment_tool_init_checkout_with_one_failure(
         HelloAssoConfig(
             name="CDR",
             helloasso_client_id="clientid",
-            helloasso_client_secret="helloasso_client_secret",
+            helloasso_client_secret="secret",
             helloasso_slug="test",
             redirect_url=redirect_url,
         ),
@@ -553,7 +553,7 @@ async def test_payment_tool_init_checkout_fail(
         HelloAssoConfig(
             name="CDR",
             helloasso_client_id="clientid",
-            helloasso_client_secret="helloasso_client_secret",
+            helloasso_client_secret="secret",
             helloasso_slug="test",
         ),
     ]
