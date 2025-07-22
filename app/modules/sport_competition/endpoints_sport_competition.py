@@ -1294,11 +1294,7 @@ async def get_current_user_participant(
 async def get_participants_for_sport(
     sport_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(
-            group_id=GroupType.competition_admin,
-        ),
-    ),
+    user: schemas_users.CoreUser = Depends(is_user()),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -1323,19 +1319,14 @@ async def get_participants_for_sport(
 async def get_participants_for_school(
     school_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_competition_user(
-            comptition_group_id=CompetitionGroupType.schools_bds,
-        ),
-    ),
+    user: schemas_users.CoreUser = Depends(is_user()),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
 ) -> list[schemas_sport_competition.ParticipantComplete]:
     if (
-        GroupType.competition_admin.value
-        not in [group.id for group in user.user.groups]
-        and user.user.school_id != school_id
+        GroupType.competition_admin.value not in [group.id for group in user.groups]
+        and user.school_id != school_id
     ):
         raise HTTPException(
             status_code=403,
@@ -1378,12 +1369,22 @@ async def join_sport(
             status_code=500,
             detail="School not found in the database",
         )
+    participant_db = await cruds_sport_competition.load_participant_by_user_id(
+        user.user_id,
+        edition.id,
+        db,
+    )
+    if participant_db is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="User already registered for a sport",
+        )
     if not checksport_category_compatibility(
         user.sport_category,
         sport.sport_category,
     ):
         raise HTTPException(
-            status_code=400,
+            status_code=403,
             detail="Sport category does not match user sport category",
         )
     if sport.team_size > 1:
@@ -1409,7 +1410,7 @@ async def join_sport(
         if team.school_id != user.user.school_id:
             raise HTTPException(
                 status_code=403,
-                detail="Unauthorized action, team does not belong to your school",
+                detail="Unauthorized action, team does not belong to user school",
             )
         if (
             not participant_info.substitute
@@ -1465,7 +1466,6 @@ async def join_sport(
     return participant
 
 
-# TODO: change logic to validate CompetitionUser and not CompetitionParticipant
 @module.router.patch(
     "/competition/participants/{user_id}/sports/{sport_id}/validate",
     status_code=204,
@@ -1476,7 +1476,7 @@ async def validate_participant(
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
         is_competition_user(
-            comptition_group_id=CompetitionGroupType.schools_bds,
+            competition_group=CompetitionGroupType.schools_bds,
         ),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
@@ -1549,7 +1549,7 @@ async def invalidate_participant(
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
         is_competition_user(
-            comptition_group_id=CompetitionGroupType.schools_bds,
+            competition_group=CompetitionGroupType.schools_bds,
         ),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
@@ -1603,7 +1603,7 @@ async def delete_participant(
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
         is_competition_user(
-            comptition_group_id=CompetitionGroupType.schools_bds,
+            competition_group=CompetitionGroupType.schools_bds,
         ),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
@@ -1644,6 +1644,184 @@ async def delete_participant(
 
 
 # endregion: Participants
+# region: Locations
+
+
+@module.router.get(
+    "/competition/locations",
+    response_model=list[schemas_sport_competition.Location],
+)
+async def get_all_locations(
+    db: AsyncSession = Depends(get_db),
+    user: schemas_users.CoreUser = Depends(is_user()),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> list[schemas_sport_competition.Location]:
+    return await cruds_sport_competition.load_all_locations_by_edition_id(
+        edition.id,
+        db,
+    )
+
+
+@module.router.get(
+    "/competition/locations/{location_id}",
+    response_model=schemas_sport_competition.LocationComplete,
+)
+async def get_location_by_id(
+    location_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: schemas_users.CoreUser = Depends(is_user()),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> schemas_sport_competition.LocationComplete:
+    location = await cruds_sport_competition.load_location_by_id(location_id, db)
+    if location is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Location not found in the database",
+        )
+    if location.edition_id != edition.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Location does not belong to the current edition",
+        )
+    matches = await cruds_sport_competition.load_all_matches_by_location_id(
+        location_id,
+        db,
+    )
+    return schemas_sport_competition.LocationComplete(
+        id=location.id,
+        name=location.name,
+        address=location.address,
+        latitude=location.latitude,
+        longitude=location.longitude,
+        edition_id=location.edition_id,
+        matches=matches,
+    )
+
+
+@module.router.post(
+    "/competition/locations",
+    status_code=201,
+    response_model=schemas_sport_competition.Location,
+)
+async def create_location(
+    location_info: schemas_sport_competition.LocationBase,
+    db: AsyncSession = Depends(get_db),
+    user: schemas_users.CoreUser = Depends(
+        is_user_in(
+            group_id=GroupType.competition_admin,
+        ),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> schemas_sport_competition.Location:
+    existing_location = await cruds_sport_competition.load_location_by_name(
+        location_info.name,
+        edition.id,
+        db,
+    )
+    if existing_location is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Location with this name already exists",
+        )
+    location = schemas_sport_competition.Location(
+        id=uuid4(),
+        name=location_info.name,
+        address=location_info.address,
+        latitude=location_info.latitude,
+        longitude=location_info.longitude,
+        edition_id=edition.id,
+    )
+    await cruds_sport_competition.add_location(location, db)
+    return location
+
+
+@module.router.patch(
+    "/competition/locations/{location_id}",
+    status_code=204,
+)
+async def edit_location(
+    location_id: UUID,
+    location_info: schemas_sport_competition.LocationEdit,
+    db: AsyncSession = Depends(get_db),
+    user: schemas_users.CoreUser = Depends(
+        is_user_in(
+            group_id=GroupType.competition_admin,
+        ),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> None:
+    location = await cruds_sport_competition.load_location_by_id(location_id, db)
+    if location is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Location not found in the database",
+        )
+    if location.edition_id != edition.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Location does not belong to the current edition",
+        )
+    if location_info.name and location_info.name != location.name:
+        existing_location = await cruds_sport_competition.load_location_by_name(
+            location_info.name,
+            edition.id,
+            db,
+        )
+        if existing_location is not None:
+            raise HTTPException(
+                status_code=400,
+                detail="Location with this name already exists",
+            )
+    await cruds_sport_competition.update_location(location_id, location_info, db)
+
+
+@module.router.delete(
+    "/competition/locations/{location_id}",
+    status_code=204,
+)
+async def delete_location(
+    location_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: schemas_users.CoreUser = Depends(
+        is_user_in(
+            group_id=GroupType.competition_admin,
+        ),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> None:
+    location = await cruds_sport_competition.load_location_by_id(location_id, db)
+    if location is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Location not found in the database",
+        )
+    if location.edition_id != edition.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Location does not belong to the current edition",
+        )
+    if await cruds_sport_competition.load_all_matches_by_location_id(
+        location_id,
+        db,
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete a location with matches scheduled",
+        )
+    await cruds_sport_competition.delete_location_by_id(location_id, db)
+
+
+# endregion: Locations
 # region: Matches
 
 

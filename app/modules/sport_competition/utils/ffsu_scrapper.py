@@ -45,6 +45,8 @@ def scrap_ffsu_licences(
     result: list[FFSUData] = []
     for target_row in target_rows:
         cells = target_row.find_all("td")  # type: ignore[union-attr]
+        if len(cells) < 11:
+            continue
         result.append(
             FFSUData(
                 licences=cells[0].get_text(strip=True).split(" "),

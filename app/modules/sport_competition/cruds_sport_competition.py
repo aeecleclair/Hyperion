@@ -3,9 +3,10 @@ from uuid import UUID
 
 from sqlalchemy import and_, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.core.schools import models_schools
+from app.core.users import models_users
 from app.modules.sport_competition import (
     models_sport_competition,
     schemas_sport_competition,
@@ -23,6 +24,8 @@ from app.modules.sport_competition.utils_sport_competition import (
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
+
+# region: Competition Groups
 
 
 async def load_memberships_by_competition_group(
@@ -114,6 +117,10 @@ async def remove_user_from_group(
     await db.flush()
 
 
+# endregion: Competition Groups
+# region: Competition Users
+
+
 async def load_all_competition_users(
     edition_id: UUID,
     db: AsyncSession,
@@ -137,9 +144,15 @@ async def load_competition_user_by_id(
     user = (
         (
             await db.execute(
-                select(models_sport_competition.CompetitionUser).where(
+                select(models_sport_competition.CompetitionUser)
+                .where(
                     models_sport_competition.CompetitionUser.user_id == user_id,
                     models_sport_competition.CompetitionUser.edition_id == edition_id,
+                )
+                .options(
+                    joinedload(
+                        models_sport_competition.CompetitionUser.user
+                    ).selectinload(models_users.CoreUser.groups),
                 ),
             )
         )
@@ -185,6 +198,10 @@ async def update_competition_user(
         .values(**user.model_dump(exclude_unset=True)),
     )
     await db.flush()
+
+
+# endregion: Competition Users
+# region: Schools Extensions
 
 
 async def add_school(
@@ -332,6 +349,10 @@ async def load_all_schools(
     ]
 
 
+# endregion: Schools Extensions
+# region: Participants
+
+
 async def add_participant(
     participant: schemas_sport_competition.Participant,
     db: AsyncSession,
@@ -345,6 +366,7 @@ async def add_participant(
             school_id=participant.school_id,
             substitute=participant.substitute,
             license=participant.license,
+            is_licence_valid=participant.is_licence_valid,
         ),
     )
     await db.flush()
@@ -439,7 +461,11 @@ async def load_participant_by_user_id(
                     == edition_id,
                 )
                 .options(
-                    selectinload(models_sport_competition.CompetitionUser.user),
+                    joinedload(
+                        models_sport_competition.CompetitionParticipant.user
+                    ).selectinload(
+                        models_sport_competition.CompetitionUser.user,
+                    ),
                 ),
             )
         )
@@ -467,7 +493,11 @@ async def load_participant_by_ids(
                     == edition_id,
                 )
                 .options(
-                    selectinload(models_sport_competition.CompetitionUser.user),
+                    joinedload(
+                        models_sport_competition.CompetitionParticipant.user
+                    ).selectinload(
+                        models_sport_competition.CompetitionUser.user,
+                    ),
                 ),
             )
         )
@@ -487,7 +517,11 @@ async def load_all_participants(
             models_sport_competition.CompetitionParticipant.edition_id == edition_id,
         )
         .options(
-            selectinload(models_sport_competition.CompetitionUser.user),
+            joinedload(
+                models_sport_competition.CompetitionParticipant.user
+            ).selectinload(
+                models_sport_competition.CompetitionUser.user,
+            ),
         ),
     )
     return [
@@ -511,7 +545,13 @@ async def load_participants_by_school_id(
                     models_sport_competition.CompetitionParticipant.school_id
                     == school_id,
                 )
-                .options(selectinload(models_sport_competition.CompetitionUser.user)),
+                .options(
+                    joinedload(
+                        models_sport_competition.CompetitionParticipant.user
+                    ).selectinload(
+                        models_sport_competition.CompetitionUser.user,
+                    ),
+                ),
             )
         )
         .scalars()
@@ -539,7 +579,11 @@ async def load_participants_by_sport_id(
                     == edition_id,
                 )
                 .options(
-                    selectinload(models_sport_competition.CompetitionUser.user),
+                    joinedload(
+                        models_sport_competition.CompetitionParticipant.user
+                    ).selectinload(
+                        models_sport_competition.CompetitionUser.user,
+                    ),
                 ),
             )
         )
@@ -571,7 +615,11 @@ async def load_participants_by_school_and_sport_ids(
                     == school_id,
                 )
                 .options(
-                    selectinload(models_sport_competition.CompetitionUser.user),
+                    joinedload(
+                        models_sport_competition.CompetitionParticipant.user
+                    ).selectinload(
+                        models_sport_competition.CompetitionUser.user,
+                    ),
                 ),
             )
         )
@@ -602,6 +650,10 @@ async def load_validated_participants_number_by_school_and_sport_ids(
         ),
     )
     return result.scalar() or 0
+
+
+# endregion: Participants
+# region: Quotas
 
 
 async def get_school_general_quota(
@@ -778,6 +830,10 @@ async def load_all_sport_quotas_by_sport_id(
     ]
 
 
+# endregion: Quotas
+# region: Sports
+
+
 async def add_sport(
     sport: schemas_sport_competition.Sport,
     db: AsyncSession,
@@ -874,6 +930,10 @@ async def load_all_sports(
         )
         for sport in sports.scalars().all()
     ]
+
+
+# endregion: Sports
+# region: Teams
 
 
 async def add_team(
@@ -1033,6 +1093,10 @@ async def count_teams_by_school_and_sport_ids(
         ),
     )
     return result.scalar() or 0
+
+
+# endregion: Teams
+# region: Competition Editions
 
 
 async def add_edition(
@@ -1202,6 +1266,133 @@ async def load_all_editions(
     ]
 
 
+# endregion: Competition Editions
+# region: Locations
+
+
+async def add_location(
+    location: schemas_sport_competition.Location,
+    db: AsyncSession,
+):
+    db.add(
+        models_sport_competition.CompetitionLocation(
+            id=location.id,
+            name=location.name,
+            description=location.description,
+            address=location.address,
+            latitude=location.latitude,
+            longitude=location.longitude,
+            edition_id=location.edition_id,
+        )
+    )
+    await db.flush()
+
+
+async def update_location(
+    location_id: UUID,
+    location: schemas_sport_competition.LocationEdit,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_sport_competition.CompetitionLocation)
+        .where(models_sport_competition.CompetitionLocation.id == location_id)
+        .values(**location.model_dump(exclude_unset=True)),
+    )
+    await db.flush()
+
+
+async def delete_location_by_id(
+    location_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_sport_competition.CompetitionLocation).where(
+            models_sport_competition.CompetitionLocation.id == location_id,
+        ),
+    )
+    await db.flush()
+
+
+async def load_location_by_id(
+    location_id: UUID,
+    db: AsyncSession,
+) -> schemas_sport_competition.Location | None:
+    location = await db.get(models_sport_competition.CompetitionLocation, location_id)
+    return (
+        schemas_sport_competition.Location(
+            id=location.id,
+            name=location.name,
+            description=location.description,
+            address=location.address,
+            latitude=location.latitude,
+            longitude=location.longitude,
+            edition_id=location.edition_id,
+        )
+        if location
+        else None
+    )
+
+
+async def load_all_locations_by_edition_id(
+    edition_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_sport_competition.Location]:
+    locations = await db.execute(
+        select(models_sport_competition.CompetitionLocation).where(
+            models_sport_competition.CompetitionLocation.edition_id == edition_id,
+        ),
+    )
+    return [
+        schemas_sport_competition.Location(
+            id=location.id,
+            name=location.name,
+            description=location.description,
+            address=location.address,
+            latitude=location.latitude,
+            longitude=location.longitude,
+            edition_id=location.edition_id,
+        )
+        for location in locations.scalars().all()
+    ]
+
+
+async def load_location_by_name(
+    name: str,
+    edition_id: UUID,
+    db: AsyncSession,
+) -> schemas_sport_competition.Location | None:
+    location = (
+        (
+            await db.execute(
+                select(models_sport_competition.CompetitionLocation).where(
+                    models_sport_competition.CompetitionLocation.name == name,
+                    models_sport_competition.CompetitionLocation.edition_id
+                    == edition_id,
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return (
+        schemas_sport_competition.Location(
+            id=location.id,
+            name=location.name,
+            description=location.description,
+            address=location.address,
+            latitude=location.latitude,
+            longitude=location.longitude,
+            edition_id=location.edition_id,
+        )
+        if location
+        else None
+    )
+
+
+# endregion: Locations
+# region: Matches
+
+
 async def add_match(
     match: schemas_sport_competition.Match,
     db: AsyncSession,
@@ -1325,6 +1516,28 @@ async def load_match_by_teams_ids(
     return match_model_to_schema(match) if match else None
 
 
+async def load_all_matches_by_location_id(
+    location_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_sport_competition.Match]:
+    matches = await db.execute(
+        select(models_sport_competition.Match)
+        .where(
+            models_sport_competition.Match.location_id == location_id,
+        )
+        .options(
+            selectinload(models_sport_competition.Match.team1),
+            selectinload(models_sport_competition.Match.team2),
+        ),
+    )
+
+    return [match_model_to_schema(match) for match in matches.scalars().all()]
+
+
+# endregion: Matches
+# region: Products
+
+
 async def get_products(
     edition_id: UUID,
     db: AsyncSession,
@@ -1400,6 +1613,10 @@ async def delete_product_by_id(
         ),
     )
     await db.flush()
+
+
+# endregion: Products
+# region: Product Variants
 
 
 async def load_product_variants(
@@ -1492,6 +1709,10 @@ async def delete_product_variant_by_id(
         ),
     )
     await db.flush()
+
+
+# endregion: Product Variants
+# region: Purchases
 
 
 async def load_purchases_by_user_id(
@@ -1647,6 +1868,10 @@ async def delete_purchase(
     await db.flush()
 
 
+# endregion: Purchases
+# region: Payments
+
+
 async def load_user_payments(
     user_id: str,
     edition_id: UUID,
@@ -1712,6 +1937,10 @@ async def delete_payment(
     await db.flush()
 
 
+# endregion: Payments
+# region: Checkouts
+
+
 def create_checkout(
     db: AsyncSession,
     checkout: schemas_sport_competition.Checkout,
@@ -1751,3 +1980,6 @@ async def get_checkout_by_checkout_id(
         if checkout
         else None
     )
+
+
+# endregion: Checkouts
