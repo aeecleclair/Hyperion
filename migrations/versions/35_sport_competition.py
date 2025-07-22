@@ -133,7 +133,6 @@ def upgrade() -> None:
         sa.Column("cameraman_quota", sa.Integer(), nullable=True),
         sa.Column("pompom_quota", sa.Integer(), nullable=True),
         sa.Column("fanfare_quota", sa.Integer(), nullable=True),
-        sa.Column("non_athlete_quota", sa.Integer(), nullable=True),
         sa.ForeignKeyConstraint(["edition_id"], ["competition_edition.id"]),
         sa.ForeignKeyConstraint(
             ["school_id"],
