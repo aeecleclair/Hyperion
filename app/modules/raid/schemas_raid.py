@@ -53,7 +53,7 @@ class SecurityFile(SecurityFileBase):
     id: str
 
 
-class ParticipantBase(BaseModel):
+class RaidParticipantBase(BaseModel):
     name: str
     firstname: str
     birthday: date
@@ -61,7 +61,7 @@ class ParticipantBase(BaseModel):
     email: str
 
 
-class ParticipantPreview(ParticipantBase):
+class RaidParticipantPreview(RaidParticipantBase):
     id: str
     bike_size: Size | None
     t_shirt_size: Size | None
@@ -73,7 +73,7 @@ class ParticipantPreview(ParticipantBase):
     number_of_validated_document: int
 
 
-class Participant(ParticipantPreview):
+class RaidParticipant(RaidParticipantPreview):
     address: str | None
     other_school: str | None = None
     company: str | None = None
@@ -88,7 +88,7 @@ class Participant(ParticipantPreview):
     is_minor: bool
 
 
-class ParticipantUpdate(BaseModel):
+class RaidParticipantUpdate(BaseModel):
     name: str | None = None
     firstname: str | None = None
     birthday: date | None = None
@@ -110,32 +110,32 @@ class ParticipantUpdate(BaseModel):
     parent_authorization_id: str | None = None
 
 
-class TeamBase(BaseModel):
+class RaidTeamBase(BaseModel):
     name: str
 
 
-class TeamPreview(TeamBase):
+class RaidTeamPreview(RaidTeamBase):
     id: str
     number: int | None
-    captain: ParticipantPreview
-    second: ParticipantPreview | None
+    captain: RaidParticipantPreview
+    second: RaidParticipantPreview | None
     difficulty: Difficulty | None
     meeting_place: MeetingPlace | None
     validation_progress: float
 
 
-class Team(TeamBase):
+class RaidTeam(RaidTeamBase):
     id: str
     number: int | None
-    captain: Participant
-    second: Participant | None
+    captain: RaidParticipant
+    second: RaidParticipant | None
     difficulty: Difficulty | None
     meeting_place: MeetingPlace | None
     validation_progress: float
     file_id: str | None
 
 
-class TeamUpdate(BaseModel):
+class RaidTeamUpdate(BaseModel):
     name: str | None = None
     number: int | None = None
     difficulty: Difficulty | None = None
@@ -161,6 +161,6 @@ class PaymentUrl(BaseModel):
     url: str
 
 
-class ParticipantCheckout(BaseModel):
+class RaidParticipantCheckout(BaseModel):
     participant_id: str
     checkout_id: str
