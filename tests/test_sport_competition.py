@@ -19,7 +19,7 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-school: models_schools.CoreSchool
+school1: models_schools.CoreSchool
 school2: models_schools.CoreSchool
 
 active_edition: models_sport_competition.CompetitionEdition
@@ -39,7 +39,7 @@ competition_user_school_bds: models_sport_competition.CompetitionUser
 competition_user_sport_manager: models_sport_competition.CompetitionUser
 
 ecl_extension: models_sport_competition.SchoolExtension
-school_extension: models_sport_competition.SchoolExtension
+school1_extension: models_sport_competition.SchoolExtension
 ecl_general_quota: models_sport_competition.SchoolGeneralQuota
 school_general_quota: models_sport_competition.SchoolGeneralQuota
 
@@ -58,20 +58,13 @@ participant2: models_sport_competition.CompetitionParticipant
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
-    for group in CompetitionGroupType:
-        group_model = models_sport_competition.CompetitionGroup(
-            id=group.value,
-            name=group.name,
-        )
-        await add_object_to_db(group_model)
-
-    global school, school2, active_edition, old_edition
-    school = models_schools.CoreSchool(
+    global school1, school2, active_edition, old_edition
+    school1 = models_schools.CoreSchool(
         id=uuid.uuid4(),
         name="Emlyon Business School",
         email_regex=r"^[a-zA-Z0-9._%+-]+@edu.emlyon.fr$",
     )
-    await add_object_to_db(school)
+    await add_object_to_db(school1)
     school2 = models_schools.CoreSchool(
         id=uuid.uuid4(),
         name="Centrale Supelec",
@@ -105,7 +98,7 @@ async def init_objects() -> None:
     )
     school_bds_user = await create_user_with_groups(
         [],
-        school_id=school.id,
+        school_id=school1.id,
     )
     sport_manager_user = await create_user_with_groups(
         [],
@@ -148,34 +141,36 @@ async def init_objects() -> None:
         created_at=datetime.now(UTC),
     )
     await add_object_to_db(competition_user_sport_manager)
-    user1_bds_membership = models_sport_competition.EditionGroupMembership(
+    user1_bds_membership = models_sport_competition.CompetitionGroupMembership(
         user_id=school_bds_user.id,
         edition_id=active_edition.id,
-        group_id=CompetitionGroupType.schools_bds.value,
+        group=CompetitionGroupType.schools_bds,
     )
     await add_object_to_db(user1_bds_membership)
-    user2_sport_manager_membership = models_sport_competition.EditionGroupMembership(
-        user_id=sport_manager_user.id,
-        edition_id=active_edition.id,
-        group_id=CompetitionGroupType.sport_manager.value,
+    user2_sport_manager_membership = (
+        models_sport_competition.CompetitionGroupMembership(
+            user_id=sport_manager_user.id,
+            edition_id=active_edition.id,
+            group=CompetitionGroupType.sport_manager,
+        )
     )
     await add_object_to_db(user2_sport_manager_membership)
 
-    global ecl_extension, school_extension
+    global ecl_extension, school1_extension
     ecl_extension = models_sport_competition.SchoolExtension(
         school_id=SchoolType.centrale_lyon.value,
         from_lyon=True,
         active=True,
-        inscription_enabled=True,
+        inscription_enabled=False,
     )
     await add_object_to_db(ecl_extension)
-    school_extension = models_sport_competition.SchoolExtension(
-        school_id=school.id,
+    school1_extension = models_sport_competition.SchoolExtension(
+        school_id=school1.id,
         from_lyon=False,
         active=True,
-        inscription_enabled=True,
+        inscription_enabled=False,
     )
-    await add_object_to_db(school_extension)
+    await add_object_to_db(school1_extension)
 
     global ecl_general_quota, school_general_quota
     ecl_general_quota = models_sport_competition.SchoolGeneralQuota(
@@ -189,7 +184,7 @@ async def init_objects() -> None:
     )
     await add_object_to_db(ecl_general_quota)
     school_general_quota = models_sport_competition.SchoolGeneralQuota(
-        school_id=school.id,
+        school_id=school1.id,
         edition_id=active_edition.id,
         athlete_quota=1,
         cameraman_quota=1,
@@ -239,7 +234,7 @@ async def init_objects() -> None:
 
     global ecl_sport_free_quota, ecl_sport_used_quota
     ecl_sport_free_quota = models_sport_competition.SchoolSportQuota(
-        school_id=school.id,
+        school_id=school1.id,
         edition_id=active_edition.id,
         sport_id=sport_free_quota.id,
         participant_quota=2,
@@ -247,7 +242,7 @@ async def init_objects() -> None:
     )
     await add_object_to_db(ecl_sport_free_quota)
     ecl_sport_used_quota = models_sport_competition.SchoolSportQuota(
-        school_id=school.id,
+        school_id=school1.id,
         edition_id=active_edition.id,
         sport_id=sport_used_quota.id,
         participant_quota=0,
@@ -733,6 +728,12 @@ async def test_enable_inscription(
     assert enabled_edition is not None
     assert enabled_edition["inscription_enabled"] is True, enabled_edition
 
+    client.post(
+        f"/competition/editions/{active_edition.id}/inscription",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json=False,
+    )
+
 
 async def test_patch_edition_as_random(
     client: TestClient,
@@ -762,3 +763,260 @@ async def test_patch_edition_as_random(
     )
     assert updated_edition_check is not None
     assert updated_edition_check["name"] == active_edition.name
+
+
+async def test_get_competition_users(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        "/competition/users",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 200, response.json()
+    users = response.json()
+    assert len(users) > 0
+    assert all(user["edition_id"] == str(active_edition.id) for user in users)
+
+
+async def test_get_competition_user_by_id(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        f"/competition/users/{competition_user_admin.user_id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200, response.json()
+    user = response.json()
+    assert user["user_id"] == str(competition_user_admin.user_id)
+    assert user["edition_id"] == str(competition_user_admin.edition_id)
+    assert competition_user_admin.sport_category is not None
+    assert user["sport_category"] == competition_user_admin.sport_category.value
+
+
+async def test_post_competition_user(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        "/competition/users",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json={
+            "sport_category": SportCategory.masculine.value,
+        },
+    )
+    assert response.status_code == 201, response.json()
+    user = response.json()
+    assert user["user_id"] == str(user3.id)
+    assert user["edition_id"] == str(active_edition.id)
+    assert user["sport_category"] == SportCategory.masculine.value
+
+
+async def test_patch_competition_user_as_me(
+    client: TestClient,
+) -> None:
+    response = client.patch(
+        "/competition/users/me",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json={
+            "sport_category": SportCategory.feminine.value,
+        },
+    )
+    assert response.status_code == 204, response.json()
+
+    user_response = client.get(
+        "/competition/users/me",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert user_response.status_code == 200, user_response.json()
+    user = user_response.json()
+    assert user["sport_category"] == SportCategory.feminine.value
+
+
+async def test_patch_competition_user_as_admin(
+    client: TestClient,
+) -> None:
+    response = client.patch(
+        f"/competition/users/{competition_user_admin.user_id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "sport_category": SportCategory.masculine.value,
+        },
+    )
+    assert response.status_code == 204, response.json()
+
+    user_response = client.get(
+        f"/competition/users/{competition_user_admin.user_id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert user_response.status_code == 200, user_response.json()
+    user = user_response.json()
+    assert user["sport_category"] == SportCategory.masculine.value
+
+
+async def test_add_user_to_group_as_random(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        f"/competition/groups/{CompetitionGroupType.schools_bds.value}/users/{competition_user_admin.user_id}",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 403, response.json()
+
+    user = client.get(
+        f"/competition/users/{competition_user_admin.user_id}/groups",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert user.status_code == 200, user.json()
+    user_json = user.json()
+    assert CompetitionGroupType.schools_bds.value not in [
+        group["group"] for group in user_json
+    ], user_json
+
+
+async def test_add_user_to_group_as_admin(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        f"/competition/groups/{CompetitionGroupType.schools_bds.value}/users/{competition_user_admin.user_id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 201, response.json()
+
+    user = client.get(
+        "/competition/users/me/groups",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert user.status_code == 200, user.json()
+    user_json = user.json()
+    assert CompetitionGroupType.schools_bds.value in [
+        group["group"] for group in user_json
+    ], user_json
+
+
+async def test_get_schools(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        "/competition/schools",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 200, response.json()
+    schools = response.json()
+    assert len(schools) > 0
+    assert any(school["school_id"] == str(school1.id) for school in schools)
+
+
+async def test_post_school_extension_as_random(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        "/competition/schools",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json={
+            "school_id": str(school2.id),
+            "from_lyon": False,
+            "active": True,
+            "inscription_enabled": False,
+        },
+    )
+    assert response.status_code == 403, response.json()
+
+    schools = client.get(
+        "/competition/schools",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert schools.status_code == 200, schools.json()
+    schools_json = schools.json()
+    unauthorized_school = next(
+        (s for s in schools_json if s["school_id"] == str(school2.id)),
+        None,
+    )
+    assert unauthorized_school is None, schools_json
+
+
+async def test_post_school_extension_as_admin(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        "/competition/schools",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "school_id": str(school2.id),
+            "from_lyon": False,
+            "active": True,
+            "inscription_enabled": False,
+        },
+    )
+    assert response.status_code == 201, response.json()
+
+    schools = client.get(
+        "/competition/schools",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert schools.status_code == 200, schools.json()
+    schools_json = schools.json()
+    print(schools_json)
+    new_school_extension = next(
+        (s for s in schools_json if s["school_id"] == str(school2.id)),
+        None,
+    )
+    assert new_school_extension is not None, schools_json
+
+
+async def test_patch_school_extension_as_random(
+    client: TestClient,
+) -> None:
+    response = client.patch(
+        f"/competition/schools/{school1.id}",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json={
+            "from_lyon": False,
+            "active": True,
+            "inscription_enabled": True,
+        },
+    )
+    assert response.status_code == 403, response.json()
+
+    schools = client.get(
+        "/competition/schools",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert schools.status_code == 200, schools.json()
+    schools_json = schools.json()
+    updated_school = next(
+        (s for s in schools_json if s["school_id"] == str(school1.id)),
+        None,
+    )
+    assert updated_school is not None
+    assert updated_school["from_lyon"] is False
+    assert updated_school["active"] is True
+    assert updated_school["inscription_enabled"] is False
+
+
+async def test_patch_school_extension_as_admin(
+    client: TestClient,
+) -> None:
+    response = client.patch(
+        f"/competition/schools/{school1.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "from_lyon": True,
+            "active": False,
+            "inscription_enabled": True,
+        },
+    )
+    assert response.status_code == 204, response.json()
+
+    schools = client.get(
+        "/competition/schools",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert schools.status_code == 200, schools.json()
+    schools_json = schools.json()
+    updated_school = next(
+        (s for s in schools_json if s["school_id"] == str(school1.id)),
+        None,
+    )
+    assert updated_school is not None
+    assert updated_school["from_lyon"] is True
+    assert updated_school["active"] is False
+    assert updated_school["inscription_enabled"] is True

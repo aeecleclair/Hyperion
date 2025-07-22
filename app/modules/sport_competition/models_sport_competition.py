@@ -87,7 +87,7 @@ class SchoolExtension(Base):
         lazy="selectin",
         init=False,
     )
-    general_quota: Mapped["SchoolGeneralQuota"] = relationship(
+    general_quota: Mapped["SchoolGeneralQuota | None"] = relationship(
         "SchoolGeneralQuota",
         lazy="selectin",
         init=False,
@@ -96,6 +96,7 @@ class SchoolExtension(Base):
         "SchoolProductQuota",
         lazy="selectin",
         default_factory=list,
+        init=False,
     )
 
 
