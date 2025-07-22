@@ -25,9 +25,8 @@ def is_user_a_member_of_extended(
     """
     Generate a dependency which will:
         * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
-        * make sure the user making the request exists and is a member of the group with the given id
-        * make sure the user is not an external user if `exclude_external` is True
-        * return the corresponding user `models_users.CoreUser` object
+        * make sure the user making the request exists and is a member of the group with the given id (if provided)
+        * make sure the user is a member of the competition group with the given id for the current edition (if provided)
     """
 
     async def is_user_a_member_of(
