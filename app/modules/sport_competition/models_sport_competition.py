@@ -50,7 +50,7 @@ class CompetitionUser(Base):
         ForeignKey("competition_edition.id"),
         primary_key=True,
     )
-    sport_category: Mapped[SportCategory | None]
+    sport_category: Mapped[SportCategory]
     validated: Mapped[bool]
     created_at: Mapped[datetime]
     is_pompom: Mapped[bool] = mapped_column(default=False)
@@ -121,6 +121,12 @@ class SchoolGeneralQuota(Base):
     cameraman_quota: Mapped[int | None]
     pompom_quota: Mapped[int | None]
     fanfare_quota: Mapped[int | None]
+    athlete_cameraman_quota: Mapped[int | None]
+    athlete_pompom_quota: Mapped[int | None]
+    athlete_fanfare_quota: Mapped[int | None]
+    non_athlete_cameraman_quota: Mapped[int | None]
+    non_athlete_pompom_quota: Mapped[int | None]
+    non_athlete_fanfare_quota: Mapped[int | None]
 
 
 class SchoolSportQuota(Base):
@@ -203,11 +209,10 @@ class CompetitionParticipant(Base):
         ForeignKey("competition_edition.id"),
         primary_key=True,
     )
-    # We duplicate school_id data to avoid horrible select queries
     school_id: Mapped[UUID] = mapped_column(
         ForeignKey("competition_school_extension.school_id"),
     )
-    team_id: Mapped[UUID | None] = mapped_column(ForeignKey("competition_team.id"))
+    team_id: Mapped[UUID] = mapped_column(ForeignKey("competition_team.id"))
     substitute: Mapped[bool]
     license: Mapped[str | None]
     is_licence_valid: Mapped[bool]
@@ -227,7 +232,7 @@ class CompetitionParticipant(Base):
     )
 
 
-class CompetitionLocation(Base):
+class MatchLocation(Base):
     __tablename__ = "competition_location"
 
     id: Mapped[PrimaryKey]
@@ -270,8 +275,8 @@ class Match(Base):
         lazy="selectin",
         init=False,
     )
-    location: Mapped[CompetitionLocation] = relationship(
-        "CompetitionLocation",
+    location: Mapped[MatchLocation] = relationship(
+        "MatchLocation",
         lazy="selectin",
         init=False,
     )
@@ -288,84 +293,19 @@ class SportPodium(Base):
         ForeignKey("competition_edition.id"),
         primary_key=True,
     )
-    first_place_points: Mapped[int]
-    second_place_points: Mapped[int]
-    third_place_points: Mapped[int]
-    team1_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("competition_team.id"),
-        nullable=True,
+    school_id: Mapped[UUID] = mapped_column(
+        ForeignKey("competition_school_extension.school_id"),
+        primary_key=True,
     )
-    team2_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("competition_team.id"),
-        nullable=True,
-    )
-    team3_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("competition_team.id"),
-        nullable=True,
-    )
-    user1_id: Mapped[str | None] = mapped_column(
-        nullable=True,
-    )
-    user2_id: Mapped[str | None] = mapped_column(
-        nullable=True,
-    )
-    user3_id: Mapped[str | None] = mapped_column(
-        nullable=True,
-    )
+    points: Mapped[int]
+    rank: Mapped[int]
+    team_id: Mapped[UUID] = mapped_column(ForeignKey("competition_team.id"))
 
-    team1: Mapped[CompetitionTeam] = relationship(
+    team: Mapped[CompetitionTeam] = relationship(
         "CompetitionTeam",
-        foreign_keys=[team1_id],
+        foreign_keys=[team_id],
         lazy="selectin",
         init=False,
-    )
-    team2: Mapped[CompetitionTeam] = relationship(
-        "CompetitionTeam",
-        foreign_keys=[team2_id],
-        lazy="selectin",
-        init=False,
-    )
-    team3: Mapped[CompetitionTeam] = relationship(
-        "CompetitionTeam",
-        foreign_keys=[team3_id],
-        lazy="selectin",
-        init=False,
-    )
-    user1: Mapped[CompetitionUser] = relationship(
-        "CompetitionUser",
-        foreign_keys=[user1_id],
-        lazy="selectin",
-        init=False,
-    )
-    user2: Mapped[CompetitionUser] = relationship(
-        "CompetitionUser",
-        foreign_keys=[user2_id],
-        lazy="selectin",
-        init=False,
-    )
-    user3: Mapped[CompetitionUser] = relationship(
-        "CompetitionUser",
-        foreign_keys=[user3_id],
-        lazy="selectin",
-        init=False,
-    )
-
-    __table_args__ = (
-        ForeignKeyConstraint(
-            ["user1_id", "edition_id"],
-            ["competition_user.user_id", "competition_user.edition_id"],
-            name="fk_sport_podium_user1",
-        ),
-        ForeignKeyConstraint(
-            ["user2_id", "edition_id"],
-            ["competition_user.user_id", "competition_user.edition_id"],
-            name="fk_sport_podium_user2",
-        ),
-        ForeignKeyConstraint(
-            ["user3_id", "edition_id"],
-            ["competition_user.user_id", "competition_user.edition_id"],
-            name="fk_sport_podium_user3",
-        ),
     )
 
 
