@@ -1,17 +1,19 @@
 from datetime import datetime
+from uuid import UUID
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.models_core import CoreSchool, CoreUser
+from app.core.schools.models_schools import CoreSchool
+from app.core.users.models_users import CoreUser
 from app.modules.sport_competition.types_sport_competition import SportCategory
-from app.types.sqlalchemy import Base
+from app.types.sqlalchemy import Base, PrimaryKey
 
 
 class CompetitionEdition(Base):
     __tablename__ = "competition_edition"
 
-    id: Mapped[str] = mapped_column(primary_key=True)
+    id: Mapped[PrimaryKey]
     year: Mapped[int]
     name: Mapped[str]
     start_date: Mapped[datetime]
@@ -22,7 +24,7 @@ class CompetitionEdition(Base):
 class CompetitionGroup(Base):
     __tablename__ = "competition_group"
 
-    id: Mapped[str] = mapped_column(primary_key=True)
+    id: Mapped[PrimaryKey]
     name: Mapped[str] = mapped_column(unique=True)
 
     members: Mapped[list[CoreUser]] = relationship(
@@ -38,11 +40,11 @@ class AnnualGroupMembership(Base):
     __tablename__ = "competition_annual_group_membership"
 
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
-    group_id: Mapped[str] = mapped_column(
+    group_id: Mapped[UUID] = mapped_column(
         ForeignKey("competition_group.id"),
         primary_key=True,
     )
-    edition_id: Mapped[str] = mapped_column(
+    edition_id: Mapped[UUID] = mapped_column(
         ForeignKey("competition_edition.id"),
         primary_key=True,
     )
@@ -51,7 +53,7 @@ class AnnualGroupMembership(Base):
 class Sport(Base):
     __tablename__ = "competition_sport"
 
-    id: Mapped[str] = mapped_column(primary_key=True)
+    id: Mapped[PrimaryKey]
     activated: Mapped[bool]
     name: Mapped[str]
     team_size: Mapped[int]
@@ -62,7 +64,7 @@ class Sport(Base):
 class SchoolExtension(Base):
     __tablename__ = "competition_school_extension"
 
-    school_id: Mapped[str] = mapped_column(
+    school_id: Mapped[UUID] = mapped_column(
         ForeignKey("core_school.id"),
         primary_key=True,
     )
@@ -84,11 +86,11 @@ class SchoolExtension(Base):
 class SchoolGeneralQuota(Base):
     __tablename__ = "competition_school_general_quota"
 
-    school_id: Mapped[str] = mapped_column(
+    school_id: Mapped[UUID] = mapped_column(
         ForeignKey("competition_school_extension.school_id"),
         primary_key=True,
     )
-    edition_id: Mapped[str] = mapped_column(
+    edition_id: Mapped[UUID] = mapped_column(
         ForeignKey("competition_edition.id"),
         primary_key=True,
     )
@@ -102,15 +104,15 @@ class SchoolGeneralQuota(Base):
 class SchoolSportQuota(Base):
     __tablename__ = "competition_sport_quota"
 
-    sport_id: Mapped[str] = mapped_column(
+    sport_id: Mapped[UUID] = mapped_column(
         ForeignKey("competition_sport.id"),
         primary_key=True,
     )
-    school_id: Mapped[str] = mapped_column(
+    school_id: Mapped[UUID] = mapped_column(
         ForeignKey("competition_school_extension.school_id"),
         primary_key=True,
     )
-    edition_id: Mapped[str] = mapped_column(
+    edition_id: Mapped[UUID] = mapped_column(
         ForeignKey("competition_edition.id"),
         primary_key=True,
     )
@@ -121,12 +123,12 @@ class SchoolSportQuota(Base):
 class Team(Base):
     __tablename__ = "competition_team"
 
-    id: Mapped[str] = mapped_column(primary_key=True)
-    sport_id: Mapped[str] = mapped_column(ForeignKey("competition_sport.id"))
-    school_id: Mapped[str] = mapped_column(
+    id: Mapped[PrimaryKey]
+    sport_id: Mapped[UUID] = mapped_column(ForeignKey("competition_sport.id"))
+    school_id: Mapped[UUID] = mapped_column(
         ForeignKey("competition_school_extension.school_id"),
     )
-    edition_id: Mapped[str] = mapped_column(
+    edition_id: Mapped[UUID] = mapped_column(
         ForeignKey("competition_edition.id"),
     )
     name: Mapped[str]
@@ -144,15 +146,15 @@ class Participant(Base):
     __tablename__ = "competition_participant"
 
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
-    sport_id: Mapped[str] = mapped_column(
+    sport_id: Mapped[UUID] = mapped_column(
         ForeignKey("competition_sport.id"),
         primary_key=True,
     )
-    edition_id: Mapped[str] = mapped_column(
+    edition_id: Mapped[UUID] = mapped_column(
         ForeignKey("competition_edition.id"),
         primary_key=True,
     )
-    team_id: Mapped[str | None] = mapped_column(ForeignKey("competition_team.id"))
+    team_id: Mapped[UUID | None] = mapped_column(ForeignKey("competition_team.id"))
     substitute: Mapped[bool]
     license: Mapped[str]
     validated: Mapped[bool]
@@ -167,19 +169,19 @@ class Participant(Base):
 class Match(Base):
     __tablename__ = "competition_match"
 
-    id: Mapped[str] = mapped_column(primary_key=True)
-    sport_id: Mapped[str] = mapped_column(ForeignKey("competition_sport.id"))
-    edition_id: Mapped[str] = mapped_column(
+    id: Mapped[PrimaryKey]
+    sport_id: Mapped[UUID] = mapped_column(ForeignKey("competition_sport.id"))
+    edition_id: Mapped[UUID] = mapped_column(
         ForeignKey("competition_edition.id"),
     )
     name: Mapped[str]
-    team1_id: Mapped[str] = mapped_column(ForeignKey("competition_team.id"))
-    team2_id: Mapped[str] = mapped_column(ForeignKey("competition_team.id"))
+    team1_id: Mapped[UUID] = mapped_column(ForeignKey("competition_team.id"))
+    team2_id: Mapped[UUID] = mapped_column(ForeignKey("competition_team.id"))
     date: Mapped[datetime | None]
     location: Mapped[str | None]
     score_team1: Mapped[int | None]
     score_team2: Mapped[int | None]
-    winner_id: Mapped[str | None] = mapped_column(ForeignKey("competition_team.id"))
+    winner_id: Mapped[UUID | None] = mapped_column(ForeignKey("competition_team.id"))
 
     team1: Mapped[Team] = relationship(
         "Team",
