@@ -47,5 +47,11 @@ class ProductPublicType(Enum):
     athlete = "athlete"
 
 
+class ProductSchoolType(Enum):
+    centrale = "centrale"
+    from_lyon = "from_lyon"
+    others = "others"
+
+
 class DefaultCoreData(Enum):
     challenge_year = datetime.now(tz=UTC).year
