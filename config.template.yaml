@@ -33,7 +33,7 @@ CLIENT_URL: "http://127.0.0.1:8000/"
 # ```
 # `AuthClientClassName` should be a class from `app.utils.auth.providers`
 # `secret` may be omitted to use PKCE instead of a client secret
-AUTH_CLIENTS_DICT: []
+AUTH_CLIENTS:
 
 #####################
 # Hyperion settings #

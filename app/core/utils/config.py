@@ -14,7 +14,7 @@ from pydantic_settings import (
     YamlConfigSettingsSource,
 )
 
-from app.core.payment.types_payment import HelloAssoConfig
+from app.core.payment.types_payment import HelloAssoConfig, HelloAssoConfigName
 from app.types.exceptions import (
     DotenvInvalidAuthClientNameInError,
     DotenvInvalidVariableError,
@@ -137,7 +137,7 @@ class Settings(BaseSettings):
     # `AuthClientClassName` should be a class from `app.utils.auth.providers`
     # `secret` may be omitted to use PKCE instead of a client secret
     # NOTE: AUTH_CLIENTS property should never be used in the code. To get an auth client, use `KNOWN_AUTH_CLIENTS`
-    AUTH_CLIENTS_DICT: dict[str, AuthClientConfig] = {}
+    AUTH_CLIENTS: dict[str, AuthClientConfig] = {}
 
     #####################
     # Hyperion settings #
@@ -249,8 +249,8 @@ class Settings(BaseSettings):
     # HELLOASSO_API_BASE should have the format: `api.helloasso-sandbox.com`
     # HelloAsso only allow 20 simultaneous active access token. Note that each Hyperion worker will need its own access token.
 
-    # [["name", "helloasso_client_id", "helloasso_client_secret", "helloasso_slug", "redirection_uri"]]
-    HELLOASSO_CONFIGURATIONS: list[HelloAssoConfig] = []
+    # {"<ConfigName>": {"helloasso_client_id": "<id>", "helloasso_client_secret" :"<secret>", "helloasso_slug": "<slug>", "redirection_uri": "<redirection_uri>"}}
+    HELLOASSO_CONFIGURATIONS: dict[HelloAssoConfigName, HelloAssoConfig] = {}
     HELLOASSO_API_BASE: str | None = None
 
     # Maximum wallet balance for MyECLPay in cents, we will prevent user from adding more money to their wallet if it will make their balance exceed this value
@@ -340,7 +340,7 @@ class Settings(BaseSettings):
     def KNOWN_AUTH_CLIENTS(cls) -> dict[str, providers.BaseAuthClient]:
         clients = {}
         auth_client_class: type[providers.BaseAuthClient]
-        for client_id, configuration in cls.AUTH_CLIENTS_DICT.items():
+        for client_id, configuration in cls.AUTH_CLIENTS.items():
             try:
                 auth_client_class = getattr(
                     providers,
