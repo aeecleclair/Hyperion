@@ -33,6 +33,7 @@ module = Module(
     root="tombola",
     tag="Raffle",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    factory=None,
 )
 
 hyperion_raffle_logger = logging.getLogger("hyperion.raffle")

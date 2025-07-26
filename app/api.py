@@ -7,5 +7,5 @@ from app.module import all_modules
 api_router = APIRouter()
 
 
-for core_module in all_modules:
-    api_router.include_router(core_module.router)
+for module in all_modules:
+    api_router.include_router(module.router)

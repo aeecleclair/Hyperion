@@ -36,6 +36,21 @@ class AuthClientConfig(BaseModel):
     auth_client: str
 
 
+class UserDemoFactoryConfig(BaseModel):
+    """
+    Configuration for the user demo factory.
+    This class is used to store the configuration of the user demo factory.
+    It is used to create an instance of the user demo factory.
+    """
+
+    firstname: str
+    name: str
+    nickname: str | None
+    email: str
+    password: str | None  # If None, the password will be generated randomly
+    groups: list[str] = []  # Groups id to which the user will be added
+
+
 class Settings(BaseSettings):
     """
     Settings for Hyperion
@@ -74,9 +89,9 @@ class Settings(BaseSettings):
     # This should be changed in the future when Pydantic will support it
     _yaml_file: ClassVar[str]
 
-    def __init__(self, _yaml_file, _env_file):
+    def __init__(self, _yaml_file, _env_file, **kwargs):
         Settings._yaml_file = _yaml_file
-        super().__init__(_env_file=_env_file)
+        super().__init__(_env_file=_env_file, **kwargs)
 
     # We configure sources that should be used to fill settings.
     # This method should return a tuple of sources
@@ -162,7 +177,10 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = ""
     POSTGRES_TZ: str = ""
     DATABASE_DEBUG: bool = False  # If True, the database will log all queries
-
+    USE_FACTORIES: bool = (
+        False  # If True, the database will be populated with fake data
+    )
+    FACTORIES_DEMO_USERS: list[UserDemoFactoryConfig] = []
     #####################################
     # SMTP configuration using starttls #
     #####################################

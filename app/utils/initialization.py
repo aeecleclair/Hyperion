@@ -17,7 +17,9 @@ from app.core.groups import models_groups
 from app.core.schools import models_schools
 from app.core.utils.config import Settings
 from app.types import core_data
-from app.types.exceptions import CoreDataNotFoundError
+from app.types.exceptions import (
+    CoreDataNotFoundError,
+)
 from app.types.sqlalchemy import Base
 from app.utils.tools import execute_async_or_sync_method
 

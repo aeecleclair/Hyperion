@@ -64,6 +64,7 @@ module = Module(
     tag="Cdr",
     payment_callback=validate_payment,
     default_allowed_groups_ids=[GroupType.admin_cdr],
+    factory=None,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -1508,7 +1509,7 @@ async def add_membership(
                 ),
             )
         else:
-            cruds_memberships.create_user_membership(
+            await cruds_memberships.create_user_membership(
                 db=db,
                 user_membership=schemas_memberships.UserMembershipSimple(
                     id=uuid4(),
