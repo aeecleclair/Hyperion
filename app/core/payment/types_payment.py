@@ -42,7 +42,6 @@ class HelloAssoConfigName(Enum):
 
 
 class HelloAssoConfig(BaseModel):
-    name: HelloAssoConfigName
     helloasso_client_id: str
     helloasso_client_secret: str
     helloasso_slug: str

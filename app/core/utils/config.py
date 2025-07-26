@@ -16,9 +16,7 @@ from pydantic_settings import (
 
 from app.core.payment.types_payment import HelloAssoConfig, HelloAssoConfigName
 from app.types.exceptions import (
-    DotenvBothAuthClientAndAuthClientDictConfigured,
     DotenvInvalidAuthClientNameInError,
-    DotenvInvalidHelloAssoConfigNameError,
     DotenvInvalidVariableError,
     DotenvMissingVariableError,
     InvalidRSAKeyInDotenvError,
@@ -64,7 +62,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
-        yaml_file=".env.yaml",
+        yaml_file="config.yaml",
         case_sensitive=False,
         extra="ignore",
     )
@@ -139,18 +137,7 @@ class Settings(BaseSettings):
     # `AuthClientClassName` should be a class from `app.utils.auth.providers`
     # `secret` may be omitted to use PKCE instead of a client secret
     # NOTE: AUTH_CLIENTS property should never be used in the code. To get an auth client, use `KNOWN_AUTH_CLIENTS`
-    AUTH_CLIENTS_DICT: dict[str, AuthClientConfig] = {}
-
-    #
-    # DEPRECATED: AUTH_CLIENTS is deprecated and will be removed in a future version.
-    # Use AUTH_CLIENTS_DICT instead.
-    #
-    # Add an AUTH_CLIENTS variable to the .env dotenv to configure auth clients
-    # This variable should have the format: [["client id", "client secret", "redirect_uri", "app.utils.auth.providers class name"]]
-    # Use an empty secret `null` or `""` to use PKCE instead of a client secret
-    # Ex: AUTH_CLIENTS=[["Nextcloudclient", "supersecret", "https://mynextcloud.instance/", "NextcloudAuthClient"], ["Piwigo", "secret2", "https://mypiwigo.instance/", "BaseAuthClient"], ["mobileapp", null, "https://titan/", "BaseAuthClient"]]
-    # NOTE: AUTH_CLIENTS property should never be used in the code. To get an auth client, use `KNOWN_AUTH_CLIENTS`
-    AUTH_CLIENTS: list[tuple[str, str | None, list[str], str]] = []
+    AUTH_CLIENTS: dict[str, AuthClientConfig] = {}
 
     #####################
     # Hyperion settings #
@@ -262,10 +249,8 @@ class Settings(BaseSettings):
     # HELLOASSO_API_BASE should have the format: `api.helloasso-sandbox.com`
     # HelloAsso only allow 20 simultaneous active access token. Note that each Hyperion worker will need its own access token.
 
-    # [["name", "helloasso_client_id", "helloasso_client_secret", "helloasso_slug", "redirection_uri"]]
-    HELLOASSO_CONFIGURATIONS: list[
-        tuple[str, str, str, str, str] | tuple[str, str, str, str]
-    ] = []
+    # {"<ConfigName>": {"helloasso_client_id": "<id>", "helloasso_client_secret" :"<secret>", "helloasso_slug": "<slug>", "redirection_uri": "<redirection_uri>"}}
+    HELLOASSO_CONFIGURATIONS: dict[HelloAssoConfigName, HelloAssoConfig] = {}
     HELLOASSO_API_BASE: str | None = None
 
     # Maximum wallet balance for MyECLPay in cents, we will prevent user from adding more money to their wallet if it will make their balance exceed this value
@@ -355,53 +340,25 @@ class Settings(BaseSettings):
     def KNOWN_AUTH_CLIENTS(cls) -> dict[str, providers.BaseAuthClient]:
         clients = {}
         auth_client_class: type[providers.BaseAuthClient]
-
-        if cls.AUTH_CLIENTS_DICT:
-            if cls.AUTH_CLIENTS:
-                # The old and new way of configuring auth clients should not be used together
-                raise DotenvBothAuthClientAndAuthClientDictConfigured
-
-            for client_id, configuration in cls.AUTH_CLIENTS_DICT.items():
-                try:
-                    auth_client_class = getattr(
-                        providers,
-                        configuration.auth_client,
-                    )
-                except AttributeError as error:
-                    raise DotenvInvalidAuthClientNameInError(
-                        configuration.auth_client,
-                    ) from error
-
-                # We can create a new instance of the auth_client_class with the client id and secret
-                clients[client_id] = auth_client_class(
-                    client_id=client_id,
-                    # If the secret is empty, this mean the client is expected to use PKCE
-                    # We need to pass a None value to the auth_client_class instead of an other falsy value
-                    secret=configuration.secret or None,
-                    redirect_uri=configuration.redirect_uri,
+        for client_id, configuration in cls.AUTH_CLIENTS.items():
+            try:
+                auth_client_class = getattr(
+                    providers,
+                    configuration.auth_client,
                 )
-        # Support for the deprecated AUTH_CLIENTS variable
-        elif cls.AUTH_CLIENTS:
-            for client_id, secret, redirect_uri, auth_client_name in cls.AUTH_CLIENTS:
-                try:
-                    auth_client_class = getattr(
-                        providers,
-                        auth_client_name,
-                    )
-                except AttributeError as error:
-                    raise DotenvInvalidAuthClientNameInError(
-                        auth_client_name,
-                    ) from error
+            except AttributeError as error:
+                raise DotenvInvalidAuthClientNameInError(
+                    configuration.auth_client,
+                ) from error
 
-                # We can create a new instance of the auth_client_class with the client id and secret
-                clients[client_id] = auth_client_class(
-                    client_id=client_id,
-                    # If the secret is empty, this mean the client is expected to use PKCE
-                    # We need to pass a None value to the auth_client_class instead of an other falsy value
-                    secret=secret or None,
-                    redirect_uri=redirect_uri,
-                )
-
+            # We can create a new instance of the auth_client_class with the client id and secret
+            clients[client_id] = auth_client_class(
+                client_id=client_id,
+                # If the secret is empty, this mean the client is expected to use PKCE
+                # We need to pass a None value to the auth_client_class instead of an other falsy value
+                secret=configuration.secret or None,
+                redirect_uri=configuration.redirect_uri,
+            )
         return clients
 
     @computed_field  # type: ignore[prop-decorator]
@@ -418,40 +375,6 @@ class Settings(BaseSettings):
                 f"redis://:{cls.REDIS_PASSWORD or ''}@{cls.REDIS_HOST}:{cls.REDIS_PORT}"
             )
         return None
-
-    @computed_field  # type: ignore[prop-decorator]
-    @cached_property
-    def PARSED_HELLOASSO_CONFIGURATIONS(cls) -> list[HelloAssoConfig]:
-        """
-        Parse the HELLOASSO_CONFIGURATIONS to return a list of HelloAssoConfigName
-        """
-        helloasso_configurations = []
-        for config_tuple in cls.HELLOASSO_CONFIGURATIONS:
-            if len(config_tuple) == 4:
-                name, helloasso_client_id, helloasso_client_secret, helloasso_slug = (
-                    config_tuple
-                )
-                redirection_uri = None
-            else:
-                (
-                    name,
-                    helloasso_client_id,
-                    helloasso_client_secret,
-                    helloasso_slug,
-                    redirection_uri,
-                ) = config_tuple
-            if name not in HelloAssoConfigName._member_names_:
-                raise DotenvInvalidHelloAssoConfigNameError(name)
-            helloasso_configurations.append(
-                HelloAssoConfig(
-                    name=name,
-                    helloasso_client_id=helloasso_client_id,
-                    helloasso_client_secret=helloasso_client_secret,
-                    helloasso_slug=helloasso_slug,
-                    redirection_uri=redirection_uri,
-                ),
-            )
-        return helloasso_configurations
 
     #######################################
     #          Fields validation          #
@@ -534,4 +457,4 @@ def construct_prod_settings() -> Settings:
     """
     Return the production settings
     """
-    return Settings(_env_file=".env", _yaml_file=".env.yaml")
+    return Settings(_env_file=".env", _yaml_file="config.yaml")

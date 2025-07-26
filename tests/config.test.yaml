@@ -12,7 +12,7 @@ RSA_PRIVATE_PEM_STRING: "-----BEGIN RSA PRIVATE KEY-----\nMIIEpQIBAAKCAQEA1tpj3T
 # NOTE: A trailing / is required
 CLIENT_URL: "http://127.0.0.1:8000/"
 
-AUTH_CLIENTS_DICT:
+AUTH_CLIENTS:
   AppAuthClientWithPKCE:
     redirect_uri:
       - "http://127.0.0.1:8000/docs"
@@ -57,33 +57,16 @@ ENABLE_RATE_LIMITER: false
 # It should begin with 'http://' or 'https:// and should never end with a '/'
 CORS_ORIGINS: ["https://test-authorized-origin.com"]
 
-# PostgreSQL configuration #
-
-# Will be used if tests are run with postgresql (should be the case because postgres is used in production)
-POSTGRES_HOST: "localhost"
-POSTGRES_USER: "hyperion"
-POSTGRES_PASSWORD: "somerealpassword"
-POSTGRES_DB: "hyperion"
-POSTGRES_TZ: "Etc/UTC"
 # If True, will print all SQL queries in the console
 DATABASE_DEBUG: False
 
 # SMTP configuration using starttls #
-
 SMTP_ACTIVE: False
 SMTP_PORT: 587
 SMTP_SERVER: ""
 SMTP_USERNAME: ""
 SMTP_PASSWORD: ""
 SMTP_EMAIL: ""
-
-# Redis configuration #
-
-REDIS_HOST: "localhost"
-REDIS_PORT: 6379
-#REDIS_PASSWORD: ""
-REDIS_LIMIT: 5
-REDIS_WINDOW: 60
 
 # Push notifications using Firebase Cloud Messaging
 USE_FIREBASE: false
@@ -93,6 +76,6 @@ USE_FIREBASE: false
 TRUSTED_PAYMENT_REDIRECT_URLS: ["http://localhost:3000/payment_callback"]
 
 HELLOASSO_API_BASE: "https://api.helloasso.com/v3"
-HELLOASSO_CONFIGURATIONS: []
+HELLOASSO_CONFIGURATIONS: {}
 
 MYECLPAY_MAXIMUM_WALLET_BALANCE: 5000

@@ -50,7 +50,6 @@ class PaymentTool:
         config: HelloAssoConfig,
         helloasso_api_base: str,
     ):
-        self.name = config.name
         self._helloasso_api_base = helloasso_api_base
         self._auth_client = OAuth2Session(
             client_id=config.helloasso_client_id,
