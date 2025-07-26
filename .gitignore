@@ -12,6 +12,8 @@ data/
 # Dotenv file
 .env
 .env.yaml
+config.yaml
+
 
 # Firebase secrets
 firebase.json

@@ -97,7 +97,11 @@ def get_override_get_settings(**kwargs) -> Callable[[], Settings]:
     """Override the get_settings function to use the testing session"""
 
     def override_get_settings() -> Settings:
-        return Settings(_env_file=".env.test", _yaml_file=".env.test.yaml", **kwargs)
+        return Settings(
+            _env_file="./tests/.env.test",
+            _yaml_file="./tests/config.test.yaml",
+            **kwargs,
+        )
 
     return override_get_settings
 
@@ -159,6 +163,8 @@ TestingSessionLocal = async_sessionmaker(
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
+TEST_PASSWORD_HASH = security.get_password_hash(get_random_string())
+
 
 async def create_user_with_groups(
     groups: list[GroupType],
@@ -180,7 +186,9 @@ async def create_user_with_groups(
     """
 
     user_id = user_id or str(uuid.uuid4())
-    password_hash = security.get_password_hash(password or get_random_string())
+    password_hash = (
+        security.get_password_hash(password) if password else TEST_PASSWORD_HASH
+    )
     school_id = school_id.value if isinstance(school_id, SchoolType) else school_id
 
     user = models_users.CoreUser(

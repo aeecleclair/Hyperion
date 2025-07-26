@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.payment import cruds_payment, models_payment, schemas_payment
 from app.core.payment.payment_tool import PaymentTool
+from app.core.payment.types_payment import HelloAssoConfig, HelloAssoConfigName
 from app.core.schools import schemas_schools
 from app.core.users import schemas_users
 from app.types.module import Module
@@ -48,7 +49,7 @@ async def init_objects() -> None:
         name="Test Payment",
         amount=100,
         hello_asso_checkout_id=1,
-        secret="payment secret",
+        secret="secret",
     )
     await add_object_to_db(checkout_with_existing_checkout_payment)
 
@@ -194,7 +195,7 @@ def test_webhook_payment_with_non_existing_checkout(
     }
 
 
-def test_webhook_payment_with_invalid_secret(
+def test_webhook_payment_with_invalid_helloasso_secret(
     client: TestClient,
 ) -> None:
     """
@@ -371,7 +372,7 @@ async def test_webhook_payment_callback_fail(
         },
     )
 
-    assert response.status_code == 204
+    assert response.status_code == 204, response.text
     mocked_callback.assert_called_once()
     mocked_hyperion_security_logger.assert_called_with(
         f"Payment: call to module {TEST_MODULE_ROOT} payment callback for checkout (hyperion_checkout_id: {checkout.id}, HelloAsso checkout_id: {checkout.id}) failed",
@@ -410,11 +411,16 @@ async def test_payment_tool_init_checkout(
     # We create a mocked settings object with the required HelloAsso API credentials
     settings: Settings = mocker.MagicMock()
     settings.HELLOASSO_API_BASE = "https://example.com"
-    settings.HELLOASSO_CONFIGURATIONS = [
-        ("CDR", "clientid", "secret", "test", redirect_url),
-    ]
+    settings.HELLOASSO_CONFIGURATIONS = {
+        HelloAssoConfigName.CDR: HelloAssoConfig(
+            helloasso_client_id="clientid",
+            helloasso_client_secret="secret",
+            helloasso_slug="test",
+            redirect_url=redirect_url,
+        ),
+    }
     payment_tool = PaymentTool(
-        config=settings.PARSED_HELLOASSO_CONFIGURATIONS[0],
+        config=settings.HELLOASSO_CONFIGURATIONS[HelloAssoConfigName.CDR],
         helloasso_api_base=settings.HELLOASSO_API_BASE,
     )
 
@@ -467,12 +473,17 @@ async def test_payment_tool_init_checkout_with_one_failure(
     # We create a mocked settings object with the required HelloAsso API credentials
     settings: Settings = mocker.MagicMock()
     settings.HELLOASSO_API_BASE = "https://example.com"
-    settings.HELLOASSO_CONFIGURATIONS = [
-        ("CDR", "clientid", "secret", "test", redirect_url),
-    ]
+    settings.HELLOASSO_CONFIGURATIONS = {
+        HelloAssoConfigName.CDR: HelloAssoConfig(
+            helloasso_client_id="clientid",
+            helloasso_client_secret="secret",
+            helloasso_slug="test",
+            redirect_url=redirect_url,
+        ),
+    }
 
     payment_tool = PaymentTool(
-        config=settings.PARSED_HELLOASSO_CONFIGURATIONS[0],
+        config=settings.HELLOASSO_CONFIGURATIONS[HelloAssoConfigName.CDR],
         helloasso_api_base=settings.HELLOASSO_API_BASE,
     )
 
@@ -535,13 +546,21 @@ async def test_payment_tool_init_checkout_fail(
         "app.core.payment.endpoints_payment.hyperion_error_logger.error",
     )
 
+    redirect_url = "https://example.com"
     # We create a mocked settings object with the required HelloAsso API credentials
     settings: Settings = mocker.MagicMock()
     settings.HELLOASSO_API_BASE = "https://example.com"
-    settings.HELLOASSO_CONFIGURATIONS = [("CDR", "clientid", "secret", "test")]
+    settings.HELLOASSO_CONFIGURATIONS = {
+        HelloAssoConfigName.CDR: HelloAssoConfig(
+            helloasso_client_id="clientid",
+            helloasso_client_secret="secret",
+            helloasso_slug="test",
+            redirect_url=redirect_url,
+        ),
+    }
 
     payment_tool = PaymentTool(
-        config=settings.PARSED_HELLOASSO_CONFIGURATIONS[0],
+        config=settings.HELLOASSO_CONFIGURATIONS[HelloAssoConfigName.CDR],
         helloasso_api_base=settings.HELLOASSO_API_BASE,
     )
 
