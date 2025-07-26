@@ -42,6 +42,7 @@ module = Module(
     root="sport_competition",
     tag="Sport Competition",
     default_allowed_account_types=get_account_types_except_externals(),
+    factory=None,
 )
 
 # region: Sport
