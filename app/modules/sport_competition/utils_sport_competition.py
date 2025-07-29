@@ -1,3 +1,4 @@
+from app.core.groups import schemas_groups
 from app.core.schools import schemas_schools
 from app.core.users import schemas_users
 from app.modules.sport_competition import (
@@ -44,7 +45,13 @@ def competition_user_model_to_schema(
             name=user.user.name,
             firstname=user.user.firstname,
             phone=user.user.phone,
-            groups=[],
+            groups=[
+                schemas_groups.CoreGroup(
+                    id=group.id,
+                    name=group.name,
+                )
+                for group in user.user.groups
+            ],
         ),
     )
 
@@ -103,6 +110,7 @@ def participant_complete_model_to_schema(
         school_id=participant.school_id,
         substitute=participant.substitute,
         license=participant.license,
+        is_licence_valid=participant.is_licence_valid,
         user=competition_user_model_to_schema(participant.user),
     )
 
