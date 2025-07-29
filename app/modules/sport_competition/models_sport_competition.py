@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, ForeignKeyConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.schools.models_schools import CoreSchool
@@ -42,7 +42,6 @@ class EditionGroupMembership(Base):
     __tablename__ = "competition_edition_group_membership"
 
     user_id: Mapped[str] = mapped_column(
-        ForeignKey("competition_user.user_id"),
         primary_key=True,
     )
     group_id: Mapped[UUID] = mapped_column(
@@ -54,12 +53,26 @@ class EditionGroupMembership(Base):
         primary_key=True,
     )
 
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["user_id", "edition_id"],
+            ["competition_user.user_id", "competition_user.edition_id"],
+            name="fk_edition_group_membership_user",
+        ),
+    )
+
 
 class CompetitionUser(Base):
     __tablename__ = "competition_user"
 
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
+    edition_id: Mapped[UUID] = mapped_column(
+        ForeignKey("competition_edition.id"),
+        primary_key=True,
+    )
     sport_category: Mapped[SportCategory | None]
+    validated: Mapped[bool]
+    created_at: Mapped[datetime]
 
     user: Mapped[CoreUser] = relationship(
         "CoreUser",
@@ -69,7 +82,7 @@ class CompetitionUser(Base):
     competition_groups: Mapped[list[CompetitionGroup]] = relationship(
         "CompetitionGroup",
         secondary="competition_edition_group_membership",
-        primaryjoin="EditionGroupMembership.user_id == CompetitionUser.user_id",
+        primaryjoin="EditionGroupMembership.user_id == CompetitionUser.user_id and EditionGroupMembership.edition_id == CompetitionUser.edition_id",
         back_populates="members",
         lazy="selectin",
         default_factory=list,
@@ -181,7 +194,7 @@ class CompetitionTeam(Base):
         ForeignKey("competition_edition.id"),
     )
     name: Mapped[str]
-    captain_id: Mapped[str] = mapped_column(ForeignKey("competition_user.user_id"))
+    captain_id: Mapped[str]
     created_at: Mapped[datetime]
 
     participants: Mapped[list["CompetitionParticipant"]] = relationship(
@@ -191,12 +204,19 @@ class CompetitionTeam(Base):
         init=False,
     )
 
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["captain_id", "edition_id"],
+            ["competition_user.user_id", "competition_user.edition_id"],
+            name="fk_competition_team_captain",
+        ),
+    )
+
 
 class CompetitionParticipant(Base):
     __tablename__ = "competition_participant"
 
     user_id: Mapped[str] = mapped_column(
-        ForeignKey("competition_user.user_id"),
         primary_key=True,
     )
     sport_id: Mapped[UUID] = mapped_column(
@@ -214,13 +234,19 @@ class CompetitionParticipant(Base):
     team_id: Mapped[UUID | None] = mapped_column(ForeignKey("competition_team.id"))
     substitute: Mapped[bool]
     license: Mapped[str | None]
-    validated: Mapped[bool]
-    created_at: Mapped[datetime]
 
-    user: Mapped[CoreUser] = relationship(
+    user: Mapped[CompetitionUser] = relationship(
         "CompetitionUser",
         lazy="joined",
         init=False,
+    )
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["user_id", "edition_id"],
+            ["competition_user.user_id", "competition_user.edition_id"],
+            name="fk_competition_participant_user",
+        ),
     )
 
 
@@ -305,15 +331,12 @@ class SportPodium(Base):
         nullable=True,
     )
     user1_id: Mapped[str | None] = mapped_column(
-        ForeignKey("competition_user.user_id"),
         nullable=True,
     )
     user2_id: Mapped[str | None] = mapped_column(
-        ForeignKey("competition_user.user_id"),
         nullable=True,
     )
     user3_id: Mapped[str | None] = mapped_column(
-        ForeignKey("competition_user.user_id"),
         nullable=True,
     )
 
@@ -354,6 +377,24 @@ class SportPodium(Base):
         init=False,
     )
 
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["user1_id", "edition_id"],
+            ["competition_user.user_id", "competition_user.edition_id"],
+            name="fk_sport_podium_user1",
+        ),
+        ForeignKeyConstraint(
+            ["user2_id", "edition_id"],
+            ["competition_user.user_id", "competition_user.edition_id"],
+            name="fk_sport_podium_user2",
+        ),
+        ForeignKeyConstraint(
+            ["user3_id", "edition_id"],
+            ["competition_user.user_id", "competition_user.edition_id"],
+            name="fk_sport_podium_user3",
+        ),
+    )
+
 
 class CompetitionProduct(Base):
     __tablename__ = "competition_product"
@@ -389,7 +430,10 @@ class CompetitionPurchase(Base):
     __tablename__ = "competition_purchase"
 
     user_id: Mapped[str] = mapped_column(
-        ForeignKey("core_user.id"),
+        primary_key=True,
+    )
+    edition_id: Mapped[UUID] = mapped_column(
+        ForeignKey("competition_edition.id"),
         primary_key=True,
     )
     product_variant_id: Mapped[UUID] = mapped_column(
@@ -405,12 +449,29 @@ class CompetitionPurchase(Base):
         init=False,
     )
 
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["user_id", "edition_id"],
+            ["competition_user.user_id", "competition_user.edition_id"],
+            name="fk_competition_purchase_user",
+        ),
+    )
+
 
 class CompetitionPayment(Base):
     __tablename__ = "competition_payment"
 
     id: Mapped[PrimaryKey]
-    user_id: Mapped[str] = mapped_column(
-        ForeignKey("core_user.id"),
+    user_id: Mapped[str]
+    edition_id: Mapped[UUID] = mapped_column(
+        ForeignKey("competition_edition.id"),
     )
     total: Mapped[int]
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["user_id", "edition_id"],
+            ["competition_user.user_id", "competition_user.edition_id"],
+            name="fk_competition_payment_user",
+        ),
+    )
