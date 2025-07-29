@@ -282,7 +282,20 @@ def test_update_batch_create_users(client: TestClient) -> None:
     response = client.post(
         "/users/batch-creation",
         json=[
-            {"email": "1@1.fr"},
+            {"email": "1@1.fr", "default_group_id": GroupType.BDE.value},
+            {"email": "2@1.fr"},
+            {"email": "3@b.fr"},
+        ],
+        headers={"Authorization": f"Bearer {token_admin_user}"},
+    )
+    assert response.status_code == 201
+
+
+def test_update_batch_invite_users(client: TestClient) -> None:
+    response = client.post(
+        "/users/batch-invitation",
+        json=[
+            {"email": "1@1.fr", "default_group_id": GroupType.BDE.value},
             {"email": "2@1.fr"},
             {"email": "3@b.fr"},
         ],

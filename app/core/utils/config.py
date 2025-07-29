@@ -166,6 +166,9 @@ class Settings(BaseSettings):
     # It should begin with 'http://' or 'https:// and should never end with a '/'
     CORS_ORIGINS: list[str]
 
+    # If self registration is disabled, users will need to be invited by an administrator to be able to register
+    ALLOW_SELF_REGISTRATION: bool = True
+
     ############################
     # PostgreSQL configuration #
     ############################

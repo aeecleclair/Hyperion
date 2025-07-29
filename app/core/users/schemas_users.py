@@ -125,6 +125,7 @@ class CoreBatchUserCreateRequest(BaseModel):
     """
 
     email: str
+    default_group_id: str | None = None
 
     # Email normalization, this will modify the email variable
     # https://pydantic-docs.helpmanual.io/usage/validators/#reuse-validators

@@ -4,7 +4,11 @@ import ssl
 from email.message import EmailMessage
 from typing import TYPE_CHECKING
 
+from app.core.core_endpoints import cruds_core
+
 if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
     from app.core.utils.config import Settings
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -27,7 +31,12 @@ def send_email(
     # https://errorsfixing.com/why-do-some-python-smtplib-messages-deliver-to-gmail-spam-folder/
 
     if isinstance(recipient, str):
+        if recipient == "":
+            return
         recipient = [recipient]
+
+    if len(recipient) == 0:
+        return
 
     context = ssl.create_default_context()
 
@@ -46,3 +55,35 @@ def send_email(
             hyperion_error_logger.warning(
                 f'Bad email adress: "{", ".join(recipient)}" for mail with subject "{subject}".',
             )
+
+
+async def send_emails_from_queue(db: "AsyncSession", settings: "Settings") -> None:
+    """
+    Send emails from the email queue. This function should be called by a cron scheduled task only once per hour.
+    The task will only send 100 emails per hour to avoid being rate-limited by the email provider.
+    """
+    queued_emails = await cruds_core.get_queued_emails(
+        db=db,
+        limit=100,
+    )
+
+    send_emails_ids = [email.id for email in queued_emails]
+
+    for email in queued_emails:
+        try:
+            await send_email(
+                recipient=email.email,
+                subject=email.subject,
+                content=email.body,
+                settings=settings,
+            )
+        except Exception:
+            hyperion_error_logger.exception(
+                f"Error while sending queued email to {email.email} with subject {email.subject}",
+            )
+            send_emails_ids.remove(email.id)
+
+    await cruds_core.delete_queued_email(
+        queued_email_ids=send_emails_ids,
+        db=db,
+    )

@@ -77,6 +77,25 @@ class CoreUserUnconfirmed(Base):
     created_on: Mapped[datetime]
     expire_on: Mapped[datetime]
 
+    # Users will be automatically added to this group when they activate their account
+    default_group_id: Mapped[str | None] = mapped_column(
+        ForeignKey("core_group.id"),
+    )
+
+
+class CoreUserInvitation(Base):
+    """
+    Registration can be limited to specific invited users.
+    """
+
+    __tablename__ = "core_user_invitation"
+
+    email: Mapped[str] = mapped_column(primary_key=True)
+
+    default_group_id: Mapped[str | None] = mapped_column(
+        ForeignKey("core_group.id"),
+    )
+
 
 class CoreUserRecoverRequest(Base):
     __tablename__ = "core_user_recover_request"

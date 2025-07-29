@@ -20,6 +20,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import cruds_auth
+from app.core.core_endpoints import cruds_core
 from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification.utils_notification import get_user_notification_topics
@@ -217,10 +218,39 @@ async def create_user_by_user(
         # Fail silently: the user should not be informed that a user with the email address already exist.
         return standard_responses.Result(success=True)
 
+    default_group_id: str | None = None
+    if not settings.ALLOW_SELF_REGISTRATION:
+        # If self registration is disabled, we want to check if the user was invited
+        db_invitation = await cruds_users.get_user_invitation_by_email(
+            email=user_create.email,
+            db=db,
+        )
+
+        if db_invitation is None:
+            # If the user was not invited, we can not create a new account
+            hyperion_security_logger.warning(
+                f"Create_user: {user_create.email} was not invited ({request_id})",
+            )
+            if settings.SMTP_ACTIVE:
+                mail = mail_templates.get_mail_account_invitation_required()
+                background_tasks.add_task(
+                    send_email,
+                    recipient=user_create.email,
+                    subject="MyECL - you need an invitation to create an account",
+                    content=mail,
+                    settings=settings,
+                )
+
+            # Fail silently: the user should not be informed if this email was invited
+            return standard_responses.Result(success=True)
+
+        default_group_id = db_invitation.default_group_id
+
     # There might be an unconfirmed user in the database but its not an issue. We will generate a second activation token.
 
     await create_user(
         email=user_create.email,
+        default_group_id=default_group_id,
         background_tasks=background_tasks,
         db=db,
         settings=settings,
@@ -253,6 +283,8 @@ async def batch_create_users(
 
     The endpoint return a dictionary of unsuccessful user creation: `{email: error message}`.
 
+    NOTE: the activation link will only be valid for a limited time. You should probably use `/users/batch-invitation` endpoint instead, which will send an invitation email to the user.
+
     **This endpoint is only usable by administrators**
     """
 
@@ -267,6 +299,7 @@ async def batch_create_users(
                 settings=settings,
                 request_id=request_id,
                 mail_templates=mail_templates,
+                default_group_id=user_create.default_group_id,
             )
         except Exception as error:
             failed[user_create.email] = str(error)
@@ -274,8 +307,69 @@ async def batch_create_users(
     return standard_responses.BatchResult(failed=failed)
 
 
+@router.post(
+    "/users/batch-invitation",
+    response_model=standard_responses.Result,
+    status_code=201,
+)
+async def batch_invite_users(
+    user_invites: list[schemas_users.CoreBatchUserCreateRequest],
+    db: AsyncSession = Depends(get_db),
+    mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    settings: Settings = Depends(get_settings),
+):
+    """
+    Batch user account invitation process. All users will be sent an email encouraging them to create an account.
+    These emails will be whitelisted in Hyperion. If self registration is disabled only whitelisted emails will be able to create an account.
+
+    The endpoint return a dictionary of unsuccessful user creation: `{email: error message}`.
+
+    **This endpoint is only usable by administrators**
+    """
+
+    failed = {}
+
+    already_invited_emails = await cruds_users.get_user_invitation_by_emails(
+        db=db,
+        emails=[user_invite.email for user_invite in user_invites],
+    )
+    for email in already_invited_emails:
+        failed[email] = "User already invited"
+
+    for user_invite in user_invites:
+        if user_invite.email in failed:
+            # If the user was already invited, we skip it
+            continue
+        try:
+            await cruds_users.create_invitation(
+                email=user_invite.email,
+                default_group_id=user_invite.default_group_id,
+                db=db,
+            )
+
+            creation_url = settings.CLIENT_URL + calypsso.get_register_relative_url(
+                external=True,
+                email=user_invite.email,
+            )
+
+            await cruds_core.add_queued_email(
+                email=user_invite.email,
+                subject="MyECL - you have been invited to create an account on MyECL",
+                body=mail_templates.get_mail_account_invitation(
+                    creation_url=creation_url,
+                ),
+                db=db,
+            )
+        except Exception as error:
+            failed[user_invite.email] = str(error)
+
+    return standard_responses.BatchResult(failed=failed)
+
+
 async def create_user(
     email: str,
+    default_group_id: str | None,
     background_tasks: BackgroundTasks,
     db: AsyncSession,
     settings: Settings,
@@ -304,6 +398,7 @@ async def create_user(
         created_on=datetime.now(UTC),
         expire_on=datetime.now(UTC)
         + timedelta(hours=settings.USER_ACTIVATION_TOKEN_EXPIRE_HOURS),
+        default_group_id=default_group_id,
     )
 
     await cruds_users.create_unconfirmed_user(user_unconfirmed=user_unconfirmed, db=db)
@@ -425,6 +520,17 @@ async def activate_user(
     )
 
     await db.flush()
+
+    if unconfirmed_user.default_group_id:
+        # If the user was invited, we add him to the group he was invited to
+        await cruds_groups.create_membership(
+            db=db,
+            membership=models_groups.CoreMembership(
+                user_id=confirmed_user.id,
+                group_id=unconfirmed_user.default_group_id,
+                description=None,
+            ),
+        )
 
     hyperion_security_logger.info(
         f"Activate_user: Activated user {confirmed_user.id} (email: {confirmed_user.email}) ({request_id})",

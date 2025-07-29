@@ -1,9 +1,11 @@
 """Common model files for all core in order to avoid circular import due to bidirectional relationship"""
 
+from datetime import datetime
+
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.groups.groups_type import AccountType
-from app.types.sqlalchemy import Base
+from app.types.sqlalchemy import Base, PrimaryKey
 
 
 class CoreData(Base):
@@ -20,6 +22,21 @@ class CoreData(Base):
 
     schema: Mapped[str] = mapped_column(primary_key=True)
     data: Mapped[str]
+
+
+class EmailQueue(Base):
+    """
+    A table to store emails to be sent. This allows to send low priority emails, without risking to be ratelimited by the email provider.
+    Emails are sent by a queued task every hour.
+    """
+
+    __tablename__ = "email_queue"
+
+    id: Mapped[PrimaryKey]
+    email: Mapped[str]
+    subject: Mapped[str]
+    body: Mapped[str]
+    created_on: Mapped[datetime]
 
 
 class ModuleGroupVisibility(Base):
