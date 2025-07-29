@@ -51,6 +51,7 @@ ecl_sport_free_quota: models_sport_competition.SchoolSportQuota
 ecl_sport_used_quota: models_sport_competition.SchoolSportQuota
 
 team1: models_sport_competition.CompetitionTeam
+team2: models_sport_competition.CompetitionTeam
 
 participant1: models_sport_competition.CompetitionParticipant
 participant2: models_sport_competition.CompetitionParticipant
@@ -253,7 +254,7 @@ async def init_objects() -> None:
     )
     await add_object_to_db(ecl_sport_used_quota)
 
-    global team1
+    global team1, team2
     team1 = models_sport_competition.CompetitionTeam(
         id=uuid.uuid4(),
         sport_id=sport_with_team.id,
@@ -264,6 +265,16 @@ async def init_objects() -> None:
         created_at=datetime.now(UTC),
     )
     await add_object_to_db(team1)
+    team2 = models_sport_competition.CompetitionTeam(
+        id=uuid.uuid4(),
+        sport_id=sport_with_team.id,
+        school_id=school1.id,
+        edition_id=active_edition.id,
+        name="Team 2",
+        captain_id=school_bds_user.id,
+        created_at=datetime.now(UTC),
+    )
+    await add_object_to_db(team2)
 
     global participant1, participant2
     participant1 = models_sport_competition.CompetitionParticipant(
@@ -1240,32 +1251,32 @@ async def test_patch_school_sport_quota_as_random(
     assert sport_quota["team_quota"] == 1, quota_json
 
 
-# async def test_patch_school_sport_quota_as_admin(
-#     client: TestClient,
-# ) -> None:
-#     response = client.patch(
-#         f"/competition/schools/{school2.id}/sports/{sport_free_quota.id}/quotas",
-#         headers={"Authorization": f"Bearer {admin_token}"},
-#         json={
-#             "participant_quota": 3,
-#             "team_quota": 1,
-#         },
-#     )
-#     assert response.status_code == 204, response.json()
+async def test_patch_school_sport_quota_as_admin(
+    client: TestClient,
+) -> None:
+    response = client.patch(
+        f"/competition/schools/{school2.id}/sports/{sport_free_quota.id}/quotas",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "participant_quota": 3,
+            "team_quota": 1,
+        },
+    )
+    assert response.status_code == 204, response.json()
 
-#     quota = client.get(
-#         f"/competition/schools/{school2.id}/quotas",
-#         headers={"Authorization": f"Bearer {admin_token}"},
-#     )
-#     assert quota.status_code == 200, quota.json()
-#     quota_json = quota.json()
-#     sport_quota = next(
-#         (q for q in quota_json if q["sport_id"] == str(sport_free_quota.id)),
-#         None,
-#     )
-#     assert sport_quota is not None, quota_json
-#     assert sport_quota["participant_quota"] == 3, quota_json
-#     assert sport_quota["team_quota"] == 1, quota_json
+    quota = client.get(
+        f"/competition/schools/{school2.id}/quotas",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert quota.status_code == 200, quota.json()
+    quota_json = quota.json()
+    sport_quota = next(
+        (q for q in quota_json if q["sport_id"] == str(sport_free_quota.id)),
+        None,
+    )
+    assert sport_quota is not None, quota_json
+    assert sport_quota["participant_quota"] == 3, quota_json
+    assert sport_quota["team_quota"] == 1, quota_json
 
 
 async def test_delete_school_sport_quota_as_random(
@@ -1290,23 +1301,47 @@ async def test_delete_school_sport_quota_as_random(
     assert sport_quota is not None, quota_json
 
 
-# async def test_delete_school_sport_quota_as_admin(
-#     client: TestClient,
-# ) -> None:
-#     response = client.delete(
-#         f"/competition/schools/{school2.id}/sports/{sport_free_quota.id}/quotas",
-#         headers={"Authorization": f"Bearer {admin_token}"},
-#     )
-#     assert response.status_code == 204, response.json()
+async def test_delete_school_sport_quota_as_admin(
+    client: TestClient,
+) -> None:
+    response = client.delete(
+        f"/competition/schools/{school2.id}/sports/{sport_free_quota.id}/quotas",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 204, response.json()
 
-#     quota = client.get(
-#         f"/competition/schools/{school2.id}/quotas",
-#         headers={"Authorization": f"Bearer {admin_token}"},
-#     )
-#     assert quota.status_code == 200, quota.json()
-#     quota_json = quota.json()
-#     sport_quota = next(
-#         (q for q in quota_json if q["sport_id"] == str(sport_free_quota.id)),
-#         None,
-#     )
-#     assert sport_quota is None, quota_json
+    quota = client.get(
+        f"/competition/schools/{school2.id}/quotas",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert quota.status_code == 200, quota.json()
+    quota_json = quota.json()
+    sport_quota = next(
+        (q for q in quota_json if q["sport_id"] == str(sport_free_quota.id)),
+        None,
+    )
+    assert sport_quota is None, quota_json
+
+
+async def test_get_sport_teams(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        f"/competition/teams/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 200, response.json()
+    teams = response.json()
+    assert len(teams) == 2
+
+
+async def test_get_sport_team_for_school(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        f"/competition/teams/sports/{sport_with_team.id}/schools/{school1.id}",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 200, response.json()
+    teams = response.json()
+    assert len(teams) == 1

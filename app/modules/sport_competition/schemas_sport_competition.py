@@ -8,6 +8,7 @@ from app.core.users import schemas_users
 from app.modules.sport_competition.types_sport_competition import (
     CompetitionGroupType,
     InvalidUserType,
+    ProductPublicType,
     SportCategory,
 )
 
@@ -295,6 +296,86 @@ class SportPodiumEdit(BaseModel):
     user1_id: str | None = None
     user2_id: str | None = None
     user3_id: str | None = None
+
+
+class ProductVariantBase(BaseModel):
+    product_id: UUID
+    name: str
+    description: str | None = None
+    price: int
+    enabled: bool = True
+    unique: bool
+    public_type: ProductPublicType | None = None
+
+
+class ProductVariantComplete(ProductVariantBase):
+    id: UUID
+
+
+class ProductVariantEdit(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    price: int | None = None
+    enabled: bool | None = None
+    unique: bool | None = None
+    public_type: ProductPublicType | None = None
+
+
+class ProductBase(BaseModel):
+    name: str
+    description: str | None = None
+
+
+class ProductComplete(ProductBase):
+    id: UUID
+    edition_id: UUID
+    variants: list[ProductVariantComplete] = []
+
+
+class ProductEdit(BaseModel):
+    name: str | None = None
+    description: str | None = None
+
+
+class PurchaseBase(BaseModel):
+    product_variant_id: UUID
+    quantity: int
+
+
+class Purchase(PurchaseBase):
+    user_id: str
+    edition_id: UUID
+    validated: bool
+    purchased_on: datetime
+
+
+class PurchaseComplete(Purchase):
+    product_variant: ProductVariantComplete
+
+
+class PurchaseEdit(BaseModel):
+    quantity: int | None = None
+
+
+class PaymentBase(BaseModel):
+    total: int
+
+
+class PaymentComplete(PaymentBase):
+    id: UUID
+    user_id: str
+    edition_id: UUID
+
+
+class PaymentUrl(BaseModel):
+    url: str
+
+
+class Checkout(BaseModel):
+    id: UUID
+    user_id: str
+    edition_id: UUID
+    checkout_id: UUID
 
 
 # Importing here to avoid circular imports
