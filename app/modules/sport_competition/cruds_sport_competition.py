@@ -5,6 +5,7 @@ from sqlalchemy import and_, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.groups import schemas_groups
 from app.core.schools import schemas_schools
 from app.core.users import models_users, schemas_users
 from app.modules.sport_competition import models_sport_competition as models_competition
@@ -16,7 +17,7 @@ from app.modules.sport_competition.types_sport_competition import (
     MultipleEditions,
 )
 
-logger = logging.getLogger("challenger")
+logger = logging.getLogger("hyperion.error")
 
 
 async def add_group(
@@ -202,45 +203,67 @@ async def load_user_by_id(
     edition_id: UUID,
     db: AsyncSession,
 ) -> schemas_competition.CompetitionUser | None:
-    db_user = (
-        await db.execute(
-            select(models_users.CoreUser, models_competition.CompetitionUser)
-            .join_from(
-                models_users.CoreUser,
-                models_competition.CompetitionUser,
-                isouter=True,
-            )
-            .where(
-                models_competition.CompetitionUser.user_id == user_id,
-            )
-            .options(
-                selectinload(models_competition.CompetitionUser.competition_groups),
-                selectinload(models_users.CoreUser.groups),
-            )
-            .filter(
-                models_competition.EditionGroupMembership.edition_id == edition_id,
-            ),
-        )
-    ).first()
-    user, competition_user = db_user.tuple() if db_user else (None, None)
-    return (
-        schemas_competition.CompetitionUser(
-            **user.__dict__,
-            competition_groups=[
-                schemas_competition.Group(
-                    id=group.id,
-                    name=group.name,
+    core_user = (
+        (
+            await db.execute(
+                select(models_users.CoreUser)
+                .where(
+                    models_users.CoreUser.id == user_id,
                 )
-                for group in competition_user.competition_groups
-            ]
-            if competition_user
-            else [],
-            sport_category=competition_user.sport_category
-            if competition_user
-            else None,
+                .options(
+                    selectinload(models_users.CoreUser.groups),
+                ),
+            )
         )
-        if user
-        else None
+        .scalars()
+        .first()
+    )
+    competition_user = (
+        (
+            await db.execute(
+                select(models_competition.CompetitionUser)
+                .join(
+                    models_competition.EditionGroupMembership,
+                )
+                .where(
+                    models_competition.CompetitionUser.user_id == user_id,
+                    models_competition.EditionGroupMembership.edition_id == edition_id,
+                )
+                .options(
+                    selectinload(models_competition.CompetitionUser.competition_groups),
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if core_user is None:
+        return None
+    return schemas_competition.CompetitionUser(
+        id=core_user.id,
+        account_type=core_user.account_type,
+        school_id=core_user.school_id,
+        email=core_user.email,
+        name=core_user.name,
+        firstname=core_user.firstname,
+        phone=core_user.phone,
+        groups=[
+            schemas_groups.CoreGroupSimple(
+                id=group.id,
+                name=group.name,
+            )
+            for group in core_user.groups
+        ],
+        competition_groups=[
+            schemas_competition.Group(
+                id=group.id,
+                name=group.name,
+            )
+            for group in competition_user.competition_groups
+        ]
+        if competition_user
+        else [],
+        sport_category=competition_user.sport_category if competition_user else None,
     )
 
 
@@ -1016,7 +1039,17 @@ async def load_edition_by_name(
     name: str,
     db: AsyncSession,
 ) -> schemas_competition.CompetitionEdition | None:
-    edition = await db.get(models_competition.CompetitionEdition, name)
+    edition = (
+        (
+            await db.execute(
+                select(models_competition.CompetitionEdition).where(
+                    models_competition.CompetitionEdition.name == name,
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
     return (
         schemas_competition.CompetitionEdition(**edition.__dict__) if edition else None
     )
