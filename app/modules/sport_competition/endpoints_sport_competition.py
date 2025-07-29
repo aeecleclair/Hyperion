@@ -10,6 +10,7 @@ from app.core.payment import schemas_payment
 from app.core.payment.payment_tool import PaymentTool
 from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.schools import cruds_schools
+from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users, models_users, schemas_users
 from app.core.utils.config import Settings
 from app.dependencies import get_db, get_payment_tool, get_settings, is_user, is_user_in
@@ -23,12 +24,14 @@ from app.modules.sport_competition.dependencies_sport_competition import (
 )
 from app.modules.sport_competition.types_sport_competition import (
     CompetitionGroupType,
+    ProductSchoolType,
 )
 from app.modules.sport_competition.utils.ffsu_scrapper import (
     validate_participant_ffsu_licence,
 )
 from app.modules.sport_competition.utils_sport_competition import (
     checksport_category_compatibility,
+    get_public_type_from_user,
 )
 from app.types.module import Module
 from app.utils.tools import is_user_member_of_any_group
@@ -2344,6 +2347,47 @@ async def delete_product(
 # region: Product Variants
 
 
+@module.router.get(
+    "/competition/products/available",
+    response_model=list[schemas_sport_competition.ProductVariantComplete],
+    status_code=200,
+)
+async def get_available_product_variants(
+    db: AsyncSession = Depends(get_db),
+    user: schemas_sport_competition.CompetitionUser = Depends(is_competition_user()),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Get all available product variants of the current edition for this user.
+    """
+    school_type = ProductSchoolType.centrale
+    if user.user.school_id != SchoolType.centrale_lyon.value:
+        school = await cruds_sport_competition.load_school_by_id(
+            user.user.school_id,
+            edition.id,
+            db,
+        )
+        if school is None:
+            raise HTTPException(
+                status_code=500,
+                detail="School not found.",
+            )
+        if school.from_lyon:
+            school_type = ProductSchoolType.from_lyon
+        else:
+            school_type = ProductSchoolType.others
+    public_type = get_public_type_from_user(user)
+
+    return await cruds_sport_competition.load_available_product_variants(
+        edition.id,
+        school_type,
+        public_type,
+        db,
+    )
+
+
 @module.router.post(
     "/competition/products/{product_id}/variants/",
     response_model=schemas_sport_competition.ProductVariantComplete,
@@ -2379,12 +2423,14 @@ async def create_product_variant(
 
     db_product_variant = schemas_sport_competition.ProductVariantComplete(
         id=uuid4(),
+        edition_id=edition.id,
         product_id=product_id,
         name=product_variant.name,
         description=product_variant.description,
         price=product_variant.price,
         enabled=product_variant.enabled,
         unique=product_variant.unique,
+        school_type=product_variant.school_type,
         public_type=product_variant.public_type,
     )
 

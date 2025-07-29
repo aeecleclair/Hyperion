@@ -167,3 +167,17 @@ def match_model_to_schema(
             created_at=match.team2.created_at,
         ),
     )
+
+
+def get_public_type_from_user(
+    user: schemas_sport_competition.CompetitionUser,
+) -> types_sport_competition.ProductPublicType | None:
+    if user.is_athlete:
+        return types_sport_competition.ProductPublicType.athlete
+    if user.is_pompom:
+        return types_sport_competition.ProductPublicType.pompom
+    if user.is_cameraman:
+        return types_sport_competition.ProductPublicType.cameraman
+    if user.is_fanfare:
+        return types_sport_competition.ProductPublicType.fanfare
+    return None
