@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.schools import schemas_schools
-from app.core.users import schemas_users
+from app.core.users import models_users, schemas_users
 from app.modules.sport_competition import models_sport_competition as models_competition
 from app.modules.sport_competition import (
     schemas_sport_competition as schemas_competition,
@@ -202,24 +202,27 @@ async def load_user_by_id(
     edition_id: UUID,
     db: AsyncSession,
 ) -> schemas_competition.CompetitionUser | None:
-    user = (
-        (
-            await db.execute(
-                select(models_competition.CompetitionUser)
-                .where(
-                    models_competition.CompetitionUser.user_id == user_id,
-                )
-                .options(
-                    selectinload(models_competition.CompetitionUser.competition_groups),
-                )
-                .filter(
-                    models_competition.EditionGroupMembership.edition_id == edition_id,
-                ),
+    db_user = (
+        await db.execute(
+            select(models_users.CoreUser, models_competition.CompetitionUser)
+            .join_from(
+                models_users.CoreUser,
+                models_competition.CompetitionUser,
+                isouter=True,
             )
+            .where(
+                models_competition.CompetitionUser.user_id == user_id,
+            )
+            .options(
+                selectinload(models_competition.CompetitionUser.competition_groups),
+                selectinload(models_users.CoreUser.groups),
+            )
+            .filter(
+                models_competition.EditionGroupMembership.edition_id == edition_id,
+            ),
         )
-        .scalars()
-        .first()
-    )
+    ).first()
+    user, competition_user = db_user.tuple() if db_user else (None, None)
     return (
         schemas_competition.CompetitionUser(
             **user.__dict__,
@@ -228,8 +231,13 @@ async def load_user_by_id(
                     id=group.id,
                     name=group.name,
                 )
-                for group in user.competition_groups
-            ],
+                for group in competition_user.competition_groups
+            ]
+            if competition_user
+            else [],
+            sport_category=competition_user.sport_category
+            if competition_user
+            else None,
         )
         if user
         else None
@@ -237,7 +245,7 @@ async def load_user_by_id(
 
 
 async def add_school(
-    school: schemas_competition.SchoolExtension,
+    school: schemas_competition.SchoolExtensionBase,
     db: AsyncSession,
 ):
     db.add(models_competition.SchoolExtension(**school.model_dump()))
