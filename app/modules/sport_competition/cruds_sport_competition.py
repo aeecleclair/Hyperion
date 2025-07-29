@@ -1,4 +1,5 @@
 import logging
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import and_, delete, func, or_, select, update
@@ -16,7 +17,7 @@ from app.modules.sport_competition.types_sport_competition import (
     ProductPublicType,
     ProductSchoolType,
 )
-from app.modules.sport_competition.utils_sport_competition import (
+from app.modules.sport_competition.utils.schemas_converters import (
     competition_user_model_to_schema,
     match_model_to_schema,
     participant_complete_model_to_schema,
@@ -1665,8 +1666,12 @@ async def get_products(
     db: AsyncSession,
 ) -> list[schemas_sport_competition.ProductComplete]:
     products = await db.execute(
-        select(models_sport_competition.CompetitionProduct).where(
+        select(models_sport_competition.CompetitionProduct)
+        .where(
             models_sport_competition.CompetitionProduct.edition_id == edition_id,
+        )
+        .options(
+            selectinload(models_sport_competition.CompetitionProduct.variants),
         ),
     )
     return [
@@ -1675,6 +1680,21 @@ async def get_products(
             edition_id=product.edition_id,
             name=product.name,
             description=product.description,
+            variants=[
+                schemas_sport_competition.ProductVariantComplete(
+                    id=variant.id,
+                    edition_id=variant.edition_id,
+                    product_id=variant.product_id,
+                    name=variant.name,
+                    description=variant.description,
+                    price=variant.price,
+                    enabled=variant.enabled,
+                    unique=variant.unique,
+                    school_type=variant.school_type,
+                    public_type=variant.public_type,
+                )
+                for variant in product.variants
+            ],
         )
         for product in products.scalars().all()
     ]
@@ -1770,7 +1790,7 @@ async def load_product_variants(
 async def load_available_product_variants(
     edition_id: UUID,
     school_type: ProductSchoolType,
-    public_type: ProductPublicType | None,
+    public_type: list[ProductPublicType],
     db: AsyncSession,
 ):
     variants = await db.execute(
@@ -1780,8 +1800,9 @@ async def load_available_product_variants(
             models_sport_competition.CompetitionProductVariant.school_type
             == school_type,
             or_(
-                models_sport_competition.CompetitionProductVariant.public_type
-                == public_type,
+                models_sport_competition.CompetitionProductVariant.public_type.in_(
+                    public_type,
+                ),
                 models_sport_competition.CompetitionProductVariant.public_type.is_(
                     None,
                 ),
@@ -1971,6 +1992,45 @@ async def load_purchase_by_ids(
     )
 
 
+async def load_purchases_by_variant_id(
+    variant_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_sport_competition.PurchaseComplete]:
+    purchases = await db.execute(
+        select(models_sport_competition.CompetitionPurchase)
+        .where(
+            models_sport_competition.CompetitionPurchase.product_variant_id
+            == variant_id,
+        )
+        .options(
+            selectinload(models_sport_competition.CompetitionPurchase.product_variant),
+        ),
+    )
+    return [
+        schemas_sport_competition.PurchaseComplete(
+            user_id=purchase.user_id,
+            product_variant_id=purchase.product_variant_id,
+            edition_id=purchase.edition_id,
+            quantity=purchase.quantity,
+            purchased_on=purchase.purchased_on,
+            validated=purchase.validated,
+            product_variant=schemas_sport_competition.ProductVariantComplete(
+                id=purchase.product_variant.id,
+                edition_id=purchase.product_variant.edition_id,
+                product_id=purchase.product_variant.product_id,
+                name=purchase.product_variant.name,
+                description=purchase.product_variant.description,
+                price=purchase.product_variant.price,
+                enabled=purchase.product_variant.enabled,
+                unique=purchase.product_variant.unique,
+                school_type=purchase.product_variant.school_type,
+                public_type=purchase.product_variant.public_type,
+            ),
+        )
+        for purchase in purchases.scalars().all()
+    ]
+
+
 async def add_purchase(
     purchase: schemas_sport_competition.Purchase,
     db: AsyncSession,
@@ -2091,6 +2151,7 @@ async def add_payment(
             user_id=payment.user_id,
             edition_id=payment.edition_id,
             total=payment.total,
+            created_at=datetime.now(UTC),
         ),
     )
 
