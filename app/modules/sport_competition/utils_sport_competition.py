@@ -71,6 +71,7 @@ def school_extension_model_to_schema_complete(
     return schemas_sport_competition.SchoolExtensionComplete(
         school_id=school_extension.school_id,
         from_lyon=school_extension.from_lyon,
+        ffsu_id=school_extension.ffsu_id,
         active=school_extension.active,
         inscription_enabled=school_extension.inscription_enabled,
         school=schemas_schools.CoreSchool(
