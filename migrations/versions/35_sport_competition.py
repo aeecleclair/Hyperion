@@ -69,7 +69,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("school_id"),
     )
     op.create_table(
-        "competition_annual_group_membership",
+        "competition_edition_group_membership",
         sa.Column("user_id", sa.String(), nullable=False),
         sa.Column("group_id", sa.Uuid(), nullable=False),
         sa.Column("edition_id", sa.Uuid(), nullable=False),
