@@ -13,6 +13,11 @@ def competition_user_model_to_schema(
     return schemas_sport_competition.CompetitionUser(
         user_id=user.user_id,
         edition_id=user.edition_id,
+        is_athlete=user.is_athlete,
+        is_cameraman=user.is_cameraman,
+        is_pompom=user.is_pompom,
+        is_fanfare=user.is_fanfare,
+        is_volunteer=user.is_volunteer,
         validated=user.validated,
         created_at=user.created_at,
         sport_category=user.sport_category,
