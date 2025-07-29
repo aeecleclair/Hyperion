@@ -965,19 +965,20 @@ async def store_edition(
     edition: schemas_competition.CompetitionEdition,
     db: AsyncSession,
 ):
-    stored_edition = await load_edition_by_id(edition.id, db)
-    if stored_edition is None:
-        db.add(models_competition.CompetitionEdition(**edition.model_dump()))
-    else:
-        await db.execute(
-            update(models_competition.CompetitionEdition)
-            .where(models_competition.CompetitionEdition.id == edition.id)
-            .values(**edition.model_dump()),
-        )
-        active = await load_active_edition(db)
-        if active and active.id != edition.id and edition.activated:
-            raise MultipleEditions
+    db.add(models_competition.CompetitionEdition(**edition.model_dump()))
+    await db.flush()
 
+
+async def update_edition(
+    edition_id: UUID,
+    edition: schemas_competition.CompetitionEditionEdit,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_competition.CompetitionEdition)
+        .where(models_competition.CompetitionEdition.id == edition_id)
+        .values(**edition.model_dump()),
+    )
     await db.flush()
 
 
@@ -998,6 +999,16 @@ async def load_edition_by_id(
     db: AsyncSession,
 ) -> schemas_competition.CompetitionEdition | None:
     edition = await db.get(models_competition.CompetitionEdition, edition_id)
+    return (
+        schemas_competition.CompetitionEdition(**edition.__dict__) if edition else None
+    )
+
+
+async def load_edition_by_name(
+    name: str,
+    db: AsyncSession,
+) -> schemas_competition.CompetitionEdition | None:
+    edition = await db.get(models_competition.CompetitionEdition, name)
     return (
         schemas_competition.CompetitionEdition(**edition.__dict__) if edition else None
     )
