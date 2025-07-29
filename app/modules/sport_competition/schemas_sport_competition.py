@@ -1,11 +1,14 @@
-from datetime import UTC, datetime
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, NonNegativeInt, PositiveInt
 
 from app.core.schools import schemas_schools
 from app.core.users import schemas_users
-from app.modules.sport_competition.types_sport_competition import SportCategory
+from app.modules.sport_competition.types_sport_competition import (
+    CompetitionGroupType,
+    SportCategory,
+)
 
 
 class CompetitionEditionBase(BaseModel):
@@ -56,43 +59,38 @@ class SchoolGeneralQuotaBase(BaseModel):
 
 class SchoolGeneralQuota(SchoolGeneralQuotaBase):
     school_id: UUID
-    edition_id: str
+    edition_id: UUID
 
 
 class UserGroupMembership(BaseModel):
     user_id: str
-    group_id: UUID
+    group: CompetitionGroupType
     edition_id: UUID
 
 
-class GroupBase(BaseModel):
-    name: str
+class CompetitionUserBase(BaseModel):
+    sport_category: SportCategory | None = None
 
 
-class Group(GroupBase):
-    id: UUID
+class CompetitionUserSimple(CompetitionUserBase):
+    user_id: str
+    edition_id: UUID
+    created_at: datetime
+    validated: bool = False
 
 
-class GroupComplete(Group):
-    members: list[schemas_users.CoreUser]
-
-
-class GroupEdit(BaseModel):
-    name: str | None
-
-
-class CompetitionUser(schemas_users.CoreUser):
+class CompetitionUser(CompetitionUserSimple):
     """
     A user with additional fields for competition purposes.
     This is used to represent a user in the context of a competition.
     """
 
-    edition_id: UUID
-    competition_category: SportCategory | None = None
-    created_at: datetime
-    validated: bool = False
+    user: schemas_users.CoreUser
 
-    competition_groups: list[Group] = []
+
+class CompetitionUserEdit(BaseModel):
+    sport_category: SportCategory | None = None
+    validated: bool | None = None
 
 
 class SportBase(BaseModel):
@@ -198,7 +196,7 @@ class MatchBase(BaseModel):
     team1_id: UUID
     team2_id: UUID
     date: datetime | None = None
-    location: str | None = None
+    location_id: UUID | None = None
     score_team1: int | None = None
     score_team2: int | None = None
     winner_id: UUID | None = None
@@ -216,7 +214,7 @@ class MatchEdit(BaseModel):
     team1_id: UUID | None = None
     team2_id: UUID | None = None
     date: datetime | None = None
-    location: str | None = None
+    location_id: UUID | None = None
     score_team1: int | None = None
     score_team2: int | None = None
     winner_id: UUID | None = None
@@ -261,6 +259,6 @@ class SportPodiumEdit(BaseModel):
 
 
 # Importing here to avoid circular imports
-from app.core.groups.schemas_groups import CoreGroupSimple  # noqa: E402, TC001
+from app.core.groups.schemas_groups import CoreGroupSimple  # noqa: E402, F401
 
 CompetitionUser.model_rebuild()
