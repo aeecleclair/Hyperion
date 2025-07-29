@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from pydantic import BaseModel, NonNegativeInt, PositiveInt
@@ -14,6 +14,7 @@ class CompetitionEditionBase(BaseModel):
     start_date: datetime
     end_date: datetime
     active: bool = True
+    inscription_enabled: bool = False
 
 
 class CompetitionEdition(CompetitionEditionBase):
@@ -25,13 +26,13 @@ class CompetitionEditionEdit(BaseModel):
     year: PositiveInt | None = None
     start_date: datetime | None = None
     end_date: datetime | None = None
-    active: bool | None = None
 
 
 class SchoolExtensionBase(BaseModel):
     school_id: UUID
     from_lyon: bool
     active: bool = True
+    inscription_enabled: bool = False
 
 
 class SchoolExtension(SchoolExtensionBase):
@@ -42,16 +43,20 @@ class SchoolExtension(SchoolExtensionBase):
 class SchoolExtensionEdit(BaseModel):
     from_lyon: bool | None = None
     active: bool | None = None
+    inscription_enabled: bool | None = None
 
 
-class SchoolGeneralQuota(BaseModel):
-    school_id: UUID
-    edition_id: str
+class SchoolGeneralQuotaBase(BaseModel):
     athlete_quota: NonNegativeInt | None = None
     cameraman_quota: NonNegativeInt | None = None
     pompom_quota: NonNegativeInt | None = None
     fanfare_quota: NonNegativeInt | None = None
     non_athlete_quota: NonNegativeInt | None = None
+
+
+class SchoolGeneralQuota(SchoolGeneralQuotaBase):
+    school_id: UUID
+    edition_id: str
 
 
 class UserGroupMembership(BaseModel):
@@ -139,6 +144,7 @@ class Participant(BaseModel):
     substitute: bool = False
     team_id: UUID | None = None
     validated: bool = False
+    created_at: datetime
 
 
 class ParticipantEdit(BaseModel):
@@ -171,6 +177,7 @@ class TeamInfo(BaseModel):
 
 class Team(TeamBase):
     id: UUID
+    created_at: datetime
 
 
 class TeamEdit(BaseModel):
@@ -211,6 +218,44 @@ class MatchEdit(BaseModel):
     score_team1: int | None = None
     score_team2: int | None = None
     winner_id: UUID | None = None
+
+
+class SportPodiumBase(BaseModel):
+    first_place_points: NonNegativeInt
+    second_place_points: NonNegativeInt
+    third_place_points: NonNegativeInt
+
+
+class SportPodium(SportPodiumBase):
+    sport_id: UUID
+    edition_id: UUID
+    team1_id: UUID | None = None
+    team2_id: UUID | None = None
+    team3_id: UUID | None = None
+    user1_id: str | None = None
+    user2_id: str | None = None
+    user3_id: str | None = None
+
+
+class SportPodiumComplete(SportPodium):
+    team1: Team | None = None
+    team2: Team | None = None
+    team3: Team | None = None
+    user1: schemas_users.CoreUser | None = None
+    user2: schemas_users.CoreUser | None = None
+    user3: schemas_users.CoreUser | None = None
+
+
+class SportPodiumEdit(BaseModel):
+    first_place_points: NonNegativeInt | None = None
+    second_place_points: NonNegativeInt | None = None
+    third_place_points: NonNegativeInt | None = None
+    team1_id: UUID | None = None
+    team2_id: UUID | None = None
+    team3_id: UUID | None = None
+    user1_id: str | None = None
+    user2_id: str | None = None
+    user3_id: str | None = None
 
 
 # Importing here to avoid circular imports
