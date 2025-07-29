@@ -2116,7 +2116,7 @@ def create_checkout(
     checkout: schemas_sport_competition.Checkout,
 ):
     db.add(
-        models_sport_competition.Checkout(
+        models_sport_competition.CompetitionCheckout(
             id=checkout.id,
             user_id=checkout.user_id,
             edition_id=checkout.edition_id,
@@ -2132,8 +2132,9 @@ async def get_checkout_by_checkout_id(
     checkout = (
         (
             await db.execute(
-                select(models_sport_competition.Checkout).where(
-                    models_sport_competition.Checkout.checkout_id == checkout_id,
+                select(models_sport_competition.CompetitionCheckout).where(
+                    models_sport_competition.CompetitionCheckout.checkout_id
+                    == checkout_id,
                 ),
             )
         )
