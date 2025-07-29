@@ -1,5 +1,5 @@
-import uuid
 from datetime import UTC, datetime
+from uuid import uuid4
 
 import pytest_asyncio
 from fastapi.testclient import TestClient
@@ -9,6 +9,10 @@ from app.core.schools import models_schools
 from app.core.schools.schools_type import SchoolType
 from app.core.users import models_users
 from app.modules.sport_competition import models_sport_competition
+from app.modules.sport_competition.schemas_sport_competition import (
+    ParticipantInfo,
+    TeamInfo,
+)
 from app.modules.sport_competition.types_sport_competition import (
     CompetitionGroupType,
     SportCategory,
@@ -61,19 +65,19 @@ participant2: models_sport_competition.CompetitionParticipant
 async def init_objects() -> None:
     global school1, school2, active_edition, old_edition
     school1 = models_schools.CoreSchool(
-        id=uuid.uuid4(),
+        id=uuid4(),
         name="Emlyon Business School",
         email_regex=r"^[a-zA-Z0-9._%+-]+@edu.emlyon.fr$",
     )
     await add_object_to_db(school1)
     school2 = models_schools.CoreSchool(
-        id=uuid.uuid4(),
+        id=uuid4(),
         name="Centrale Supelec",
         email_regex=r"^[a-zA-Z0-9._%+-]+@edu.centralesupelec.fr$",
     )
     await add_object_to_db(school2)
     old_edition = models_sport_competition.CompetitionEdition(
-        id=uuid.uuid4(),
+        id=uuid4(),
         name="Edition 2023",
         year=2023,
         start_date=datetime(2023, 1, 1, tzinfo=UTC),
@@ -83,7 +87,7 @@ async def init_objects() -> None:
     )
     await add_object_to_db(old_edition)
     active_edition = models_sport_competition.CompetitionEdition(
-        id=uuid.uuid4(),
+        id=uuid4(),
         name="Edition 2024",
         year=2024,
         start_date=datetime(2024, 1, 1, tzinfo=UTC),
@@ -96,16 +100,20 @@ async def init_objects() -> None:
     global admin_user, school_bds_user, sport_manager_user, user3
     admin_user = await create_user_with_groups(
         [GroupType.competition_admin],
+        email="Admin User",
     )
     school_bds_user = await create_user_with_groups(
         [],
+        email="School BDS User",
         school_id=school1.id,
     )
     sport_manager_user = await create_user_with_groups(
         [],
+        email="Sport Manager User",
     )
     user3 = await create_user_with_groups(
         [],
+        email="Random User",
     )
 
     global admin_token, school_bds_token, sport_manager_token, user3_token
@@ -200,7 +208,7 @@ async def init_objects() -> None:
 
     global sport_free_quota, sport_used_quota, sport_with_team, sport_with_substitute
     sport_free_quota = models_sport_competition.Sport(
-        id=uuid.uuid4(),
+        id=uuid4(),
         name="Free Quota Sport",
         team_size=1,
         substitute_max=0,
@@ -209,7 +217,7 @@ async def init_objects() -> None:
     )
     await add_object_to_db(sport_free_quota)
     sport_used_quota = models_sport_competition.Sport(
-        id=uuid.uuid4(),
+        id=uuid4(),
         name="Used Quota Sport",
         team_size=1,
         substitute_max=0,
@@ -218,7 +226,7 @@ async def init_objects() -> None:
     )
     await add_object_to_db(sport_used_quota)
     sport_with_team = models_sport_competition.Sport(
-        id=uuid.uuid4(),
+        id=uuid4(),
         name="Sport with Team",
         team_size=5,
         substitute_max=0,
@@ -227,7 +235,7 @@ async def init_objects() -> None:
     )
     await add_object_to_db(sport_with_team)
     sport_with_substitute = models_sport_competition.Sport(
-        id=uuid.uuid4(),
+        id=uuid4(),
         name="Sport with Substitute",
         team_size=5,
         substitute_max=2,
@@ -256,7 +264,7 @@ async def init_objects() -> None:
 
     global team1, team2
     team1 = models_sport_competition.CompetitionTeam(
-        id=uuid.uuid4(),
+        id=uuid4(),
         sport_id=sport_with_team.id,
         school_id=SchoolType.centrale_lyon.value,
         edition_id=active_edition.id,
@@ -266,7 +274,7 @@ async def init_objects() -> None:
     )
     await add_object_to_db(team1)
     team2 = models_sport_competition.CompetitionTeam(
-        id=uuid.uuid4(),
+        id=uuid4(),
         sport_id=sport_with_team.id,
         school_id=school1.id,
         edition_id=active_edition.id,
@@ -438,7 +446,7 @@ async def test_patch_sport_as_admin(
     client: TestClient,
 ) -> None:
     sport_to_modify = models_sport_competition.Sport(
-        id=uuid.uuid4(),
+        id=uuid4(),
         name="Sport to Modify",
         team_size=5,
         substitute_max=2,
@@ -526,7 +534,7 @@ async def test_delete_sport_as_admin(
     client: TestClient,
 ) -> None:
     sport_to_delete = models_sport_competition.Sport(
-        id=uuid.uuid4(),
+        id=uuid4(),
         name="Sport to Delete",
         team_size=5,
         substitute_max=2,
@@ -1345,3 +1353,398 @@ async def test_get_sport_team_for_school(
     assert response.status_code == 200, response.json()
     teams = response.json()
     assert len(teams) == 1
+
+
+async def test_create_team_different_captain(
+    client: TestClient,
+) -> None:
+    team_info = TeamInfo(
+        name="New Team",
+        school_id=school1.id,
+        sport_id=sport_with_team.id,
+        captain_id=school_bds_user.id,
+    )
+    response = client.post(
+        "/competition/teams",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json=team_info.model_dump(exclude_none=True, mode="json"),
+    )
+    assert response.status_code == 403, response.json()
+
+    teams = client.get(
+        f"/competition/teams/sports/{sport_free_quota.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert teams.status_code == 200, teams.json()
+    teams_json = teams.json()
+    new_team_check = next(
+        (t for t in teams_json if t["captain_id"] == str(school_bds_user.id)),
+        None,
+    )
+    assert new_team_check is None, teams_json
+
+
+async def test_create_team_different_school(
+    client: TestClient,
+) -> None:
+    team_info = TeamInfo(
+        name="New Team",
+        school_id=school2.id,
+        sport_id=sport_with_team.id,
+        captain_id=user3.id,
+    )
+    response = client.post(
+        "/competition/teams",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json=team_info.model_dump(exclude_none=True, mode="json"),
+    )
+    assert response.status_code == 403, response.json()
+
+    teams = client.get(
+        f"/competition/teams/sports/{sport_free_quota.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert teams.status_code == 200, teams.json()
+    teams_json = teams.json()
+    new_team_check = next(
+        (t for t in teams_json if t["school_id"] == str(school2.id)),
+        None,
+    )
+    assert new_team_check is None, teams_json
+
+
+async def test_create_team_for_sport_without_team(
+    client: TestClient,
+) -> None:
+    team_info = TeamInfo(
+        name="New Team",
+        school_id=SchoolType.centrale_lyon.value,
+        sport_id=sport_free_quota.id,
+        captain_id=user3.id,
+    )
+    response = client.post(
+        "/competition/teams",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json=team_info.model_dump(exclude_none=True, mode="json"),
+    )
+    assert response.status_code == 400, response.json()
+
+    teams = client.get(
+        f"/competition/teams/sports/{sport_free_quota.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert teams.status_code == 200, teams.json()
+    teams_json = teams.json()
+    new_team_check = next((t for t in teams_json if t["name"] == "New Team"), None)
+    assert new_team_check is None, teams_json
+
+
+async def test_create_team_no_quota(
+    client: TestClient,
+) -> None:
+    strict_quota = models_sport_competition.SchoolSportQuota(
+        school_id=school1.id,
+        edition_id=active_edition.id,
+        sport_id=sport_with_team.id,
+        participant_quota=0,
+        team_quota=0,
+    )
+    await add_object_to_db(strict_quota)
+
+    team_info = TeamInfo(
+        name="New Team",
+        school_id=school1.id,
+        sport_id=sport_with_team.id,
+        captain_id=school_bds_user.id,
+    )
+    response = client.post(
+        "/competition/teams",
+        headers={"Authorization": f"Bearer {school_bds_token}"},
+        json=team_info.model_dump(exclude_none=True, mode="json"),
+    )
+    assert response.status_code == 400, response.json()
+
+    teams = client.get(
+        f"/competition/teams/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert teams.status_code == 200, teams.json()
+    teams_json = teams.json()
+    new_team_check = next((t for t in teams_json if t["name"] == "New Team"), None)
+    assert new_team_check is None, teams_json
+
+
+async def test_create_team_used_name(
+    client: TestClient,
+) -> None:
+    team_info = TeamInfo(
+        name=team1.name,
+        school_id=SchoolType.centrale_lyon.value,
+        sport_id=sport_with_team.id,
+        captain_id=user3.id,
+    )
+    response = client.post(
+        "/competition/teams",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json=team_info.model_dump(exclude_none=True, mode="json"),
+    )
+    assert response.status_code == 400, response.json()
+
+    teams = client.get(
+        f"/competition/teams/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert teams.status_code == 200, teams.json()
+    teams_json = teams.json()
+    new_team_check = next((t for t in teams_json if t["name"] == team1.name), None)
+    assert new_team_check is not None, teams_json
+
+
+async def test_create_team(
+    client: TestClient,
+) -> None:
+    team_info = TeamInfo(
+        name="New Team",
+        school_id=SchoolType.centrale_lyon.value,
+        sport_id=sport_with_team.id,
+        captain_id=user3.id,
+    )
+    response = client.post(
+        "/competition/teams",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json=team_info.model_dump(exclude_none=True, mode="json"),
+    )
+    assert response.status_code == 201, response.json()
+    team = response.json()
+
+    teams = client.get(
+        f"/competition/teams/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert teams.status_code == 200, teams.json()
+    teams_json = teams.json()
+    new_team_check = next((t for t in teams_json if t["id"] == team["id"]), None)
+    assert new_team_check is not None, teams_json
+
+
+async def test_patch_team_as_random(
+    client: TestClient,
+) -> None:
+    response = client.patch(
+        f"/competition/teams/{team1.id}",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json={
+            "name": "Unauthorized Team Update",
+        },
+    )
+    assert response.status_code == 403, response.json()
+
+    teams = client.get(
+        f"/competition/teams/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert teams.status_code == 200, teams.json()
+    teams_json = teams.json()
+    updated_team_check = next((t for t in teams_json if t["id"] == str(team1.id)), None)
+    assert updated_team_check is not None
+    assert updated_team_check["name"] == team1.name
+
+
+async def test_patch_team_as_admin(
+    client: TestClient,
+) -> None:
+    response = client.patch(
+        f"/competition/teams/{team1.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "name": "Updated Team Name",
+        },
+    )
+    assert response.status_code == 204, response.json()
+
+    teams = client.get(
+        f"/competition/teams/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert teams.status_code == 200, teams.json()
+    teams_json = teams.json()
+    updated_team_check = next((t for t in teams_json if t["id"] == str(team1.id)), None)
+    assert updated_team_check is not None
+    assert updated_team_check["name"] == "Updated Team Name"
+
+
+async def test_patch_team_as_captain(
+    client: TestClient,
+) -> None:
+    response = client.patch(
+        f"/competition/teams/{team1.id}",
+        headers={"Authorization": f"Bearer {sport_manager_token}"},
+        json={
+            "name": "Captain Updated Team Name",
+        },
+    )
+    assert response.status_code == 204, response.json()
+
+    teams = client.get(
+        f"/competition/teams/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert teams.status_code == 200, teams.json()
+    teams_json = teams.json()
+    updated_team_check = next((t for t in teams_json if t["id"] == str(team1.id)), None)
+    assert updated_team_check is not None
+    assert updated_team_check["name"] == "Captain Updated Team Name"
+
+
+async def test_delete_team_as_random(
+    client: TestClient,
+) -> None:
+    response = client.delete(
+        f"/competition/teams/{team1.id}",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 403, response.json()
+
+    teams = client.get(
+        f"/competition/teams/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert teams.status_code == 200, teams.json()
+    teams_json = teams.json()
+    deleted_team_check = next((t for t in teams_json if t["id"] == str(team1.id)), None)
+    assert deleted_team_check is not None, teams_json
+
+
+async def test_delete_team_as_admin(
+    client: TestClient,
+) -> None:
+    new_team = models_sport_competition.CompetitionTeam(
+        id=uuid4(),
+        name="Team to Delete",
+        school_id=SchoolType.centrale_lyon.value,
+        edition_id=active_edition.id,
+        sport_id=sport_with_team.id,
+        captain_id=user3.id,
+        created_at=datetime.now(UTC),
+    )
+    await add_object_to_db(new_team)
+    response = client.delete(
+        f"/competition/teams/{new_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 204, response.json()
+
+    teams = client.get(
+        f"/competition/teams/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert teams.status_code == 200, teams.json()
+    teams_json = teams.json()
+    deleted_team_check = next(
+        (t for t in teams_json if t["id"] == str(new_team.id)),
+        None,
+    )
+    assert deleted_team_check is None, teams_json
+
+
+async def test_delete_team_as_captain(
+    client: TestClient,
+) -> None:
+    new_team = models_sport_competition.CompetitionTeam(
+        id=uuid4(),
+        name="Team to Delete",
+        school_id=SchoolType.centrale_lyon.value,
+        edition_id=active_edition.id,
+        sport_id=sport_with_team.id,
+        captain_id=user3.id,
+        created_at=datetime.now(UTC),
+    )
+    await add_object_to_db(new_team)
+    response = client.delete(
+        f"/competition/teams/{new_team.id}",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 204, response.json()
+
+    teams = client.get(
+        f"/competition/teams/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert teams.status_code == 200, teams.json()
+    teams_json = teams.json()
+    deleted_team_check = next(
+        (t for t in teams_json if t["id"] == str(new_team.id)),
+        None,
+    )
+    assert deleted_team_check is None, teams_json
+
+
+async def test_get_participant_me(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        "/competition/users/me",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200, response.json()
+    user = response.json()
+    assert user["user_id"] == str(user3.id)
+    assert user["sport_id"] == str(sport_free_quota.id)
+    assert user["edition_id"] == str(active_edition.id)
+
+
+async def test_get_participant_for_sport(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        f"/competition/users/sports/{sport_free_quota.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200, response.json()
+    users = response.json()
+    assert len(users) > 0
+    assert all(user["edition_id"] == str(active_edition.id) for user in users)
+    assert all(user["sport_id"] == str(sport_free_quota.id) for user in users)
+
+
+async def test_get_participant_for_school(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        f"/competition/users/sports/{sport_free_quota.id}/schools/{school1.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200, response.json()
+    users = response.json()
+    assert len(users) > 0
+    assert all(user["edition_id"] == str(active_edition.id) for user in users)
+    assert all(user["sport_id"] == str(sport_free_quota.id) for user in users)
+    assert all(user["school_id"] == str(school1.id) for user in users)
+
+
+async def test_user_participate(
+    client: TestClient,
+) -> None:
+    info = ParticipantInfo(
+        license="12345670089",
+        substitute=False,
+    )
+    response = client.post(
+        f"/competition/sports/{sport_free_quota.id}/participate",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json=info.model_dump(exclude_none=True, mode="json"),
+    )
+    assert response.status_code == 200, response.json()
+
+    participants = client.get(
+        f"/competition/users/sports/{sport_free_quota.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert participants.status_code == 200, participants.json()
+    participants_json = participants.json()
+    user_participation = next(
+        (u for u in participants_json if u["user_id"] == str(user3.id)),
+        None,
+    )
+    assert user_participation is not None, participants_json
+    assert user_participation["edition_id"] == str(active_edition.id)
