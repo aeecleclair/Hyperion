@@ -135,6 +135,7 @@ class ProductBase(BaseModel):
     tickets: list[GenerateTicketBase] = []
     product_constraints: list[UUID]
     document_constraints: list[UUID]
+    year: int | None = None
 
 
 class ProductCompleteNoConstraint(BaseModel):
@@ -148,6 +149,7 @@ class ProductCompleteNoConstraint(BaseModel):
     variants: list[ProductVariantComplete] = []
     related_membership: schemas_memberships.MembershipSimple | None = None
     tickets: list[GenerateTicketComplete]
+    year: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -165,6 +167,7 @@ class ProductComplete(BaseModel):
     product_constraints: list[ProductCompleteNoConstraint] = []
     document_constraints: list[DocumentComplete] = []
     tickets: list[GenerateTicketComplete] = []
+    year: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -179,6 +182,7 @@ class ProductEdit(BaseModel):
     related_membership: schemas_memberships.MembershipSimple | None = None
     product_constraints: list[UUID] | None = None
     document_constraints: list[UUID] | None = None
+    year: int | None = None
 
 
 class SellerBase(BaseModel):

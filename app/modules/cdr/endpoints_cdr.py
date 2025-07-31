@@ -33,7 +33,7 @@ from app.dependencies import (
     is_user_a_member,
     is_user_in,
 )
-from app.modules.cdr import cruds_cdr, models_cdr, schemas_cdr
+from app.modules.cdr import coredata_cdr, cruds_cdr, models_cdr, schemas_cdr
 from app.modules.cdr.types_cdr import (
     CdrLogActionType,
     CdrStatus,
@@ -732,6 +732,7 @@ async def create_product(
         related_membership_id=product.related_membership.id
         if product.related_membership
         else None,
+        year=int(datetime.now(tz=UTC).year),
     )
 
     cruds_cdr.create_product(db, db_product)
@@ -2436,6 +2437,30 @@ async def get_payment_url(
     return schemas_cdr.PaymentUrl(
         url=checkout.payment_url,
     )
+
+
+@module.router.get(
+    "/cdr/year/",
+    response_model=coredata_cdr.CdrYear,
+    status_code=200,
+)
+async def get_cdr_year(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
+):
+    return await get_core_data(coredata_cdr.CdrYear, db)
+
+
+@module.router.patch(
+    "/cdr/year/",
+    status_code=204,
+)
+async def update_cdr_year(
+    year: coredata_cdr.CdrYear,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+):
+    await set_core_data(year, db)
 
 
 @module.router.get(

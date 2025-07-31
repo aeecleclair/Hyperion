@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import noload, selectinload
 
 from app.core.users.models_users import CoreUser
-from app.modules.cdr import models_cdr, schemas_cdr
+from app.modules.cdr import coredata_cdr, models_cdr, schemas_cdr
 
 
 async def get_cdr_users_curriculum(

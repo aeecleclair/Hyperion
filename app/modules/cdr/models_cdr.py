@@ -75,6 +75,7 @@ class CdrProduct(Base):
     name_fr: Mapped[str]
     name_en: Mapped[str | None]
     available_online: Mapped[bool]
+    year: Mapped[int]
 
     description_fr: Mapped[str | None] = mapped_column(default=None)
     description_en: Mapped[str | None] = mapped_column(default=None)
