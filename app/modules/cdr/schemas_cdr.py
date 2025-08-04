@@ -95,6 +95,7 @@ class ProductVariantBase(BaseModel):
     unique: bool
     allowed_curriculum: list[UUID]
     related_membership_added_duration: timedelta | None = None
+    year: int
 
 
 class ProductVariantComplete(BaseModel):

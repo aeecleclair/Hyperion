@@ -934,6 +934,7 @@ async def create_product_variant(
         related_membership_added_duration=product_variant.related_membership_added_duration,
         description_fr=product_variant.description_fr,
         description_en=product_variant.description_en,
+        year=product_variant.year,
     )
     if (
         product
