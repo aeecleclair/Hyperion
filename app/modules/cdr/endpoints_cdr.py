@@ -1393,6 +1393,7 @@ async def create_purchase(
     **User must create a purchase for themself and for an online available product or be part of the seller's group to use this endpoint**
     """
     status = await get_core_data(schemas_cdr.Status, db)
+    CdrYear = await get_core_data(coredata_cdr.CdrYear, db)
     if status.status in [CdrStatus.pending, CdrStatus.closed]:
         raise HTTPException(
             status_code=403,
@@ -1415,6 +1416,11 @@ async def create_purchase(
         raise HTTPException(
             status_code=404,
             detail="Invalid product.",
+        )
+    if product_variant.year != CdrYear.year:
+        raise HTTPException(
+            status_code=404,
+            detail="Product unavailable.",
         )
     if not (user_id == user.id and product.available_online):
         await is_user_in_a_seller_group(product.seller_id, user=user, db=db)
