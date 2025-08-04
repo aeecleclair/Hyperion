@@ -54,7 +54,10 @@ async def get_online_products(
     db: AsyncSession,
 ) -> Sequence[models_cdr.CdrProduct]:
     result = await db.execute(
-        select(models_cdr.CdrProduct).where(models_cdr.CdrProduct.available_online),
+        select(models_cdr.CdrProduct).where(
+            models_cdr.CdrProduct.available_online,
+            models_cdr.CdrProduct.year == coredata_cdr.CdrYear.year,
+        ),
     )
     return result.unique().scalars().all()
 
@@ -63,7 +66,9 @@ async def get_products(
     db: AsyncSession,
 ) -> Sequence[models_cdr.CdrProduct]:
     result = await db.execute(
-        select(models_cdr.CdrProduct),
+        select(models_cdr.CdrProduct).where(
+            models_cdr.CdrProduct.year == coredata_cdr.CdrYear.year
+        ),
     )
     return result.unique().scalars().all()
 
@@ -126,6 +131,7 @@ async def get_products_by_seller_id(
     result = await db.execute(
         select(models_cdr.CdrProduct).where(
             models_cdr.CdrProduct.seller_id == seller_id,
+            models_cdr.CdrProduct.year == coredata_cdr.CdrYear.year,
         ),
     )
     return result.unique().scalars().all()
@@ -139,6 +145,7 @@ async def get_online_products_by_seller_id(
         select(models_cdr.CdrProduct).where(
             models_cdr.CdrProduct.seller_id == seller_id,
             models_cdr.CdrProduct.available_online,
+            models_cdr.CdrProduct.year == coredata_cdr.CdrYear.year,
         ),
     )
     return result.unique().scalars().all()
@@ -149,7 +156,10 @@ async def get_product_by_id(
     product_id: UUID,
 ) -> models_cdr.CdrProduct | None:
     result = await db.execute(
-        select(models_cdr.CdrProduct).where(models_cdr.CdrProduct.id == product_id),
+        select(models_cdr.CdrProduct).where(
+            models_cdr.CdrProduct.id == product_id,
+            models_cdr.CdrProduct.year == coredata_cdr.CdrYear.year,
+        ),
     )
     return result.unique().scalars().first()
 
