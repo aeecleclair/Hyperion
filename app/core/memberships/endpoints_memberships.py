@@ -271,7 +271,7 @@ async def read_user_association_membership_history(
 
     if not is_user_member_of_any_group(
         user,
-        [GroupType.admin, db_membership.manager_group_id],
+        [GroupType.admin, GroupType.admin_cdr, db_membership.manager_group_id],
     ):
         raise HTTPException(status_code=403, detail="Unauthorized")
 
@@ -312,7 +312,11 @@ async def create_user_membership(
         )
     if not is_user_member_of_any_group(
         user,
-        [GroupType.admin, db_association_membership.manager_group_id],
+        [
+            GroupType.admin,
+            GroupType.admin_cdr,
+            db_association_membership.manager_group_id,
+        ],
     ):
         raise HTTPException(status_code=403, detail="Unauthorized")
 
@@ -381,7 +385,11 @@ async def add_batch_membership(
 
     if not is_user_member_of_any_group(
         user,
-        [GroupType.admin, db_association_membership.manager_group_id],
+        [
+            GroupType.admin,
+            GroupType.admin_cdr,
+            db_association_membership.manager_group_id,
+        ],
     ):
         raise HTTPException(status_code=403, detail="Unauthorized")
 
@@ -447,7 +455,7 @@ async def update_user_membership(
 
     if not is_user_member_of_any_group(
         user,
-        [GroupType.admin, db_membership.manager_group_id],
+        [GroupType.admin, GroupType.admin_cdr, db_membership.manager_group_id],
     ):
         raise HTTPException(status_code=403, detail="Unauthorized")
 
@@ -500,7 +508,7 @@ async def delete_user_membership(
 
     if not is_user_member_of_any_group(
         user,
-        [GroupType.admin, db_membership.manager_group_id],
+        [GroupType.admin, GroupType.admin_cdr, db_membership.manager_group_id],
     ):
         raise HTTPException(status_code=403, detail="Unauthorized")
 
