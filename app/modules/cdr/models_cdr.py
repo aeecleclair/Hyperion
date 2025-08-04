@@ -162,6 +162,7 @@ class ProductVariant(Base):
     price: Mapped[int]
     enabled: Mapped[bool]
     unique: Mapped[bool]
+    year: Mapped[int]
 
     related_membership_added_duration: Mapped[timedelta | None] = mapped_column(
         default=None,

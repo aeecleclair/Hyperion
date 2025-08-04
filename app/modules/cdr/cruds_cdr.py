@@ -41,8 +41,12 @@ async def get_sellers(
 
 async def get_online_sellers(
     db: AsyncSession,
+    cdr_year: int,
 ) -> Sequence[models_cdr.Seller]:
-    online_products = await get_online_products(db=db)
+    online_products = await get_online_products(
+        db=db,
+        cdr_year=cdr_year,
+    )
     seller_ids = set(product.seller_id for product in online_products)
     result = await db.execute(
         select(models_cdr.Seller).where(models_cdr.Seller.id.in_(seller_ids)),
@@ -52,11 +56,12 @@ async def get_online_sellers(
 
 async def get_online_products(
     db: AsyncSession,
+    cdr_year: int,
 ) -> Sequence[models_cdr.CdrProduct]:
     result = await db.execute(
         select(models_cdr.CdrProduct).where(
             models_cdr.CdrProduct.available_online,
-            models_cdr.CdrProduct.year == coredata_cdr.CdrYear.year,
+            models_cdr.CdrProduct.year == cdr_year,
         ),
     )
     return result.unique().scalars().all()
@@ -64,11 +69,10 @@ async def get_online_products(
 
 async def get_products(
     db: AsyncSession,
+    cdr_year: int = coredata_cdr.CdrYear.year,
 ) -> Sequence[models_cdr.CdrProduct]:
     result = await db.execute(
-        select(models_cdr.CdrProduct).where(
-            models_cdr.CdrProduct.year == coredata_cdr.CdrYear.year
-        ),
+        select(models_cdr.CdrProduct).where(models_cdr.CdrProduct.year == cdr_year),
     )
     return result.unique().scalars().all()
 
@@ -127,11 +131,12 @@ async def delete_seller(
 async def get_products_by_seller_id(
     db: AsyncSession,
     seller_id: UUID,
+    cdr_year: int,
 ) -> Sequence[models_cdr.CdrProduct]:
     result = await db.execute(
         select(models_cdr.CdrProduct).where(
             models_cdr.CdrProduct.seller_id == seller_id,
-            models_cdr.CdrProduct.year == coredata_cdr.CdrYear.year,
+            models_cdr.CdrProduct.year == cdr_year,
         ),
     )
     return result.unique().scalars().all()
@@ -140,12 +145,13 @@ async def get_products_by_seller_id(
 async def get_online_products_by_seller_id(
     db: AsyncSession,
     seller_id: UUID,
+    cdr_year: int,
 ) -> Sequence[models_cdr.CdrProduct]:
     result = await db.execute(
         select(models_cdr.CdrProduct).where(
             models_cdr.CdrProduct.seller_id == seller_id,
             models_cdr.CdrProduct.available_online,
-            models_cdr.CdrProduct.year == coredata_cdr.CdrYear.year,
+            models_cdr.CdrProduct.year == cdr_year,
         ),
     )
     return result.unique().scalars().all()
@@ -154,11 +160,12 @@ async def get_online_products_by_seller_id(
 async def get_product_by_id(
     db: AsyncSession,
     product_id: UUID,
+    cdr_year: int,
 ) -> models_cdr.CdrProduct | None:
     result = await db.execute(
         select(models_cdr.CdrProduct).where(
             models_cdr.CdrProduct.id == product_id,
-            models_cdr.CdrProduct.year == coredata_cdr.CdrYear.year,
+            models_cdr.CdrProduct.year == cdr_year,
         ),
     )
     return result.unique().scalars().first()
@@ -265,10 +272,12 @@ async def delete_document_constraints(
 async def get_product_variant_by_id(
     db: AsyncSession,
     variant_id: UUID,
+    cdr_year: int,
 ) -> models_cdr.ProductVariant | None:
     result = await db.execute(
         select(models_cdr.ProductVariant).where(
             models_cdr.ProductVariant.id == variant_id,
+            models_cdr.ProductVariant.year == cdr_year,
         ),
     )
     return result.scalars().first()
@@ -277,10 +286,12 @@ async def get_product_variant_by_id(
 async def get_product_variants(
     db: AsyncSession,
     product_id: UUID,
+    cdr_year: int,
 ) -> Sequence[models_cdr.ProductVariant]:
     result = await db.execute(
         select(models_cdr.ProductVariant).where(
             models_cdr.ProductVariant.product_id == product_id,
+            models_cdr.ProductVariant.year == cdr_year,
         ),
     )
     return result.scalars().all()
@@ -919,8 +930,11 @@ def create_ticket_generator(db: AsyncSession, ticket: models_cdr.TicketGenerator
 async def get_product_validated_purchases(
     db: AsyncSession,
     product_id: UUID,
+    cdr_year: int,
 ) -> Sequence[models_cdr.Purchase]:
-    variant = await get_product_variants(db=db, product_id=product_id)
+    variant = await get_product_variants(
+        db=db, product_id=product_id, cdr_year=cdr_year
+    )
     variant_ids = [v.id for v in variant]
     result = await db.execute(
         select(models_cdr.Purchase).where(
