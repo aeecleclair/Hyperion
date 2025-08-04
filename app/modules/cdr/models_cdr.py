@@ -162,7 +162,6 @@ class ProductVariant(Base):
     price: Mapped[int]
     enabled: Mapped[bool]
     unique: Mapped[bool]
-    year: Mapped[int]
 
     related_membership_added_duration: Mapped[timedelta | None] = mapped_column(
         default=None,
@@ -239,6 +238,7 @@ class Payment(Base):
     payment_type: Mapped[PaymentType] = mapped_column(
         index=True,
     )
+    year: Mapped[int]
 
 
 class CdrAction(Base):

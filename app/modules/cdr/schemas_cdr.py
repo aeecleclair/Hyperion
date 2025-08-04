@@ -95,7 +95,6 @@ class ProductVariantBase(BaseModel):
     unique: bool
     allowed_curriculum: list[UUID]
     related_membership_added_duration: timedelta | None = None
-    year: int
 
 
 class ProductVariantComplete(BaseModel):
@@ -150,7 +149,6 @@ class ProductCompleteNoConstraint(BaseModel):
     variants: list[ProductVariantComplete] = []
     related_membership: schemas_memberships.MembershipSimple | None = None
     tickets: list[GenerateTicketComplete]
-    year: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -168,7 +166,6 @@ class ProductComplete(BaseModel):
     product_constraints: list[ProductCompleteNoConstraint] = []
     document_constraints: list[DocumentComplete] = []
     tickets: list[GenerateTicketComplete] = []
-    year: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -183,7 +180,6 @@ class ProductEdit(BaseModel):
     related_membership: schemas_memberships.MembershipSimple | None = None
     product_constraints: list[UUID] | None = None
     document_constraints: list[UUID] | None = None
-    year: int | None = None
 
 
 class SellerBase(BaseModel):
@@ -244,6 +240,7 @@ class SignatureComplete(SignatureBase):
 class PaymentBase(BaseModel):
     total: int
     payment_type: PaymentType
+    year: int
 
 
 class PaymentComplete(PaymentBase):
