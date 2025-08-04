@@ -15,10 +15,11 @@ from tests.commons import (
 
 user: models_users.CoreUser
 admin_user: models_users.CoreUser
+bde_user: models_users.CoreUser
 
 token_user: str
 token_admin: str
-
+token_bde: str
 aeecl_association_membership: models_memberships.CoreAssociationMembership
 useecl_association_membership: models_memberships.CoreAssociationMembership
 user_membership: models_memberships.CoreAssociationUserMembership
@@ -26,15 +27,19 @@ user_membership: models_memberships.CoreAssociationUserMembership
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
-    global user, admin_user
+    global user, admin_user, bde_user
     user = await create_user_with_groups([])
     admin_user = await create_user_with_groups(
         [GroupType.admin],
     )
+    bde_user = await create_user_with_groups(
+        [GroupType.BDE],
+    )
 
-    global token_user, token_admin
+    global token_user, token_admin, token_bde
     token_user = create_api_access_token(user)
     token_admin = create_api_access_token(admin_user)
+    token_bde = create_api_access_token(bde_user)
 
     global aeecl_association_membership, useecl_association_membership
     aeecl_association_membership = models_memberships.CoreAssociationMembership(
@@ -245,6 +250,15 @@ def test_get_memberships_by_user_id_admin(client: TestClient):
     assert str(user_membership.id) in [x["id"] for x in response.json()]
 
 
+def test_get_association_membership_by_user_id_manager(client: TestClient):
+    response = client.get(
+        f"/memberships/users/{user.id}/{aeecl_association_membership.id}",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 200
+    assert str(user_membership.id) in [x["id"] for x in response.json()]
+
+
 async def test_get_membership_with_date_filter(client: TestClient):
     today = datetime.now(tz=UTC).date()
     new_membership1 = models_memberships.CoreAssociationUserMembership(
@@ -389,6 +403,28 @@ def test_create_user_membership_admin(client: TestClient):
     assert str(membership_id) in [x["id"] for x in response.json()]
 
 
+def test_create_user_membership_manager(client: TestClient):
+    today = datetime.now(tz=UTC).date()
+    response = client.post(
+        f"/memberships/users/{bde_user.id}",
+        json={
+            "association_membership_id": str(aeecl_association_membership.id),
+            "start_date": str(today - timedelta(days=1000)),
+            "end_date": str(today - timedelta(days=750)),
+        },
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 201
+    membership_id = uuid.UUID(response.json()["id"])
+
+    response = client.get(
+        f"/memberships/users/{bde_user.id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert str(membership_id) in [x["id"] for x in response.json()]
+
+
 def test_delete_user_membership_user(client: TestClient):
     response = client.delete(
         f"/memberships/users/{user_membership.id}",
@@ -425,6 +461,30 @@ async def test_delete_user_membership_admin(client: TestClient):
     response = client.delete(
         f"/memberships/users/{new_membership.id}",
         headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 204
+
+    response = client.get(
+        f"/memberships/users/{user.id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert str(new_membership.id) not in [x["id"] for x in response.json()]
+
+
+async def test_delete_user_membership_manager(client: TestClient):
+    new_membership = models_memberships.CoreAssociationUserMembership(
+        id=uuid.uuid4(),
+        user_id=bde_user.id,
+        association_membership_id=aeecl_association_membership.id,
+        start_date=datetime.now(tz=UTC).date() - timedelta(days=365),
+        end_date=datetime.now(tz=UTC).date() + timedelta(days=365),
+    )
+    await add_object_to_db(new_membership)
+
+    response = client.delete(
+        f"/memberships/users/{new_membership.id}",
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 204
 
@@ -531,17 +591,51 @@ async def test_patch_user_membership_admin(client: TestClient):
     assert new_membership.id == uuid.UUID(membership["id"])
 
 
+async def test_patch_user_membership_manager(client: TestClient):
+    new_membership = models_memberships.CoreAssociationUserMembership(
+        id=uuid.uuid4(),
+        user_id=bde_user.id,
+        association_membership_id=aeecl_association_membership.id,
+        start_date=user_membership.end_date + timedelta(days=90),
+        end_date=user_membership.end_date + timedelta(days=500),
+    )
+    await add_object_to_db(new_membership)
+
+    new_start_date = str(user_membership.end_date + timedelta(days=100))
+    new_end_date = str(user_membership.end_date + timedelta(days=1000))
+    response = client.patch(
+        f"/memberships/users/{new_membership.id}",
+        json={
+            "start_date": new_start_date,
+            "end_date": new_end_date,
+        },
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 204
+
+    response = client.get(
+        f"/memberships/users/{bde_user.id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    membership = next(x for x in response.json() if x["id"] == str(new_membership.id))
+    assert new_start_date == membership["start_date"]
+    assert new_end_date == membership["end_date"]
+    assert bde_user.id == membership["user_id"]
+    assert new_membership.id == uuid.UUID(membership["id"])
+
+
 def test_post_batch_user_memberships_user(client: TestClient):
     response = client.post(
         f"/memberships/{aeecl_association_membership.id}/add-batch/",
         json=[
             {
-                "email": user.email,
+                "user_email": user.email,
                 "start_date": str(date(2024, 6, 1)),
                 "end_date": str(date(2028, 6, 1)),
             },
             {
-                "email": user.email,
+                "user_email": user.email,
                 "start_date": str(date(2024, 6, 1)),
                 "end_date": str(date(2028, 6, 1)),
             },
