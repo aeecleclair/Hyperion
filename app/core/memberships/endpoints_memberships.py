@@ -234,11 +234,11 @@ async def read_user_memberships(
     if user_id != user.id and GroupType.admin not in [
         group.id for group in user.groups
     ]:
-        raise HTTPException(
-            status_code=403,
-            detail="User is not allowed to access other users' memberships",
+        return await cruds_memberships.get_user_memberships_by_user_id(
+            db,
+            user_id,
+            manager_restriction=[group.id for group in user.groups],
         )
-
     return await cruds_memberships.get_user_memberships_by_user_id(
         db,
         user_id,

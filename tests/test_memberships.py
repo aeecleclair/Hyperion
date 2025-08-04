@@ -23,6 +23,7 @@ token_bde: str
 aeecl_association_membership: models_memberships.CoreAssociationMembership
 useecl_association_membership: models_memberships.CoreAssociationMembership
 user_membership: models_memberships.CoreAssociationUserMembership
+useecl_user_membership: models_memberships.CoreAssociationUserMembership
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -55,7 +56,7 @@ async def init_objects():
     )
     await add_object_to_db(useecl_association_membership)
 
-    global user_membership
+    global user_membership, useecl_user_membership
     user_membership = models_memberships.CoreAssociationUserMembership(
         id=uuid.uuid4(),
         user_id=user.id,
@@ -248,6 +249,16 @@ def test_get_memberships_by_user_id_admin(client: TestClient):
     )
     assert response.status_code == 200
     assert str(user_membership.id) in [x["id"] for x in response.json()]
+
+
+def test_get_memberships_by_user_id_manager(client: TestClient):
+    response = client.get(
+        f"/memberships/users/{user.id}",
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 200
+    assert str(user_membership.id) in [x["id"] for x in response.json()]
+    assert str(useecl_user_membership.id) not in [x["id"] for x in response.json()]
 
 
 def test_get_association_membership_by_user_id_manager(client: TestClient):
