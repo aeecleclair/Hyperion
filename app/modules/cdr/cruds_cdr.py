@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, extract, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import noload, selectinload
 
@@ -160,12 +160,10 @@ async def get_online_products_by_seller_id(
 async def get_product_by_id(
     db: AsyncSession,
     product_id: UUID,
-    cdr_year: int,
 ) -> models_cdr.CdrProduct | None:
     result = await db.execute(
         select(models_cdr.CdrProduct).where(
             models_cdr.CdrProduct.id == product_id,
-            models_cdr.CdrProduct.year == cdr_year,
         ),
     )
     return result.unique().scalars().first()
@@ -272,12 +270,10 @@ async def delete_document_constraints(
 async def get_product_variant_by_id(
     db: AsyncSession,
     variant_id: UUID,
-    cdr_year: int,
 ) -> models_cdr.ProductVariant | None:
     result = await db.execute(
         select(models_cdr.ProductVariant).where(
             models_cdr.ProductVariant.id == variant_id,
-            models_cdr.ProductVariant.year == cdr_year,
         ),
     )
     return result.scalars().first()
@@ -286,12 +282,10 @@ async def get_product_variant_by_id(
 async def get_product_variants(
     db: AsyncSession,
     product_id: UUID,
-    cdr_year: int,
 ) -> Sequence[models_cdr.ProductVariant]:
     result = await db.execute(
         select(models_cdr.ProductVariant).where(
             models_cdr.ProductVariant.product_id == product_id,
-            models_cdr.ProductVariant.year == cdr_year,
         ),
     )
     return result.scalars().all()
@@ -418,10 +412,14 @@ async def get_all_purchases(db: AsyncSession) -> Sequence[models_cdr.Purchase]:
 async def get_purchases_by_user_id(
     db: AsyncSession,
     user_id: str,
+    cdryear: int,
 ) -> Sequence[models_cdr.Purchase]:
     result = await db.execute(
         select(models_cdr.Purchase)
-        .where(models_cdr.Purchase.user_id == user_id)
+        .where(
+            models_cdr.Purchase.user_id == user_id,
+            models_cdr.Purchase.purchased_on.year == cdryear,
+        )
         .options(selectinload("*")),
     )
     return result.scalars().all()
@@ -447,11 +445,13 @@ async def get_purchases_by_ids(
     db: AsyncSession,
     user_id: str,
     product_variant_id: list[UUID],
+    cdr_year: int,
 ) -> Sequence[models_cdr.Purchase]:
     result = await db.execute(
         select(models_cdr.Purchase).where(
             models_cdr.Purchase.user_id == user_id,
             models_cdr.Purchase.product_variant_id.in_(product_variant_id),
+            extract("year", models_cdr.Purchase.purchased_on) == cdr_year,
         ),
     )
     return result.scalars().all()
@@ -698,9 +698,13 @@ async def delete_curriculum_membership(
 async def get_payments_by_user_id(
     db: AsyncSession,
     user_id: str,
+    cdr_year: int,
 ) -> Sequence[models_cdr.Payment]:
     result = await db.execute(
-        select(models_cdr.Payment).where(models_cdr.Payment.user_id == user_id),
+        select(models_cdr.Payment).where(
+            models_cdr.Payment.user_id == user_id,
+            models_cdr.Payment.year == cdr_year,
+        ),
     )
     return result.scalars().all()
 
@@ -933,7 +937,8 @@ async def get_product_validated_purchases(
     cdr_year: int,
 ) -> Sequence[models_cdr.Purchase]:
     variant = await get_product_variants(
-        db=db, product_id=product_id, cdr_year=cdr_year
+        db=db,
+        product_id=product_id,
     )
     variant_ids = [v.id for v in variant]
     result = await db.execute(

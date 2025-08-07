@@ -433,7 +433,6 @@ async def generate_and_send_results(
         product_variants = await cruds_cdr.get_product_variants(
             db,
             product.id,
-            cdr_year.year,
         )
         variants.extend(product_variants)
         product_fields[product.id] = list(
@@ -767,7 +766,7 @@ async def create_product(
         related_membership_id=product.related_membership.id
         if product.related_membership
         else None,
-        year=int(datetime.now(tz=UTC).year),
+        year=cdr_year.year,
     )
 
     cruds_cdr.create_product(db, db_product)
@@ -802,7 +801,6 @@ async def create_product(
     return await cruds_cdr.get_product_by_id(
         db,
         db_product.id,
-        cdr_year.year,
     )
 
 
@@ -921,7 +919,6 @@ async def delete_product(
     variants = await cruds_cdr.get_product_variants(
         db=db,
         product_id=product_id,
-        cdr_year=cdr_year.year,
     )
     if variants:
         raise HTTPException(
@@ -980,7 +977,7 @@ async def create_product_variant(
         related_membership_added_duration=product_variant.related_membership_added_duration,
         description_fr=product_variant.description_fr,
         description_en=product_variant.description_en,
-        year=product_variant.year,
+        year=cdr_year.year,
     )
     if (
         product
@@ -1015,7 +1012,6 @@ async def create_product_variant(
     return await cruds_cdr.get_product_variant_by_id(
         db=db,
         variant_id=db_product_variant.id,
-        cdr_year=cdr_year.year,
     )
 
 
@@ -1285,19 +1281,21 @@ async def get_purchases_by_user_id(
             status_code=403,
             detail="You're not allowed to see other users purchases.",
         )
-    purchases = await cruds_cdr.get_purchases_by_user_id(db=db, user_id=user_id)
+    purchases = await cruds_cdr.get_purchases_by_user_id(
+        db=db,
+        user_id=user_id,
+        cdryear=cdr_year.year,
+    )
     result = []
     for purchase in purchases:
         product_variant = await cruds_cdr.get_product_variant_by_id(
             db=db,
             variant_id=purchase.product_variant_id,
-            cdr_year=cdr_year.year,
         )
         if product_variant:
             product = await cruds_cdr.get_product_by_id(
                 db=db,
                 product_id=product_variant.product_id,
-                cdr_year=cdr_year.year,
             )
             if product:
                 seller = await cruds_cdr.get_seller_by_id(
@@ -1350,7 +1348,7 @@ async def get_my_purchases(
     user: models_users.CoreUser = Depends(is_user()),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
-    return await get_purchases_by_user_id(user.id, db, user)
+    return await get_purchases_by_user_id(user.id, db, user, cdr_year)
 
 
 @module.router.get(
@@ -1383,13 +1381,11 @@ async def get_purchases_by_user_id_by_seller_id(
         product_variant = await cruds_cdr.get_product_variant_by_id(
             db=db,
             variant_id=purchase.product_variant_id,
-            cdr_year=cdr_year.year,
         )
         if product_variant:
             product = await cruds_cdr.get_product_by_id(
                 db=db,
                 product_id=product_variant.product_id,
-                cdr_year=cdr_year.year,
             )
             if product:
                 seller = await cruds_cdr.get_seller_by_id(
@@ -1451,7 +1447,6 @@ async def create_purchase(
     **User must create a purchase for themself and for an online available product or be part of the seller's group to use this endpoint**
     """
     status = await get_core_data(schemas_cdr.Status, db)
-    CdrYear = await get_core_data(coredata_cdr.CdrYear, db)
     if status.status in [CdrStatus.pending, CdrStatus.closed]:
         raise HTTPException(
             status_code=403,
@@ -1460,7 +1455,6 @@ async def create_purchase(
     product_variant = await cruds_cdr.get_product_variant_by_id(
         db=db,
         variant_id=product_variant_id,
-        cdr_year=cdr_year.year,
     )
     if not product_variant:
         raise HTTPException(
@@ -1470,14 +1464,13 @@ async def create_purchase(
     product = await cruds_cdr.get_product_by_id(
         db=db,
         product_id=product_variant.product_id,
-        cdr_year=cdr_year.year,
     )
     if not product:
         raise HTTPException(
             status_code=404,
             detail="Invalid product.",
         )
-    if product_variant.year != CdrYear.year:
+    if product_variant.year != cdr_year.year:
         raise HTTPException(
             status_code=404,
             detail="Product unavailable.",
@@ -1619,7 +1612,6 @@ async def mark_purchase_as_validated(
     product_variant = await cruds_cdr.get_product_variant_by_id(
         db=db,
         variant_id=product_variant_id,
-        cdr_year=cdr_year.year,
     )
     if not product_variant:
         raise HTTPException(
@@ -1629,7 +1621,6 @@ async def mark_purchase_as_validated(
     product = await cruds_cdr.get_product_by_id(
         db=db,
         product_id=product_variant.product_id,
-        cdr_year=cdr_year.year,
     )
     if not product:
         raise HTTPException(
@@ -1649,6 +1640,7 @@ async def mark_purchase_as_validated(
                 product_variant_id=[
                     variant.id for variant in product_constraint.variants
                 ],
+                cdr_year=cdr_year.year,
             )
             if not purchases:
                 if product_constraint.related_membership:
@@ -1753,7 +1745,6 @@ async def delete_purchase(
     product_variant = await cruds_cdr.get_product_variant_by_id(
         db=db,
         variant_id=product_variant_id,
-        cdr_year=cdr_year.year,
     )
     if not product_variant:
         raise HTTPException(
@@ -1763,7 +1754,6 @@ async def delete_purchase(
     product = await cruds_cdr.get_product_by_id(
         db=db,
         product_id=product_variant.product_id,
-        cdr_year=cdr_year.year,
     )
     if not product:
         raise HTTPException(
@@ -1790,13 +1780,16 @@ async def delete_purchase(
         )
 
     # Check if a validated purchase depends on this purchase
-    user_purchases = await cruds_cdr.get_purchases_by_user_id(db=db, user_id=user_id)
+    user_purchases = await cruds_cdr.get_purchases_by_user_id(
+        db=db,
+        user_id=user_id,
+        cdryear=cdr_year.year,
+    )
     for purchase in user_purchases:
         if purchase.validated:
             purchased_product = await cruds_cdr.get_product_by_id(
                 db=db,
                 product_id=purchase.product_variant.product_id,
-                cdr_year=cdr_year.year,
             )
             if purchased_product:
                 if product in purchased_product.product_constraints:
@@ -1811,6 +1804,7 @@ async def delete_purchase(
                         db=db,
                         user_id=user_id,
                         product_variant_id=[variant.id for variant in product.variants],
+                        cdr_year=cdr_year.year,
                     )
                     if all_possible_purchases:
                         all_possible_purchases = list(all_possible_purchases)
@@ -2123,7 +2117,11 @@ async def create_curriculum_membership(
         )
     curriculum = await cruds_cdr.get_curriculum_by_user_id(db=db, user_id=user_id)
     if curriculum:
-        purchases = await cruds_cdr.get_purchases_by_user_id(db=db, user_id=user_id)
+        purchases = await cruds_cdr.get_purchases_by_user_id(
+            db=db,
+            user_id=user_id,
+            cdryear=cdr_year.year,
+        )
         if purchases:
             raise HTTPException(
                 status_code=403,
@@ -2353,7 +2351,11 @@ async def get_payments_by_user_id(
             status_code=403,
             detail="You're not allowed to see other users payments.",
         )
-    return await cruds_cdr.get_payments_by_user_id(db=db, user_id=user_id)
+    return await cruds_cdr.get_payments_by_user_id(
+        db=db,
+        user_id=user_id,
+        cdr_year=cdr_year.year,
+    )
 
 
 @module.router.post(
@@ -2384,7 +2386,7 @@ async def create_payment(
         user_id=user_id,
         total=payment.total,
         payment_type=payment.payment_type,
-        year=payment.year,
+        year=cdr_year.year,
     )
     db_action = models_cdr.CdrAction(
         id=uuid4(),
@@ -2410,7 +2412,6 @@ async def delete_payment(
     payment_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Remove a payment.
@@ -2463,8 +2464,16 @@ async def get_payment_url(
     Get payment url
     """
 
-    purchases = await cruds_cdr.get_purchases_by_user_id(db=db, user_id=user.id)
-    payments = await cruds_cdr.get_payments_by_user_id(db=db, user_id=user.id)
+    purchases = await cruds_cdr.get_purchases_by_user_id(
+        db=db,
+        user_id=user.id,
+        cdryear=cdr_year.year,
+    )
+    payments = await cruds_cdr.get_payments_by_user_id(
+        db=db,
+        user_id=user.id,
+        cdr_year=cdr_year.year,
+    )
 
     purchases_total = sum(
         purchase.product_variant.price * purchase.quantity for purchase in purchases
@@ -2928,7 +2937,6 @@ async def generate_ticket_for_product(
     return await cruds_cdr.get_product_by_id(
         db=db,
         product_id=product_id,
-        cdr_year=cdr_year.year,
     )
 
 
