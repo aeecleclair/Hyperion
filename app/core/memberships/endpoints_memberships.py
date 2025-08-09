@@ -228,9 +228,10 @@ async def read_user_memberships(
 ):
     """
     Return all memberships for a user.
-
-    **This endpoint is only usable by administrators**
     """
+    # Check if the user is trying to access their own memberships or if they are an admin
+    # If the user is not an admin or the user_id does not match the current user,
+    # filter the query to get the managed memberships from user's groups.
     if user_id != user.id and GroupType.admin not in [
         group.id for group in user.groups
     ]:
