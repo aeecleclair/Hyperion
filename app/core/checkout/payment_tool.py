@@ -16,8 +16,8 @@ from helloasso_python.models.hello_asso_api_v5_models_carts_init_checkout_body i
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.payment import cruds_payment, models_payment, schemas_payment
-from app.core.payment.types_payment import HelloAssoConfig
+from app.core.checkout import cruds_checkout, models_checkout, schemas_checkout
+from app.core.checkout.types_checkout import HelloAssoConfig
 from app.core.users import schemas_users
 from app.core.utils import security
 from app.types.exceptions import (
@@ -131,7 +131,7 @@ class PaymentTool:
         db: AsyncSession,
         payer_user: schemas_users.CoreUser | None = None,
         redirection_uri: str | None = None,
-    ) -> schemas_payment.Checkout:
+    ) -> schemas_checkout.Checkout:
         """
         Init an HelloAsso checkout
 
@@ -181,7 +181,7 @@ class PaymentTool:
                 return_url=redirection_uri,
                 contains_donation=False,
                 payer=payer,
-                metadata=schemas_payment.HelloAssoCheckoutMetadata(
+                metadata=schemas_checkout.HelloAssoCheckoutMetadata(
                     secret=secret,
                     hyperion_checkout_id=str(checkout_model_id),
                 ).model_dump(),
@@ -220,7 +220,7 @@ class PaymentTool:
                 )
                 raise MissingHelloAssoCheckoutIdError()  # noqa: TRY301
 
-            checkout_model = models_payment.Checkout(
+            checkout_model = models_checkout.Checkout(
                 id=checkout_model_id,
                 module=module,
                 name=checkout_name,
@@ -229,9 +229,9 @@ class PaymentTool:
                 secret=secret,
             )
 
-            await cruds_payment.create_checkout(db=db, checkout=checkout_model)
+            await cruds_checkout.create_checkout(db=db, checkout=checkout_model)
 
-            return schemas_payment.Checkout(
+            return schemas_checkout.Checkout(
                 id=checkout_model_id,
                 payment_url=response.redirect_url,
             )
@@ -245,8 +245,8 @@ class PaymentTool:
         self,
         checkout_id: uuid.UUID,
         db: AsyncSession,
-    ) -> schemas_payment.CheckoutComplete | None:
-        checkout_model = await cruds_payment.get_checkout_by_id(
+    ) -> schemas_checkout.CheckoutComplete | None:
+        checkout_model = await cruds_checkout.get_checkout_by_id(
             checkout_id=checkout_id,
             db=db,
         )
@@ -255,10 +255,10 @@ class PaymentTool:
 
         checkout_dict = checkout_model.__dict__
         checkout_dict["payments"] = [
-            schemas_payment.CheckoutPayment(**payment.__dict__)
+            schemas_checkout.CheckoutPayment(**payment.__dict__)
             for payment in checkout_dict["payments"]
         ]
-        return schemas_payment.CheckoutComplete(**checkout_dict)
+        return schemas_checkout.CheckoutComplete(**checkout_dict)
 
     async def refund_payment(
         self,

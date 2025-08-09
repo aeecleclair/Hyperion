@@ -19,20 +19,23 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.checkout import schemas_checkout
+from app.core.checkout.payment_tool import PaymentTool
+from app.core.checkout.types_checkout import HelloAssoConfigName
 from app.core.core_endpoints import cruds_core
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import schemas_memberships
 from app.core.memberships.utils_memberships import (
     get_user_active_membership_to_association_membership,
 )
-from app.core.myeclpay import cruds_myeclpay, schemas_myeclpay
-from app.core.myeclpay.integrity_myeclpay import (
+from app.core.mypayment import cruds_mypayment, schemas_mypayment
+from app.core.mypayment.integrity_mypayment import (
     format_cancel_log,
     format_refund_log,
     format_transaction_log,
 )
-from app.core.myeclpay.models_myeclpay import Store, WalletDevice
-from app.core.myeclpay.types_myeclpay import (
+from app.core.mypayment.models_mypayment import Store, WalletDevice
+from app.core.mypayment.types_mypayment import (
     HistoryType,
     TransactionStatus,
     TransactionType,
@@ -41,7 +44,7 @@ from app.core.myeclpay.types_myeclpay import (
     WalletDeviceStatus,
     WalletType,
 )
-from app.core.myeclpay.utils_myeclpay import (
+from app.core.mypayment.utils_mypayment import (
     LATEST_TOS,
     QRCODE_EXPIRATION,
     is_user_latest_tos_signed,
@@ -49,9 +52,6 @@ from app.core.myeclpay.utils_myeclpay import (
     verify_signature,
 )
 from app.core.notification.schemas_notification import Message
-from app.core.payment import schemas_payment
-from app.core.payment.payment_tool import PaymentTool
-from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.users import cruds_users, schemas_users
 from app.core.users.models_users import CoreUser
 from app.core.utils import security
@@ -100,7 +100,7 @@ RETENTION_DURATION = 10 * 365  # 10 years in days
 @router.get(
     "/myeclpay/structures",
     status_code=200,
-    response_model=list[schemas_myeclpay.Structure],
+    response_model=list[schemas_mypayment.Structure],
 )
 async def get_structures(
     db: AsyncSession = Depends(get_db),
@@ -109,7 +109,7 @@ async def get_structures(
     """
     Get all structures.
     """
-    return await cruds_myeclpay.get_structures(
+    return await cruds_mypayment.get_structures(
         db=db,
     )
 
@@ -117,10 +117,10 @@ async def get_structures(
 @router.post(
     "/myeclpay/structures",
     status_code=201,
-    response_model=schemas_myeclpay.Structure,
+    response_model=schemas_mypayment.Structure,
 )
 async def create_structure(
-    structure: schemas_myeclpay.StructureBase,
+    structure: schemas_mypayment.StructureBase,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
@@ -144,7 +144,7 @@ async def create_structure(
             status_code=404,
             detail="Manager user does not exist",
         )
-    structure_db = schemas_myeclpay.Structure(
+    structure_db = schemas_mypayment.Structure(
         id=uuid.uuid4(),
         name=structure.name,
         association_membership_id=structure.association_membership_id,
@@ -159,7 +159,7 @@ async def create_structure(
             school_id=db_user.school_id,
         ),
     )
-    await cruds_myeclpay.create_structure(
+    await cruds_mypayment.create_structure(
         structure=structure_db,
         db=db,
     )
@@ -172,7 +172,7 @@ async def create_structure(
         },
     )
 
-    return await cruds_myeclpay.get_structure_by_id(structure_db.id, db)
+    return await cruds_mypayment.get_structure_by_id(structure_db.id, db)
 
 
 @router.patch(
@@ -181,7 +181,7 @@ async def create_structure(
 )
 async def update_structure(
     structure_id: UUID,
-    structure_update: schemas_myeclpay.StructureUpdate,
+    structure_update: schemas_mypayment.StructureUpdate,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
@@ -190,7 +190,7 @@ async def update_structure(
 
     **The user must be an admin to use this endpoint**
     """
-    structure = await cruds_myeclpay.get_structure_by_id(
+    structure = await cruds_mypayment.get_structure_by_id(
         structure_id=structure_id,
         db=db,
     )
@@ -200,7 +200,7 @@ async def update_structure(
             detail="Structure does not exist",
         )
 
-    await cruds_myeclpay.update_structure(
+    await cruds_mypayment.update_structure(
         structure_id=structure_id,
         structure_update=structure_update,
         db=db,
@@ -229,7 +229,7 @@ async def delete_structure(
 
     **The user must be an admin to use this endpoint**
     """
-    stores = await cruds_myeclpay.get_stores_by_structure_id(
+    stores = await cruds_mypayment.get_stores_by_structure_id(
         structure_id=structure_id,
         db=db,
     )
@@ -239,7 +239,7 @@ async def delete_structure(
             detail="Structure has stores",
         )
 
-    await cruds_myeclpay.delete_structure(
+    await cruds_mypayment.delete_structure(
         structure_id=structure_id,
         db=db,
     )
@@ -251,7 +251,7 @@ async def delete_structure(
 )
 async def init_transfer_structure_manager(
     structure_id: UUID,
-    transfer_info: schemas_myeclpay.StructureTranfert,
+    transfer_info: schemas_mypayment.StructureTranfert,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
@@ -264,7 +264,7 @@ async def init_transfer_structure_manager(
 
     **The user must be the manager for this structure**
     """
-    structure = await cruds_myeclpay.get_structure_by_id(
+    structure = await cruds_mypayment.get_structure_by_id(
         structure_id=structure_id,
         db=db,
     )
@@ -280,7 +280,7 @@ async def init_transfer_structure_manager(
         )
 
     # If a previous transfer request exists, delete it
-    await cruds_myeclpay.delete_structure_manager_transfer_by_structure(
+    await cruds_mypayment.delete_structure_manager_transfer_by_structure(
         structure_id=structure_id,
         db=db,
     )
@@ -297,7 +297,7 @@ async def init_transfer_structure_manager(
 
     confirmation_token = security.generate_token()
 
-    await cruds_myeclpay.init_structure_manager_transfer(
+    await cruds_mypayment.init_structure_manager_transfer(
         structure_id=structure_id,
         user_id=transfer_info.new_manager_user_id,
         confirmation_token=confirmation_token,
@@ -341,7 +341,7 @@ async def confirm_structure_manager_transfer(
     The user must have initiated the update of the manager with `init_update_structure_manager`
     """
 
-    request = await cruds_myeclpay.get_structure_manager_transfer_by_secret(
+    request = await cruds_mypayment.get_structure_manager_transfer_by_secret(
         confirmation_token=token,
         db=db,
     )
@@ -357,25 +357,25 @@ async def confirm_structure_manager_transfer(
             detail="Request has expired",
         )
 
-    await cruds_myeclpay.update_structure_manager(
+    await cruds_mypayment.update_structure_manager(
         structure_id=request.structure_id,
         manager_user_id=request.user_id,
         db=db,
     )
 
     # We will add the new manager as a seller for all stores of the structure
-    stores = await cruds_myeclpay.get_stores_by_structure_id(
+    stores = await cruds_mypayment.get_stores_by_structure_id(
         structure_id=request.structure_id,
         db=db,
     )
-    sellers = await cruds_myeclpay.get_sellers_by_user_id(
+    sellers = await cruds_mypayment.get_sellers_by_user_id(
         user_id=request.user_id,
         db=db,
     )
     sellers_store_ids = [seller.store_id for seller in sellers]
     for store in stores:
         if store.id not in sellers_store_ids:
-            await cruds_myeclpay.create_seller(
+            await cruds_mypayment.create_seller(
                 user_id=request.user_id,
                 store_id=store.id,
                 can_bank=True,
@@ -385,10 +385,10 @@ async def confirm_structure_manager_transfer(
                 db=db,
             )
         else:
-            await cruds_myeclpay.update_seller(
+            await cruds_mypayment.update_seller(
                 seller_user_id=request.user_id,
                 store_id=store.id,
-                seller_update=schemas_myeclpay.SellerUpdate(
+                seller_update=schemas_mypayment.SellerUpdate(
                     can_bank=True,
                     can_see_history=True,
                     can_cancel=True,
@@ -408,11 +408,11 @@ async def confirm_structure_manager_transfer(
 @router.post(
     "/myeclpay/structures/{structure_id}/stores",
     status_code=201,
-    response_model=schemas_myeclpay.Store,
+    response_model=schemas_mypayment.Store,
 )
 async def create_store(
     structure_id: UUID,
-    store: schemas_myeclpay.StoreBase,
+    store: schemas_mypayment.StoreBase,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
 ):
@@ -423,7 +423,7 @@ async def create_store(
 
     **The user must be the manager for this structure**
     """
-    structure = await cruds_myeclpay.get_structure_by_id(
+    structure = await cruds_mypayment.get_structure_by_id(
         structure_id=structure_id,
         db=db,
     )
@@ -438,7 +438,7 @@ async def create_store(
             detail="User is not the manager for this structure",
         )
 
-    existing_store_with_name = await cruds_myeclpay.get_store_by_name(
+    existing_store_with_name = await cruds_mypayment.get_store_by_name(
         name=store.name,
         db=db,
     )
@@ -450,7 +450,7 @@ async def create_store(
 
     # Create new wallet for store
     wallet_id = uuid.uuid4()
-    await cruds_myeclpay.create_wallet(
+    await cruds_mypayment.create_wallet(
         wallet_id=wallet_id,
         wallet_type=WalletType.STORE,
         balance=0,
@@ -463,14 +463,14 @@ async def create_store(
         structure_id=structure_id,
         wallet_id=wallet_id,
     )
-    await cruds_myeclpay.create_store(
+    await cruds_mypayment.create_store(
         store=store_db,
         db=db,
     )
     await db.flush()
 
     # Add manager as an full right seller for the store
-    await cruds_myeclpay.create_seller(
+    await cruds_mypayment.create_seller(
         user_id=user.id,
         store_id=store_db.id,
         can_bank=True,
@@ -488,7 +488,7 @@ async def create_store(
         },
     )
 
-    return schemas_myeclpay.Store(
+    return schemas_mypayment.Store(
         id=store_db.id,
         name=store_db.name,
         structure_id=store_db.structure_id,
@@ -500,7 +500,7 @@ async def create_store(
 @router.get(
     "/myeclpay/stores/{store_id}/history",
     status_code=200,
-    response_model=list[schemas_myeclpay.History],
+    response_model=list[schemas_mypayment.History],
 )
 async def get_store_history(
     store_id: UUID,
@@ -514,7 +514,7 @@ async def get_store_history(
 
     **The user must be authorized to see the store history**
     """
-    store = await cruds_myeclpay.get_store(
+    store = await cruds_mypayment.get_store(
         store_id=store_id,
         db=db,
     )
@@ -524,7 +524,7 @@ async def get_store_history(
             detail="Store does not exist",
         )
 
-    seller = await cruds_myeclpay.get_seller(
+    seller = await cruds_mypayment.get_seller(
         user_id=user.id,
         store_id=store_id,
         db=db,
@@ -537,23 +537,23 @@ async def get_store_history(
 
     history = []
 
-    transactions = await cruds_myeclpay.get_transactions_by_wallet_id(
+    transactions = await cruds_mypayment.get_transactions_by_wallet_id(
         wallet_id=store.wallet_id,
         db=db,
         start_datetime=start_date,
         end_datetime=end_date,
     )
     for transaction in transactions:
-        history_refund: schemas_myeclpay.HistoryRefund | None = None
+        history_refund: schemas_mypayment.HistoryRefund | None = None
         if transaction.refund is not None:
-            history_refund = schemas_myeclpay.HistoryRefund(
+            history_refund = schemas_mypayment.HistoryRefund(
                 total=transaction.refund.total,
                 creation=transaction.refund.creation,
             )
 
         if transaction.debited_wallet_id == store.wallet_id:
             history.append(
-                schemas_myeclpay.History(
+                schemas_mypayment.History(
                     id=transaction.id,
                     type=HistoryType.GIVEN,
                     total=transaction.total,
@@ -567,7 +567,7 @@ async def get_store_history(
             )
         else:
             history.append(
-                schemas_myeclpay.History(
+                schemas_mypayment.History(
                     id=transaction.id,
                     type=HistoryType.RECEIVED,
                     total=transaction.total,
@@ -581,7 +581,7 @@ async def get_store_history(
             )
 
     # TODO: do we accept transfers to empty a store wallet?
-    transfers = await cruds_myeclpay.get_transfers_by_wallet_id(
+    transfers = await cruds_mypayment.get_transfers_by_wallet_id(
         wallet_id=store.wallet_id,
         db=db,
         start_datetime=start_date,
@@ -593,7 +593,7 @@ async def get_store_history(
         )
 
     # We add refunds
-    refunds = await cruds_myeclpay.get_refunds_by_wallet_id(
+    refunds = await cruds_mypayment.get_refunds_by_wallet_id(
         wallet_id=store.wallet_id,
         db=db,
         start_datetime=start_date,
@@ -608,7 +608,7 @@ async def get_store_history(
             other_wallet_info = refund.debited_wallet
 
         history.append(
-            schemas_myeclpay.History(
+            schemas_mypayment.History(
                 id=refund.id,
                 type=transaction_type,
                 other_wallet_name=other_wallet_info.owner_name or "Unknown",
@@ -624,7 +624,7 @@ async def get_store_history(
 @router.get(
     "/myeclpay/users/me/stores",
     status_code=200,
-    response_model=list[schemas_myeclpay.UserStore],
+    response_model=list[schemas_mypayment.UserStore],
 )
 async def get_user_stores(
     db: AsyncSession = Depends(get_db),
@@ -635,24 +635,24 @@ async def get_user_stores(
 
     **The user must be authenticated to use this endpoint**
     """
-    sellers = await cruds_myeclpay.get_sellers_by_user_id(
+    sellers = await cruds_mypayment.get_sellers_by_user_id(
         user_id=user.id,
         db=db,
     )
 
-    stores: list[schemas_myeclpay.UserStore] = []
+    stores: list[schemas_mypayment.UserStore] = []
     for seller in sellers:
-        store = await cruds_myeclpay.get_store(
+        store = await cruds_mypayment.get_store(
             store_id=seller.store_id,
             db=db,
         )
         if store is not None:
             stores.append(
-                schemas_myeclpay.UserStore(
+                schemas_mypayment.UserStore(
                     id=store.id,
                     name=store.name,
                     structure_id=store.structure_id,
-                    structure=schemas_myeclpay.Structure(
+                    structure=schemas_mypayment.Structure(
                         id=store.structure.id,
                         name=store.structure.name,
                         association_membership_id=store.structure.association_membership_id,
@@ -690,7 +690,7 @@ async def get_user_stores(
 )
 async def update_store(
     store_id: UUID,
-    store_update: schemas_myeclpay.StoreUpdate,
+    store_update: schemas_mypayment.StoreUpdate,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
 ):
@@ -699,7 +699,7 @@ async def update_store(
 
     **The user must be the manager for this store's structure**
     """
-    store = await cruds_myeclpay.get_store(
+    store = await cruds_mypayment.get_store(
         store_id=store_id,
         db=db,
     )
@@ -709,7 +709,7 @@ async def update_store(
             detail="Store does not exist",
         )
 
-    structure = await cruds_myeclpay.get_structure_by_id(
+    structure = await cruds_mypayment.get_structure_by_id(
         structure_id=store.structure_id,
         db=db,
     )
@@ -719,7 +719,7 @@ async def update_store(
             detail="User is not the manager for this structure",
         )
 
-    await cruds_myeclpay.update_store(
+    await cruds_mypayment.update_store(
         store_id=store_id,
         store_update=store_update,
         db=db,
@@ -748,7 +748,7 @@ async def delete_store(
 
     **The user must be the manager for this store's structure**
     """
-    store = await cruds_myeclpay.get_store(
+    store = await cruds_mypayment.get_store(
         store_id=store_id,
         db=db,
     )
@@ -758,7 +758,7 @@ async def delete_store(
             detail="Store does not exist",
         )
 
-    structure = await cruds_myeclpay.get_structure_by_id(
+    structure = await cruds_mypayment.get_structure_by_id(
         structure_id=store.structure_id,
         db=db,
     )
@@ -768,15 +768,15 @@ async def delete_store(
             detail="User is not the manager for this structure",
         )
 
-    transactions = await cruds_myeclpay.get_transactions_by_wallet_id(
+    transactions = await cruds_mypayment.get_transactions_by_wallet_id(
         wallet_id=store.wallet_id,
         db=db,
     )
-    transfers = await cruds_myeclpay.get_transfers_by_wallet_id(
+    transfers = await cruds_mypayment.get_transfers_by_wallet_id(
         wallet_id=store.wallet_id,
         db=db,
     )
-    refunds = await cruds_myeclpay.get_refunds_by_wallet_id(
+    refunds = await cruds_mypayment.get_refunds_by_wallet_id(
         wallet_id=store.wallet_id,
         db=db,
     )
@@ -786,18 +786,18 @@ async def delete_store(
             detail="Store has items in history and cannot be deleted anymore",
         )
 
-    sellers = await cruds_myeclpay.get_sellers_by_store_id(
+    sellers = await cruds_mypayment.get_sellers_by_store_id(
         store_id=store_id,
         db=db,
     )
     for seller in sellers:
-        await cruds_myeclpay.delete_seller(
+        await cruds_mypayment.delete_seller(
             seller_user_id=seller.user_id,
             store_id=store_id,
             db=db,
         )
 
-    await cruds_myeclpay.delete_store(
+    await cruds_mypayment.delete_store(
         store_id=store_id,
         db=db,
     )
@@ -806,11 +806,11 @@ async def delete_store(
 @router.post(
     "/myeclpay/stores/{store_id}/sellers",
     status_code=201,
-    response_model=schemas_myeclpay.Seller,
+    response_model=schemas_mypayment.Seller,
 )
 async def create_store_seller(
     store_id: UUID,
-    seller: schemas_myeclpay.SellerCreation,
+    seller: schemas_mypayment.SellerCreation,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
 ):
@@ -825,7 +825,7 @@ async def create_store_seller(
 
     **The user must have the `can_manage_sellers` permission for this store**
     """
-    store = await cruds_myeclpay.get_store(
+    store = await cruds_mypayment.get_store(
         store_id=store_id,
         db=db,
     )
@@ -835,7 +835,7 @@ async def create_store_seller(
             detail="Store does not exist",
         )
 
-    seller_admin = await cruds_myeclpay.get_seller(
+    seller_admin = await cruds_mypayment.get_seller(
         user_id=user.id,
         store_id=store_id,
         db=db,
@@ -846,7 +846,7 @@ async def create_store_seller(
             detail="User does not have the permission to manage sellers",
         )
 
-    existing_seller = await cruds_myeclpay.get_seller(
+    existing_seller = await cruds_mypayment.get_seller(
         user_id=seller.user_id,
         store_id=store_id,
         db=db,
@@ -857,7 +857,7 @@ async def create_store_seller(
             detail="Seller already exists",
         )
 
-    await cruds_myeclpay.create_seller(
+    await cruds_mypayment.create_seller(
         user_id=seller.user_id,
         store_id=store_id,
         can_bank=seller.can_bank,
@@ -867,7 +867,7 @@ async def create_store_seller(
         db=db,
     )
 
-    return await cruds_myeclpay.get_seller(
+    return await cruds_mypayment.get_seller(
         user_id=seller.user_id,
         store_id=store_id,
         db=db,
@@ -877,7 +877,7 @@ async def create_store_seller(
 @router.get(
     "/myeclpay/stores/{store_id}/sellers",
     status_code=200,
-    response_model=list[schemas_myeclpay.Seller],
+    response_model=list[schemas_mypayment.Seller],
 )
 async def get_store_sellers(
     store_id: UUID,
@@ -889,7 +889,7 @@ async def get_store_sellers(
 
     **The user must have the `can_manage_sellers` permission for this store**
     """
-    store = await cruds_myeclpay.get_store(
+    store = await cruds_mypayment.get_store(
         store_id=store_id,
         db=db,
     )
@@ -899,7 +899,7 @@ async def get_store_sellers(
             detail="Store does not exist",
         )
 
-    seller_admin = await cruds_myeclpay.get_seller(
+    seller_admin = await cruds_mypayment.get_seller(
         user_id=user.id,
         store_id=store_id,
         db=db,
@@ -910,7 +910,7 @@ async def get_store_sellers(
             detail="User does not have the permission to manage sellers",
         )
 
-    return await cruds_myeclpay.get_sellers_by_store_id(
+    return await cruds_mypayment.get_sellers_by_store_id(
         store_id=store_id,
         db=db,
     )
@@ -923,7 +923,7 @@ async def get_store_sellers(
 async def update_store_seller(
     store_id: UUID,
     seller_user_id: str,
-    seller_update: schemas_myeclpay.SellerUpdate,
+    seller_update: schemas_mypayment.SellerUpdate,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
 ):
@@ -934,7 +934,7 @@ async def update_store_seller(
     **The user must have the `can_manage_sellers` permission for this store**
     """
 
-    store = await cruds_myeclpay.get_store(
+    store = await cruds_mypayment.get_store(
         store_id=store_id,
         db=db,
     )
@@ -944,7 +944,7 @@ async def update_store_seller(
             detail="Store does not exist",
         )
 
-    seller_admin = await cruds_myeclpay.get_seller(
+    seller_admin = await cruds_mypayment.get_seller(
         user_id=user.id,
         store_id=store_id,
         db=db,
@@ -955,7 +955,7 @@ async def update_store_seller(
             detail="User does not have the permission to manage sellers",
         )
 
-    structure = await cruds_myeclpay.get_structure_by_id(
+    structure = await cruds_mypayment.get_structure_by_id(
         structure_id=store.structure_id,
         db=db,
     )
@@ -965,7 +965,7 @@ async def update_store_seller(
             detail="User is the manager for this structure and cannot be updated as a seller",
         )
 
-    seller = await cruds_myeclpay.get_seller(
+    seller = await cruds_mypayment.get_seller(
         user_id=seller_user_id,
         store_id=store_id,
         db=db,
@@ -977,7 +977,7 @@ async def update_store_seller(
             detail="Seller does not exist",
         )
 
-    await cruds_myeclpay.update_seller(
+    await cruds_mypayment.update_seller(
         seller_user_id=seller_user_id,
         store_id=store_id,
         seller_update=seller_update,
@@ -1001,7 +1001,7 @@ async def delete_store_seller(
 
     **The user must have the `can_manage_sellers` permission for this store**
     """
-    store = await cruds_myeclpay.get_store(
+    store = await cruds_mypayment.get_store(
         store_id=store_id,
         db=db,
     )
@@ -1011,7 +1011,7 @@ async def delete_store_seller(
             detail="Store does not exist",
         )
 
-    seller_admin = await cruds_myeclpay.get_seller(
+    seller_admin = await cruds_mypayment.get_seller(
         user_id=user.id,
         store_id=store_id,
         db=db,
@@ -1022,7 +1022,7 @@ async def delete_store_seller(
             detail="User does not have the permission to manage sellers",
         )
 
-    structure = await cruds_myeclpay.get_structure_by_id(
+    structure = await cruds_mypayment.get_structure_by_id(
         structure_id=store.structure_id,
         db=db,
     )
@@ -1032,7 +1032,7 @@ async def delete_store_seller(
             detail="User is the manager for this structure and cannot be deleted as a seller",
         )
 
-    seller = await cruds_myeclpay.get_seller(
+    seller = await cruds_mypayment.get_seller(
         user_id=seller_user_id,
         store_id=store_id,
         db=db,
@@ -1044,7 +1044,7 @@ async def delete_store_seller(
             detail="Seller does not exist",
         )
 
-    await cruds_myeclpay.delete_seller(
+    await cruds_mypayment.delete_seller(
         seller_user_id=seller_user_id,
         store_id=store_id,
         db=db,
@@ -1068,7 +1068,7 @@ async def register_user(
     """
 
     # Check if user is already registered
-    existing_user_payment = await cruds_myeclpay.get_user_payment(
+    existing_user_payment = await cruds_mypayment.get_user_payment(
         user_id=user.id,
         db=db,
     )
@@ -1080,7 +1080,7 @@ async def register_user(
 
     # Create new wallet for user
     wallet_id = uuid.uuid4()
-    await cruds_myeclpay.create_wallet(
+    await cruds_mypayment.create_wallet(
         wallet_id=wallet_id,
         wallet_type=WalletType.USER,
         balance=0,
@@ -1090,7 +1090,7 @@ async def register_user(
     await db.flush()
 
     # Create new payment user with wallet
-    await cruds_myeclpay.create_user_payment(
+    await cruds_mypayment.create_user_payment(
         user_id=user.id,
         wallet_id=wallet_id,
         accepted_tos_signature=datetime.now(UTC),
@@ -1110,7 +1110,7 @@ async def register_user(
 @router.get(
     "/myeclpay/users/me/tos",
     status_code=200,
-    response_model=schemas_myeclpay.TOSSignatureResponse,
+    response_model=schemas_mypayment.TOSSignatureResponse,
 )
 async def get_user_tos(
     db: AsyncSession = Depends(get_db),
@@ -1123,7 +1123,7 @@ async def get_user_tos(
     **The user must be authenticated to use this endpoint**
     """
     # Check if user is already registered
-    existing_user_payment = await cruds_myeclpay.get_user_payment(
+    existing_user_payment = await cruds_mypayment.get_user_payment(
         user_id=user.id,
         db=db,
     )
@@ -1133,7 +1133,7 @@ async def get_user_tos(
             detail="User is not registered for MyECL Pay",
         )
 
-    return schemas_myeclpay.TOSSignatureResponse(
+    return schemas_mypayment.TOSSignatureResponse(
         accepted_tos_version=existing_user_payment.accepted_tos_version,
         latest_tos_version=LATEST_TOS,
         tos_content=Path("assets/myeclpay-terms-of-service.txt").read_text(),
@@ -1146,7 +1146,7 @@ async def get_user_tos(
     status_code=204,
 )
 async def sign_tos(
-    signature: schemas_myeclpay.TOSSignature,
+    signature: schemas_mypayment.TOSSignature,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
@@ -1167,7 +1167,7 @@ async def sign_tos(
         )
 
     # Check if user is already registered
-    existing_user_payment = await cruds_myeclpay.get_user_payment(
+    existing_user_payment = await cruds_mypayment.get_user_payment(
         user_id=user.id,
         db=db,
     )
@@ -1178,7 +1178,7 @@ async def sign_tos(
         )
 
     # Update existing user payment
-    await cruds_myeclpay.update_user_payment(
+    await cruds_mypayment.update_user_payment(
         user_id=user.id,
         accepted_tos_signature=datetime.now(UTC),
         accepted_tos_version=signature.accepted_tos_version,
@@ -1207,7 +1207,7 @@ async def sign_tos(
 @router.get(
     "/myeclpay/users/me/wallet/devices",
     status_code=200,
-    response_model=list[schemas_myeclpay.WalletDevice],
+    response_model=list[schemas_mypayment.WalletDevice],
 )
 async def get_user_devices(
     db: AsyncSession = Depends(get_db),
@@ -1219,7 +1219,7 @@ async def get_user_devices(
     **The user must be authenticated to use this endpoint**
     """
     # Check if user is already registered
-    user_payment = await cruds_myeclpay.get_user_payment(
+    user_payment = await cruds_mypayment.get_user_payment(
         user_id=user.id,
         db=db,
     )
@@ -1229,7 +1229,7 @@ async def get_user_devices(
             detail="User is not registered for MyECL Pay",
         )
 
-    return await cruds_myeclpay.get_wallet_devices_by_wallet_id(
+    return await cruds_mypayment.get_wallet_devices_by_wallet_id(
         wallet_id=user_payment.wallet_id,
         db=db,
     )
@@ -1238,7 +1238,7 @@ async def get_user_devices(
 @router.get(
     "/myeclpay/users/me/wallet/devices/{wallet_device_id}",
     status_code=200,
-    response_model=schemas_myeclpay.WalletDevice,
+    response_model=schemas_mypayment.WalletDevice,
 )
 async def get_user_device(
     wallet_device_id: UUID,
@@ -1251,7 +1251,7 @@ async def get_user_device(
     **The user must be authenticated to use this endpoint**
     """
     # Check if user is already registered
-    user_payment = await cruds_myeclpay.get_user_payment(
+    user_payment = await cruds_mypayment.get_user_payment(
         user_id=user.id,
         db=db,
     )
@@ -1261,7 +1261,7 @@ async def get_user_device(
             detail="User is not registered for MyECL Pay",
         )
 
-    wallet_device = await cruds_myeclpay.get_wallet_device(
+    wallet_device = await cruds_mypayment.get_wallet_device(
         wallet_device_id=wallet_device_id,
         db=db,
     )
@@ -1284,7 +1284,7 @@ async def get_user_device(
 @router.get(
     "/myeclpay/users/me/wallet",
     status_code=200,
-    response_model=schemas_myeclpay.Wallet,
+    response_model=schemas_mypayment.Wallet,
 )
 async def get_user_wallet(
     db: AsyncSession = Depends(get_db),
@@ -1296,7 +1296,7 @@ async def get_user_wallet(
     **The user must be authenticated to use this endpoint**
     """
     # Check if user is already registered
-    user_payment = await cruds_myeclpay.get_user_payment(
+    user_payment = await cruds_mypayment.get_user_payment(
         user_id=user.id,
         db=db,
     )
@@ -1306,7 +1306,7 @@ async def get_user_wallet(
             detail="User is not registered for MyECL Pay",
         )
 
-    wallet = await cruds_myeclpay.get_wallet(
+    wallet = await cruds_mypayment.get_wallet(
         wallet_id=user_payment.wallet_id,
         db=db,
     )
@@ -1323,10 +1323,10 @@ async def get_user_wallet(
 @router.post(
     "/myeclpay/users/me/wallet/devices",
     status_code=201,
-    response_model=schemas_myeclpay.WalletDevice,
+    response_model=schemas_mypayment.WalletDevice,
 )
 async def create_user_devices(
-    wallet_device_creation: schemas_myeclpay.WalletDeviceCreation,
+    wallet_device_creation: schemas_mypayment.WalletDeviceCreation,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
@@ -1340,7 +1340,7 @@ async def create_user_devices(
     **The user must be authenticated to use this endpoint**
     """
     # Check if user is already registered
-    user_payment = await cruds_myeclpay.get_user_payment(
+    user_payment = await cruds_mypayment.get_user_payment(
         user_id=user.id,
         db=db,
     )
@@ -1364,7 +1364,7 @@ async def create_user_devices(
         activation_token=activation_token,
     )
 
-    await cruds_myeclpay.create_wallet_device(
+    await cruds_mypayment.create_wallet_device(
         wallet_device=wallet_device_db,
         db=db,
     )
@@ -1410,7 +1410,7 @@ async def activate_user_device(
     Activate a wallet device
     """
 
-    wallet_device = await cruds_myeclpay.get_wallet_device_by_activation_token(
+    wallet_device = await cruds_mypayment.get_wallet_device_by_activation_token(
         activation_token=token,
         db=db,
     )
@@ -1429,13 +1429,13 @@ async def activate_user_device(
             ),
         )
 
-    await cruds_myeclpay.update_wallet_device_status(
+    await cruds_mypayment.update_wallet_device_status(
         wallet_device_id=wallet_device.id,
         status=WalletDeviceStatus.ACTIVE,
         db=db,
     )
 
-    wallet = await cruds_myeclpay.get_wallet(
+    wallet = await cruds_mypayment.get_wallet(
         wallet_id=wallet_device.wallet_id,
         db=db,
     )
@@ -1487,7 +1487,7 @@ async def revoke_user_devices(
     **The user must be authenticated to use this endpoint**
     """
     # Check if user is already registered
-    user_payment = await cruds_myeclpay.get_user_payment(
+    user_payment = await cruds_mypayment.get_user_payment(
         user_id=user.id,
         db=db,
     )
@@ -1497,7 +1497,7 @@ async def revoke_user_devices(
             detail="User is not registered for MyECL Pay",
         )
 
-    wallet_device = await cruds_myeclpay.get_wallet_device(
+    wallet_device = await cruds_mypayment.get_wallet_device(
         wallet_device_id=wallet_device_id,
         db=db,
     )
@@ -1514,7 +1514,7 @@ async def revoke_user_devices(
             detail="Wallet device does not belong to the user",
         )
 
-    await cruds_myeclpay.update_wallet_device_status(
+    await cruds_mypayment.update_wallet_device_status(
         wallet_device_id=wallet_device_id,
         status=WalletDeviceStatus.REVOKED,
         db=db,
@@ -1537,7 +1537,7 @@ async def revoke_user_devices(
 
 @router.get(
     "/myeclpay/users/me/wallet/history",
-    response_model=list[schemas_myeclpay.History],
+    response_model=list[schemas_mypayment.History],
 )
 async def get_user_wallet_history(
     db: AsyncSession = Depends(get_db),
@@ -1550,7 +1550,7 @@ async def get_user_wallet_history(
 
     **The user must be authenticated to use this endpoint**
     """
-    user_payment = await cruds_myeclpay.get_user_payment(
+    user_payment = await cruds_mypayment.get_user_payment(
         user_id=user.id,
         db=db,
     )
@@ -1561,10 +1561,10 @@ async def get_user_wallet_history(
             detail="User is not registered for MyECL Pay",
         )
 
-    history: list[schemas_myeclpay.History] = []
+    history: list[schemas_mypayment.History] = []
 
     # First we get all received and send transactions
-    transactions = await cruds_myeclpay.get_transactions_by_wallet_id(
+    transactions = await cruds_mypayment.get_transactions_by_wallet_id(
         wallet_id=user_payment.wallet_id,
         db=db,
         start_datetime=start_date,
@@ -1589,14 +1589,14 @@ async def get_user_wallet_history(
         else:
             raise UnexpectedError("Transaction has no credited or debited wallet")  # noqa: TRY003
 
-        history_refund: schemas_myeclpay.HistoryRefund | None = None
+        history_refund: schemas_mypayment.HistoryRefund | None = None
         if transaction.refund is not None:
-            history_refund = schemas_myeclpay.HistoryRefund(
+            history_refund = schemas_mypayment.HistoryRefund(
                 total=transaction.refund.total,
                 creation=transaction.refund.creation,
             )
         history.append(
-            schemas_myeclpay.History(
+            schemas_mypayment.History(
                 id=transaction.id,
                 type=transaction_type,
                 other_wallet_name=other_wallet_name,
@@ -1608,7 +1608,7 @@ async def get_user_wallet_history(
         )
 
     # We also want to include transfers
-    transfers = await cruds_myeclpay.get_transfers_by_wallet_id(
+    transfers = await cruds_mypayment.get_transfers_by_wallet_id(
         wallet_id=user_payment.wallet_id,
         db=db,
         start_datetime=start_date,
@@ -1624,7 +1624,7 @@ async def get_user_wallet_history(
             status = TransactionStatus.CANCELED
 
         history.append(
-            schemas_myeclpay.History(
+            schemas_mypayment.History(
                 id=transfer.id,
                 type=HistoryType.TRANSFER,
                 other_wallet_name="Transfer",
@@ -1635,7 +1635,7 @@ async def get_user_wallet_history(
         )
 
     # We add refunds
-    refunds = await cruds_myeclpay.get_refunds_by_wallet_id(
+    refunds = await cruds_mypayment.get_refunds_by_wallet_id(
         wallet_id=user_payment.wallet_id,
         db=db,
         start_datetime=start_date,
@@ -1650,7 +1650,7 @@ async def get_user_wallet_history(
             other_wallet_info = refund.debited_wallet
 
         history.append(
-            schemas_myeclpay.History(
+            schemas_mypayment.History(
                 id=refund.id,
                 type=transaction_type,
                 other_wallet_name=other_wallet_info.owner_name or "Unknown",
@@ -1665,11 +1665,11 @@ async def get_user_wallet_history(
 
 @router.post(
     "/myeclpay/transfer/init",
-    response_model=schemas_payment.PaymentUrl,
+    response_model=schemas_checkout.PaymentUrl,
     status_code=201,
 )
 async def init_ha_transfer(
-    transfer_info: schemas_myeclpay.TransferInfo,
+    transfer_info: schemas_mypayment.TransferInfo,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
@@ -1694,7 +1694,7 @@ async def init_ha_transfer(
             detail="Please give an amount in cents, greater than 1€.",
         )
 
-    user_payment = await cruds_myeclpay.get_user_payment(
+    user_payment = await cruds_mypayment.get_user_payment(
         user_id=user.id,
         db=db,
     )
@@ -1710,7 +1710,7 @@ async def init_ha_transfer(
             detail="User has not signed the latest TOS",
         )
 
-    wallet = await cruds_myeclpay.get_wallet(
+    wallet = await cruds_mypayment.get_wallet(
         wallet_id=user_payment.wallet_id,
         db=db,
     )
@@ -1749,9 +1749,9 @@ async def init_ha_transfer(
         db=db,
     )
 
-    await cruds_myeclpay.create_transfer(
+    await cruds_mypayment.create_transfer(
         db=db,
-        transfer=schemas_myeclpay.Transfer(
+        transfer=schemas_mypayment.Transfer(
             id=uuid.uuid4(),
             type=TransferType.HELLO_ASSO,
             approver_user_id=None,
@@ -1763,14 +1763,14 @@ async def init_ha_transfer(
         ),
     )
 
-    return schemas_payment.PaymentUrl(
+    return schemas_checkout.PaymentUrl(
         url=checkout.payment_url,
     )
 
 
 @router.get(
     "/myeclpay/transfer/redirect",
-    response_model=schemas_payment.PaymentUrl,
+    response_model=schemas_checkout.PaymentUrl,
     status_code=201,
 )
 async def redirect_from_ha_transfer(
@@ -1819,7 +1819,7 @@ async def redirect_from_ha_transfer(
 )
 async def validate_can_scan_qrcode(
     store_id: UUID,
-    scan_info: schemas_myeclpay.ScanInfo,
+    scan_info: schemas_mypayment.ScanInfo,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user_an_ecl_member),
 ):
@@ -1833,7 +1833,7 @@ async def validate_can_scan_qrcode(
 
     **The user must be authenticated to use this endpoint**
     """
-    store = await cruds_myeclpay.get_store(
+    store = await cruds_mypayment.get_store(
         store_id=store_id,
         db=db,
     )
@@ -1843,7 +1843,7 @@ async def validate_can_scan_qrcode(
             detail="Store does not exist",
         )
 
-    seller = await cruds_myeclpay.get_seller(
+    seller = await cruds_mypayment.get_seller(
         store_id=store_id,
         user_id=user.id,
         db=db,
@@ -1855,7 +1855,7 @@ async def validate_can_scan_qrcode(
             detail="User does not have `can_bank` permission for this store",
         )
 
-    debited_wallet_device = await cruds_myeclpay.get_wallet_device(
+    debited_wallet_device = await cruds_mypayment.get_wallet_device(
         wallet_device_id=scan_info.key,
         db=db,
     )
@@ -1865,7 +1865,7 @@ async def validate_can_scan_qrcode(
             detail="Wallet device does not exist",
         )
 
-    debited_wallet = await cruds_myeclpay.get_wallet(
+    debited_wallet = await cruds_mypayment.get_wallet(
         wallet_id=debited_wallet_device.wallet_id,
         db=db,
     )
@@ -1906,7 +1906,7 @@ async def validate_can_scan_qrcode(
 )
 async def store_scan_qrcode(
     store_id: UUID,
-    scan_info: schemas_myeclpay.ScanInfo,
+    scan_info: schemas_mypayment.ScanInfo,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user_an_ecl_member),
     request_id: str = Depends(get_request_id),
@@ -1939,7 +1939,7 @@ async def store_scan_qrcode(
     **The user must have the `can_bank` permission for this store**
     """
     # If the QR Code is already used, we return an error
-    already_existing_used_qrcode = await cruds_myeclpay.get_used_qrcode(
+    already_existing_used_qrcode = await cruds_mypayment.get_used_qrcode(
         qr_code_id=scan_info.id,
         db=db,
     )
@@ -1951,7 +1951,7 @@ async def store_scan_qrcode(
 
     # After scanning a QR Code, we want to add it to the list of already scanned QR Code
     # even if it fail to be banked
-    await cruds_myeclpay.create_used_qrcode(
+    await cruds_mypayment.create_used_qrcode(
         qr_code=scan_info,
         db=db,
     )
@@ -1961,7 +1961,7 @@ async def store_scan_qrcode(
     # We start a SAVEPOINT to ensure that even if the following code fails due to a database exception,
     # after roleback the `used_qrcode` will still be created and committed in db.
     async with db.begin_nested():
-        store = await cruds_myeclpay.get_store(
+        store = await cruds_mypayment.get_store(
             store_id=store_id,
             db=db,
         )
@@ -1971,7 +1971,7 @@ async def store_scan_qrcode(
                 detail="Store does not exist",
             )
 
-        seller = await cruds_myeclpay.get_seller(
+        seller = await cruds_mypayment.get_seller(
             store_id=store_id,
             user_id=user.id,
             db=db,
@@ -1984,7 +1984,7 @@ async def store_scan_qrcode(
             )
 
         # We verify the signature
-        debited_wallet_device = await cruds_myeclpay.get_wallet_device(
+        debited_wallet_device = await cruds_mypayment.get_wallet_device(
             wallet_device_id=scan_info.key,
             db=db,
         )
@@ -2035,7 +2035,7 @@ async def store_scan_qrcode(
             )
 
         # We verify that the debited walled contains enough money
-        debited_wallet = await cruds_myeclpay.get_wallet(
+        debited_wallet = await cruds_mypayment.get_wallet(
             wallet_id=debited_wallet_device.wallet_id,
             db=db,
         )
@@ -2053,7 +2053,7 @@ async def store_scan_qrcode(
                 detail="Stores are not allowed to make transaction by QR code",
             )
 
-        debited_user_payment = await cruds_myeclpay.get_user_payment(
+        debited_user_payment = await cruds_mypayment.get_user_payment(
             debited_wallet.user.id,
             db=db,
         )
@@ -2087,21 +2087,21 @@ async def store_scan_qrcode(
                     )
 
         # We increment the receiving wallet balance
-        await cruds_myeclpay.increment_wallet_balance(
+        await cruds_mypayment.increment_wallet_balance(
             wallet_id=store.wallet_id,
             amount=scan_info.tot,
             db=db,
         )
 
         # We decrement the debited wallet balance
-        await cruds_myeclpay.increment_wallet_balance(
+        await cruds_mypayment.increment_wallet_balance(
             wallet_id=debited_wallet.id,
             amount=-scan_info.tot,
             db=db,
         )
         transaction_id = uuid.uuid4()
         creation_date = datetime.now(UTC)
-        transaction = schemas_myeclpay.TransactionBase(
+        transaction = schemas_mypayment.TransactionBase(
             id=transaction_id,
             debited_wallet_id=debited_wallet_device.wallet_id,
             credited_wallet_id=store.wallet_id,
@@ -2113,7 +2113,7 @@ async def store_scan_qrcode(
             qr_code_id=scan_info.id,
         )
         # We create a transaction
-        await cruds_myeclpay.create_transaction(
+        await cruds_mypayment.create_transaction(
             transaction=transaction,
             debited_wallet_device_id=debited_wallet_device.id,
             store_note=None,
@@ -2145,7 +2145,7 @@ async def store_scan_qrcode(
 )
 async def refund_transaction(
     transaction_id: UUID,
-    refund_info: schemas_myeclpay.RefundInfo,
+    refund_info: schemas_mypayment.RefundInfo,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user_an_ecl_member),
     notification_tool: NotificationTool = Depends(get_notification_tool),
@@ -2159,7 +2159,7 @@ async def refund_transaction(
 
     **The user must either be the credited user or a seller with cancel permissions of the credited store of the transaction**
     """
-    transaction = await cruds_myeclpay.get_transaction(
+    transaction = await cruds_mypayment.get_transaction(
         transaction_id=transaction_id,
         db=db,
     )
@@ -2183,7 +2183,7 @@ async def refund_transaction(
         )
 
     # The wallet that was credited if the one that will be de debited during the refund
-    wallet_previously_credited = await cruds_myeclpay.get_wallet(
+    wallet_previously_credited = await cruds_mypayment.get_wallet(
         wallet_id=transaction.credited_wallet_id,
         db=db,
     )
@@ -2199,7 +2199,7 @@ async def refund_transaction(
                 status_code=404,
                 detail="Missing store in store wallet",
             )
-        seller = await cruds_myeclpay.get_seller(
+        seller = await cruds_mypayment.get_seller(
             store_id=wallet_previously_credited.store.id,
             user_id=user.id,
             db=db,
@@ -2249,7 +2249,7 @@ async def refund_transaction(
         refund_amount = refund_info.amount
 
     # The wallet that was debited is the one that will be credited during the refund
-    wallet_previously_debited = await cruds_myeclpay.get_wallet(
+    wallet_previously_debited = await cruds_mypayment.get_wallet(
         wallet_id=transaction.debited_wallet_id,
         db=db,
     )
@@ -2259,14 +2259,14 @@ async def refund_transaction(
             detail="The wallet that should be credited during the refund does not exist",
         )
 
-    await cruds_myeclpay.update_transaction_status(
+    await cruds_mypayment.update_transaction_status(
         transaction_id=transaction_id,
         status=TransactionStatus.REFUNDED,
         db=db,
     )
 
     creation_date = datetime.now(UTC)
-    refund = schemas_myeclpay.RefundBase(
+    refund = schemas_mypayment.RefundBase(
         id=uuid.uuid4(),
         transaction_id=transaction_id,
         total=refund_amount,
@@ -2278,19 +2278,19 @@ async def refund_transaction(
         creation=creation_date,
     )
 
-    await cruds_myeclpay.create_refund(
+    await cruds_mypayment.create_refund(
         refund=refund,
         db=db,
     )
 
     # We add the amount to the wallet that was previously debited
-    await cruds_myeclpay.increment_wallet_balance(
+    await cruds_mypayment.increment_wallet_balance(
         wallet_id=wallet_previously_debited.id,
         amount=refund_amount,
         db=db,
     )
 
-    await cruds_myeclpay.increment_wallet_balance(
+    await cruds_mypayment.increment_wallet_balance(
         wallet_id=wallet_previously_credited.id,
         amount=-refund_amount,
         db=db,
@@ -2350,7 +2350,7 @@ async def cancel_transaction(
 
     **The user must either be the credited user or the seller of the transaction**
     """
-    transaction = await cruds_myeclpay.get_transaction(
+    transaction = await cruds_mypayment.get_transaction(
         transaction_id=transaction_id,
         db=db,
     )
@@ -2367,7 +2367,7 @@ async def cancel_transaction(
             detail="Transaction is older than 30 seconds and can not be canceled",
         )
 
-    canceller_wallet = await cruds_myeclpay.get_wallet(
+    canceller_wallet = await cruds_mypayment.get_wallet(
         wallet_id=transaction.credited_wallet_id,
         db=db,
     )
@@ -2383,7 +2383,7 @@ async def cancel_transaction(
                 status_code=404,
                 detail="Store does not exist",
             )
-        seller = await cruds_myeclpay.get_seller(
+        seller = await cruds_mypayment.get_seller(
             store_id=canceller_wallet.store.id,
             user_id=user.id,
             db=db,
@@ -2418,7 +2418,7 @@ async def cancel_transaction(
             detail="Only confirmed transactions can be canceled",
         )
 
-    debited_wallet = await cruds_myeclpay.get_wallet(
+    debited_wallet = await cruds_mypayment.get_wallet(
         wallet_id=transaction.debited_wallet_id,
         db=db,
     )
@@ -2428,19 +2428,19 @@ async def cancel_transaction(
             detail="Debited wallet does not exist",
         )
 
-    await cruds_myeclpay.update_transaction_status(
+    await cruds_mypayment.update_transaction_status(
         transaction_id=transaction_id,
         status=TransactionStatus.CANCELED,
         db=db,
     )
 
-    await cruds_myeclpay.increment_wallet_balance(
+    await cruds_mypayment.increment_wallet_balance(
         wallet_id=transaction.debited_wallet_id,
         amount=transaction.total,
         db=db,
     )
 
-    await cruds_myeclpay.increment_wallet_balance(
+    await cruds_mypayment.increment_wallet_balance(
         wallet_id=transaction.credited_wallet_id,
         amount=-transaction.total,
         db=db,
@@ -2469,11 +2469,11 @@ async def cancel_transaction(
 @router.get(
     "/myeclpay/integrity-check",
     status_code=200,
-    response_model=schemas_myeclpay.IntegrityCheckData,
+    response_model=schemas_mypayment.IntegrityCheckData,
 )
 async def get_data_for_integrity_check(
-    headers: schemas_myeclpay.IntegrityCheckHeaders = Header(),
-    query_params: schemas_myeclpay.IntegrityCheckQuery = Query(),
+    headers: schemas_mypayment.IntegrityCheckHeaders = Header(),
+    query_params: schemas_mypayment.IntegrityCheckQuery = Query(),
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
@@ -2507,10 +2507,10 @@ async def get_data_for_integrity_check(
     # as they can be canceled during the 30 seconds after their creation
     security_now = now - timedelta(seconds=30)
 
-    wallets = await cruds_myeclpay.get_wallets(
+    wallets = await cruds_mypayment.get_wallets(
         db=db,
     )
-    to_substract_transactions = await cruds_myeclpay.get_transactions(
+    to_substract_transactions = await cruds_mypayment.get_transactions(
         db=db,
         start_date=security_now,
         exclude_canceled=True,
@@ -2531,28 +2531,28 @@ async def get_data_for_integrity_check(
             credited_wallet.balance -= transaction.total
 
     if query_params.isInitialisation:
-        return schemas_myeclpay.IntegrityCheckData(
+        return schemas_mypayment.IntegrityCheckData(
             date=security_now,
             wallets=wallets,
             transactions=[],
             transfers=[],
             refunds=[],
         )
-    transactions = await cruds_myeclpay.get_transactions(
+    transactions = await cruds_mypayment.get_transactions(
         db=db,
         start_date=query_params.lastChecked,
         end_date=security_now,
     )
-    transfers = await cruds_myeclpay.get_transfers(
+    transfers = await cruds_mypayment.get_transfers(
         db=db,
         last_checked=query_params.lastChecked,
     )
-    refunds = await cruds_myeclpay.get_refunds(
+    refunds = await cruds_mypayment.get_refunds(
         db=db,
         last_checked=query_params.lastChecked,
     )
 
-    return schemas_myeclpay.IntegrityCheckData(
+    return schemas_mypayment.IntegrityCheckData(
         date=security_now,
         wallets=wallets,
         transactions=transactions,

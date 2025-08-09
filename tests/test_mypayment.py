@@ -13,16 +13,16 @@ from pytest_mock import MockerFixture
 
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import models_memberships
-from app.core.myeclpay import cruds_myeclpay, models_myeclpay
-from app.core.myeclpay.schemas_myeclpay import QRCodeContentData
-from app.core.myeclpay.types_myeclpay import (
+from app.core.mypayment import cruds_mypayment, models_mypayment
+from app.core.mypayment.schemas_mypayment import QRCodeContentData
+from app.core.mypayment.types_mypayment import (
     TransactionStatus,
     TransactionType,
     TransferType,
     WalletDeviceStatus,
     WalletType,
 )
-from app.core.myeclpay.utils_myeclpay import LATEST_TOS
+from app.core.mypayment.utils_mypayment import LATEST_TOS
 from app.core.users import models_users
 from tests.commons import (
     TestingSessionLocal,
@@ -38,35 +38,35 @@ structure_manager_user_token: str
 
 ecl_user: models_users.CoreUser
 ecl_user_access_token: str
-ecl_user_wallet: models_myeclpay.Wallet
+ecl_user_wallet: models_mypayment.Wallet
 ecl_user_wallet_device_private_key: Ed25519PrivateKey
 ecl_user_wallet_device_public_key: Ed25519PublicKey
-ecl_user_wallet_device: models_myeclpay.WalletDevice
-ecl_user_wallet_device_inactive: models_myeclpay.WalletDevice
-ecl_user_payment: models_myeclpay.UserPayment
-ecl_user_transfer: models_myeclpay.Transfer
+ecl_user_wallet_device: models_mypayment.WalletDevice
+ecl_user_wallet_device_inactive: models_mypayment.WalletDevice
+ecl_user_payment: models_mypayment.UserPayment
+ecl_user_transfer: models_mypayment.Transfer
 
 ecl_user2: models_users.CoreUser
 ecl_user2_access_token: str
-ecl_user2_wallet: models_myeclpay.Wallet
-ecl_user2_wallet_device: models_myeclpay.WalletDevice
-ecl_user2_payment: models_myeclpay.UserPayment
+ecl_user2_wallet: models_mypayment.Wallet
+ecl_user2_wallet_device: models_mypayment.WalletDevice
+ecl_user2_payment: models_mypayment.UserPayment
 
 association_membership: models_memberships.CoreAssociationMembership
 association_membership_user: models_memberships.CoreAssociationUserMembership
-structure: models_myeclpay.Structure
-store_wallet: models_myeclpay.Wallet
-store: models_myeclpay.Store
+structure: models_mypayment.Structure
+store_wallet: models_mypayment.Wallet
+store: models_mypayment.Store
 store_wallet_device_private_key: Ed25519PrivateKey
-store_wallet_device: models_myeclpay.WalletDevice
+store_wallet_device: models_mypayment.WalletDevice
 
 
-transaction_from_ecl_user_to_store: models_myeclpay.Transaction
-transaction_from_ecl_user_to_ecl_user2: models_myeclpay.Transaction
-transaction_from_store_to_ecl_user: models_myeclpay.Transaction
-transaction_from_ecl_user2_to_ecl_user: models_myeclpay.Transaction
+transaction_from_ecl_user_to_store: models_mypayment.Transaction
+transaction_from_ecl_user_to_ecl_user2: models_mypayment.Transaction
+transaction_from_store_to_ecl_user: models_mypayment.Transaction
+transaction_from_ecl_user2_to_ecl_user: models_mypayment.Transaction
 
-used_qr_code: models_myeclpay.UsedQRCode
+used_qr_code: models_mypayment.UsedQRCode
 
 
 store_seller_can_bank_user: models_users.CoreUser
@@ -101,7 +101,7 @@ async def init_objects() -> None:
     structure_manager_user = await create_user_with_groups(groups=[])
     structure_manager_user_token = create_api_access_token(structure_manager_user)
 
-    structure = models_myeclpay.Structure(
+    structure = models_mypayment.Structure(
         id=uuid4(),
         name="Test Structure",
         association_membership_id=association_membership.id,
@@ -128,7 +128,7 @@ async def init_objects() -> None:
     await add_object_to_db(association_membership_user)
 
     global ecl_user_wallet
-    ecl_user_wallet = models_myeclpay.Wallet(
+    ecl_user_wallet = models_mypayment.Wallet(
         id=uuid4(),
         type=WalletType.USER,
         balance=1000,  # 10€
@@ -136,7 +136,7 @@ async def init_objects() -> None:
     await add_object_to_db(ecl_user_wallet)
 
     global ecl_user_payment
-    ecl_user_payment = models_myeclpay.UserPayment(
+    ecl_user_payment = models_mypayment.UserPayment(
         user_id=ecl_user.id,
         wallet_id=ecl_user_wallet.id,
         accepted_tos_signature=datetime.now(UTC),
@@ -151,7 +151,7 @@ async def init_objects() -> None:
         ecl_user_wallet_device_inactive
     ecl_user_wallet_device_private_key = Ed25519PrivateKey.generate()
     ecl_user_wallet_device_public_key = ecl_user_wallet_device_private_key.public_key()
-    ecl_user_wallet_device = models_myeclpay.WalletDevice(
+    ecl_user_wallet_device = models_mypayment.WalletDevice(
         id=uuid4(),
         name="Test device",
         wallet_id=ecl_user_wallet.id,
@@ -164,7 +164,7 @@ async def init_objects() -> None:
         activation_token="activation_token_ecl_user_wallet_device",
     )
     await add_object_to_db(ecl_user_wallet_device)
-    ecl_user_wallet_device_inactive = models_myeclpay.WalletDevice(
+    ecl_user_wallet_device_inactive = models_mypayment.WalletDevice(
         id=uuid4(),
         name="Test device inactive",
         wallet_id=ecl_user_wallet.id,
@@ -186,7 +186,7 @@ async def init_objects() -> None:
     ecl_user2_access_token = create_api_access_token(ecl_user2)
 
     global ecl_user2_wallet
-    ecl_user2_wallet = models_myeclpay.Wallet(
+    ecl_user2_wallet = models_mypayment.Wallet(
         id=uuid4(),
         type=WalletType.USER,
         balance=2000,  # 20€
@@ -194,7 +194,7 @@ async def init_objects() -> None:
     await add_object_to_db(ecl_user2_wallet)
 
     global ecl_user2_payment
-    ecl_user2_payment = models_myeclpay.UserPayment(
+    ecl_user2_payment = models_mypayment.UserPayment(
         user_id=ecl_user2.id,
         wallet_id=ecl_user2_wallet.id,
         accepted_tos_signature=datetime.now(UTC),
@@ -203,7 +203,7 @@ async def init_objects() -> None:
     await add_object_to_db(ecl_user2_payment)
 
     global ecl_user2_wallet_device
-    ecl_user2_wallet_device = models_myeclpay.WalletDevice(
+    ecl_user2_wallet_device = models_mypayment.WalletDevice(
         id=uuid4(),
         name="Test device",
         wallet_id=ecl_user2_wallet.id,
@@ -216,7 +216,7 @@ async def init_objects() -> None:
 
     # store
     global store_wallet
-    store_wallet = models_myeclpay.Wallet(
+    store_wallet = models_mypayment.Wallet(
         id=uuid4(),
         type=WalletType.STORE,
         balance=5000,  # 50€
@@ -224,14 +224,14 @@ async def init_objects() -> None:
     await add_object_to_db(store_wallet)
 
     global store
-    store = models_myeclpay.Store(
+    store = models_mypayment.Store(
         id=uuid4(),
         wallet_id=store_wallet.id,
         name="Test Store",
         structure_id=structure.id,
     )
     await add_object_to_db(store)
-    manager_as_admin = models_myeclpay.Seller(
+    manager_as_admin = models_mypayment.Seller(
         user_id=structure_manager_user.id,
         store_id=store.id,
         can_bank=True,
@@ -244,7 +244,7 @@ async def init_objects() -> None:
     # NOTE: in practice we won't allow a store to emit transactions and to have a WalletDevice
     global store_wallet_device, store_wallet_device_private_key
     store_wallet_device_private_key = Ed25519PrivateKey.generate()
-    store_wallet_device = models_myeclpay.WalletDevice(
+    store_wallet_device = models_mypayment.WalletDevice(
         id=uuid4(),
         name="Store test device",
         wallet_id=store_wallet.id,
@@ -260,7 +260,7 @@ async def init_objects() -> None:
 
     # Create test transactions
     global transaction_from_ecl_user_to_store
-    transaction_from_ecl_user_to_store = models_myeclpay.Transaction(
+    transaction_from_ecl_user_to_store = models_mypayment.Transaction(
         id=uuid4(),
         debited_wallet_id=ecl_user_wallet.id,
         debited_wallet_device_id=ecl_user_wallet_device.id,
@@ -278,7 +278,7 @@ async def init_objects() -> None:
     await add_object_to_db(transaction_from_ecl_user_to_store)
 
     global transaction_from_ecl_user_to_ecl_user2
-    transaction_from_ecl_user_to_ecl_user2 = models_myeclpay.Transaction(
+    transaction_from_ecl_user_to_ecl_user2 = models_mypayment.Transaction(
         id=uuid4(),
         debited_wallet_id=ecl_user_wallet.id,
         debited_wallet_device_id=ecl_user_wallet_device.id,
@@ -294,7 +294,7 @@ async def init_objects() -> None:
     await add_object_to_db(transaction_from_ecl_user_to_ecl_user2)
 
     global transaction_from_store_to_ecl_user
-    transaction_from_store_to_ecl_user = models_myeclpay.Transaction(
+    transaction_from_store_to_ecl_user = models_mypayment.Transaction(
         id=uuid4(),
         debited_wallet_id=store_wallet.id,
         debited_wallet_device_id=store_wallet_device.id,
@@ -310,7 +310,7 @@ async def init_objects() -> None:
     await add_object_to_db(transaction_from_store_to_ecl_user)
 
     global transaction_from_ecl_user2_to_ecl_user
-    transaction_from_ecl_user2_to_ecl_user = models_myeclpay.Transaction(
+    transaction_from_ecl_user2_to_ecl_user = models_mypayment.Transaction(
         id=uuid4(),
         debited_wallet_id=ecl_user2_wallet.id,
         debited_wallet_device_id=ecl_user2_wallet_device.id,
@@ -327,7 +327,7 @@ async def init_objects() -> None:
 
     # Add a transfer
     global ecl_user_transfer
-    ecl_user_transfer = models_myeclpay.Transfer(
+    ecl_user_transfer = models_mypayment.Transfer(
         id=uuid4(),
         type=TransferType.HELLO_ASSO,
         transfer_identifier="transfer_identifier",
@@ -341,7 +341,7 @@ async def init_objects() -> None:
 
     # QR Code
     global used_qr_code
-    used_qr_code = models_myeclpay.UsedQRCode(
+    used_qr_code = models_mypayment.UsedQRCode(
         qr_code_id=uuid4(),
         qr_code_iat=datetime.now(UTC) - timedelta(days=1),
         qr_code_key=ecl_user2_wallet_device.id,
@@ -359,7 +359,7 @@ async def init_objects() -> None:
     store_seller_no_permission_user_access_token = create_api_access_token(
         store_seller_no_permission_user,
     )
-    store_seller_no_permission = models_myeclpay.Seller(
+    store_seller_no_permission = models_mypayment.Seller(
         user_id=store_seller_no_permission_user.id,
         store_id=store.id,
         can_bank=False,
@@ -376,7 +376,7 @@ async def init_objects() -> None:
     store_seller_can_bank_user_access_token = create_api_access_token(
         store_seller_can_bank_user,
     )
-    store_seller_can_bank = models_myeclpay.Seller(
+    store_seller_can_bank = models_mypayment.Seller(
         user_id=store_seller_can_bank_user.id,
         store_id=store.id,
         can_bank=True,
@@ -393,7 +393,7 @@ async def init_objects() -> None:
     store_seller_can_cancel_user_access_token = create_api_access_token(
         store_seller_can_cancel_user,
     )
-    store_seller_can_cancel = models_myeclpay.Seller(
+    store_seller_can_cancel = models_mypayment.Seller(
         user_id=store_seller_can_cancel_user.id,
         store_id=store.id,
         can_bank=False,
@@ -410,7 +410,7 @@ async def init_objects() -> None:
     store_seller_can_manage_sellers_user_access_token = create_api_access_token(
         store_seller_can_manage_sellers_user,
     )
-    store_seller_can_manage_sellers = models_myeclpay.Seller(
+    store_seller_can_manage_sellers = models_mypayment.Seller(
         user_id=store_seller_can_manage_sellers_user.id,
         store_id=store.id,
         can_bank=False,
@@ -424,7 +424,7 @@ async def init_objects() -> None:
     store_seller_can_see_history_user = await create_user_with_groups(
         groups=[],
     )
-    store_seller_can_see_history_seller = models_myeclpay.Seller(
+    store_seller_can_see_history_seller = models_mypayment.Seller(
         user_id=store_seller_can_see_history_user.id,
         store_id=store.id,
         can_bank=False,
@@ -519,7 +519,7 @@ async def test_delete_structure_as_admin_with_stores(client: TestClient):
 
 
 async def test_delete_structure_as_admin(client: TestClient):
-    new_structure = models_myeclpay.Structure(
+    new_structure = models_mypayment.Structure(
         id=uuid4(),
         name="Test Structure 2",
         manager_user_id=structure_manager_user.id,
@@ -557,7 +557,7 @@ async def test_transfer_structure_manager_as_admin(client: TestClient):
 
 
 async def test_transfer_structure_manager_with_wrong_token(client: TestClient):
-    tranfert = models_myeclpay.StructureManagerTransfert(
+    tranfert = models_mypayment.StructureManagerTransfert(
         structure_id=structure.id,
         user_id=ecl_user2.id,
         confirmation_token="RANDOM_TOKEN",
@@ -598,39 +598,39 @@ async def test_transfer_structure_manager_as_manager(
     client: TestClient,
     mocker: MockerFixture,
 ):
-    new_structure = models_myeclpay.Structure(
+    new_structure = models_mypayment.Structure(
         id=uuid4(),
         name="Test Structure 2",
         manager_user_id=structure_manager_user.id,
     )
     await add_object_to_db(new_structure)
-    new_wallet = models_myeclpay.Wallet(
+    new_wallet = models_mypayment.Wallet(
         id=uuid4(),
         type=WalletType.STORE,
         balance=5000,
     )
     await add_object_to_db(new_wallet)
-    new_store = models_myeclpay.Store(
+    new_store = models_mypayment.Store(
         id=uuid4(),
         wallet_id=new_wallet.id,
         name="Test Store Structure 2",
         structure_id=new_structure.id,
     )
     await add_object_to_db(new_store)
-    new_wallet2 = models_myeclpay.Wallet(
+    new_wallet2 = models_mypayment.Wallet(
         id=uuid4(),
         type=WalletType.STORE,
         balance=5000,
     )
     await add_object_to_db(new_wallet2)
-    new_store2_where_new_manager_already_seller = models_myeclpay.Store(
+    new_store2_where_new_manager_already_seller = models_mypayment.Store(
         id=uuid4(),
         wallet_id=new_wallet2.id,
         name="Test Store Structure 2 Where New Manager Already Seller",
         structure_id=new_structure.id,
     )
     await add_object_to_db(new_store2_where_new_manager_already_seller)
-    seller = models_myeclpay.Seller(
+    seller = models_mypayment.Seller(
         user_id=ecl_user2.id,
         store_id=new_store2_where_new_manager_already_seller.id,
         can_bank=True,
@@ -893,20 +893,20 @@ async def test_delete_store_with_history(client: TestClient):
 
 async def test_delete_store(client: TestClient):
     store_id = uuid4()
-    new_wallet = models_myeclpay.Wallet(
+    new_wallet = models_mypayment.Wallet(
         id=store_id,
         type=WalletType.STORE,
         balance=5000,
     )
     await add_object_to_db(new_wallet)
-    new_store = models_myeclpay.Store(
+    new_store = models_mypayment.Store(
         id=store_id,
         wallet_id=new_wallet.id,
         name="Test Store to Delete",
         structure_id=structure.id,
     )
     await add_object_to_db(new_store)
-    sellet = models_myeclpay.Seller(
+    sellet = models_mypayment.Seller(
         user_id=structure_manager_user.id,
         store_id=new_store.id,
         can_bank=True,
@@ -926,13 +926,13 @@ async def test_delete_store(client: TestClient):
 
 
 async def test_update_store(client: TestClient):
-    new_wallet = models_myeclpay.Wallet(
+    new_wallet = models_mypayment.Wallet(
         id=uuid4(),
         type=WalletType.STORE,
         balance=5000,
     )
     await add_object_to_db(new_wallet)
-    new_store = models_myeclpay.Store(
+    new_store = models_mypayment.Store(
         id=uuid4(),
         wallet_id=new_wallet.id,
         name="Test Store 2",
@@ -1043,7 +1043,7 @@ async def test_add_already_existing_seller(client: TestClient):
     user = await create_user_with_groups(
         groups=[],
     )
-    seller = models_myeclpay.Seller(
+    seller = models_mypayment.Seller(
         user_id=user.id,
         store_id=store.id,
         can_bank=True,
@@ -1173,7 +1173,7 @@ async def test_update_non_existing_seller(client: TestClient):
     user = await create_user_with_groups(
         groups=[],
     )
-    seller = models_myeclpay.Seller(
+    seller = models_mypayment.Seller(
         user_id=user.id,
         store_id=store.id,
         can_bank=False,
@@ -1200,7 +1200,7 @@ async def test_update_seller_as_seller_with_permission(client: TestClient):
     user = await create_user_with_groups(
         groups=[],
     )
-    seller = models_myeclpay.Seller(
+    seller = models_mypayment.Seller(
         user_id=user.id,
         store_id=store.id,
         can_bank=False,
@@ -1308,7 +1308,7 @@ async def test_delete_seller_as_seller_with_permission(client: TestClient):
     user = await create_user_with_groups(
         groups=[],
     )
-    seller = models_myeclpay.Seller(
+    seller = models_mypayment.Seller(
         user_id=user.id,
         store_id=store.id,
         can_bank=False,
@@ -1541,7 +1541,7 @@ async def test_create_and_activate_user_device(
 
     async with TestingSessionLocal() as db:
         wallet_device = await db.get(
-            models_myeclpay.WalletDevice,
+            models_mypayment.WalletDevice,
             response.json()["id"],
         )
         assert wallet_device is not None
@@ -1626,7 +1626,7 @@ async def test_revoke_user_device_device_does_not_belong_to_user(
 async def test_revoke_user_device(
     client: TestClient,
 ) -> None:
-    wallet_device = models_myeclpay.WalletDevice(
+    wallet_device = models_mypayment.WalletDevice(
         id=uuid4(),
         name="Will revoke device",
         wallet_id=ecl_user_wallet.id,
@@ -2122,7 +2122,7 @@ def test_store_scan_store_missing_wallet(
 ):
     # This should never happen, as an user should never have a WalletDevice without an existing associated Wallet
     mocker.patch(
-        "app.core.myeclpay.cruds_myeclpay.get_wallet",
+        "app.core.mypayment.cruds_mypayment.get_wallet",
         return_value=None,
     )
 
@@ -2202,14 +2202,14 @@ async def test_store_scan_store_from_wallet_with_old_tos_version(client: TestCli
         groups=[],
     )
 
-    ecl_user_wallet = models_myeclpay.Wallet(
+    ecl_user_wallet = models_mypayment.Wallet(
         id=uuid4(),
         type=WalletType.USER,
         balance=1000,  # 10€
     )
     await add_object_to_db(ecl_user_wallet)
 
-    ecl_user_payment = models_myeclpay.UserPayment(
+    ecl_user_payment = models_mypayment.UserPayment(
         user_id=ecl_user.id,
         wallet_id=ecl_user_wallet.id,
         accepted_tos_signature=datetime.now(UTC),
@@ -2218,7 +2218,7 @@ async def test_store_scan_store_from_wallet_with_old_tos_version(client: TestCli
     await add_object_to_db(ecl_user_payment)
 
     ecl_user_wallet_device_private_key = Ed25519PrivateKey.generate()
-    ecl_user_wallet_device = models_myeclpay.WalletDevice(
+    ecl_user_wallet_device = models_mypayment.WalletDevice(
         id=uuid4(),
         name="Test device",
         wallet_id=ecl_user_wallet.id,
@@ -2313,11 +2313,11 @@ async def test_store_scan_store_successful_scan(client: TestClient):
     )
 
     async with TestingSessionLocal() as db:
-        store_wallet_before_scan = await cruds_myeclpay.get_wallet(
+        store_wallet_before_scan = await cruds_mypayment.get_wallet(
             db=db,
             wallet_id=store_wallet.id,
         )
-        user_wallet_before_scan = await cruds_myeclpay.get_wallet(
+        user_wallet_before_scan = await cruds_mypayment.get_wallet(
             db=db,
             wallet_id=ecl_user_wallet_device.wallet_id,
         )
@@ -2341,11 +2341,11 @@ async def test_store_scan_store_successful_scan(client: TestClient):
     ensure_qr_code_id_is_already_used(qr_code_id=qr_code_id, client=client)
 
     async with TestingSessionLocal() as db:
-        store_wallet_after_scan = await cruds_myeclpay.get_wallet(
+        store_wallet_after_scan = await cruds_mypayment.get_wallet(
             db=db,
             wallet_id=store_wallet.id,
         )
-        user_wallet_after_scan = await cruds_myeclpay.get_wallet(
+        user_wallet_after_scan = await cruds_mypayment.get_wallet(
             db=db,
             wallet_id=ecl_user_wallet_device.wallet_id,
         )
@@ -2377,7 +2377,7 @@ async def test_unknown_transaction_refund(client: TestClient):
 
 
 async def test_transaction_refund_unconfirmed_transaction(client: TestClient):
-    transaction_canceled = models_myeclpay.Transaction(
+    transaction_canceled = models_mypayment.Transaction(
         id=uuid4(),
         debited_wallet_id=ecl_user_wallet.id,
         credited_wallet_id=store_wallet.id,
@@ -2416,18 +2416,18 @@ async def test_transaction_refund_unauthorized_user(client: TestClient):
 
 async def test_transaction_refund_complete(client: TestClient):
     async with TestingSessionLocal() as db:
-        debited_wallet_before_refund = await cruds_myeclpay.get_wallet(
+        debited_wallet_before_refund = await cruds_mypayment.get_wallet(
             db=db,
             wallet_id=ecl_user_wallet.id,
         )
-        credited_wallet_before_refund = await cruds_myeclpay.get_wallet(
+        credited_wallet_before_refund = await cruds_mypayment.get_wallet(
             db=db,
             wallet_id=store_wallet.id,
         )
     assert debited_wallet_before_refund is not None
     assert credited_wallet_before_refund is not None
 
-    transaction = models_myeclpay.Transaction(
+    transaction = models_mypayment.Transaction(
         id=uuid4(),
         debited_wallet_id=ecl_user_wallet.id,
         credited_wallet_id=store_wallet.id,
@@ -2451,19 +2451,19 @@ async def test_transaction_refund_complete(client: TestClient):
     assert response.status_code == 204
 
     async with TestingSessionLocal() as db:
-        transaction_after_refund = await cruds_myeclpay.get_transaction(
+        transaction_after_refund = await cruds_mypayment.get_transaction(
             db=db,
             transaction_id=transaction.id,
         )
-        refund = await cruds_myeclpay.get_refund_by_transaction_id(
+        refund = await cruds_mypayment.get_refund_by_transaction_id(
             db=db,
             transaction_id=transaction.id,
         )
-        debited_wallet_after_refund = await cruds_myeclpay.get_wallet(
+        debited_wallet_after_refund = await cruds_mypayment.get_wallet(
             db=db,
             wallet_id=ecl_user_wallet.id,
         )
-        credited_wallet_after_refund = await cruds_myeclpay.get_wallet(
+        credited_wallet_after_refund = await cruds_mypayment.get_wallet(
             db=db,
             wallet_id=store_wallet.id,
         )
@@ -2536,18 +2536,18 @@ async def test_transaction_refund_partial_invalid_amount(client: TestClient):
 
 async def test_transaction_refund_partial(client: TestClient):
     async with TestingSessionLocal() as db:
-        debited_wallet_before_refund = await cruds_myeclpay.get_wallet(
+        debited_wallet_before_refund = await cruds_mypayment.get_wallet(
             db=db,
             wallet_id=ecl_user_wallet.id,
         )
-        credited_wallet_before_refund = await cruds_myeclpay.get_wallet(
+        credited_wallet_before_refund = await cruds_mypayment.get_wallet(
             db=db,
             wallet_id=store_wallet.id,
         )
     assert debited_wallet_before_refund is not None
     assert credited_wallet_before_refund is not None
 
-    transaction = models_myeclpay.Transaction(
+    transaction = models_mypayment.Transaction(
         id=uuid4(),
         debited_wallet_id=ecl_user_wallet.id,
         credited_wallet_id=store_wallet.id,
@@ -2574,19 +2574,19 @@ async def test_transaction_refund_partial(client: TestClient):
     assert response.status_code == 204
 
     async with TestingSessionLocal() as db:
-        transaction_after_refund = await cruds_myeclpay.get_transaction(
+        transaction_after_refund = await cruds_mypayment.get_transaction(
             db=db,
             transaction_id=transaction.id,
         )
-        refund = await cruds_myeclpay.get_refund_by_transaction_id(
+        refund = await cruds_mypayment.get_refund_by_transaction_id(
             db=db,
             transaction_id=transaction.id,
         )
-        debited_wallet_after_refund = await cruds_myeclpay.get_wallet(
+        debited_wallet_after_refund = await cruds_mypayment.get_wallet(
             db=db,
             wallet_id=ecl_user_wallet.id,
         )
-        credited_wallet_after_refund = await cruds_myeclpay.get_wallet(
+        credited_wallet_after_refund = await cruds_mypayment.get_wallet(
             db=db,
             wallet_id=store_wallet.id,
         )

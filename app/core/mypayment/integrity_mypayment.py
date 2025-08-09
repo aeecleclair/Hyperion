@@ -15,24 +15,24 @@
 
 from uuid import UUID
 
-from app.core.myeclpay import models_myeclpay, schemas_myeclpay
-from app.core.myeclpay.types_myeclpay import ActionType
+from app.core.mypayment import models_mypayment, schemas_mypayment
+from app.core.mypayment.types_mypayment import ActionType
 
 
 def format_transfer_log(
-    transfer: schemas_myeclpay.Transfer | models_myeclpay.Transfer,
+    transfer: schemas_mypayment.Transfer | models_mypayment.Transfer,
 ):
     return f"{ActionType.TRANSFER.name} {transfer.id} {transfer.type.name} {transfer.total} {transfer.wallet_id}"
 
 
 def format_transaction_log(
-    transaction: schemas_myeclpay.TransactionBase,
+    transaction: schemas_mypayment.TransactionBase,
 ):
     return f"{ActionType.TRANSACTION.name} {transaction.id} {transaction.debited_wallet_id} {transaction.credited_wallet_id} {transaction.total}"
 
 
 def format_refund_log(
-    refund: schemas_myeclpay.RefundBase,
+    refund: schemas_mypayment.RefundBase,
 ):
     return (
         f"{ActionType.REFUND.name} {refund.id} {refund.transaction_id} {refund.total}"

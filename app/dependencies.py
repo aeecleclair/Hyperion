@@ -22,9 +22,9 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.core.auth import schemas_auth
+from app.core.checkout.payment_tool import PaymentTool
+from app.core.checkout.types_checkout import HelloAssoConfigName
 from app.core.groups.groups_type import AccountType, GroupType, get_ecl_account_types
-from app.core.payment.payment_tool import PaymentTool
-from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.users import models_users
 from app.core.utils import security
 from app.core.utils.config import Settings, construct_prod_settings

@@ -3,7 +3,7 @@ from app.types.module import Module
 
 module = Module(
     root="payment",
-    tag="MyECLPay",
+    tag="MyPayment",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
     factory=None,
 )

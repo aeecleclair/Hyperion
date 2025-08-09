@@ -6,10 +6,10 @@ from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.checkout.payment_tool import PaymentTool
+from app.core.checkout.types_checkout import HelloAssoConfigName
 from app.core.google_api.google_api import DriveGoogleAPI
 from app.core.groups.groups_type import AccountType, GroupType
-from app.core.payment.payment_tool import PaymentTool
-from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.users import models_users, schemas_users
 from app.core.utils.config import Settings
 from app.dependencies import (

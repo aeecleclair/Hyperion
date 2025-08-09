@@ -5,7 +5,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.memberships import models_memberships
-from app.core.myeclpay.types_myeclpay import (
+from app.core.mypayment.types_mypayment import (
     RequestStatus,
     TransactionStatus,
     TransactionType,

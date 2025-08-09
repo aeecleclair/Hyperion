@@ -8,8 +8,8 @@ from fastapi import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.checkout import schemas_checkout
 from app.core.groups.groups_type import GroupType
-from app.core.payment import schemas_payment
 from app.core.users import models_users
 from app.dependencies import (
     hyperion_access_logger,
@@ -27,7 +27,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 async def validate_payment(
-    checkout_payment: schemas_payment.CheckoutPayment,
+    checkout_payment: schemas_checkout.CheckoutPayment,
     db: AsyncSession,
 ) -> None:
     paid_amount = checkout_payment.paid_amount
