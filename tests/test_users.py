@@ -177,21 +177,21 @@ def test_create_user_by_user_with_email(
             "fab1@etu.ec-lyon.fr",
             201,
             AccountType.student,
-            SchoolType.centrale_lyon,
+            SchoolType.base_school,
         ),
-        ("fab2@ec-lyon.fr", 201, AccountType.staff, SchoolType.centrale_lyon),
+        ("fab2@ec-lyon.fr", 201, AccountType.staff, SchoolType.base_school),
         (
             "fab3@centraliens-lyon.net",
             201,
             AccountType.former_student,
-            SchoolType.centrale_lyon,
+            SchoolType.base_school,
         ),
         ("fab4@test.fr", 201, AccountType.external, SchoolType.no_school),
         (
-            "fab5@ecl22.ec-lyon.fr",
+            "fab5@etu.ec-lyon.fr",
             201,
             AccountType.student,
-            SchoolType.centrale_lyon,
+            SchoolType.base_school,
         ),
     ],
 )
@@ -295,7 +295,7 @@ def test_update_batch_invite_users(client: TestClient) -> None:
     response = client.post(
         "/users/batch-invitation",
         json=[
-            {"email": "1@1.fr", "default_group_id": GroupType.BDE.value},
+            {"email": "1@1.net", "default_group_id": GroupType.BDE.value},
             {"email": "2@1.fr"},
             {"email": "3@b.fr"},
         ],

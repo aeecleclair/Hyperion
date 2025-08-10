@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.core.groups.groups_type import AccountType
 from app.core.schools.schemas_schools import CoreSchool
@@ -103,7 +103,7 @@ class CoreUserCreateRequest(BaseModel):
     The schema is used to send an account creation request.
     """
 
-    email: str
+    email: EmailStr
     accept_external: bool | None = Field(
         None,
         deprecated=True,

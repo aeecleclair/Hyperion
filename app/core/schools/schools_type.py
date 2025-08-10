@@ -12,7 +12,7 @@ class SchoolType(Enum):
 
     # Account types
     no_school = UUID("dce19aa2-8863-4c93-861e-fb7be8f610ed")
-    centrale_lyon = UUID("d9772da7-1142-4002-8b86-b694b431dfed")
+    base_school = UUID("d9772da7-1142-4002-8b86-b694b431dfed")
 
     # Auth related groups
 

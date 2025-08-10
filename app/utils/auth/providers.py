@@ -7,7 +7,7 @@ from app.core.groups.groups_type import (
     AccountType,
     GroupType,
     get_account_types_except_externals,
-    get_ecl_account_types,
+    get_school_account_types,
     get_schools_account_types,
 )
 from app.core.users import models_users
@@ -130,7 +130,7 @@ class APIToolAuthClient(BaseAuthClient):
 
 
 class NextcloudAuthClient(BaseAuthClient):
-    allowed_account_types: list[AccountType] | None = get_ecl_account_types()
+    allowed_account_types: list[AccountType] | None = get_school_account_types()
 
     # For Nextcloud:
     # Required iss : the issuer value form .well-known (corresponding code : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1255)
@@ -156,7 +156,7 @@ class NextcloudAuthClient(BaseAuthClient):
 class PiwigoAuthClient(BaseAuthClient):
     # Restrict the authentication to this client to specific Hyperion groups.
     # When set to `None`, users from any group can use the auth client
-    allowed_account_types: list[AccountType] | None = get_ecl_account_types()
+    allowed_account_types: list[AccountType] | None = get_school_account_types()
 
     def get_userinfo(self, user: models_users.CoreUser) -> dict[str, Any]:
         """
@@ -186,7 +186,7 @@ class HedgeDocAuthClient(BaseAuthClient):
     # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.profile}
 
-    allowed_account_types: list[AccountType] | None = get_ecl_account_types()
+    allowed_account_types: list[AccountType] | None = get_school_account_types()
 
     @classmethod
     def get_userinfo(cls, user: models_users.CoreUser):
@@ -221,7 +221,7 @@ class SynapseAuthClient(BaseAuthClient):
     # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
 
-    allowed_account_types: list[AccountType] | None = get_ecl_account_types()
+    allowed_account_types: list[AccountType] | None = get_school_account_types()
 
     # https://github.com/matrix-org/matrix-authentication-service/issues/2088
     return_userinfo_in_id_token: bool = True
@@ -253,7 +253,7 @@ class MinecraftAuthClient(BaseAuthClient):
     # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.profile}
 
-    allowed_account_types: list[AccountType] | None = get_ecl_account_types()
+    allowed_account_types: list[AccountType] | None = get_school_account_types()
 
     @classmethod
     def get_userinfo(cls, user: models_users.CoreUser):
@@ -364,7 +364,7 @@ class SiarnaqAuthClient(BaseAuthClient):
 
 
 class OverleafAuthClient(BaseAuthClient):
-    allowed_account_types: list[AccountType] | None = get_ecl_account_types()
+    allowed_account_types: list[AccountType] | None = get_school_account_types()
 
     @classmethod
     def get_userinfo(cls, user: models_users.CoreUser):
@@ -404,7 +404,7 @@ class PlankaAuthClient(BaseAuthClient):
 
 class SlashAuthClient(BaseAuthClient):
     # When set to `None`, users from any group can use the auth client
-    allowed_account_types: list[AccountType] | None = get_ecl_account_types()
+    allowed_account_types: list[AccountType] | None = get_school_account_types()
 
     def get_userinfo(self, user: models_users.CoreUser) -> dict[str, Any]:
         """

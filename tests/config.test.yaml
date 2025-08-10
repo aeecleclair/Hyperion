@@ -71,6 +71,17 @@ SMTP_EMAIL: ""
 # Push notifications using Firebase Cloud Messaging
 USE_FIREBASE: false
 
+school:
+  name: Tests MyECL
+  payment_name: Tests MyECLPay
+  entity_name: ÉCLAIR
+  entity_site_url: "https://myecl.fr/"
+  primary_color: "#F97315"
+
+  student_email_regex: '^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$'
+  staff_email_regex: '^[\w\-.]*@(enise\.)?ec-lyon\.fr$'
+  former_student_email_regex: '^[\w\-.]*@centraliens-lyon\.net$'
+
 # Payment configuration #
 
 TRUSTED_PAYMENT_REDIRECT_URLS: ["http://localhost:3000/payment_callback"]

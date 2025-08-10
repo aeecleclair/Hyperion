@@ -64,7 +64,7 @@ from app.dependencies import (
     get_request_id,
     get_settings,
     is_user,
-    is_user_an_ecl_member,
+    is_user_a_school_member,
     is_user_in,
 )
 from app.types import standard_responses
@@ -316,7 +316,7 @@ async def init_transfer_structure_manager(
         background_tasks.add_task(
             send_email,
             recipient=user.email,
-            subject="MyECL - Confirm the structure manager transfer",
+            subject=f"{settings.school.name} - Confirm the structure manager transfer",
             content=mail,
             settings=settings,
         )
@@ -1821,7 +1821,7 @@ async def validate_can_scan_qrcode(
     store_id: UUID,
     scan_info: schemas_myeclpay.ScanInfo,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user_an_ecl_member),
+    user: CoreUser = Depends(is_user_a_school_member),
 ):
     """
     Validate if a given QR Code can be scanned by the seller.
@@ -1908,7 +1908,7 @@ async def store_scan_qrcode(
     store_id: UUID,
     scan_info: schemas_myeclpay.ScanInfo,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user_an_ecl_member),
+    user: CoreUser = Depends(is_user_a_school_member),
     request_id: str = Depends(get_request_id),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
@@ -2147,7 +2147,7 @@ async def refund_transaction(
     transaction_id: UUID,
     refund_info: schemas_myeclpay.RefundInfo,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user_an_ecl_member),
+    user: CoreUser = Depends(is_user_a_school_member),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -2338,7 +2338,7 @@ async def refund_transaction(
 async def cancel_transaction(
     transaction_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user_an_ecl_member),
+    user: CoreUser = Depends(is_user_a_school_member),
     request_id: str = Depends(get_request_id),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):

@@ -120,7 +120,7 @@ def test_update_school_with_used_name(client: TestClient) -> None:
 
     response = client.patch(
         f"/schools/{id_test_ens}",
-        json={"name": "centrale_lyon"},
+        json={"name": "base_school"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 400
@@ -222,7 +222,7 @@ def test_delete_base_school(client: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
     response = client.delete(
-        f"/schools/{SchoolType.centrale_lyon.value}",
+        f"/schools/{SchoolType.base_school.value}",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 400

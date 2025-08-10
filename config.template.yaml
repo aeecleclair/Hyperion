@@ -23,7 +23,7 @@ CLIENT_URL: "http://127.0.0.1:8000/"
 # Configure AuthClients, to allow services to authenticate users using OAuth2 or Openid connect
 # The following format should be used in yaml config files:
 # ```yml
-# AUTH_CLIENTS_DICT:
+# AUTH_CLIENTS:
 #   <ClientId>:
 #     secret: <ClientSecret>
 #     redirect_uri:
@@ -33,7 +33,7 @@ CLIENT_URL: "http://127.0.0.1:8000/"
 # ```
 # `AuthClientClassName` should be a class from `app.utils.auth.providers`
 # `secret` may be omitted to use PKCE instead of a client secret
-AUTH_CLIENTS:
+#AUTH_CLIENTS:
 
 #####################
 # Hyperion settings #
@@ -45,6 +45,9 @@ LOG_DEBUG_MESSAGES: true
 # See https://fastapi.tiangolo.com/tutorial/cors/
 # It should begin with 'http://' or 'https:// and should never end with a '/'
 CORS_ORIGINS: ["http://localhost"]
+
+# If self registration is disabled, users will need to be invited by an administrator to be able to register
+#ALLOW_SELF_REGISTRATION: true
 
 # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (if possible Postgresql should be used instead)
 SQLITE_DB: "app.db"
@@ -69,6 +72,32 @@ SMTP_EMAIL: ""
 # To enable Firebase push notification capabilities, a JSON key file named `firebase.json` should be placed at Hyperion root.
 # This file can be created and downloaded from [Google cloud, IAM and administration, Service account](https://console.cloud.google.com/iam-admin/serviceaccounts) page.
 USE_FIREBASE: false
+
+########################
+# School Configuration #
+########################
+school:
+  # Name of the application (ex: MyECL)
+  name: MyECL
+  # Name of the payment solution (ex: MyECLPay)
+  payment_name: MyECLPay
+  # Name of the entity managing the application (ex: ÉCLAIR)
+  entity_name: ÉCLAIR
+  # The entity website url, used for promotion (ex: "https://myecl.fr/")
+  entity_site_url: "https://myecl.fr/"
+
+  # Colors used for the application
+  primary_color: Color
+
+  # Regex for email account type validation
+  # On registration, user whose email match these regex will be automatically assigned to the corresponding account type
+  # Use simple quotes to avoid escaping the regex
+  # Ex: `student_email_regex: '^[\w\-.]*@domain.fr$'`
+  student_email_regex:
+  #staff_email_regex:
+  #former_student_email_regex:
+
+  #
 ########################
 # Matrix configuration #
 ########################

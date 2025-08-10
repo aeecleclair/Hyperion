@@ -19,7 +19,7 @@ from app.dependencies import (
     get_db,
     get_notification_manager,
     get_request_id,
-    is_user_an_ecl_member,
+    is_user_a_school_member,
     is_user_in,
 )
 from app.types.module import CoreModule
@@ -44,7 +44,7 @@ hyperion_security_logger = logging.getLogger("hyperion.security")
 )
 async def read_groups(
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_an_ecl_member),
+    user=Depends(is_user_a_school_member),
 ):
     """
     Return all groups from database as a list of dictionaries

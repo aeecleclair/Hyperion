@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.users import models_users
-from app.dependencies import get_db, is_user_an_ecl_member, is_user_in
+from app.dependencies import get_db, is_user_a_school_member, is_user_in
 from app.modules.calendar import (
     cruds_calendar,
     models_calendar,
@@ -48,7 +48,7 @@ async def get_events(
 )
 async def get_confirmed_events(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_a_school_member),
 ):
     """
     Get all confirmed events.
@@ -66,7 +66,7 @@ async def get_confirmed_events(
 async def get_applicant_bookings(
     applicant_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_a_school_member),
 ):
     """
     Get one user bookings.
@@ -92,7 +92,7 @@ async def get_applicant_bookings(
 async def get_event_by_id(
     event_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_a_school_member),
 ):
     """Get an event's information by its id."""
 
@@ -126,7 +126,7 @@ async def get_event_applicant(
 async def add_event(
     event: schemas_calendar.EventBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_a_school_member),
 ):
     """Add an event to the calendar."""
 
@@ -150,7 +150,7 @@ async def edit_bookings_id(
     event_id: str,
     event_edit: schemas_calendar.EventEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_a_school_member),
 ):
     """
     Edit an event.
@@ -196,7 +196,7 @@ async def confirm_booking(
 async def delete_bookings_id(
     event_id,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(is_user_a_school_member),
 ):
     """
     Remove an event.

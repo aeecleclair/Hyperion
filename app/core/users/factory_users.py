@@ -75,15 +75,15 @@ class CoreUsersFactory(Factory):
             )
             if i < NB_USERS // 2:
                 email = (firstname[i] + "." + name[i] + "@etu.ec-lyon.fr").lower()
-                school_id = SchoolType.centrale_lyon.value
+                school_id = SchoolType.base_school.value
                 account_type = groups_type.AccountType.student
             elif i < 3 * NB_USERS // 4:
                 email = (firstname[i] + "." + name[i] + "@ec-lyon.fr").lower()
-                school_id = SchoolType.centrale_lyon.value
+                school_id = SchoolType.base_school.value
                 account_type = groups_type.AccountType.staff
             elif i < 4 * NB_USERS // 5:
                 email = (firstname[i] + "." + name[i] + "@centraliens-lyon.net").lower()
-                school_id = SchoolType.centrale_lyon.value
+                school_id = SchoolType.base_school.value
                 account_type = groups_type.AccountType.former_student
             else:
                 email = faker.email()
@@ -120,7 +120,7 @@ class CoreUsersFactory(Factory):
                 floor=None,
                 phone=None,
                 promo=None,
-                school_id=SchoolType.centrale_lyon.value,
+                school_id=SchoolType.base_school.value,
                 account_type=groups_type.AccountType.student,
                 birthday=None,
                 created_on=datetime.now(tz=UTC),

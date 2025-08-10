@@ -159,9 +159,9 @@ def init_mail_templates(
     settings: Settings,
 ) -> calypsso.MailTemplates:
     return calypsso.MailTemplates(
-        product_name="MyECL",
-        payment_product_name="MyECLPay",
-        entity_name="ÉCLAIR",
-        entity_site_url="https://myecl.fr/",
+        product_name=settings.school.name,
+        payment_product_name=settings.school.payment_name,
+        entity_name=settings.school.entity_name,
+        entity_site_url=settings.school.entity_site_url,
         api_base_url=settings.CLIENT_URL,
     )

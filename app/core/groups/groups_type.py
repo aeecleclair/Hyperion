@@ -51,7 +51,7 @@ class AccountType(str, Enum):
         return f"{self.name}<{self.value}>"
 
 
-def get_ecl_account_types() -> list[AccountType]:
+def get_school_account_types() -> list[AccountType]:
     return [
         AccountType.student,
         AccountType.former_student,
