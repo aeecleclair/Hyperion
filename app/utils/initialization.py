@@ -353,4 +353,5 @@ def get_number_of_workers() -> int:
     workers = [
         p for p in parent_process.children() if p.status() != psutil.STATUS_ZOMBIE
     ]
-    return len(workers)
+    # We remove the parent process from the list of workers, as it does not process any job
+    return len(workers) - 1
