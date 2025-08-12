@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import noload, selectinload
 
 from app.core.users.models_users import CoreUser
-from app.modules.cdr import coredata_cdr, models_cdr, schemas_cdr
+from app.modules.cdr import models_cdr, schemas_cdr
 
 
 async def get_cdr_users_curriculum(
@@ -69,7 +69,7 @@ async def get_online_products(
 
 async def get_products(
     db: AsyncSession,
-    cdr_year: int = coredata_cdr.CdrYear.year,
+    cdr_year: int,
 ) -> Sequence[models_cdr.CdrProduct]:
     result = await db.execute(
         select(models_cdr.CdrProduct).where(models_cdr.CdrProduct.year == cdr_year),
