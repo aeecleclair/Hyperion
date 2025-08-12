@@ -17,7 +17,9 @@ from app.core.groups import models_groups
 from app.core.schools import models_schools
 from app.core.utils.config import Settings
 from app.types import core_data
-from app.types.exceptions import CoreDataNotFoundError
+from app.types.exceptions import (
+    CoreDataNotFoundError,
+)
 from app.types.sqlalchemy import Base
 from app.utils.tools import execute_async_or_sync_method
 
@@ -336,7 +338,7 @@ async def use_lock_for_workers(
 
     elif unlock_key:
         # As an `unlock_key` is provided, we will wait until an other worker has finished executing `job_function`
-        while redis_client.get(unlock_key) is not None:
+        while redis_client.get(unlock_key) is None:
             logger.debug(f"Waiting for {job_function.__name__} to finish")
             await asyncio.sleep(1)
 

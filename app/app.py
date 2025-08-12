@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 import alembic.command as alembic_command
 import alembic.config as alembic_config
 import alembic.migration as alembic_migration
+import redis
 from calypsso import get_calypsso_app
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.encoders import jsonable_encoder
@@ -55,6 +56,8 @@ from app.utils.state import LifespanState
 
 if TYPE_CHECKING:
     import redis
+
+    from app.types.factory import Factory
 
 
 # NOTE: We can not get loggers at the top of this file like we do in other files
@@ -224,6 +227,66 @@ def initialize_schools(
                     hyperion_error_logger.fatal(
                         f"Startup: Could not add school {db_school.name}<{db_school.id}> in the database: {error}",
                     )
+
+
+async def run_factories(
+    db: AsyncSession,
+    settings: Settings,
+    hyperion_error_logger: logging.Logger,
+) -> None:
+    """Run the factories to create default data in the database"""
+    if not settings.USE_FACTORIES:
+        return
+
+    hyperion_error_logger.info("Startup: Factories enabled")
+    # Importing the core_factory at the beginning of the factories.
+    factories_list: list[Factory] = []
+    for module in all_modules:
+        if module.factory:
+            factories_list.append(module.factory)
+            hyperion_error_logger.info(
+                f"Module {module.root} declares a factory {module.factory.__class__.__name__} with dependencies {module.factory.depends_on}",
+            )
+        else:
+            hyperion_error_logger.warning(
+                f"Module {module.root} does not declare a factory. It won't provide any base data.",
+            )
+
+    # We have to run the factories in a specific order to make sure the dependencies are met
+    # For that reason, we will run the first factory that has no dependencies, after that we remove it from the list of the dependencies from the other factories
+    # And we loop until there are no more factories to run and we use a boolean to avoid infinite loops with circular dependencies
+    no_factory_run_during_last_loop = False
+    ran_factories: list[type[Factory]] = []
+    while len(factories_list) > 0 and not no_factory_run_during_last_loop:
+        no_factory_run_during_last_loop = True
+        for factory in factories_list:
+            if all(depend in ran_factories for depend in factory.depends_on):
+                no_factory_run_during_last_loop = False
+                # Check if the factory should be run
+                if await factory.should_run(db):
+                    hyperion_error_logger.info(
+                        f"Startup: Running factory {factory.__class__.__name__}",
+                    )
+                    try:
+                        await factory.run(db, settings)
+                    except Exception as error:
+                        hyperion_error_logger.fatal(
+                            f"Startup: Could not run factories: {error}",
+                        )
+                        raise
+                else:
+                    hyperion_error_logger.info(
+                        f"Startup: Factory {factory.__class__.__name__} is not necessary, skipping it",
+                    )
+                ran_factories.append(factory.__class__)
+                factories_list.remove(factory)
+                break
+        if no_factory_run_during_last_loop:
+            hyperion_error_logger.error(
+                "Factories are not correctly configured, some factories are not running.",
+            )
+            break
+    hyperion_error_logger.info("Startup: Factories have been run")
 
 
 def initialize_module_visibility(
@@ -487,7 +550,18 @@ async def init_lifespan(
         get_db,
         get_db,
     )
-
+    # We need to run the factories only once across all the workers
+    async for db in get_db_dependency(state):
+        await initialization.use_lock_for_workers(
+            run_factories,
+            "run_factories",
+            redis_client,
+            number_of_workers,
+            hyperion_error_logger,
+            db=db,
+            settings=settings,
+            hyperion_error_logger=hyperion_error_logger,
+        )
     async for db in get_db_dependency(state):
         await initialization.use_lock_for_workers(
             init_google_API,

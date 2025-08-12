@@ -5,4 +5,5 @@ module = Module(
     root="payment",
     tag="MyECLPay",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    factory=None,
 )
