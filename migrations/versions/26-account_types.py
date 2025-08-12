@@ -576,7 +576,7 @@ def pre_test_upgrade(
         "core_user",
         {
             "id": ECLAIR_ID,
-            "email": "eclair@myecl.fr",
+            "email": "{entity_email}",
             "password_hash": "password_hash",
             "name": "name",
             "firstname": "firstname",

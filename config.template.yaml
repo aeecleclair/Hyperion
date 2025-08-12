@@ -77,27 +77,31 @@ USE_FIREBASE: false
 # School Configuration #
 ########################
 school:
-  # Name of the application (ex: MyECL)
-  name: MyECL
-  # Name of the payment solution (ex: MyECLPay)
-  payment_name: MyECLPay
-  # Name of the entity managing the application (ex: ÉCLAIR)
-  entity_name: ÉCLAIR
-  # The entity website url, used for promotion (ex: "https://myecl.fr/")
-  entity_site_url: "https://myecl.fr/"
+    # Name of the school (ex: École Centrale Lyon)
+    school_name: "École Centrale Lyon"
+    # Name of the application (ex: MyECL)
+    application_name: MyECL
+    # Name of the payment solution (ex: MyECLPay)
+    payment_name: MyECLPay
+    # Name of the entity managing the application (ex: ÉCLAIR)
+    entity_name: ÉCLAIR
+    # The entity website url, used for promotion (ex: "https://myecl.fr/")
+    entity_site_url: "https://myecl.fr/"
+    # The entity email, used for contact
+    entity_email: "eclair@myecl.fr"
 
-  # Colors used for the application
-  primary_color: Color
+    # Colors used for the application
+    primary_color: Color
 
-  # Regex for email account type validation
-  # On registration, user whose email match these regex will be automatically assigned to the corresponding account type
-  # Use simple quotes to avoid escaping the regex
-  # Ex: `student_email_regex: '^[\w\-.]*@domain.fr$'`
-  student_email_regex:
-  #staff_email_regex:
-  #former_student_email_regex:
+    # Regex for email account type validation
+    # On registration, user whose email match these regex will be automatically assigned to the corresponding account type
+    # Use simple quotes to avoid escaping the regex
+    # Ex: `student_email_regex: '^[\w\-.]*@domain.fr$'`
+    student_email_regex:
+    #staff_email_regex:
+    #former_student_email_regex:
 
-  #
+    #
 ########################
 # Matrix configuration #
 ########################

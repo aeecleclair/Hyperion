@@ -316,7 +316,7 @@ async def init_transfer_structure_manager(
         background_tasks.add_task(
             send_email,
             recipient=user.email,
-            subject=f"{settings.school.name} - Confirm the structure manager transfer",
+            subject=f"{settings.school.application_name} - Confirm the structure manager transfer",
             content=mail,
             settings=settings,
         )

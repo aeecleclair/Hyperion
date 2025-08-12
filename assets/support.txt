@@ -1,5 +1,5 @@
-Welcome on MyECL support page.
+Welcome on {application_name} support page.
 
 You can create an user by choosing "Créer un compte" on the main page of the application. You will receive a message on the adresse you entered asking you to confirm your account.
 
-If you have any problems using MyECL, please contact us at eclair@myecl.fr. We undertake to process your request as soon as possible.
+If you have any problems using {application_name}, please contact us at {entity_email}. We undertake to process your request as soon as possible.

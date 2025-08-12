@@ -33,14 +33,18 @@ class School(BaseModel):
     It is used to create an instance of the school.
     """
 
+    # Name of the school (ex: École Centrale Lyon)
+    school_name: str
     # Name of the application (ex: MyECL)
-    name: str
+    application_name: str
     # Name of the payment solution (ex: MyECLPay)
     payment_name: str
     # Name of the entity managing the application (ex: ÉCLAIR)
     entity_name: str
     # The entity website url, used for promotion (ex: "https://myecl.fr/")
     entity_site_url: str
+    # The entity email, used for contact
+    entity_email: str
 
     # Colors used for the application
     primary_color: Color
@@ -108,6 +112,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         yaml_file="config.yaml",
+        yaml_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
     )

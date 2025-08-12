@@ -159,7 +159,7 @@ def init_mail_templates(
     settings: Settings,
 ) -> calypsso.MailTemplates:
     return calypsso.MailTemplates(
-        product_name=settings.school.name,
+        product_name=settings.school.application_name,
         payment_product_name=settings.school.payment_name,
         entity_name=settings.school.entity_name,
         entity_site_url=settings.school.entity_site_url,

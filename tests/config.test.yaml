@@ -13,40 +13,40 @@ RSA_PRIVATE_PEM_STRING: "-----BEGIN RSA PRIVATE KEY-----\nMIIEpQIBAAKCAQEA1tpj3T
 CLIENT_URL: "http://127.0.0.1:8000/"
 
 AUTH_CLIENTS:
-  AppAuthClientWithPKCE:
-    redirect_uri:
-      - "http://127.0.0.1:8000/docs"
-    auth_client: "AppAuthClient"
-  AppAuthClientWithClientSecret:
-    secret: "secret"
-    redirect_uri:
-      - "http://127.0.0.1:8000/docs"
-    auth_client: "AppAuthClient"
-  BaseAuthClient:
-    secret: "secret"
-    redirect_uri:
-      - "http://127.0.0.1:8000/docs"
-    auth_client: "BaseAuthClient"
-  RalllyAuthClient:
-    secret: "secret"
-    redirect_uri:
-      - "http://127.0.0.1:8000/docs"
-    auth_client: "RalllyAuthClient"
-  SynapseAuthClient:
-    secret: "secret"
-    redirect_uri:
-      - "http://127.0.0.1:8000/docs"
-    auth_client: "SynapseAuthClient"
-  AcceptingOnlyECLUsersAuthClient:
-    secret: "secret"
-    redirect_uri:
-      - "http://127.0.0.1:8000/docs"
-    auth_client: "NextcloudAuthClient"
-  RestrictingUsersGroupsAuthClient:
-    secret: "secret"
-    redirect_uri:
-      - "http://127.0.0.1:8000/docs"
-    auth_client: "DocumensoAuthClient"
+    AppAuthClientWithPKCE:
+        redirect_uri:
+            - "http://127.0.0.1:8000/docs"
+        auth_client: "AppAuthClient"
+    AppAuthClientWithClientSecret:
+        secret: "secret"
+        redirect_uri:
+            - "http://127.0.0.1:8000/docs"
+        auth_client: "AppAuthClient"
+    BaseAuthClient:
+        secret: "secret"
+        redirect_uri:
+            - "http://127.0.0.1:8000/docs"
+        auth_client: "BaseAuthClient"
+    RalllyAuthClient:
+        secret: "secret"
+        redirect_uri:
+            - "http://127.0.0.1:8000/docs"
+        auth_client: "RalllyAuthClient"
+    SynapseAuthClient:
+        secret: "secret"
+        redirect_uri:
+            - "http://127.0.0.1:8000/docs"
+        auth_client: "SynapseAuthClient"
+    AcceptingOnlyECLUsersAuthClient:
+        secret: "secret"
+        redirect_uri:
+            - "http://127.0.0.1:8000/docs"
+        auth_client: "NextcloudAuthClient"
+    RestrictingUsersGroupsAuthClient:
+        secret: "secret"
+        redirect_uri:
+            - "http://127.0.0.1:8000/docs"
+        auth_client: "DocumensoAuthClient"
 
 # Logging configuration #
 
@@ -72,15 +72,17 @@ SMTP_EMAIL: ""
 USE_FIREBASE: false
 
 school:
-  name: Tests MyECL
-  payment_name: Tests MyECLPay
-  entity_name: ÉCLAIR
-  entity_site_url: "https://myecl.fr/"
-  primary_color: "#F97315"
+    school_name: "École Centrale Lyon"
+    application_name: Tests MyECL
+    payment_name: Tests MyECLPay
+    entity_name: ÉCLAIR
+    entity_site_url: "https://myecl.fr/"
+    entity_email: "eclair@myecl.fr"
+    primary_color: "#F97315"
 
-  student_email_regex: '^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$'
-  staff_email_regex: '^[\w\-.]*@(enise\.)?ec-lyon\.fr$'
-  former_student_email_regex: '^[\w\-.]*@centraliens-lyon\.net$'
+    student_email_regex: '^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$'
+    staff_email_regex: '^[\w\-.]*@(enise\.)?ec-lyon\.fr$'
+    former_student_email_regex: '^[\w\-.]*@centraliens-lyon\.net$'
 
 # Payment configuration #
 
