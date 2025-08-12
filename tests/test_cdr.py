@@ -132,6 +132,7 @@ async def init_objects():
         description_fr="Un Produit",
         description_en="A Product",
         available_online=False,
+        year=datetime.now(UTC).year,
     )
     await add_object_to_db(product)
 
@@ -144,6 +145,7 @@ async def init_objects():
         description_fr="Un Produit disponible en ligne",
         description_en="An online available Product",
         available_online=True,
+        year=datetime.now(UTC).year,
     )
     await add_object_to_db(online_product)
 
@@ -154,6 +156,7 @@ async def init_objects():
         name_fr="Produit sans variante",
         name_en="Unused product",
         available_online=False,
+        year=datetime.now(UTC).year,
     )
     await add_object_to_db(empty_product)
 
@@ -164,6 +167,7 @@ async def init_objects():
         name_fr="Produit utilisable",
         name_en="Usable product",
         available_online=False,
+        year=datetime.now(UTC).year,
     )
     await add_object_to_db(usable_product)
 
@@ -214,6 +218,7 @@ async def init_objects():
         price=100,
         unique=False,
         enabled=True,
+        year=datetime.now(UTC).year,
     )
     await add_object_to_db(variant)
 
@@ -226,6 +231,7 @@ async def init_objects():
         price=100,
         unique=False,
         enabled=True,
+        year=datetime.now(UTC).year,
     )
     await add_object_to_db(empty_variant)
 
@@ -303,6 +309,7 @@ async def init_objects():
         user_id=cdr_user.id,
         total=5000,
         payment_type=PaymentType.cash,
+        year=datetime.now(UTC).year,
     )
     await add_object_to_db(payment)
 
@@ -331,6 +338,7 @@ async def init_objects():
         name_fr="Produit a ticket",
         name_en="Usable product",
         available_online=False,
+        year=datetime.now(UTC).year,
     )
     await add_object_to_db(ticket_product)
 
@@ -343,6 +351,7 @@ async def init_objects():
         price=100,
         unique=False,
         enabled=True,
+        year=datetime.now(UTC).year,
     )
     await add_object_to_db(ticket_variant)
 
@@ -2224,6 +2233,7 @@ async def test_pay(mocker: MockerFixture, client: TestClient):
         price=100,
         unique=False,
         enabled=True,
+        year=datetime.now(UTC).year,
     )
     await add_object_to_db(variant_new)
     purchase_bde = models_cdr.Purchase(
@@ -2444,6 +2454,7 @@ async def test_validate_purchase(client: TestClient):
         name_en="Product",
         available_online=False,
         related_membership_id=association_membership.id,
+        year=datetime.now(UTC).year,
     )
     await add_object_to_db(product_membership)
     product_membership_to_purchase = models_cdr.CdrProduct(
@@ -2453,6 +2464,7 @@ async def test_validate_purchase(client: TestClient):
         name_en="Product",
         available_online=False,
         related_membership_id=association_membership.id,
+        year=datetime.now(UTC).year,
     )
     await add_object_to_db(product_membership_to_purchase)
     product_2 = models_cdr.CdrProduct(
@@ -2461,6 +2473,7 @@ async def test_validate_purchase(client: TestClient):
         name_fr="Produit à adhésion",
         name_en="Product",
         available_online=False,
+        year=datetime.now(UTC).year,
     )
     await add_object_to_db(product_2)
     variant_to_validate = models_cdr.ProductVariant(
@@ -2471,6 +2484,7 @@ async def test_validate_purchase(client: TestClient):
         price=100,
         unique=False,
         enabled=True,
+        year=datetime.now(UTC).year,
     )
     await add_object_to_db(variant_to_validate)
     variant_purchased = models_cdr.ProductVariant(
@@ -2481,6 +2495,7 @@ async def test_validate_purchase(client: TestClient):
         price=100,
         unique=False,
         enabled=True,
+        year=datetime.now(UTC).year,
     )
     await add_object_to_db(variant_purchased)
     purchase_product_constraint = models_cdr.ProductConstraint(

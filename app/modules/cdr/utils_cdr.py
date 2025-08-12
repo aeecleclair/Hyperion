@@ -14,7 +14,7 @@ from app.core.users import models_users
 from app.dependencies import (
     hyperion_access_logger,
 )
-from app.modules.cdr import cruds_cdr, models_cdr
+from app.modules.cdr import coredata_cdr, cruds_cdr, models_cdr
 from app.modules.cdr.types_cdr import (
     CdrLogActionType,
     PaymentType,
@@ -29,6 +29,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 async def validate_payment(
     checkout_payment: schemas_payment.CheckoutPayment,
     db: AsyncSession,
+    cdryear: coredata_cdr.CdrYear,
 ) -> None:
     paid_amount = checkout_payment.paid_amount
     checkout_id = checkout_payment.checkout_id
@@ -48,6 +49,7 @@ async def validate_payment(
         user_id=checkout.user_id,
         total=paid_amount,
         payment_type=PaymentType.helloasso,
+        year=cdryear.year,
     )
     db_action = models_cdr.CdrAction(
         id=uuid4(),
