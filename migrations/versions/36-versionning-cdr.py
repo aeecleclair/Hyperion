@@ -4,15 +4,13 @@ Create Date: 2025-08-12 21:28:33.755307
 """
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pytest_alembic import MigrationContext
 
 import sqlalchemy as sa
 from alembic import op
-
-from app.types.sqlalchemy import TZDateTime
 
 # revision identifiers, used by Alembic.
 revision: str = "1294f07e0c02"
