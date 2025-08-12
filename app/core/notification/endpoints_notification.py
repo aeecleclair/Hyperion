@@ -41,6 +41,7 @@ core_module = CoreModule(
     tag="Notifications",
     router=router,
     registred_topics=[notification_test_topic],
+    factory=None,
 )
 
 

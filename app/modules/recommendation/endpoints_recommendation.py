@@ -17,6 +17,7 @@ from app.modules.recommendation import (
     models_recommendation,
     schemas_recommendation,
 )
+from app.modules.recommendation.factory_recommendation import RecommendationFactory
 from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
@@ -29,6 +30,7 @@ module = Module(
     root="recommendation",
     tag="Recommendation",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    factory=RecommendationFactory(),
 )
 
 
