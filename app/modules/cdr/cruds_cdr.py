@@ -412,13 +412,13 @@ async def get_all_purchases(db: AsyncSession) -> Sequence[models_cdr.Purchase]:
 async def get_purchases_by_user_id(
     db: AsyncSession,
     user_id: str,
-    cdryear: int,
+    cdr_year: int,
 ) -> Sequence[models_cdr.Purchase]:
     result = await db.execute(
         select(models_cdr.Purchase)
         .where(
             models_cdr.Purchase.user_id == user_id,
-            models_cdr.Purchase.purchased_on.year == cdryear,
+            extract("year", models_cdr.Purchase.purchased_on) == cdr_year,
         )
         .options(selectinload("*")),
     )

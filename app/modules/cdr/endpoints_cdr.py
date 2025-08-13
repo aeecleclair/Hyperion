@@ -404,8 +404,8 @@ async def generate_and_send_results(
     # emails: schemas_cdr.ResultRequest,
     db: AsyncSession,
     # settings: Settings,
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ) -> Path:
+    cdr_year = await get_core_data(coredata_cdr.CdrYear, db)
     seller = await cruds_cdr.get_seller_by_id(db, seller_id)
     if not seller:
         raise HTTPException(
@@ -815,7 +815,6 @@ async def update_product(
     product: schemas_cdr.ProductEdit,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Edit a product.
@@ -889,7 +888,6 @@ async def delete_product(
     product_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Delete a product.
@@ -1027,7 +1025,6 @@ async def update_product_variant(
     product_variant: schemas_cdr.ProductVariantEdit,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Edit a product variant.
@@ -1106,7 +1103,6 @@ async def delete_product_variant(
     variant_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Delete a product variant.
@@ -1285,7 +1281,7 @@ async def get_purchases_by_user_id(
     purchases = await cruds_cdr.get_purchases_by_user_id(
         db=db,
         user_id=user_id,
-        cdryear=cdr_year.year,
+        cdr_year=cdr_year.year,
     )
     result = []
     for purchase in purchases:
@@ -1362,7 +1358,6 @@ async def get_purchases_by_user_id_by_seller_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get a user's purchases.
@@ -1784,7 +1779,7 @@ async def delete_purchase(
     user_purchases = await cruds_cdr.get_purchases_by_user_id(
         db=db,
         user_id=user_id,
-        cdryear=cdr_year.year,
+        cdr_year=cdr_year.year,
     )
     for purchase in user_purchases:
         if purchase.validated:
@@ -1852,7 +1847,6 @@ async def get_signatures_by_user_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get a user's signatures.
@@ -1879,7 +1873,6 @@ async def get_signatures_by_user_id_by_seller_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get a user's signatures for a single seller.
@@ -1907,7 +1900,6 @@ async def create_signature(
     signature: schemas_cdr.SignatureBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Create a signature.
@@ -1973,7 +1965,6 @@ async def delete_signature(
     document_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Delete a signature.
@@ -2121,7 +2112,7 @@ async def create_curriculum_membership(
         purchases = await cruds_cdr.get_purchases_by_user_id(
             db=db,
             user_id=user_id,
-            cdryear=cdr_year.year,
+            cdr_year=cdr_year.year,
         )
         if purchases:
             raise HTTPException(
@@ -2468,7 +2459,7 @@ async def get_payment_url(
     purchases = await cruds_cdr.get_purchases_by_user_id(
         db=db,
         user_id=user.id,
-        cdryear=cdr_year.year,
+        cdr_year=cdr_year.year,
     )
     payments = await cruds_cdr.get_payments_by_user_id(
         db=db,
@@ -2564,7 +2555,6 @@ async def update_cdr_year(
 async def get_status(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     return await get_core_data(schemas_cdr.Status, db)
 
@@ -2615,7 +2605,6 @@ async def update_status(
 async def get_my_tickets(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     return await cruds_cdr.get_tickets_of_user(db=db, user_id=user.id)
 
@@ -2629,7 +2618,6 @@ async def get_tickets_of_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     if not (
         is_user_member_of_any_group(user, [GroupType.admin_cdr]) or user_id == user.id
@@ -2650,7 +2638,6 @@ async def get_ticket_secret(
     ticket_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     ticket = await cruds_cdr.get_ticket(db=db, ticket_id=ticket_id)
     if not ticket:
@@ -2678,7 +2665,6 @@ async def get_ticket_by_secret(
     secret: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     product = await check_request_consistency(
         db=db,
@@ -2731,7 +2717,6 @@ async def scan_ticket(
     ticket_data: schemas_cdr.TicketScan,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     product = await check_request_consistency(
         db=db,

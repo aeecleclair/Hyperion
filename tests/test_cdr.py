@@ -929,6 +929,7 @@ def test_create_product_variant_seller(client: TestClient):
             "price": 5000,
             "unique": True,
             "allowed_curriculum": [str(curriculum.id)],
+            "year": datetime.now(UTC).year,
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
@@ -957,6 +958,7 @@ def test_create_product_variant_user(client: TestClient):
             "price": 5000,
             "unique": True,
             "allowed_curriculum": [str(curriculum.id)],
+            "year": datetime.now(UTC).year,
         },
         headers={"Authorization": f"Bearer {token_user}"},
     )
@@ -1350,6 +1352,7 @@ def test_create_payment_not_started(client: TestClient):
         json={
             "total": 12345,
             "payment_type": PaymentType.card,
+            "year": datetime.now(UTC).year,
         },
         headers={"Authorization": f"Bearer {token_admin}"},
     )
@@ -2020,6 +2023,7 @@ def test_create_payment_admin(client: TestClient):
         json={
             "total": 12345,
             "payment_type": PaymentType.card,
+            "year": datetime.now(UTC).year,
         },
         headers={"Authorization": f"Bearer {token_admin}"},
     )
@@ -2132,6 +2136,7 @@ def test_create_product_variant_closed(client: TestClient):
             "price": 5000,
             "unique": True,
             "allowed_curriculum": [str(curriculum.id)],
+            "year": datetime.now(UTC).year,
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
