@@ -424,6 +424,7 @@ class NotificationTool:
         defer_date: datetime,
         job_id: str,
     ):
+        await scheduler.cancel_job(job_id=job_id)
         await scheduler.queue_job_defer_to(
             self.notification_manager.send_notification_to_users,
             user_ids=user_ids,
@@ -473,6 +474,7 @@ class NotificationTool:
         defer_date: datetime,
         job_id: str,
     ):
+        await scheduler.cancel_job(job_id=job_id)
         await scheduler.queue_job_defer_to(
             self.notification_manager.send_notification_to_topic,
             topic_id=topic_id,

@@ -1,6 +1,6 @@
 aiofiles==24.1.0                    # Asynchronous file manipulation
 alembic==1.13.2                     # database migrations
-arq==0.26.1                         # Scheduler 
+arq==0.26.3                         # Scheduler 
 asyncpg==0.29.0                     # PostgreSQL adapter for asynchronous operations
 authlib==1.5.2
 bcrypt==4.1.3                       # password hashing

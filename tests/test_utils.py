@@ -21,8 +21,8 @@ from app.utils.tools import (
     set_core_data,
 )
 from tests.commons import (
-    TestingSessionLocal,
     add_object_to_db,
+    get_TestingSessionLocal,
 )
 
 
@@ -250,14 +250,14 @@ async def test_save_pdf_first_page_as_image() -> None:
 
 
 async def test_get_core_data() -> None:
-    async with TestingSessionLocal() as db:
+    async with get_TestingSessionLocal()() as db:
         exemple_core_data = await get_core_data(core_data_class=ExempleCoreData, db=db)
         assert exemple_core_data.name == "Fabristpp"
         assert exemple_core_data.age == 42
 
 
 async def test_get_default_core_data() -> None:
-    async with TestingSessionLocal() as db:
+    async with get_TestingSessionLocal()() as db:
         default_core_data = await get_core_data(
             core_data_class=ExempleDefaultCoreData,
             db=db,
@@ -267,7 +267,7 @@ async def test_get_default_core_data() -> None:
 
 
 async def test_get_default_without_default_values_core_data():
-    async with TestingSessionLocal() as db:
+    async with get_TestingSessionLocal()() as db:
         with pytest.raises(CoreDataNotFoundError):
             await get_core_data(
                 core_data_class=ExempleDefaultWithoutDefaultValuesCoreData,
@@ -276,7 +276,7 @@ async def test_get_default_without_default_values_core_data():
 
 
 async def test_replace_core_data() -> None:
-    async with TestingSessionLocal() as db:
+    async with get_TestingSessionLocal()() as db:
         core_data = ExempleExistingCoreData(
             name="ECLAIR",
             age=42,

@@ -36,11 +36,10 @@ from app.core.utils.config import Settings
 from app.core.utils.log import LogConfig
 from app.dependencies import (
     disconnect_state,
-    get_app_state,
     get_db,
     get_notification_manager,
     get_redis_client,
-    init_app_state,
+    init_state,
 )
 from app.module import all_modules, module_list
 from app.types.exceptions import (
@@ -494,11 +493,11 @@ async def init_lifespan(
 ) -> LifespanState:
     hyperion_error_logger.info("Startup: Initializing application")
 
-    # We get `init_app_state` as a dependency, as tests
+    # We get `init_state` as a dependency, as tests
     # should override it to provide their own state
-    state: LifespanState = await app.dependency_overrides.get(
-        init_app_state,
-        init_app_state,
+    await app.dependency_overrides.get(
+        init_state,
+        init_state,
     )(
         app=app,
         settings=settings,
@@ -508,7 +507,7 @@ async def init_lifespan(
     redis_client: Redis | None = app.dependency_overrides.get(
         get_redis_client,
         get_redis_client,
-    )(state=state)
+    )()
 
     # Initialization steps should only be run once across all workers
     # We use Redis locks to ensure that the initialization steps are only run once
@@ -544,14 +543,14 @@ async def init_lifespan(
     )
 
     get_db_dependency: Callable[
-        [LifespanState],
+        [],
         AsyncGenerator[AsyncSession, None],
     ] = app.dependency_overrides.get(
         get_db,
         get_db,
     )
     # We need to run the factories only once across all the workers
-    async for db in get_db_dependency(state):
+    async for db in get_db_dependency():
         await initialization.use_lock_for_workers(
             run_factories,
             "run_factories",
@@ -562,7 +561,7 @@ async def init_lifespan(
             settings=settings,
             hyperion_error_logger=hyperion_error_logger,
         )
-    async for db in get_db_dependency(state):
+    async for db in get_db_dependency():
         await initialization.use_lock_for_workers(
             init_google_API,
             "init_google_API",
@@ -573,11 +572,11 @@ async def init_lifespan(
             settings=settings,
         )
 
-    async for db in get_db_dependency(state):
+    async for db in get_db_dependency():
         notification_manager = app.dependency_overrides.get(
             get_notification_manager,
             get_notification_manager,
-        )(state)
+        )()
         await initialization.use_lock_for_workers(
             initialize_notification_topics,
             "initialize_notification_topics",
@@ -589,7 +588,7 @@ async def init_lifespan(
             notification_manager=notification_manager,
         )
 
-    return state
+    return LifespanState()
 
 
 # We wrap the application in a function to be able to pass the settings and drop_db parameters
@@ -620,7 +619,6 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
             disconnect_state,
             disconnect_state,
         )(
-            state=state,
             hyperion_error_logger=hyperion_error_logger,
         )
 
@@ -644,10 +642,6 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     calypsso = get_calypsso_app()
     app.mount("/calypsso", calypsso, "Calypsso")
 
-    get_app_state_dependency = app.dependency_overrides.get(
-        get_app_state,
-        get_app_state,
-    )
     get_redis_client_dependency = app.dependency_overrides.get(
         get_redis_client,
         get_redis_client,
@@ -683,9 +677,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         port = request.client.port
         client_address = f"{ip_address}:{port}"
 
-        redis_client: redis.Redis | None = get_redis_client_dependency(
-            state=get_app_state_dependency(request),
-        )
+        redis_client: redis.Redis | None = get_redis_client_dependency()
 
         # We test the ip address with the redis limiter
         process = True

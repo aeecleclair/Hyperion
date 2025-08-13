@@ -299,7 +299,7 @@ async def send_test_future_notification(
         message=message,
         defer_date=datetime.now(UTC) + timedelta(seconds=10),
         scheduler=scheduler,
-        job_id="testtt",
+        job_id="send_test_future_notification",
     )
 
 
@@ -350,7 +350,7 @@ async def send_test_future_notification_topic(
         topic_id=notification_test_topic.id,
         message=message,
         defer_date=datetime.now(UTC) + timedelta(seconds=10),
-        job_id="test26",
+        job_id="notification_test_future",
         scheduler=scheduler,
     )
 

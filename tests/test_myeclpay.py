@@ -25,10 +25,10 @@ from app.core.myeclpay.types_myeclpay import (
 from app.core.myeclpay.utils_myeclpay import LATEST_TOS
 from app.core.users import models_users
 from tests.commons import (
-    TestingSessionLocal,
     add_object_to_db,
     create_api_access_token,
     create_user_with_groups,
+    get_TestingSessionLocal,
 )
 
 admin_user: models_users.CoreUser
@@ -1539,7 +1539,7 @@ async def test_create_and_activate_user_device(
     assert response.status_code == 201
     assert response.json()["id"] is not None
 
-    async with TestingSessionLocal() as db:
+    async with get_TestingSessionLocal()() as db:
         wallet_device = await db.get(
             models_myeclpay.WalletDevice,
             response.json()["id"],
@@ -2312,8 +2312,8 @@ async def test_store_scan_store_successful_scan(client: TestClient):
         qr_code_content.model_dump_json().encode("utf-8"),
     )
 
-    async with TestingSessionLocal() as db:
-        store_wallet_before_scan = await cruds_myeclpay.get_wallet(
+    async with get_TestingSessionLocal()() as db:
+        store_wallet_before_scan = await cruds_mypayment.get_wallet(
             db=db,
             wallet_id=store_wallet.id,
         )
@@ -2340,8 +2340,8 @@ async def test_store_scan_store_successful_scan(client: TestClient):
 
     ensure_qr_code_id_is_already_used(qr_code_id=qr_code_id, client=client)
 
-    async with TestingSessionLocal() as db:
-        store_wallet_after_scan = await cruds_myeclpay.get_wallet(
+    async with get_TestingSessionLocal()() as db:
+        store_wallet_after_scan = await cruds_mypayment.get_wallet(
             db=db,
             wallet_id=store_wallet.id,
         )
@@ -2415,8 +2415,8 @@ async def test_transaction_refund_unauthorized_user(client: TestClient):
 
 
 async def test_transaction_refund_complete(client: TestClient):
-    async with TestingSessionLocal() as db:
-        debited_wallet_before_refund = await cruds_myeclpay.get_wallet(
+    async with get_TestingSessionLocal()() as db:
+        debited_wallet_before_refund = await cruds_mypayment.get_wallet(
             db=db,
             wallet_id=ecl_user_wallet.id,
         )
@@ -2450,8 +2450,8 @@ async def test_transaction_refund_complete(client: TestClient):
     )
     assert response.status_code == 204
 
-    async with TestingSessionLocal() as db:
-        transaction_after_refund = await cruds_myeclpay.get_transaction(
+    async with get_TestingSessionLocal()() as db:
+        transaction_after_refund = await cruds_mypayment.get_transaction(
             db=db,
             transaction_id=transaction.id,
         )
@@ -2535,8 +2535,8 @@ async def test_transaction_refund_partial_invalid_amount(client: TestClient):
 
 
 async def test_transaction_refund_partial(client: TestClient):
-    async with TestingSessionLocal() as db:
-        debited_wallet_before_refund = await cruds_myeclpay.get_wallet(
+    async with get_TestingSessionLocal()() as db:
+        debited_wallet_before_refund = await cruds_mypayment.get_wallet(
             db=db,
             wallet_id=ecl_user_wallet.id,
         )
@@ -2573,8 +2573,8 @@ async def test_transaction_refund_partial(client: TestClient):
     )
     assert response.status_code == 204
 
-    async with TestingSessionLocal() as db:
-        transaction_after_refund = await cruds_myeclpay.get_transaction(
+    async with get_TestingSessionLocal()() as db:
+        transaction_after_refund = await cruds_mypayment.get_transaction(
             db=db,
             transaction_id=transaction.id,
         )
