@@ -33,7 +33,8 @@ from app.dependencies import (
     is_user_a_member,
     is_user_in,
 )
-from app.modules.cdr import cruds_cdr, models_cdr, schemas_cdr
+from app.modules.cdr import coredata_cdr, cruds_cdr, models_cdr, schemas_cdr
+from app.modules.cdr.dependencies_cdr import get_current_cdr_year
 from app.modules.cdr.types_cdr import (
     CdrLogActionType,
     CdrStatus,
@@ -385,13 +386,17 @@ async def get_sellers_by_user_id(
 async def get_online_sellers(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get all sellers that has online available products.
 
     **User must be authenticated to use this endpoint**
     """
-    return await cruds_cdr.get_online_sellers(db)
+    return await cruds_cdr.get_online_sellers(
+        db=db,
+        cdr_year=cdr_year.year,
+    )
 
 
 async def generate_and_send_results(
@@ -400,6 +405,7 @@ async def generate_and_send_results(
     db: AsyncSession,
     # settings: Settings,
 ) -> Path:
+    cdr_year = await get_core_data(coredata_cdr.CdrYear, db)
     seller = await cruds_cdr.get_seller_by_id(db, seller_id)
     if not seller:
         raise HTTPException(
@@ -412,7 +418,11 @@ async def generate_and_send_results(
             status_code=404,
             detail="Seller group not found.",
         )
-    products = await cruds_cdr.get_products_by_seller_id(db, seller_id)
+    products = await cruds_cdr.get_products_by_seller_id(
+        db,
+        seller_id,
+        cdr_year.year,
+    )
     if len(products) == 0:
         raise HTTPException(
             status_code=400,
@@ -421,7 +431,10 @@ async def generate_and_send_results(
     variants: list[models_cdr.ProductVariant] = []
     product_fields: dict[UUID, list[models_cdr.CustomDataField]] = {}
     for product in products:
-        product_variants = await cruds_cdr.get_product_variants(db, product.id)
+        product_variants = await cruds_cdr.get_product_variants(
+            db,
+            product.id,
+        )
         variants.extend(product_variants)
         product_fields[product.id] = list(
             await cruds_cdr.get_product_customdata_fields(
@@ -528,13 +541,17 @@ async def send_seller_results(
 async def get_all_available_online_products(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get a seller's online available products.
 
     **User must be authenticated to use this endpoint**
     """
-    return await cruds_cdr.get_online_products(db)
+    return await cruds_cdr.get_online_products(
+        db,
+        cdr_year.year,
+    )
 
 
 @module.router.get(
@@ -545,6 +562,7 @@ async def get_all_available_online_products(
 async def get_all_products(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get a seller's online available products.
@@ -560,7 +578,10 @@ async def get_all_products(
             status_code=403,
             detail="You must be a seller to get all documents.",
         )
-    return await cruds_cdr.get_products(db)
+    return await cruds_cdr.get_products(
+        db,
+        cdr_year.year,
+    )
 
 
 @module.router.post(
@@ -636,6 +657,7 @@ async def delete_seller(
     seller_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Delete a seller.
@@ -646,6 +668,7 @@ async def delete_seller(
     if await cruds_cdr.get_products_by_seller_id(
         db=db,
         seller_id=seller_id,
+        cdr_year=cdr_year.year,
     ) or await cruds_cdr.get_documents_by_seller_id(db=db, seller_id=seller_id):
         raise HTTPException(
             status_code=403,
@@ -667,6 +690,7 @@ async def get_products_by_seller_id(
     seller_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get a seller's products.
@@ -674,7 +698,11 @@ async def get_products_by_seller_id(
     **User must be part of the seller's group to use this endpoint**
     """
     await is_user_in_a_seller_group(seller_id, user=user, db=db)
-    return await cruds_cdr.get_products_by_seller_id(db, seller_id)
+    return await cruds_cdr.get_products_by_seller_id(
+        db,
+        seller_id,
+        cdr_year.year,
+    )
 
 
 @module.router.get(
@@ -686,13 +714,18 @@ async def get_available_online_products(
     seller_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get a seller's online available products.
 
     **User must be authenticated to use this endpoint**
     """
-    return await cruds_cdr.get_online_products_by_seller_id(db, seller_id)
+    return await cruds_cdr.get_online_products_by_seller_id(
+        db,
+        seller_id,
+        cdr_year.year,
+    )
 
 
 @module.router.post(
@@ -705,6 +738,7 @@ async def create_product(
     product: schemas_cdr.ProductBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Create a product.
@@ -733,6 +767,7 @@ async def create_product(
         related_membership_id=product.related_membership.id
         if product.related_membership
         else None,
+        year=cdr_year.year,
     )
 
     cruds_cdr.create_product(db, db_product)
@@ -764,7 +799,10 @@ async def create_product(
             ),
         )
     await db.flush()
-    return await cruds_cdr.get_product_by_id(db, db_product.id)
+    return await cruds_cdr.get_product_by_id(
+        db,
+        db_product.id,
+    )
 
 
 @module.router.patch(
@@ -877,7 +915,10 @@ async def delete_product(
             status_code=403,
             detail="You can't delete a product once CDR has started.",
         )
-    variants = await cruds_cdr.get_product_variants(db=db, product_id=product_id)
+    variants = await cruds_cdr.get_product_variants(
+        db=db,
+        product_id=product_id,
+    )
     if variants:
         raise HTTPException(
             status_code=403,
@@ -901,6 +942,7 @@ async def create_product_variant(
     product_variant: schemas_cdr.ProductVariantBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Create a product variant.
@@ -934,6 +976,7 @@ async def create_product_variant(
         related_membership_added_duration=product_variant.related_membership_added_duration,
         description_fr=product_variant.description_fr,
         description_en=product_variant.description_en,
+        year=cdr_year.year,
     )
     if (
         product
@@ -1221,6 +1264,7 @@ async def get_purchases_by_user_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get a user's purchases.
@@ -1234,7 +1278,11 @@ async def get_purchases_by_user_id(
             status_code=403,
             detail="You're not allowed to see other users purchases.",
         )
-    purchases = await cruds_cdr.get_purchases_by_user_id(db=db, user_id=user_id)
+    purchases = await cruds_cdr.get_purchases_by_user_id(
+        db=db,
+        user_id=user_id,
+        cdr_year=cdr_year.year,
+    )
     result = []
     for purchase in purchases:
         product_variant = await cruds_cdr.get_product_variant_by_id(
@@ -1295,8 +1343,9 @@ async def get_purchases_by_user_id(
 async def get_my_purchases(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
-    return await get_purchases_by_user_id(user.id, db, user)
+    return await get_purchases_by_user_id(user.id, db, user, cdr_year)
 
 
 @module.router.get(
@@ -1386,6 +1435,7 @@ async def create_purchase(
     purchase: schemas_cdr.PurchaseBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Create a purchase.
@@ -1415,6 +1465,11 @@ async def create_purchase(
         raise HTTPException(
             status_code=404,
             detail="Invalid product.",
+        )
+    if product_variant.year != cdr_year.year:
+        raise HTTPException(
+            status_code=404,
+            detail="Product unavailable.",
         )
     if not (user_id == user.id and product.available_online):
         await is_user_in_a_seller_group(product.seller_id, user=user, db=db)
@@ -1674,6 +1729,7 @@ async def delete_purchase(
     product_variant_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Delete a purchase.
@@ -1718,7 +1774,11 @@ async def delete_purchase(
         )
 
     # Check if a validated purchase depends on this purchase
-    user_purchases = await cruds_cdr.get_purchases_by_user_id(db=db, user_id=user_id)
+    user_purchases = await cruds_cdr.get_purchases_by_user_id(
+        db=db,
+        user_id=user_id,
+        cdr_year=cdr_year.year,
+    )
     for purchase in user_purchases:
         if purchase.validated:
             purchased_product = await cruds_cdr.get_product_by_id(
@@ -2014,6 +2074,7 @@ async def create_curriculum_membership(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Add a curriculum to a user.
@@ -2045,7 +2106,11 @@ async def create_curriculum_membership(
         )
     curriculum = await cruds_cdr.get_curriculum_by_user_id(db=db, user_id=user_id)
     if curriculum:
-        purchases = await cruds_cdr.get_purchases_by_user_id(db=db, user_id=user_id)
+        purchases = await cruds_cdr.get_purchases_by_user_id(
+            db=db,
+            user_id=user_id,
+            cdr_year=cdr_year.year,
+        )
         if purchases:
             raise HTTPException(
                 status_code=403,
@@ -2261,6 +2326,7 @@ async def get_payments_by_user_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get a user's payments.
@@ -2274,7 +2340,11 @@ async def get_payments_by_user_id(
             status_code=403,
             detail="You're not allowed to see other users payments.",
         )
-    return await cruds_cdr.get_payments_by_user_id(db=db, user_id=user_id)
+    return await cruds_cdr.get_payments_by_user_id(
+        db=db,
+        user_id=user_id,
+        cdr_year=cdr_year.year,
+    )
 
 
 @module.router.post(
@@ -2287,6 +2357,7 @@ async def create_payment(
     payment: schemas_cdr.PaymentBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Create a payment.
@@ -2304,6 +2375,7 @@ async def create_payment(
         user_id=user_id,
         total=payment.total,
         payment_type=payment.payment_type,
+        year=cdr_year.year,
     )
     db_action = models_cdr.CdrAction(
         id=uuid4(),
@@ -2375,13 +2447,22 @@ async def get_payment_url(
     user: models_users.CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
     payment_tool: PaymentTool = Depends(get_payment_tool(HelloAssoConfigName.CDR)),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get payment url
     """
 
-    purchases = await cruds_cdr.get_purchases_by_user_id(db=db, user_id=user.id)
-    payments = await cruds_cdr.get_payments_by_user_id(db=db, user_id=user.id)
+    purchases = await cruds_cdr.get_purchases_by_user_id(
+        db=db,
+        user_id=user.id,
+        cdr_year=cdr_year.year,
+    )
+    payments = await cruds_cdr.get_payments_by_user_id(
+        db=db,
+        user_id=user.id,
+        cdr_year=cdr_year.year,
+    )
 
     purchases_total = sum(
         purchase.product_variant.price * purchase.quantity for purchase in purchases
@@ -2437,6 +2518,30 @@ async def get_payment_url(
     return schemas_cdr.PaymentUrl(
         url=checkout.payment_url,
     )
+
+
+@module.router.get(
+    "/cdr/year/",
+    response_model=coredata_cdr.CdrYear,
+    status_code=200,
+)
+async def get_cdr_year(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
+):
+    return await get_core_data(coredata_cdr.CdrYear, db)
+
+
+@module.router.patch(
+    "/cdr/year/",
+    status_code=204,
+)
+async def update_cdr_year(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
+):
+    await set_core_data(cdr_year, db)
 
 
 @module.router.get(
@@ -2771,6 +2876,7 @@ async def generate_ticket_for_product(
     ticket_data: schemas_cdr.GenerateTicketBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
     product = await check_request_consistency(
@@ -2795,6 +2901,7 @@ async def generate_ticket_for_product(
     validated_purchases = await cruds_cdr.get_product_validated_purchases(
         db=db,
         product_id=ticketgen.product_id,
+        cdr_year=cdr_year.year,
     )
     for purchase in validated_purchases:
         ticket = models_cdr.Ticket(
@@ -2810,7 +2917,10 @@ async def generate_ticket_for_product(
         )
         cruds_cdr.create_ticket(db=db, ticket=ticket)
     await db.flush()
-    return await cruds_cdr.get_product_by_id(db=db, product_id=product_id)
+    return await cruds_cdr.get_product_by_id(
+        db=db,
+        product_id=product_id,
+    )
 
 
 @module.router.delete(
