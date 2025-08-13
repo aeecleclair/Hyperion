@@ -445,13 +445,11 @@ async def get_purchases_by_ids(
     db: AsyncSession,
     user_id: str,
     product_variant_id: list[UUID],
-    cdr_year: int,
 ) -> Sequence[models_cdr.Purchase]:
     result = await db.execute(
         select(models_cdr.Purchase).where(
             models_cdr.Purchase.user_id == user_id,
             models_cdr.Purchase.product_variant_id.in_(product_variant_id),
-            extract("year", models_cdr.Purchase.purchased_on) == cdr_year,
         ),
     )
     return result.scalars().all()

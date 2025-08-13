@@ -1587,7 +1587,6 @@ async def mark_purchase_as_validated(
     validated: bool,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Validate a purchase.
@@ -1636,7 +1635,6 @@ async def mark_purchase_as_validated(
                 product_variant_id=[
                     variant.id for variant in product_constraint.variants
                 ],
-                cdr_year=cdr_year.year,
             )
             if not purchases:
                 if product_constraint.related_membership:
@@ -1800,7 +1798,6 @@ async def delete_purchase(
                         db=db,
                         user_id=user_id,
                         product_variant_id=[variant.id for variant in product.variants],
-                        cdr_year=cdr_year.year,
                     )
                     if all_possible_purchases:
                         all_possible_purchases = list(all_possible_purchases)
