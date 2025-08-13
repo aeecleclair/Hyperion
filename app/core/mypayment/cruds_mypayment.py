@@ -7,9 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import noload, selectinload
 
 from app.core.memberships import schemas_memberships
-from app.core.myeclpay import models_myeclpay, schemas_myeclpay
-from app.core.myeclpay.exceptions_myeclpay import WalletNotFoundOnUpdateError
-from app.core.myeclpay.types_myeclpay import (
+from app.core.mypayment import models_mypayment, schemas_mypayment
+from app.core.mypayment.exceptions_mypayment import WalletNotFoundOnUpdateError
+from app.core.mypayment.types_mypayment import (
     TransactionStatus,
     WalletDeviceStatus,
     WalletType,
@@ -18,11 +18,11 @@ from app.core.users import schemas_users
 
 
 async def create_structure(
-    structure: schemas_myeclpay.Structure,
+    structure: schemas_mypayment.Structure,
     db: AsyncSession,
 ) -> None:
     db.add(
-        models_myeclpay.Structure(
+        models_mypayment.Structure(
             id=structure.id,
             name=structure.name,
             association_membership_id=structure.association_membership_id,
@@ -33,12 +33,12 @@ async def create_structure(
 
 async def update_structure(
     structure_id: UUID,
-    structure_update: schemas_myeclpay.StructureUpdate,
+    structure_update: schemas_mypayment.StructureUpdate,
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        update(models_myeclpay.Structure)
-        .where(models_myeclpay.Structure.id == structure_id)
+        update(models_mypayment.Structure)
+        .where(models_mypayment.Structure.id == structure_id)
         .values(**structure_update.model_dump(exclude_unset=True)),
     )
 
@@ -48,8 +48,8 @@ async def delete_structure(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        delete(models_myeclpay.Structure).where(
-            models_myeclpay.Structure.id == structure_id,
+        delete(models_mypayment.Structure).where(
+            models_mypayment.Structure.id == structure_id,
         ),
     )
 
@@ -62,7 +62,7 @@ async def init_structure_manager_transfer(
     db: AsyncSession,
 ) -> None:
     db.add(
-        models_myeclpay.StructureManagerTransfert(
+        models_mypayment.StructureManagerTransfert(
             structure_id=structure_id,
             user_id=user_id,
             valid_until=valid_until,
@@ -74,10 +74,10 @@ async def init_structure_manager_transfer(
 async def get_structure_manager_transfer_by_secret(
     confirmation_token: str,
     db: AsyncSession,
-) -> models_myeclpay.StructureManagerTransfert | None:
+) -> models_mypayment.StructureManagerTransfert | None:
     result = await db.execute(
-        select(models_myeclpay.StructureManagerTransfert).where(
-            models_myeclpay.StructureManagerTransfert.confirmation_token
+        select(models_mypayment.StructureManagerTransfert).where(
+            models_mypayment.StructureManagerTransfert.confirmation_token
             == confirmation_token,
         ),
     )
@@ -89,8 +89,8 @@ async def delete_structure_manager_transfer_by_structure(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        delete(models_myeclpay.StructureManagerTransfert).where(
-            models_myeclpay.StructureManagerTransfert.structure_id == structure_id,
+        delete(models_mypayment.StructureManagerTransfert).where(
+            models_mypayment.StructureManagerTransfert.structure_id == structure_id,
         ),
     )
 
@@ -101,18 +101,18 @@ async def update_structure_manager(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        update(models_myeclpay.Structure)
-        .where(models_myeclpay.Structure.id == structure_id)
+        update(models_mypayment.Structure)
+        .where(models_mypayment.Structure.id == structure_id)
         .values(manager_user_id=manager_user_id),
     )
 
 
 async def get_structures(
     db: AsyncSession,
-) -> Sequence[schemas_myeclpay.Structure]:
-    result = await db.execute(select(models_myeclpay.Structure))
+) -> Sequence[schemas_mypayment.Structure]:
+    result = await db.execute(select(models_mypayment.Structure))
     return [
-        schemas_myeclpay.Structure(
+        schemas_mypayment.Structure(
             name=structure.name,
             association_membership_id=structure.association_membership_id,
             association_membership=schemas_memberships.MembershipSimple(
@@ -140,12 +140,12 @@ async def get_structures(
 async def get_structure_by_id(
     structure_id: UUID,
     db: AsyncSession,
-) -> schemas_myeclpay.Structure | None:
+) -> schemas_mypayment.Structure | None:
     structure = (
         (
             await db.execute(
-                select(models_myeclpay.Structure).where(
-                    models_myeclpay.Structure.id == structure_id,
+                select(models_mypayment.Structure).where(
+                    models_mypayment.Structure.id == structure_id,
                 ),
             )
         )
@@ -153,7 +153,7 @@ async def get_structure_by_id(
         .first()
     )
     return (
-        schemas_myeclpay.Structure(
+        schemas_mypayment.Structure(
             name=structure.name,
             association_membership_id=structure.association_membership_id,
             association_membership=schemas_memberships.MembershipSimple(
@@ -180,7 +180,7 @@ async def get_structure_by_id(
 
 
 async def create_store(
-    store: models_myeclpay.Store,
+    store: models_mypayment.Store,
     db: AsyncSession,
 ) -> None:
     db.add(store)
@@ -188,12 +188,12 @@ async def create_store(
 
 async def update_store(
     store_id: UUID,
-    store_update: schemas_myeclpay.StoreUpdate,
+    store_update: schemas_mypayment.StoreUpdate,
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        update(models_myeclpay.Store)
-        .where(models_myeclpay.Store.id == store_id)
+        update(models_mypayment.Store)
+        .where(models_mypayment.Store.id == store_id)
         .values(**store_update.model_dump(exclude_none=True)),
     )
 
@@ -203,24 +203,24 @@ async def delete_store(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        delete(models_myeclpay.Store).where(models_myeclpay.Store.id == store_id),
+        delete(models_mypayment.Store).where(models_mypayment.Store.id == store_id),
     )
 
 
 async def get_stores(
     db: AsyncSession,
-) -> Sequence[models_myeclpay.Store]:
-    result = await db.execute(select(models_myeclpay.Store))
+) -> Sequence[models_mypayment.Store]:
+    result = await db.execute(select(models_mypayment.Store))
     return result.scalars().all()
 
 
 async def get_store_by_name(
     name: str,
     db: AsyncSession,
-) -> models_myeclpay.Store | None:
+) -> models_mypayment.Store | None:
     result = await db.execute(
-        select(models_myeclpay.Store).where(
-            models_myeclpay.Store.name == name,
+        select(models_mypayment.Store).where(
+            models_mypayment.Store.name == name,
         ),
     )
     return result.scalars().first()
@@ -229,10 +229,10 @@ async def get_store_by_name(
 async def get_stores_by_structure_id(
     db: AsyncSession,
     structure_id: UUID,
-) -> Sequence[models_myeclpay.Store]:
+) -> Sequence[models_mypayment.Store]:
     result = await db.execute(
-        select(models_myeclpay.Store).where(
-            models_myeclpay.Store.structure_id == structure_id,
+        select(models_mypayment.Store).where(
+            models_mypayment.Store.structure_id == structure_id,
         ),
     )
     return result.scalars().all()
@@ -247,7 +247,7 @@ async def create_seller(
     can_manage_sellers: bool,
     db: AsyncSession,
 ) -> None:
-    wallet = models_myeclpay.Seller(
+    wallet = models_mypayment.Seller(
         user_id=user_id,
         store_id=store_id,
         can_bank=can_bank,
@@ -262,13 +262,13 @@ async def get_seller(
     user_id: str,
     store_id: UUID,
     db: AsyncSession,
-) -> schemas_myeclpay.Seller | None:
+) -> schemas_mypayment.Seller | None:
     result = (
         (
             await db.execute(
-                select(models_myeclpay.Seller).where(
-                    models_myeclpay.Seller.user_id == user_id,
-                    models_myeclpay.Seller.store_id == store_id,
+                select(models_mypayment.Seller).where(
+                    models_mypayment.Seller.user_id == user_id,
+                    models_mypayment.Seller.store_id == store_id,
                 ),
             )
         )
@@ -276,7 +276,7 @@ async def get_seller(
         .first()
     )
     return (
-        schemas_myeclpay.Seller(
+        schemas_mypayment.Seller(
             user_id=result.user_id,
             store_id=result.store_id,
             can_bank=result.can_bank,
@@ -300,14 +300,14 @@ async def get_seller(
 async def get_sellers_by_store_id(
     store_id: UUID,
     db: AsyncSession,
-) -> list[schemas_myeclpay.Seller]:
+) -> list[schemas_mypayment.Seller]:
     result = await db.execute(
-        select(models_myeclpay.Seller).where(
-            models_myeclpay.Seller.store_id == store_id,
+        select(models_mypayment.Seller).where(
+            models_mypayment.Seller.store_id == store_id,
         ),
     )
     return [
-        schemas_myeclpay.Seller(
+        schemas_mypayment.Seller(
             user_id=seller.user_id,
             store_id=seller.store_id,
             can_bank=seller.can_bank,
@@ -330,10 +330,10 @@ async def get_sellers_by_store_id(
 async def get_sellers_by_user_id(
     user_id: str,
     db: AsyncSession,
-) -> Sequence[models_myeclpay.Seller]:
+) -> Sequence[models_mypayment.Seller]:
     result = await db.execute(
-        select(models_myeclpay.Seller).where(
-            models_myeclpay.Seller.user_id == user_id,
+        select(models_mypayment.Seller).where(
+            models_mypayment.Seller.user_id == user_id,
         ),
     )
     return result.scalars().all()
@@ -342,14 +342,14 @@ async def get_sellers_by_user_id(
 async def update_seller(
     seller_user_id: str,
     store_id: UUID,
-    seller_update: schemas_myeclpay.SellerUpdate,
+    seller_update: schemas_mypayment.SellerUpdate,
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        update(models_myeclpay.Seller)
+        update(models_mypayment.Seller)
         .where(
-            models_myeclpay.Seller.user_id == seller_user_id,
-            models_myeclpay.Seller.store_id == store_id,
+            models_mypayment.Seller.user_id == seller_user_id,
+            models_mypayment.Seller.store_id == store_id,
         )
         .values(
             **seller_update.model_dump(exclude_none=True),
@@ -363,9 +363,9 @@ async def delete_seller(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        delete(models_myeclpay.Seller).where(
-            models_myeclpay.Seller.user_id == seller_user_id,
-            models_myeclpay.Seller.store_id == store_id,
+        delete(models_mypayment.Seller).where(
+            models_mypayment.Seller.user_id == seller_user_id,
+            models_mypayment.Seller.store_id == store_id,
         ),
     )
 
@@ -376,7 +376,7 @@ async def create_wallet(
     balance: int,
     db: AsyncSession,
 ) -> None:
-    wallet = models_myeclpay.Wallet(
+    wallet = models_mypayment.Wallet(
         id=wallet_id,
         type=wallet_type,
         balance=balance,
@@ -386,10 +386,10 @@ async def create_wallet(
 
 async def get_wallets(
     db: AsyncSession,
-) -> Sequence[schemas_myeclpay.WalletBase]:
-    result = await db.execute(select(models_myeclpay.Wallet))
+) -> Sequence[schemas_mypayment.WalletBase]:
+    result = await db.execute(select(models_mypayment.Wallet))
     return [
-        schemas_myeclpay.WalletBase(
+        schemas_mypayment.WalletBase(
             id=wallet.id,
             type=wallet.type,
             balance=wallet.balance,
@@ -401,14 +401,14 @@ async def get_wallets(
 async def get_wallet(
     wallet_id: UUID,
     db: AsyncSession,
-) -> models_myeclpay.Wallet | None:
+) -> models_mypayment.Wallet | None:
     # We lock the wallet `for update` to prevent race conditions
     request = (
-        select(models_myeclpay.Wallet)
+        select(models_mypayment.Wallet)
         .where(
-            models_myeclpay.Wallet.id == wallet_id,
+            models_mypayment.Wallet.id == wallet_id,
         )
-        .with_for_update(of=models_myeclpay.Wallet)
+        .with_for_update(of=models_mypayment.Wallet)
     )
 
     result = await db.execute(request)
@@ -418,10 +418,10 @@ async def get_wallet(
 async def get_wallet_device(
     wallet_device_id: UUID,
     db: AsyncSession,
-) -> models_myeclpay.WalletDevice | None:
+) -> models_mypayment.WalletDevice | None:
     result = await db.execute(
-        select(models_myeclpay.WalletDevice).where(
-            models_myeclpay.WalletDevice.id == wallet_device_id,
+        select(models_mypayment.WalletDevice).where(
+            models_mypayment.WalletDevice.id == wallet_device_id,
         ),
     )
     return result.scalars().first()
@@ -430,10 +430,10 @@ async def get_wallet_device(
 async def get_wallet_devices_by_wallet_id(
     wallet_id: UUID,
     db: AsyncSession,
-) -> Sequence[models_myeclpay.WalletDevice]:
+) -> Sequence[models_mypayment.WalletDevice]:
     result = await db.execute(
-        select(models_myeclpay.WalletDevice).where(
-            models_myeclpay.WalletDevice.wallet_id == wallet_id,
+        select(models_mypayment.WalletDevice).where(
+            models_mypayment.WalletDevice.wallet_id == wallet_id,
         ),
     )
     return result.scalars().all()
@@ -442,17 +442,17 @@ async def get_wallet_devices_by_wallet_id(
 async def get_wallet_device_by_activation_token(
     activation_token: str,
     db: AsyncSession,
-) -> models_myeclpay.WalletDevice | None:
+) -> models_mypayment.WalletDevice | None:
     result = await db.execute(
-        select(models_myeclpay.WalletDevice).where(
-            models_myeclpay.WalletDevice.activation_token == activation_token,
+        select(models_mypayment.WalletDevice).where(
+            models_mypayment.WalletDevice.activation_token == activation_token,
         ),
     )
     return result.scalars().first()
 
 
 async def create_wallet_device(
-    wallet_device: models_myeclpay.WalletDevice,
+    wallet_device: models_mypayment.WalletDevice,
     db: AsyncSession,
 ) -> None:
     db.add(wallet_device)
@@ -464,8 +464,8 @@ async def update_wallet_device_status(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        update(models_myeclpay.WalletDevice)
-        .where(models_myeclpay.WalletDevice.id == wallet_device_id)
+        update(models_mypayment.WalletDevice)
+        .where(models_mypayment.WalletDevice.id == wallet_device_id)
         .values(status=status),
     )
 
@@ -481,11 +481,11 @@ async def increment_wallet_balance(
     # Prevent a race condition by locking the wallet row
     # as we don't want the balance to be modified between the select and the update.
     request = (
-        select(models_myeclpay.Wallet)
-        .where(models_myeclpay.Wallet.id == wallet_id)
+        select(models_mypayment.Wallet)
+        .where(models_mypayment.Wallet.id == wallet_id)
         .options(
-            noload(models_myeclpay.Wallet.store),
-            noload(models_myeclpay.Wallet.user),
+            noload(models_mypayment.Wallet.store),
+            noload(models_mypayment.Wallet.user),
         )
         .with_for_update()
     )
@@ -504,7 +504,7 @@ async def create_user_payment(
     accepted_tos_version: int,
     db: AsyncSession,
 ) -> None:
-    user_payment = models_myeclpay.UserPayment(
+    user_payment = models_mypayment.UserPayment(
         user_id=user_id,
         wallet_id=wallet_id,
         accepted_tos_signature=accepted_tos_signature,
@@ -520,8 +520,8 @@ async def update_user_payment(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        update(models_myeclpay.UserPayment)
-        .where(models_myeclpay.UserPayment.user_id == user_id)
+        update(models_mypayment.UserPayment)
+        .where(models_mypayment.UserPayment.user_id == user_id)
         .values(
             accepted_tos_signature=accepted_tos_signature,
             accepted_tos_version=accepted_tos_version,
@@ -532,22 +532,22 @@ async def update_user_payment(
 async def get_user_payment(
     user_id: str,
     db: AsyncSession,
-) -> models_myeclpay.UserPayment | None:
+) -> models_mypayment.UserPayment | None:
     result = await db.execute(
-        select(models_myeclpay.UserPayment).where(
-            models_myeclpay.UserPayment.user_id == user_id,
+        select(models_mypayment.UserPayment).where(
+            models_mypayment.UserPayment.user_id == user_id,
         ),
     )
     return result.scalars().first()
 
 
 async def create_transaction(
-    transaction: schemas_myeclpay.TransactionBase,
+    transaction: schemas_mypayment.TransactionBase,
     debited_wallet_device_id: UUID,
     store_note: str | None,
     db: AsyncSession,
 ) -> None:
-    transaction_db = models_myeclpay.Transaction(
+    transaction_db = models_mypayment.Transaction(
         id=transaction.id,
         debited_wallet_id=transaction.debited_wallet_id,
         debited_wallet_device_id=debited_wallet_device_id,
@@ -569,8 +569,8 @@ async def update_transaction_status(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        update(models_myeclpay.Transaction)
-        .where(models_myeclpay.Transaction.id == transaction_id)
+        update(models_mypayment.Transaction)
+        .where(models_mypayment.Transaction.id == transaction_id)
         .values(status=status),
     )
 
@@ -578,24 +578,24 @@ async def update_transaction_status(
 async def get_transaction(
     transaction_id: UUID,
     db: AsyncSession,
-) -> schemas_myeclpay.Transaction | None:
+) -> schemas_mypayment.Transaction | None:
     # We lock the transaction `for update` to prevent
     # race conditions
     result = (
         (
             await db.execute(
-                select(models_myeclpay.Transaction)
+                select(models_mypayment.Transaction)
                 .where(
-                    models_myeclpay.Transaction.id == transaction_id,
+                    models_mypayment.Transaction.id == transaction_id,
                 )
-                .with_for_update(of=models_myeclpay.Transaction),
+                .with_for_update(of=models_mypayment.Transaction),
             )
         )
         .scalars()
         .first()
     )
     return (
-        schemas_myeclpay.Transaction(
+        schemas_mypayment.Transaction(
             id=result.id,
             debited_wallet_id=result.debited_wallet_id,
             credited_wallet_id=result.credited_wallet_id,
@@ -615,22 +615,22 @@ async def get_transactions(
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     exclude_canceled: bool = False,
-) -> Sequence[schemas_myeclpay.TransactionBase]:
+) -> Sequence[schemas_mypayment.TransactionBase]:
     result = await db.execute(
-        select(models_myeclpay.Transaction).where(
-            models_myeclpay.Transaction.creation >= start_date
+        select(models_mypayment.Transaction).where(
+            models_mypayment.Transaction.creation >= start_date
             if start_date
             else and_(True),
-            models_myeclpay.Transaction.creation <= end_date
+            models_mypayment.Transaction.creation <= end_date
             if end_date
             else and_(True),
-            models_myeclpay.Transaction.status != TransactionStatus.CANCELED
+            models_mypayment.Transaction.status != TransactionStatus.CANCELED
             if exclude_canceled
             else and_(True),
         ),
     )
     return [
-        schemas_myeclpay.TransactionBase(
+        schemas_mypayment.TransactionBase(
             id=transaction.id,
             debited_wallet_id=transaction.debited_wallet_id,
             credited_wallet_id=transaction.credited_wallet_id,
@@ -649,24 +649,24 @@ async def get_transactions_by_wallet_id(
     db: AsyncSession,
     start_datetime: datetime | None = None,
     end_datetime: datetime | None = None,
-) -> Sequence[models_myeclpay.Transaction]:
+) -> Sequence[models_mypayment.Transaction]:
     result = await db.execute(
-        select(models_myeclpay.Transaction)
+        select(models_mypayment.Transaction)
         .where(
             or_(
-                models_myeclpay.Transaction.debited_wallet_id == wallet_id,
-                models_myeclpay.Transaction.credited_wallet_id == wallet_id,
+                models_mypayment.Transaction.debited_wallet_id == wallet_id,
+                models_mypayment.Transaction.credited_wallet_id == wallet_id,
             ),
-            models_myeclpay.Transaction.creation >= start_datetime
+            models_mypayment.Transaction.creation >= start_datetime
             if start_datetime
             else and_(True),
-            models_myeclpay.Transaction.creation <= end_datetime
+            models_mypayment.Transaction.creation <= end_datetime
             if end_datetime
             else and_(True),
         )
         .options(
-            selectinload(models_myeclpay.Transaction.debited_wallet),
-            selectinload(models_myeclpay.Transaction.credited_wallet),
+            selectinload(models_mypayment.Transaction.debited_wallet),
+            selectinload(models_mypayment.Transaction.credited_wallet),
         ),
     )
     return result.scalars().all()
@@ -675,16 +675,16 @@ async def get_transactions_by_wallet_id(
 async def get_transfers(
     db: AsyncSession,
     last_checked: datetime | None = None,
-) -> Sequence[schemas_myeclpay.Transfer]:
+) -> Sequence[schemas_mypayment.Transfer]:
     result = await db.execute(
-        select(models_myeclpay.Transfer).where(
-            models_myeclpay.Transfer.creation >= last_checked
+        select(models_mypayment.Transfer).where(
+            models_mypayment.Transfer.creation >= last_checked
             if last_checked
             else and_(True),
         ),
     )
     return [
-        schemas_myeclpay.Transfer(
+        schemas_mypayment.Transfer(
             id=transfer.id,
             type=transfer.type,
             transfer_identifier=transfer.transfer_identifier,
@@ -699,10 +699,10 @@ async def get_transfers(
 
 
 async def create_transfer(
-    transfer: schemas_myeclpay.Transfer,
+    transfer: schemas_mypayment.Transfer,
     db: AsyncSession,
 ) -> None:
-    transfer_db = models_myeclpay.Transfer(
+    transfer_db = models_mypayment.Transfer(
         id=transfer.id,
         type=transfer.type,
         transfer_identifier=transfer.transfer_identifier,
@@ -720,8 +720,8 @@ async def confirm_transfer(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        update(models_myeclpay.Transfer)
-        .where(models_myeclpay.Transfer.id == transfer_id)
+        update(models_mypayment.Transfer)
+        .where(models_mypayment.Transfer.id == transfer_id)
         .values(confirmed=True),
     )
 
@@ -731,17 +731,17 @@ async def get_transfers_by_wallet_id(
     db: AsyncSession,
     start_datetime: datetime | None = None,
     end_datetime: datetime | None = None,
-) -> Sequence[models_myeclpay.Transfer]:
+) -> Sequence[models_mypayment.Transfer]:
     result = await db.execute(
-        select(models_myeclpay.Transfer)
+        select(models_mypayment.Transfer)
         .where(
-            models_myeclpay.Transfer.wallet_id == wallet_id,
+            models_mypayment.Transfer.wallet_id == wallet_id,
         )
         .where(
-            models_myeclpay.Transfer.creation >= start_datetime
+            models_mypayment.Transfer.creation >= start_datetime
             if start_datetime
             else and_(True),
-            models_myeclpay.Transfer.creation <= end_datetime
+            models_mypayment.Transfer.creation <= end_datetime
             if end_datetime
             else and_(True),
         ),
@@ -752,10 +752,10 @@ async def get_transfers_by_wallet_id(
 async def get_transfer_by_transfer_identifier(
     db: AsyncSession,
     transfer_identifier: str,
-) -> models_myeclpay.Transfer | None:
+) -> models_mypayment.Transfer | None:
     result = await db.execute(
-        select(models_myeclpay.Transfer).where(
-            models_myeclpay.Transfer.transfer_identifier == transfer_identifier,
+        select(models_mypayment.Transfer).where(
+            models_mypayment.Transfer.transfer_identifier == transfer_identifier,
         ),
     )
     return result.scalars().first()
@@ -764,16 +764,16 @@ async def get_transfer_by_transfer_identifier(
 async def get_refunds(
     db: AsyncSession,
     last_checked: datetime | None = None,
-) -> Sequence[schemas_myeclpay.RefundBase]:
+) -> Sequence[schemas_mypayment.RefundBase]:
     result = await db.execute(
-        select(models_myeclpay.Refund).where(
-            models_myeclpay.Refund.creation >= last_checked
+        select(models_mypayment.Refund).where(
+            models_mypayment.Refund.creation >= last_checked
             if last_checked
             else and_(True),
         ),
     )
     return [
-        schemas_myeclpay.RefundBase(
+        schemas_mypayment.RefundBase(
             id=refund.id,
             transaction_id=refund.transaction_id,
             credited_wallet_id=refund.credited_wallet_id,
@@ -787,10 +787,10 @@ async def get_refunds(
 
 
 async def create_refund(
-    refund: schemas_myeclpay.RefundBase,
+    refund: schemas_mypayment.RefundBase,
     db: AsyncSession,
 ) -> None:
-    refund_db = models_myeclpay.Refund(
+    refund_db = models_mypayment.Refund(
         id=refund.id,
         transaction_id=refund.transaction_id,
         credited_wallet_id=refund.credited_wallet_id,
@@ -805,17 +805,17 @@ async def create_refund(
 async def get_refund_by_transaction_id(
     transaction_id: UUID,
     db: AsyncSession,
-) -> schemas_myeclpay.Refund | None:
+) -> schemas_mypayment.Refund | None:
     result = (
         (
             await db.execute(
-                select(models_myeclpay.Refund)
+                select(models_mypayment.Refund)
                 .where(
-                    models_myeclpay.Refund.transaction_id == transaction_id,
+                    models_mypayment.Refund.transaction_id == transaction_id,
                 )
                 .options(
-                    selectinload(models_myeclpay.Refund.debited_wallet),
-                    selectinload(models_myeclpay.Refund.credited_wallet),
+                    selectinload(models_mypayment.Refund.debited_wallet),
+                    selectinload(models_mypayment.Refund.credited_wallet),
                 ),
             )
         )
@@ -823,7 +823,7 @@ async def get_refund_by_transaction_id(
         .first()
     )
     return (
-        schemas_myeclpay.Refund(
+        schemas_mypayment.Refund(
             id=result.id,
             transaction_id=result.transaction_id,
             credited_wallet_id=result.credited_wallet_id,
@@ -831,7 +831,7 @@ async def get_refund_by_transaction_id(
             total=result.total,
             creation=result.creation,
             seller_user_id=result.seller_user_id,
-            transaction=schemas_myeclpay.Transaction(
+            transaction=schemas_mypayment.Transaction(
                 id=result.transaction.id,
                 debited_wallet_id=result.transaction.debited_wallet_id,
                 credited_wallet_id=result.transaction.credited_wallet_id,
@@ -841,7 +841,7 @@ async def get_refund_by_transaction_id(
                 creation=result.transaction.creation,
                 status=result.transaction.status,
             ),
-            debited_wallet=schemas_myeclpay.WalletInfo(
+            debited_wallet=schemas_mypayment.WalletInfo(
                 id=result.debited_wallet.id,
                 type=result.debited_wallet.type,
                 owner_name=result.debited_wallet.store.name
@@ -850,7 +850,7 @@ async def get_refund_by_transaction_id(
                 if result.debited_wallet.user
                 else None,
             ),
-            credited_wallet=schemas_myeclpay.WalletInfo(
+            credited_wallet=schemas_mypayment.WalletInfo(
                 id=result.credited_wallet.id,
                 type=result.credited_wallet.type,
                 owner_name=result.credited_wallet.store.name
@@ -870,19 +870,19 @@ async def get_refunds_by_wallet_id(
     db: AsyncSession,
     start_datetime: datetime | None = None,
     end_datetime: datetime | None = None,
-) -> Sequence[schemas_myeclpay.Refund]:
+) -> Sequence[schemas_mypayment.Refund]:
     result = (
         (
             await db.execute(
-                select(models_myeclpay.Refund).where(
+                select(models_mypayment.Refund).where(
                     or_(
-                        models_myeclpay.Refund.debited_wallet_id == wallet_id,
-                        models_myeclpay.Refund.credited_wallet_id == wallet_id,
+                        models_mypayment.Refund.debited_wallet_id == wallet_id,
+                        models_mypayment.Refund.credited_wallet_id == wallet_id,
                     ),
-                    models_myeclpay.Refund.creation >= start_datetime
+                    models_mypayment.Refund.creation >= start_datetime
                     if start_datetime
                     else and_(True),
-                    models_myeclpay.Refund.creation <= end_datetime
+                    models_mypayment.Refund.creation <= end_datetime
                     if end_datetime
                     else and_(True),
                 ),
@@ -892,7 +892,7 @@ async def get_refunds_by_wallet_id(
         .all()
     )
     return [
-        schemas_myeclpay.Refund(
+        schemas_mypayment.Refund(
             id=refund.id,
             transaction_id=refund.transaction_id,
             credited_wallet_id=refund.credited_wallet_id,
@@ -900,7 +900,7 @@ async def get_refunds_by_wallet_id(
             total=refund.total,
             creation=refund.creation,
             seller_user_id=refund.seller_user_id,
-            transaction=schemas_myeclpay.Transaction(
+            transaction=schemas_mypayment.Transaction(
                 id=refund.transaction.id,
                 debited_wallet_id=refund.transaction.debited_wallet_id,
                 credited_wallet_id=refund.transaction.credited_wallet_id,
@@ -910,7 +910,7 @@ async def get_refunds_by_wallet_id(
                 creation=refund.transaction.creation,
                 status=refund.transaction.status,
             ),
-            debited_wallet=schemas_myeclpay.WalletInfo(
+            debited_wallet=schemas_mypayment.WalletInfo(
                 id=refund.debited_wallet.id,
                 type=refund.debited_wallet.type,
                 owner_name=refund.debited_wallet.store.name
@@ -919,7 +919,7 @@ async def get_refunds_by_wallet_id(
                 if refund.debited_wallet.user
                 else None,
             ),
-            credited_wallet=schemas_myeclpay.WalletInfo(
+            credited_wallet=schemas_mypayment.WalletInfo(
                 id=refund.credited_wallet.id,
                 type=refund.credited_wallet.type,
                 owner_name=refund.credited_wallet.store.name
@@ -936,20 +936,20 @@ async def get_refunds_by_wallet_id(
 async def get_store(
     store_id: UUID,
     db: AsyncSession,
-) -> models_myeclpay.Store | None:
+) -> models_mypayment.Store | None:
     result = await db.execute(
-        select(models_myeclpay.Store).where(
-            models_myeclpay.Store.id == store_id,
+        select(models_mypayment.Store).where(
+            models_mypayment.Store.id == store_id,
         ),
     )
     return result.scalars().first()
 
 
 async def create_used_qrcode(
-    qr_code: schemas_myeclpay.ScanInfo,
+    qr_code: schemas_mypayment.ScanInfo,
     db: AsyncSession,
 ) -> None:
-    wallet = models_myeclpay.UsedQRCode(
+    wallet = models_mypayment.UsedQRCode(
         qr_code_id=qr_code.id,
         qr_code_tot=qr_code.tot,
         qr_code_iat=qr_code.iat,
@@ -963,10 +963,10 @@ async def create_used_qrcode(
 async def get_used_qrcode(
     qr_code_id: UUID,
     db: AsyncSession,
-) -> models_myeclpay.UsedQRCode | None:
+) -> models_mypayment.UsedQRCode | None:
     result = await db.execute(
-        select(models_myeclpay.UsedQRCode).where(
-            models_myeclpay.UsedQRCode.qr_code_id == qr_code_id,
+        select(models_mypayment.UsedQRCode).where(
+            models_mypayment.UsedQRCode.qr_code_id == qr_code_id,
         ),
     )
     return result.scalars().first()
@@ -977,7 +977,7 @@ async def delete_used_qrcode(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        delete(models_myeclpay.UsedQRCode).where(
-            models_myeclpay.UsedQRCode.qr_code_id == qr_code_id,
+        delete(models_mypayment.UsedQRCode).where(
+            models_mypayment.UsedQRCode.qr_code_id == qr_code_id,
         ),
     )

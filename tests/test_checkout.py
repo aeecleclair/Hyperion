@@ -14,9 +14,9 @@ from pytest_mock import MockerFixture
 from requests import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.payment import cruds_payment, models_payment, schemas_payment
-from app.core.payment.payment_tool import PaymentTool
-from app.core.payment.types_payment import HelloAssoConfig, HelloAssoConfigName
+from app.core.checkout import cruds_checkout, models_checkout, schemas_checkout
+from app.core.checkout.payment_tool import PaymentTool
+from app.core.checkout.types_checkout import HelloAssoConfig, HelloAssoConfigName
 from app.core.schools import schemas_schools
 from app.core.users import schemas_users
 from app.types.module import Module
@@ -30,9 +30,9 @@ from tests.commons import (
 if TYPE_CHECKING:
     from app.core.utils.config import Settings
 
-checkout_with_existing_checkout_payment: models_payment.Checkout
-existing_checkout_payment: models_payment.CheckoutPayment
-checkout: models_payment.Checkout
+checkout_with_existing_checkout_payment: models_checkout.Checkout
+existing_checkout_payment: models_checkout.CheckoutPayment
+checkout: models_checkout.Checkout
 
 user_schema: schemas_users.CoreUser
 
@@ -43,7 +43,7 @@ TEST_MODULE_ROOT = "tests"
 async def init_objects() -> None:
     global checkout_with_existing_checkout_payment
     checkout_with_existing_checkout_payment_id = uuid.uuid4()
-    checkout_with_existing_checkout_payment = models_payment.Checkout(
+    checkout_with_existing_checkout_payment = models_checkout.Checkout(
         id=checkout_with_existing_checkout_payment_id,
         module=TEST_MODULE_ROOT,
         name="Test Payment",
@@ -54,7 +54,7 @@ async def init_objects() -> None:
     await add_object_to_db(checkout_with_existing_checkout_payment)
 
     global existing_checkout_payment
-    existing_checkout_payment = models_payment.CheckoutPayment(
+    existing_checkout_payment = models_checkout.CheckoutPayment(
         id=uuid.uuid4(),
         checkout_id=checkout_with_existing_checkout_payment_id,
         paid_amount=100,
@@ -63,7 +63,7 @@ async def init_objects() -> None:
     await add_object_to_db(existing_checkout_payment)
 
     global checkout
-    checkout = models_payment.Checkout(
+    checkout = models_checkout.Checkout(
         id=uuid.uuid4(),
         module="tests",
         name="Test Payment",
@@ -93,7 +93,7 @@ async def init_objects() -> None:
 
 def test_webhook_with_invalid_body(client: TestClient) -> None:
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "invalid": "body",
         },
@@ -104,7 +104,7 @@ def test_webhook_with_invalid_body(client: TestClient) -> None:
 
 def test_webhook_order(client: TestClient) -> None:
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "eventType": "Order",
             "data": {},
@@ -121,11 +121,11 @@ def test_webhook_payment_for_already_received_payment(
     This situation could happen if HelloAsso call our webhook multiple times for the same payment.
     """
     mocked_hyperion_security_logger = mocker.patch(
-        "app.core.payment.endpoints_payment.hyperion_error_logger.debug",
+        "app.core.checkout.endpoints_checkout.hyperion_error_logger.debug",
     )
 
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "eventType": "Payment",
             "data": {
@@ -153,7 +153,7 @@ def test_webhook_payment_without_metadata(
     """
 
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "eventType": "Payment",
             "data": {
@@ -174,7 +174,7 @@ def test_webhook_payment_with_non_existing_checkout(
     """
 
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "eventType": "Payment",
             "data": {
@@ -203,7 +203,7 @@ def test_webhook_payment_with_invalid_helloasso_secret(
     """
 
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "eventType": "Payment",
             "data": {
@@ -227,7 +227,7 @@ async def test_webhook_payment(
     # We will simulate a first payment of 0,7 € then a payment of 0,3 €
 
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "eventType": "Payment",
             "data": {
@@ -244,7 +244,7 @@ async def test_webhook_payment(
     assert response.status_code == 204
 
     async with TestingSessionLocal() as db:
-        checkout_model = await cruds_payment.get_checkout_by_id(
+        checkout_model = await cruds_checkout.get_checkout_by_id(
             checkout_id=checkout.id,
             db=db,
         )
@@ -253,7 +253,7 @@ async def test_webhook_payment(
         assert checkout_model.payments[0].paid_amount == 70
 
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "eventType": "Payment",
             "data": {
@@ -270,7 +270,7 @@ async def test_webhook_payment(
     assert response.status_code == 204
 
     async with TestingSessionLocal() as db:
-        checkout_model = await cruds_payment.get_checkout_by_id(
+        checkout_model = await cruds_checkout.get_checkout_by_id(
             checkout_id=checkout.id,
             db=db,
         )
@@ -283,7 +283,7 @@ async def test_webhook_payment(
 
 
 async def callback(
-    checkout_payment: schemas_payment.CheckoutPayment,
+    checkout_payment: schemas_checkout.CheckoutPayment,
     db: AsyncSession,
 ) -> None:
     pass
@@ -295,7 +295,7 @@ async def test_webhook_payment_callback(
 ) -> None:
     # We patch the callback to be able to check if it was called
     mocked_callback = mocker.patch(
-        "tests.test_payment.callback",
+        "tests.test_checkout.callback",
     )
 
     # We patch the module_list to inject our custom test module
@@ -307,12 +307,12 @@ async def test_webhook_payment_callback(
         factory=None,
     )
     mocker.patch(
-        "app.core.payment.endpoints_payment.all_modules",
+        "app.core.checkout.endpoints_checkout.all_modules",
         [test_module],
     )
 
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "eventType": "Payment",
             "data": {
@@ -336,7 +336,7 @@ async def test_webhook_payment_callback_fail(
 ) -> None:
     # We patch the callback to be able to check if it was called
     mocked_callback = mocker.patch(
-        "tests.test_payment.callback",
+        "tests.test_checkout.callback",
         side_effect=ValueError("Test error"),
     )
 
@@ -349,16 +349,16 @@ async def test_webhook_payment_callback_fail(
         factory=None,
     )
     mocker.patch(
-        "app.core.payment.endpoints_payment.all_modules",
+        "app.core.checkout.endpoints_checkout.all_modules",
         [test_module],
     )
 
     mocked_hyperion_security_logger = mocker.patch(
-        "app.core.payment.endpoints_payment.hyperion_error_logger.exception",
+        "app.core.checkout.endpoints_checkout.hyperion_error_logger.exception",
     )
 
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "eventType": "Payment",
             "data": {
@@ -439,7 +439,7 @@ async def test_payment_tool_init_checkout(
         redirect_url=redirect_url,
     )
     mocker.patch(
-        "app.core.payment.payment_tool.CheckoutApi",
+        "app.core.checkout.payment_tool.CheckoutApi",
         return_value=mock_checkout_api,
     )
 
@@ -514,7 +514,7 @@ async def test_payment_tool_init_checkout_with_one_failure(
     mock_checkout_api = mocker.MagicMock()
     mock_checkout_api.organizations_organization_slug_checkout_intents_post.side_effect = init_a_checkout_side_effect
     mocker.patch(
-        "app.core.payment.payment_tool.CheckoutApi",
+        "app.core.checkout.payment_tool.CheckoutApi",
         return_value=mock_checkout_api,
     )
 
@@ -543,7 +543,7 @@ async def test_payment_tool_init_checkout_fail(
     client: TestClient,
 ) -> None:
     mocked_hyperion_security_logger = mocker.patch(
-        "app.core.payment.endpoints_payment.hyperion_error_logger.error",
+        "app.core.checkout.endpoints_checkout.hyperion_error_logger.error",
     )
 
     redirect_url = "https://example.com"
@@ -579,7 +579,7 @@ async def test_payment_tool_init_checkout_fail(
     )
 
     mocker.patch(
-        "app.core.payment.payment_tool.CheckoutApi",
+        "app.core.checkout.payment_tool.CheckoutApi",
         return_value=mock_checkout_api,
     )
 

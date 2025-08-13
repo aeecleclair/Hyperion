@@ -16,7 +16,7 @@ from pydantic_settings import (
     YamlConfigSettingsSource,
 )
 
-from app.core.payment.types_payment import HelloAssoConfig, HelloAssoConfigName
+from app.core.checkout.types_checkout import HelloAssoConfig, HelloAssoConfigName
 from app.types.exceptions import (
     DotenvInvalidAuthClientNameInError,
     DotenvInvalidVariableError,
@@ -280,6 +280,7 @@ class Settings(BaseSettings):
     # S3 configuration is needed to use the S3 storage for MyECLPay logs
 
     S3_BUCKET_NAME: str | None = None
+    S3_DIRECTORY: str | None = None
     S3_ACCESS_KEY_ID: str | None = None
     S3_SECRET_ACCESS_KEY: str | None = None
 

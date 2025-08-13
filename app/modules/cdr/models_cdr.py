@@ -260,7 +260,7 @@ class Checkout(Base):
     user_id: Mapped[str] = mapped_column(
         ForeignKey("core_user.id"),
     )
-    checkout_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("payment_checkout.id"))
+    checkout_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("checkout_checkout.id"))
 
 
 class Ticket(Base):

@@ -729,7 +729,7 @@ async def test_get_payment_url_participant_with_tshirt(
     )
 
     mocker.patch(
-        "app.core.payment.payment_tool.PaymentTool.init_checkout",
+        "app.core.checkout.payment_tool.PaymentTool.init_checkout",
         return_value=Mock(
             id=str(uuid.uuid4()),
             payment_url="https://some.url.fr/checkout",
@@ -756,7 +756,7 @@ async def test_get_payment_url_prices_not_set(
         return_value=coredata_raid.RaidPrice(student_price=None, t_shirt_price=None),
     )
     mocker.patch(
-        "app.core.payment.payment_tool.PaymentTool.init_checkout",
+        "app.core.checkout.payment_tool.PaymentTool.init_checkout",
         return_value=Mock(id=str(uuid.uuid4()), payment_url="http://mock-url.com"),
     )
 

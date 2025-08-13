@@ -104,7 +104,7 @@ class LogConfig:
                     "format": self.MATRIX_LOG_FORMAT,
                     "datefmt": "%d-%b-%y %H:%M:%S",
                 },
-                "myeclpay": {
+                "mypayment": {
                     "format": self.MYECLPAY_LOG_FORMAT,
                 },
             },
@@ -141,23 +141,27 @@ class LogConfig:
                     ),
                     "level": "INFO",
                 },
-                "myeclpay_s3": {
-                    "formatter": "myeclpay",
+                "mypayment_s3": {
+                    "formatter": "mypayment",
                     "class": "app.utils.loggers_tools.s3_handler.S3LogHandler",
-                    "failure_logger": "hyperion.myeclpay.fallback",
+                    "failure_logger": "hyperion.mypayment.fallback",
                     "s3_bucket_name": settings.S3_BUCKET_NAME,
                     "s3_access_key_id": settings.S3_ACCESS_KEY_ID,
                     "s3_secret_access_key": settings.S3_SECRET_ACCESS_KEY,
-                    "folder": "myeclpay",
+                    "folder": "mypayment"
+                    if settings.S3_DIRECTORY is None
+                    else settings.S3_DIRECTORY + "/mypayment",
                 },
                 "s3": {
-                    "formatter": "myeclpay",
+                    "formatter": "mypayment",
                     "class": "app.utils.loggers_tools.s3_handler.S3LogHandler",
                     "failure_logger": "hyperion.s3.fallback",
                     "s3_bucket_name": settings.S3_BUCKET_NAME,
                     "s3_access_key_id": settings.S3_ACCESS_KEY_ID,
                     "s3_secret_access_key": settings.S3_SECRET_ACCESS_KEY,
-                    "folder": "",
+                    "folder": ""
+                    if settings.S3_DIRECTORY is None
+                    else settings.S3_DIRECTORY,
                 },
                 # There is a handler per log file #
                 # They are based on RotatingFileHandler to logs in multiple 1024 bytes files
@@ -190,17 +194,17 @@ class LogConfig:
                     "backupCount": 50,
                     "level": "INFO",
                 },
-                "file_myeclpay": {
-                    # file_myeclpay is there to log all operations related to MyECLPay that failed to be logged in the S3 bucket
+                "file_mypayment": {
+                    # file_mypayment is there to log all operations related to MyECLPay that failed to be logged in the S3 bucket
                     "formatter": "default",
                     "class": "logging.handlers.RotatingFileHandler",
-                    "filename": "logs/myeclpay.log",
+                    "filename": "logs/mypayment.log",
                     "maxBytes": 1024 * 1024 * 40,  # ~ 40 MB
                     "backupCount": 100,
                     "level": "DEBUG",
                 },
                 "file_s3": {
-                    # file_myeclpay is there to log all operations related to MyECLPay that failed to be logged in the S3 bucket
+                    # file_mypayment is there to log all operations related to MyECLPay that failed to be logged in the S3 bucket
                     "formatter": "default",
                     "class": "logging.handlers.RotatingFileHandler",
                     "filename": "logs/s3.log",
@@ -266,18 +270,18 @@ class LogConfig:
                     ],
                     "level": MINIMUM_LOG_LEVEL,
                 },
-                "hyperion.myeclpay.fallback": {
+                "hyperion.mypayment.fallback": {
                     "handlers": [
-                        "file_myeclpay",
+                        "file_mypayment",
                         "matrix_errors",
                         "console",
                     ],
                     "level": MINIMUM_LOG_LEVEL,
                     "propagate": False,
                 },
-                "hyperion.myeclpay": {
+                "hyperion.mypayment": {
                     "handlers": [
-                        "myeclpay_s3",
+                        "mypayment_s3",
                     ],
                     "level": MINIMUM_LOG_LEVEL,
                 },

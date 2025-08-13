@@ -2243,7 +2243,7 @@ async def test_pay(mocker: MockerFixture, client: TestClient):
     assert response.json()["url"] == "https://some.url.fr/checkout"
 
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "eventType": "Payment",
             "data": {"amount": 500, "id": 123},

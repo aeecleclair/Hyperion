@@ -578,7 +578,9 @@ async def init_s3_for_users(
     # We need to use the S3Access class to get the files in the bucket
     s3_access = S3Access(
         failure_logger="hyperion.error",
-        folder="users",
+        folder="users"
+        if settings.S3_DIRECTORY is None
+        else settings.S3_DIRECTORY + "/users",
         s3_bucket_name=settings.S3_BUCKET_NAME,
         s3_access_key_id=settings.S3_ACCESS_KEY_ID,
         s3_secret_access_key=settings.S3_SECRET_ACCESS_KEY,

@@ -5,13 +5,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.payment import models_payment, schemas_payment
+from app.core.checkout import models_checkout, schemas_checkout
 
 
 async def create_checkout(
     db: AsyncSession,
-    checkout: models_payment.Checkout,
-) -> models_payment.Checkout:
+    checkout: models_checkout.Checkout,
+) -> models_checkout.Checkout:
     db.add(checkout)
 
     return checkout
@@ -21,22 +21,22 @@ async def get_checkouts(
     module: str,
     db: AsyncSession,
     last_checked: datetime | None = None,
-) -> list[schemas_payment.CheckoutComplete]:
+) -> list[schemas_checkout.CheckoutComplete]:
     result = await db.execute(
-        select(models_payment.Checkout)
-        .options(selectinload(models_payment.Checkout.payments))
+        select(models_checkout.Checkout)
+        .options(selectinload(models_checkout.Checkout.payments))
         .where(
-            models_payment.Checkout.module == module,
+            models_checkout.Checkout.module == module,
         ),
     )
     return [
-        schemas_payment.CheckoutComplete(
+        schemas_checkout.CheckoutComplete(
             id=checkout.id,
             module=checkout.module,
             name=checkout.name,
             amount=checkout.amount,
             payments=[
-                schemas_payment.CheckoutPayment(
+                schemas_checkout.CheckoutPayment(
                     id=payment.id,
                     checkout_id=payment.checkout_id,
                     paid_amount=payment.paid_amount,
@@ -51,13 +51,13 @@ async def get_checkouts(
 async def get_checkout_by_id(
     checkout_id: uuid.UUID,
     db: AsyncSession,
-) -> models_payment.Checkout | None:
+) -> models_checkout.Checkout | None:
     result = await db.execute(
-        select(models_payment.Checkout)
+        select(models_checkout.Checkout)
         .where(
-            models_payment.Checkout.id == checkout_id,
+            models_checkout.Checkout.id == checkout_id,
         )
-        .options(selectinload(models_payment.Checkout.payments)),
+        .options(selectinload(models_checkout.Checkout.payments)),
     )
     return result.scalars().first()
 
@@ -65,10 +65,10 @@ async def get_checkout_by_id(
 async def get_checkout_by_hello_asso_checkout_id(
     hello_asso_checkout_id: int,
     db: AsyncSession,
-) -> models_payment.Checkout | None:
+) -> models_checkout.Checkout | None:
     result = await db.execute(
-        select(models_payment.Checkout).where(
-            models_payment.Checkout.hello_asso_checkout_id == hello_asso_checkout_id,
+        select(models_checkout.Checkout).where(
+            models_checkout.Checkout.hello_asso_checkout_id == hello_asso_checkout_id,
         ),
     )
     return result.scalars().first()
@@ -76,8 +76,8 @@ async def get_checkout_by_hello_asso_checkout_id(
 
 async def create_checkout_payment(
     db: AsyncSession,
-    checkout_payment: models_payment.CheckoutPayment,
-) -> models_payment.CheckoutPayment:
+    checkout_payment: models_checkout.CheckoutPayment,
+) -> models_checkout.CheckoutPayment:
     db.add(checkout_payment)
     await db.flush()
     return checkout_payment
@@ -86,10 +86,10 @@ async def create_checkout_payment(
 async def get_checkout_payment_by_hello_asso_payment_id(
     hello_asso_payment_id: int,
     db: AsyncSession,
-) -> models_payment.CheckoutPayment | None:
+) -> models_checkout.CheckoutPayment | None:
     result = await db.execute(
-        select(models_payment.CheckoutPayment).where(
-            models_payment.CheckoutPayment.hello_asso_payment_id
+        select(models_checkout.CheckoutPayment).where(
+            models_checkout.CheckoutPayment.hello_asso_payment_id
             == hello_asso_payment_id,
         ),
     )

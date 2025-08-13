@@ -6,21 +6,21 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.myeclpay import cruds_myeclpay
-from app.core.myeclpay.integrity_myeclpay import format_transfer_log
-from app.core.myeclpay.models_myeclpay import UserPayment
-from app.core.myeclpay.schemas_myeclpay import (
+from app.core.checkout import schemas_checkout
+from app.core.mypayment import cruds_mypayment
+from app.core.mypayment.integrity_mypayment import format_transfer_log
+from app.core.mypayment.models_mypayment import UserPayment
+from app.core.mypayment.schemas_mypayment import (
     QRCodeContentData,
 )
-from app.core.myeclpay.types_myeclpay import (
+from app.core.mypayment.types_mypayment import (
     TransferAlreadyConfirmedInCallbackError,
     TransferNotFoundByCallbackError,
     TransferTotalDontMatchInCallbackError,
 )
-from app.core.payment import schemas_payment
 
 hyperion_security_logger = logging.getLogger("hyperion.security")
-hyperion_myeclpay_logger = logging.getLogger("hyperion.myeclpay")
+hyperion_mypayment_logger = logging.getLogger("hyperion.mypayment")
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 LATEST_TOS = 2
@@ -71,13 +71,13 @@ def is_user_latest_tos_signed(
 
 
 async def validate_transfer_callback(
-    checkout_payment: schemas_payment.CheckoutPayment,
+    checkout_payment: schemas_checkout.CheckoutPayment,
     db: AsyncSession,
 ):
     paid_amount = checkout_payment.paid_amount
     checkout_id = checkout_payment.checkout_id
 
-    transfer = await cruds_myeclpay.get_transfer_by_transfer_identifier(
+    transfer = await cruds_mypayment.get_transfer_by_transfer_identifier(
         db=db,
         transfer_identifier=str(checkout_id),
     )
@@ -99,17 +99,17 @@ async def validate_transfer_callback(
         )
         raise TransferAlreadyConfirmedInCallbackError(checkout_id)
 
-    await cruds_myeclpay.confirm_transfer(
+    await cruds_mypayment.confirm_transfer(
         db=db,
         transfer_id=transfer.id,
     )
-    await cruds_myeclpay.increment_wallet_balance(
+    await cruds_mypayment.increment_wallet_balance(
         db=db,
         wallet_id=transfer.wallet_id,
         amount=paid_amount,
     )
 
-    hyperion_myeclpay_logger.info(
+    hyperion_mypayment_logger.info(
         format_transfer_log(transfer),
         extra={
             "s3_subfolder": MYECLPAY_LOGS_S3_SUBFOLDER,
