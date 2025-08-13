@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from arq import cron
 from arq.connections import RedisSettings
-from arq.jobs import Job
+from arq.jobs import Job, JobStatus
 from arq.typing import WorkerSettingsBase
 from arq.worker import create_worker
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -74,11 +74,12 @@ async def run_task(
     if require_db_for_kwargs:
         # `get_db` is the real dependency, defined in dependency.py
         # `_get_db` may be the real dependency or an override
-        _get_db: Callable[[], AsyncGenerator[AsyncSession, None]] = (
-            _dependency_overrides.get(
-                dependencies.get_db,
-                dependencies.get_db,
-            )
+        _get_db: Callable[
+            [],
+            AsyncGenerator[AsyncSession, None],
+        ] = _dependency_overrides.get(
+            dependencies.get_db,
+            dependencies.get_db,
         )
 
         async for db in _get_db():
@@ -98,11 +99,12 @@ def get_send_emails_from_queue_task(
     """
 
     # We can not get the db and settings from the scheduler, we will thus get them from the dependency overrides directly
-    _get_db: Callable[[], AsyncGenerator[AsyncSession, None]] = (
-        _dependency_overrides.get(
-            dependencies.get_db,
-            dependencies.get_db,
-        )
+    _get_db: Callable[
+        [],
+        AsyncGenerator[AsyncSession, None],
+    ] = _dependency_overrides.get(
+        dependencies.get_db,
+        dependencies.get_db,
     )
 
     _get_settings: Callable[[], Settings] = _dependency_overrides.get(
@@ -110,7 +112,9 @@ def get_send_emails_from_queue_task(
         dependencies.get_settings,
     )
 
-    async def send_emails_from_queue_task():
+    async def send_emails_from_queue_task(
+        ctx: dict[Any, Any] | None,
+    ):
         settings = _get_settings()
 
         async for db in _get_db():
@@ -160,7 +164,10 @@ class Scheduler:
         class ArqWorkerSettings(WorkerSettingsBase):
             functions = [run_task]
             allow_abort_jobs = True
-            keep_result_forever = True
+            # After a job is completed or aborted, we want arq to remove its result
+            # to be able to queue a new task with the same id
+            keep_result = 0
+            keep_result_forever = False
             redis_settings = RedisSettings(
                 host=redis_host,
                 port=redis_port,
@@ -227,8 +234,13 @@ class Scheduler:
         if self.worker is None:
             raise SchedulerNotStartedError
         job = Job(job_id, redis=self.worker.pool)
-        scheduler_logger.debug(f"Job aborted {job}")
-        await job.abort()
+        # We only want to abort the job if it exist
+        # otherwise if we try to plan a job with the same id just after, we may get
+        # a job aborted before being queued
+        status = await job.status()
+        if status != JobStatus.not_found:
+            scheduler_logger.debug(f"Job being aborted {job}")
+            await job.abort()
 
 
 class OfflineScheduler(Scheduler):
@@ -260,7 +272,6 @@ class OfflineScheduler(Scheduler):
         - redis_password: str
         - _dependency_overrides: dict[Callable[..., Any], Callable[..., Any]] a pointer to the app dependency overrides dict
         """
-        self._dependency_overrides = _dependency_overrides
 
         scheduler_logger.info("OfflineScheduler started")
 

@@ -1,6 +1,5 @@
 import logging
 import uuid
-from collections.abc import Callable
 from datetime import timedelta
 from functools import lru_cache
 
@@ -13,6 +12,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+from app import dependencies
 from app.core.auth import schemas_auth
 from app.core.checkout import cruds_checkout, models_checkout, schemas_checkout
 from app.core.checkout.payment_tool import PaymentTool
@@ -27,10 +27,10 @@ from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.types import core_data
 from app.types.floors_type import FloorsType
 from app.types.scheduler import OfflineScheduler
-from app.types.sqlalchemy import Base
+from app.types.sqlalchemy import Base, SessionLocalType
 from app.utils.communication.notifications import NotificationManager
 from app.utils.state import (
-    LifespanState,
+    GlobalState,
     init_mail_templates,
     init_redis_client,
     init_websocket_connection_manager,
@@ -45,17 +45,18 @@ class FailedToAddObjectToDB(Exception):
     """Exception raised when an object cannot be added to the database."""
 
 
-async def override_init_app_state(
+async def override_init_state(
     app: FastAPI,
     settings: Settings,
     hyperion_error_logger: logging.Logger,
-) -> LifespanState:
+) -> None:
     """
     Initialize the state of the application. This dependency should be used at the start of the application lifespan.
     """
-    engine = init_test_engine()
 
-    SessionLocal = init_test_SessionLocal()
+    engine = init_test_engine(settings=settings)
+
+    SessionLocal = init_test_SessionLocal(engine=engine)
 
     redis_client = init_redis_client(
         settings=settings,
@@ -79,7 +80,7 @@ async def override_init_app_state(
 
     mail_templates = init_mail_templates(settings=settings)
 
-    return LifespanState(
+    dependencies.GLOBAL_STATE = GlobalState(
         engine=engine,
         SessionLocal=SessionLocal,
         redis_client=redis_client,
@@ -92,56 +93,64 @@ async def override_init_app_state(
     )
 
 
-@lru_cache
-def get_override_get_settings(**kwargs) -> Callable[[], Settings]:
+def create_test_settings(**kwargs) -> Settings:
     """Override the get_settings function to use the testing session"""
 
-    def override_get_settings() -> Settings:
-        return Settings(
-            _env_file="./tests/.env.test",
-            _yaml_file="./tests/config.test.yaml",
-            **kwargs,
-        )
-
-    return override_get_settings
+    return Settings(
+        _env_file="./tests/.env.test",
+        _yaml_file="./tests/config.test.yaml",
+        **kwargs,
+    )
 
 
-settings = get_override_get_settings()()
+# We use a global `SETTINGS` and a global `TestingSessionLocal` object
+# to be able to access it from tests
+SETTINGS: Settings
+TestingSessionLocal: SessionLocalType
 
 
-# Connect to the test's database
-if settings.SQLITE_DB:
-    SQLALCHEMY_DATABASE_URL = f"sqlite+aiosqlite:///./{settings.SQLITE_DB}"
-    SQLALCHEMY_DATABASE_URL_SYNC = f"sqlite:///./{settings.SQLITE_DB}"
-else:
-    SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
-    SQLALCHEMY_DATABASE_URL_SYNC = f"postgresql+psycopg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
+@lru_cache
+def override_get_settings() -> Settings:
+    return SETTINGS  # noqa: F821
 
 
-engine = create_async_engine(
-    SQLALCHEMY_DATABASE_URL,
-    echo=settings.DATABASE_DEBUG,
-    # We need to use NullPool to run tests with Postgresql
-    # See https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html#using-multiple-asyncio-event-loops
-    poolclass=NullPool,
-)
-
-TestingSessionLocal = async_sessionmaker(
-    engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-)
+def get_TestingSessionLocal() -> SessionLocalType:
+    return TestingSessionLocal
 
 
-def init_test_engine() -> AsyncEngine:
+def get_database_sync_url() -> str:
+    settings = override_get_settings()
+    if settings.SQLITE_DB:
+        return f"sqlite:///./{settings.SQLITE_DB}"
+    return f"postgresql+psycopg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
+
+
+def init_test_engine(settings: Settings) -> AsyncEngine:
     """
     Return the (asynchronous) database engine, if the engine doesn't exit yet it will create one based on the settings
     """
+    # Connect to the test's database
+    if settings.SQLITE_DB:
+        SQLALCHEMY_DATABASE_URL = f"sqlite+aiosqlite:///./{settings.SQLITE_DB}"
+    else:
+        SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
 
-    return engine
+    return create_async_engine(
+        SQLALCHEMY_DATABASE_URL,
+        echo=settings.DATABASE_DEBUG,
+        # We need to use NullPool to run tests with Postgresql
+        # See https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html#using-multiple-asyncio-event-loops
+        poolclass=NullPool,
+    )
 
 
-def init_test_SessionLocal() -> Callable[[], AsyncSession]:
+def init_test_SessionLocal(engine: AsyncEngine) -> SessionLocalType:
+    global TestingSessionLocal
+    TestingSessionLocal = async_sessionmaker(
+        engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
     return TestingSessionLocal
 
 
@@ -151,14 +160,6 @@ def init_test_payment_tools() -> dict[HelloAssoConfigName, PaymentTool]:
         payment_tools[helloasso_config_name] = MockedPaymentTool()
 
     return payment_tools
-
-
-# Create a session for testing purposes
-TestingSessionLocal = async_sessionmaker(
-    engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-)
 
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -244,7 +245,7 @@ def create_api_access_token(
     access_token_data = schemas_auth.TokenData(sub=user.id, scopes="API")
     return security.create_access_token(
         data=access_token_data,
-        settings=settings,
+        settings=override_get_settings(),
         expires_delta=expires_delta,
     )
 

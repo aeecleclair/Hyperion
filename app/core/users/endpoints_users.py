@@ -309,7 +309,7 @@ async def batch_create_users(
 
 @router.post(
     "/users/batch-invitation",
-    response_model=standard_responses.Result,
+    response_model=standard_responses.BatchResult,
     status_code=201,
 )
 async def batch_invite_users(
