@@ -17,7 +17,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import Connection
 
 from app.utils.initialization import drop_db_sync
-from tests.commons import SQLALCHEMY_DATABASE_URL_SYNC
+from tests.commons import get_database_sync_url
 
 pre_test_upgrade_dict: dict[
     str,
@@ -103,6 +103,7 @@ def alembic_connection() -> Generator[Connection, None, None]:
     """
     # We use `echo=False` to disable SQLAlchemy logging for migrations
     # as errors are easier to see without all SQLAlchemy info
+    SQLALCHEMY_DATABASE_URL_SYNC = get_database_sync_url()
     connectable = create_engine(SQLALCHEMY_DATABASE_URL_SYNC, echo=False)
 
     with connectable.begin() as connection:
