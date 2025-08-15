@@ -46,4 +46,3 @@ class AdvertReturnComplete(AdvertBase):
 class AdvertUpdate(BaseModel):
     title: str | None = None
     content: str | None = None
-    tags: str | None = None
