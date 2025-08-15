@@ -11,6 +11,7 @@ import logging
 from collections.abc import AsyncGenerator, Callable, Coroutine
 from functools import lru_cache
 from typing import Annotated, Any, cast
+from uuid import UUID
 
 import calypsso
 import redis
@@ -21,6 +22,7 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession,
 )
 
+from app.core.associations import cruds_associations
 from app.core.auth import schemas_auth
 from app.core.checkout.payment_tool import PaymentTool
 from app.core.checkout.types_checkout import HelloAssoConfigName
@@ -54,6 +56,7 @@ from app.utils.state import (
 )
 from app.utils.tools import (
     is_user_external,
+    is_user_member_of_an_association,
     is_user_member_of_any_group,
 )
 
@@ -470,7 +473,6 @@ def is_user_in(
         user: models_users.CoreUser = Depends(
             is_user(included_groups=[group_id], exclude_external=exclude_external),
         ),
-        request_id: str = Depends(get_request_id),
     ) -> models_users.CoreUser:
         """
         A dependency that checks that user is a member of the group with the given id then returns the corresponding user.
@@ -479,3 +481,30 @@ def is_user_in(
         return user
 
     return is_user_in
+
+
+async def is_user_in_association(
+    association_id: UUID,
+    user: models_users.CoreUser = Depends(is_user()),
+    db: AsyncSession = Depends(get_db),
+) -> models_users.CoreUser:
+    """
+    Check if a user is a member of a specific association.
+
+    The endpoint path must contains `association_id`
+    """
+
+    association = await cruds_associations.get_association_by_id(
+        association_id=association_id,
+        db=db,
+    )
+    if association is None or not is_user_member_of_an_association(
+        user=user,
+        association=association,
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="User is not a member of the association",
+        )
+
+    return user

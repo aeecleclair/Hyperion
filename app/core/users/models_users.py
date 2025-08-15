@@ -63,6 +63,10 @@ class CoreUser(Base):
             return f"{self.firstname} {self.name} ({self.nickname})"
         return f"{self.firstname} {self.name}"
 
+    @property
+    def group_ids(self) -> list[str]:
+        return [group.id for group in self.groups]
+
 
 class CoreUserUnconfirmed(Base):
     __tablename__ = "core_user_unconfirmed"

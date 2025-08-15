@@ -23,6 +23,7 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 from weasyprint import CSS, HTML
 
+from app.core.associations import models_associations
 from app.core.core_endpoints import cruds_core, models_core
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import AccountType, GroupType
@@ -112,6 +113,20 @@ def is_user_member_of_any_group(
     return any(group_id in user_groups_id for group_id in allowed_groups)
 
 
+def is_user_member_of_an_association(
+    user: models_users.CoreUser,
+    association: models_associations.CoreAssociation,
+) -> bool:
+    """
+    Check if the user is a member of the association
+    """
+
+    return is_user_member_of_any_group(
+        user=user,
+        allowed_groups=[association.group_id],
+    )
+
+
 async def is_group_id_valid(group_id: str, db: AsyncSession) -> bool:
     """
     Test if the provided group_id is a valid group.
@@ -133,7 +148,7 @@ async def is_user_id_valid(user_id: str, db: AsyncSession) -> bool:
 async def save_file_as_data(
     upload_file: UploadFile,
     directory: str,
-    filename: str,
+    filename: str | UUID,
     max_file_size: int = 1024 * 1024 * 2,  # 2 MB
     accepted_content_types: list[ContentType] | None = None,
 ):
@@ -156,6 +171,9 @@ async def save_file_as_data(
 
     WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
     """
+    if isinstance(filename, UUID):
+        filename = str(filename)
+
     if accepted_content_types is None:
         # Accept only images by default
         accepted_content_types = [
@@ -313,7 +331,6 @@ def get_file_from_data(
 
     WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
     """
-
     path = get_file_path_from_data(
         directory,
         filename,
