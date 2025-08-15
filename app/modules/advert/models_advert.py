@@ -29,7 +29,7 @@ class Advert(Base):
     title: Mapped[str]
     content: Mapped[str]
     date: Mapped[datetime]
-    tags: Mapped[str | None]
+    post_to_feed: Mapped[bool]
     advertiser: Mapped[Advertiser] = relationship(
         "Advertiser",
         lazy="joined",

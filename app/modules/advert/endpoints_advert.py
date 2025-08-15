@@ -6,6 +6,7 @@ from fastapi import Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.feed.utils_feed import create_feed_news
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification.schemas_notification import Message
 from app.core.notification.utils_notification import get_topic_by_root_and_identifier
@@ -14,6 +15,7 @@ from app.dependencies import (
     get_db,
     get_notification_manager,
     get_notification_tool,
+    is_user,
     is_user_a_school_member,
     is_user_in,
 )
@@ -179,7 +181,7 @@ async def update_advertiser(
 )
 async def get_current_user_advertisers(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_school_member),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Return all advertisers the current user can manage.
@@ -269,13 +271,15 @@ async def create_advert(
             detail=f"Unauthorized to manage {advertiser.name} adverts",
         )
 
-    advert_params = advert.model_dump()
-
+    advert_id = uuid.uuid4()
     db_advert = models_advert.Advert(
-        id=str(uuid.uuid4()),
+        id=str(advert_id),
         date=datetime.now(UTC),
         advertiser=advertiser,
-        **advert_params,
+        advertiser_id=advert.advertiser_id,
+        title=advert.title,
+        content=advert.content,
+        post_to_feed=advert.post_to_feed,
     )
 
     result = await cruds_advert.create_advert(db_advert=db_advert, db=db)
@@ -295,6 +299,23 @@ async def create_advert(
         await notification_tool.send_notification_to_topic(
             topic_id=topic.id,
             message=message,
+        )
+
+    if advert.post_to_feed:
+        await create_feed_news(
+            title=advert.title,
+            start=datetime.now(UTC),
+            end=None,
+            entity=advertiser.name,
+            location=None,
+            action_start=None,
+            module=module.root,
+            module_object_id=advert_id,
+            image_directory="adverts",
+            image_id=advert_id,
+            require_feed_admin_approval=True,
+            db=db,
+            notification_tool=notification_tool,
         )
 
     return result

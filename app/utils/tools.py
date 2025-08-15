@@ -264,11 +264,14 @@ def get_file_path_from_data(
     directory: str,
     filename: str | UUID,
     default_asset: str | None = None,
+    raise_http_exception: bool = False,
 ) -> Path:
     """
     If there is a file with the provided filename in the data folder, return it. The file extension will be inferred from the provided content file.
     > "data/{directory}/{filename}.ext"
+
     Otherwise, return the default asset if provided, or raise an exception.
+    If `raise_http_exception`, then a 404 error will be returned, otherwise a `FileDoesNotExistError` server error will be raised
 
     The filename should be a uuid.
 
@@ -289,13 +292,17 @@ def get_file_path_from_data(
     if default_asset is not None:
         return Path(default_asset)
 
+    if raise_http_exception:
+        raise HTTPException(status_code=404, detail="File does not exist")
+
     raise FileDoesNotExistError(name=f"{directory}/{filename}.*")
 
 
 def get_file_from_data(
     directory: str,
-    filename: str,
-    default_asset: str,
+    filename: str | UUID,
+    default_asset: str | None = None,
+    raise_http_exception: bool = False,
 ) -> FileResponse:
     """
     If there is a file with the provided filename in the data folder, return it. The file extension will be inferred from the provided content file.
@@ -306,7 +313,13 @@ def get_file_from_data(
 
     WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
     """
-    path = get_file_path_from_data(directory, filename, default_asset)
+
+    path = get_file_path_from_data(
+        directory,
+        filename,
+        default_asset,
+        raise_http_exception,
+    )
 
     return FileResponse(path)
 

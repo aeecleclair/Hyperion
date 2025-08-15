@@ -1113,7 +1113,6 @@ async def update_user(
 async def create_current_user_profile_picture(
     image: UploadFile = File(...),
     user: models_users.CoreUser = Depends(is_user()),
-    request_id: str = Depends(get_request_id),
 ):
     """
     Upload a profile picture for the current user.
@@ -1124,7 +1123,7 @@ async def create_current_user_profile_picture(
     await save_file_as_data(
         upload_file=image,
         directory="profile-pictures",
-        filename=str(user.id),
+        filename=user.id,
         max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,

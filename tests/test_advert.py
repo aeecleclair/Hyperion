@@ -64,7 +64,7 @@ async def init_objects() -> None:
         title="Advert",
         content="Example of advert",
         date=datetime.datetime.now(tz=datetime.UTC),
-        tags="Tag1, Tag2, Tag3",
+        post_to_feed=False,
     )
 
     await add_object_to_db(advert)

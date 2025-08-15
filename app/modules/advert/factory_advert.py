@@ -28,9 +28,9 @@ class AdvertFactory(Factory):
                 content="Nous sommes heureux de vous annoncer notre nouveau mandat !",
                 id=str(uuid.uuid4()),
                 date=datetime.now(UTC),
-                tags="important",
                 advertiser_id=advertiser.id,
                 advertiser=advertiser,
+                post_to_feed=False,
             ),
         )
 
@@ -41,9 +41,9 @@ class AdvertFactory(Factory):
                 content="Ne cassez pas les tables svp !",
                 id=str(uuid.uuid4()),
                 date=datetime.now(UTC) - timedelta(days=1),
-                tags="important",
                 advertiser_id=advertiser.id,
                 advertiser=advertiser,
+                post_to_feed=False,
             ),
         )
 
@@ -61,9 +61,9 @@ class AdvertFactory(Factory):
                 content="Codons comme des fous !",
                 id=str(uuid.uuid4()),
                 date=datetime.now(UTC) - timedelta(days=2),
-                tags="myecl",
                 advertiser_id=advertiser2.id,
                 advertiser=advertiser2,
+                post_to_feed=False,
             ),
         )
 

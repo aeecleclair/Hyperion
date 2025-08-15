@@ -24,7 +24,10 @@ class AdvertBase(BaseModel):
     title: str
     content: str
     advertiser_id: str
-    tags: str | None = None
+    post_to_feed: bool = Field(
+        default=False,
+        description="If the advert should be posted in the feed. It will be pending validation be admin",
+    )
 
 
 class AdvertComplete(AdvertBase):
