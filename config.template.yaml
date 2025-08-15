@@ -85,6 +85,8 @@ school:
   entity_name: ÉCLAIR
   # The entity website url, used for promotion (ex: "https://myecl.fr/")
   entity_site_url: "https://myecl.fr/"
+  # Email placeholder
+  email_placeholder: "prenom.nom@etu.ec-lyon.fr"
 
   # Colors used for the application
   primary_color: Color
@@ -93,7 +95,7 @@ school:
   # On registration, user whose email match these regex will be automatically assigned to the corresponding account type
   # Use simple quotes to avoid escaping the regex
   # Ex: `student_email_regex: '^[\w\-.]*@domain.fr$'`
-  student_email_regex:
+  student_email_regex: '^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$'
   #staff_email_regex:
   #former_student_email_regex:
 

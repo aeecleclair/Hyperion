@@ -150,6 +150,7 @@ async def get_variables(
     return schemas_core.CoreVariables(
         name=settings.school.name,
         entity_name=settings.school.entity_name,
+        email_placeholder=settings.school.email_placeholder,
         # `as_hsl()` return a string in the format `hsl(hue saturation lightness)`, we need to convert it to `24.6 95% 53.1%` for TailwindCSS
         primary_color=settings.school.primary_color.as_hsl()[4:-1],
     )

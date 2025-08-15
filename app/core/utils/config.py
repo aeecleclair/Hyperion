@@ -41,6 +41,8 @@ class School(BaseModel):
     entity_name: str
     # The entity website url, used for promotion (ex: "https://myecl.fr/")
     entity_site_url: str
+    # Email placeholder
+    email_placeholder: str = "prenom.nom@ecole.fr"
 
     # Colors used for the application
     primary_color: Color
