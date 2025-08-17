@@ -78,7 +78,6 @@ async def get_news_image(
     status_code=200,
 )
 async def get_admin_news(
-    status: list[NewsStatus],
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.feed_admin)),
 ):
@@ -88,7 +87,7 @@ async def get_admin_news(
     **This endpoint is only usable by feed administrators**
     """
 
-    return await cruds_feed.get_news(status=status, db=db)
+    return await cruds_feed.get_all_news(db=db)
 
 
 @router.post(

@@ -31,6 +31,13 @@ async def get_news(
     return result.scalars().all()
 
 
+async def get_all_news(
+    db: AsyncSession,
+) -> Sequence[models_feed.News]:
+    result = await db.execute(select(models_feed.News))
+    return result.scalars().all()
+
+
 async def get_news_by_id(
     news_id: UUID,
     db: AsyncSession,
