@@ -10,7 +10,7 @@ async def get_users(db: AsyncSession = Depends(get_db)):
 import logging
 from collections.abc import AsyncGenerator, Callable, Coroutine
 from functools import lru_cache
-from typing import Annotated, Any, cast
+from typing import TYPE_CHECKING, Annotated, Any, cast
 from uuid import UUID
 
 import calypsso
@@ -35,7 +35,6 @@ from app.types.exceptions import (
     InvalidAppStateTypeError,
     PaymentToolCredentialsNotSetException,
 )
-from app.types.scheduler import Scheduler
 from app.types.scopes_type import ScopeType
 from app.types.websocket import WebsocketConnectionManager
 from app.utils.auth import auth_utils
@@ -59,6 +58,9 @@ from app.utils.tools import (
     is_user_member_of_an_association,
     is_user_member_of_any_group,
 )
+
+if TYPE_CHECKING:
+    from app.types.scheduler import Scheduler
 
 # We could maybe use hyperion.security
 hyperion_access_logger = logging.getLogger("hyperion.access")
@@ -243,7 +245,7 @@ def get_redis_client() -> redis.Redis | None:
     return GLOBAL_STATE["redis_client"]
 
 
-def get_scheduler() -> Scheduler:
+def get_scheduler() -> "Scheduler":
     return GLOBAL_STATE["scheduler"]
 
 

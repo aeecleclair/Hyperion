@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 import firebase_admin
@@ -11,7 +12,9 @@ from app.core.notification import cruds_notification, models_notification
 from app.core.notification.schemas_notification import Message
 from app.core.users import cruds_users
 from app.core.utils.config import Settings
-from app.types.scheduler import Scheduler
+
+if TYPE_CHECKING:
+    from app.types.scheduler import Scheduler
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -374,7 +377,7 @@ class NotificationTool:
         self,
         group_id: str,
         message: Message,
-        scheduler: Scheduler | None = None,
+        scheduler: "Scheduler | None" = None,
         defer_date: datetime | None = None,
         job_id: str | None = None,
     ):
@@ -396,7 +399,7 @@ class NotificationTool:
         self,
         user_ids: list[str],
         message: Message,
-        scheduler: Scheduler | None = None,
+        scheduler: "Scheduler | None" = None,
         defer_date: datetime | None = None,
         job_id: str | None = None,
     ):
@@ -420,7 +423,7 @@ class NotificationTool:
         self,
         user_ids: list[str],
         message: Message,
-        scheduler: Scheduler,
+        scheduler: "Scheduler",
         defer_date: datetime,
         job_id: str,
     ):
@@ -447,7 +450,7 @@ class NotificationTool:
         self,
         topic_id: UUID,
         message: Message,
-        scheduler: Scheduler | None = None,
+        scheduler: "Scheduler | None" = None,
         defer_date: datetime | None = None,
         job_id: str | None = None,
     ):
@@ -470,7 +473,7 @@ class NotificationTool:
         self,
         topic_id: UUID,
         message: Message,
-        scheduler: Scheduler,
+        scheduler: "Scheduler",
         defer_date: datetime,
         job_id: str,
     ):
@@ -485,7 +488,7 @@ class NotificationTool:
 
     async def cancel_notification(
         self,
-        scheduler: Scheduler,
+        scheduler: "Scheduler",
         job_id: str,
     ):
         await scheduler.cancel_job(job_id=job_id)
