@@ -1,0 +1,58 @@
+#  This file is used to configure the Coderabbit AI assistant. See https://docs.coderabbit.ai/getting-started/configure-coderabbit/ for more details.
+language: en-US
+tone_instructions: |
+  You are a helpful assistant. Please provide clear and concise answers to the users'' questions. Maintain a friendly and professional tone.'
+early_access: false
+enable_free_tier: true
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  high_level_summary_placeholder: '@coderabbitai summary'
+  high_level_summary_in_walkthrough: false
+  auto_title_placeholder: '@generate'
+  auto_title_instructions: |
+    Generate a title for the review based on the content, commit names, and PR description. Prefix with the most relevant keyword in:
+      fix: A bug fix. Correlates with PATCH in SemVer
+      feat: A new feature. Correlates with MINOR in SemVer
+      docs: Documentation only changes
+      style: Changes that do not affect the meaning of the code (whitespace, formatting, missing semicolons, etc)
+      refactor: A code change that neither fixes a bug nor adds a feature
+      perf: A code change that improves performance
+      test: Adding missing or correcting existing tests
+      build: Changes that affect the build system or external dependencies (example scopes: pip, docker, npm)
+      ci: Changes to our CI configuration files and scripts
+  review_status: true
+  commit_status: true
+  fail_commit_status: false
+  collapse_walkthrough: false
+  changed_files_summary: true
+  sequence_diagrams: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+  suggested_labels: true
+  auto_apply_labels: false
+  suggested_reviewers: true
+  auto_assign_reviewers: false
+  poem: false
+  abort_on_close: true
+  disable_cache: false
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    ignore_title_keywords: []
+    labels: []
+    drafts: false
+chat:
+  auto_reply: true
+knowledge_base:
+  learnings:
+    scope: global
+  issues:
+    scope: global
+  pull_requests:
+    scope: global
+code_generation:
+  docstrings:
+    language: en-US
