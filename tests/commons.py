@@ -178,6 +178,7 @@ async def create_user_with_groups(
     firstname: str | None = None,
     floor: FloorsType | None = None,
     nickname: str | None = None,
+    is_super_admin: bool = False,
 ) -> models_users.CoreUser:
     """
     Add a dummy user to the database
@@ -202,6 +203,7 @@ async def create_user_with_groups(
         nickname=nickname,
         floor=floor,
         account_type=account_type,
+        is_super_admin=is_super_admin,
         birthday=None,
         promo=None,
         phone=None,

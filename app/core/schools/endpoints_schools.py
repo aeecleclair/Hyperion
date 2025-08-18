@@ -10,7 +10,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import AccountType, GroupType
+from app.core.groups.groups_type import AccountType
 from app.core.schools import (
     cruds_schools,
     models_schools,
@@ -21,7 +21,7 @@ from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users, schemas_users
 from app.dependencies import (
     get_db,
-    is_user_in,
+    is_user_super_admin,
 )
 from app.types.module import CoreModule
 
@@ -79,7 +79,7 @@ async def read_school(
 async def create_school(
     school: schemas_schools.CoreSchoolBase,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: schemas_users.CoreUser = Depends(is_user_super_admin),
 ):
     """
     Create a new school and add users to it based on the email regex.
@@ -127,7 +127,7 @@ async def update_school(
     school_id: uuid.UUID,
     school_update: schemas_schools.CoreSchoolUpdate,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: schemas_users.CoreUser = Depends(is_user_super_admin),
 ):
     """
     Update the name or the description of a school.
@@ -185,7 +185,7 @@ async def update_school(
 async def delete_school(
     school_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: schemas_users.CoreUser = Depends(is_user_super_admin),
 ):
     """
     Delete school from database.
