@@ -570,9 +570,8 @@ async def create_membership(
 
     await cruds_phonebook.create_membership(membership_model, db)
 
-    user_groups_id = [group.id for group in user_added.groups]
     for associated_group_id in association.associated_groups:
-        if associated_group_id not in user_groups_id:
+        if associated_group_id not in user_added.group_ids:
             await cruds_groups.create_membership(
                 models_groups.CoreMembership(
                     user_id=membership.user_id,

@@ -109,8 +109,7 @@ def is_user_member_of_any_group(
     """
     Check if the user is a member of the group.
     """
-    user_groups_id = [group.id for group in user.groups]
-    return any(group_id in user_groups_id for group_id in allowed_groups)
+    return any(group_id in user.group_ids for group_id in allowed_groups)
 
 
 def is_user_member_of_an_association(

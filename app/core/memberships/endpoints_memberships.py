@@ -78,9 +78,10 @@ async def read_association_membership(
     if db_association_membership is None:
         raise HTTPException(status_code=404, detail="Association Membership not found")
 
-    if db_association_membership.manager_group_id not in [
-        group.id for group in user.groups
-    ] and GroupType.admin not in [group.id for group in user.groups]:
+    if (
+        db_association_membership.manager_group_id not in user.group_ids
+        and GroupType.admin not in user.group_ids
+    ):
         raise HTTPException(
             status_code=403,
             detail="User is not allowed to access this membership",
@@ -230,9 +231,7 @@ async def read_user_memberships(
 
     **This endpoint is only usable by administrators**
     """
-    if user_id != user.id and GroupType.admin not in [
-        group.id for group in user.groups
-    ]:
+    if user_id != user.id and GroupType.admin not in user.group_ids:
         raise HTTPException(
             status_code=403,
             detail="User is not allowed to access other users' memberships",

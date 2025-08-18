@@ -64,15 +64,13 @@ async def get_modules_by_user(
 ) -> list[str]:
     """Return the modules a user has access to"""
 
-    userGroupIds = [group.id for group in user.groups]
-
     result_group = list(
         (
             await db.execute(
                 select(models_core.ModuleGroupVisibility.root)
                 .where(
                     models_core.ModuleGroupVisibility.allowed_group_id.in_(
-                        userGroupIds,
+                        user.group_ids,
                     ),
                 )
                 .group_by(models_core.ModuleGroupVisibility.root),

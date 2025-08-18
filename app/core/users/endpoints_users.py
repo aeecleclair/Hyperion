@@ -39,6 +39,7 @@ from app.dependencies import (
     is_user,
     is_user_a_school_member,
     is_user_in,
+    is_user_super_admin,
 )
 from app.types import standard_responses
 from app.types.content_type import ContentType
@@ -622,14 +623,7 @@ async def make_admin(
         )
 
     try:
-        await cruds_groups.create_membership(
-            db=db,
-            membership=models_groups.CoreMembership(
-                user_id=users[0].id,
-                group_id=GroupType.admin,
-                description=None,
-            ),
-        )
+        await cruds_users.update_user_as_super_admin(db=db, user_id=users[0].id)
     except Exception as error:
         raise HTTPException(
             status_code=400,
@@ -1103,6 +1097,27 @@ async def update_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     await cruds_users.update_user(db=db, user_id=user_id, user_update=user_update)
+
+
+@router.patch(
+    "/users/{user_id}/super-admin",
+    status_code=204,
+)
+async def update_user_as_super_admin(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_super_admin),
+):
+    """
+    Update an user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
+
+    **This endpoint is only usable by administrators**
+    """
+    db_user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    await cruds_users.update_user_as_super_admin(db=db, user_id=user_id)
 
 
 @router.post(

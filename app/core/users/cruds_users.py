@@ -149,6 +149,19 @@ async def update_user(
     )
 
 
+async def update_user_as_super_admin(
+    db: AsyncSession,
+    user_id: str,
+):
+    """Update a user as a super admin, this function is used to update the user
+    without checking the account type or the school id"""
+    await db.execute(
+        update(models_users.CoreUser)
+        .where(models_users.CoreUser.id == user_id)
+        .values(is_super_admin=True),
+    )
+
+
 async def create_unconfirmed_user(
     db: AsyncSession,
     user_unconfirmed: models_users.CoreUserUnconfirmed,

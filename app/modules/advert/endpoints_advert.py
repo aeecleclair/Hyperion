@@ -188,11 +188,10 @@ async def get_current_user_advertisers(
 
     **The user must be authenticated to use this endpoint**
     """
-    user_groups_ids = [group.id for group in user.groups]
 
     return await cruds_advert.get_advertisers_by_groups(
         db=db,
-        user_groups_ids=user_groups_ids,
+        user_groups_ids=user.group_ids,
     )
 
 

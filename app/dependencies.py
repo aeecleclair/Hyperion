@@ -367,6 +367,7 @@ def is_user(
     excluded_account_types: list[AccountType] | None = None,
     included_account_types: list[AccountType] | None = None,
     exclude_external: bool = False,
+    only_super_admin: bool = False,
 ) -> Callable[[models_users.CoreUser], models_users.CoreUser]:
     """
     A dependency that will:
@@ -387,9 +388,14 @@ def is_user(
             get_user_from_token_with_scopes([[ScopeType.API]]),
         ),
     ) -> models_users.CoreUser:
-        groups_id: list[str] = [group.id for group in user.groups]
-        if GroupType.admin in groups_id:
+        if only_super_admin:
+            if not user.is_super_admin:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Unauthorized, user is not a super admin",
+                )
             return user
+
         if user.account_type in excluded_account_types:
             raise HTTPException(
                 status_code=403,
@@ -509,4 +515,18 @@ async def is_user_in_association(
             detail="User is not a member of the association",
         )
 
+    return user
+
+
+def is_user_super_admin(
+    user: models_users.CoreUser = Depends(
+        is_user(only_super_admin=True),
+    ),
+) -> models_users.CoreUser:
+    """
+    A dependency that will:
+        * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
+        * make sure the user making the request exists and is a super admin
+        * return the corresponding user `models_users.CoreUser` object
+    """
     return user

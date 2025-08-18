@@ -88,7 +88,7 @@ async def get_cdr_users(
         is_user_member_of_any_group(user, [GroupType.admin_cdr])
         or await cruds_cdr.get_sellers_by_group_ids(
             db=db,
-            group_ids=[g.id for g in user.groups],
+            group_ids=user.group_ids,
         )
     ):
         raise HTTPException(
@@ -122,7 +122,7 @@ async def get_cdr_users_pending_validation(
         is_user_member_of_any_group(user, [GroupType.admin_cdr])
         or await cruds_cdr.get_sellers_by_group_ids(
             db=db,
-            group_ids=[g.id for g in user.groups],
+            group_ids=user.group_ids,
         )
     ):
         raise HTTPException(
@@ -185,7 +185,7 @@ async def get_cdr_user(
             is_user_member_of_any_group(user, [GroupType.admin_cdr])
             or await cruds_cdr.get_sellers_by_group_ids(
                 db=db,
-                group_ids=[g.id for g in user.groups],
+                group_ids=user.group_ids,
             )
         ):
             raise HTTPException(
@@ -373,7 +373,7 @@ async def get_sellers_by_user_id(
         return await cruds_cdr.get_sellers(db)
     return await cruds_cdr.get_sellers_by_group_ids(
         db,
-        [x.id for x in user.groups],
+        user.group_ids,
     )
 
 
@@ -553,7 +553,7 @@ async def get_all_products(
     """
     sellers = await cruds_cdr.get_sellers_by_group_ids(
         db,
-        [x.id for x in user.groups],
+        user.group_ids,
     )
     if not (sellers or is_user_member_of_any_group(user, [GroupType.admin_cdr])):
         raise HTTPException(
@@ -1134,7 +1134,7 @@ async def get_all_sellers_documents(
     """
     sellers = await cruds_cdr.get_sellers_by_group_ids(
         db,
-        [x.id for x in user.groups],
+        user.group_ids,
     )
     if not (sellers or is_user_member_of_any_group(user, [GroupType.admin_cdr])):
         raise HTTPException(

@@ -11,19 +11,19 @@ from tests.commons import (
 )
 
 simple_user: models_users.CoreUser
-admin_user: models_users.CoreUser
+super_admin_user: models_users.CoreUser
 token_simple: str
-token_admin: str
+token_super_admin: str
 root = "root"
 group_id = "random id"
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
-    global admin_user
-    admin_user = await create_user_with_groups([GroupType.admin])
-    global token_admin
-    token_admin = create_api_access_token(admin_user)
+    global super_admin_user
+    super_admin_user = await create_user_with_groups([], is_super_admin=True)
+    global token_super_admin
+    token_super_admin = create_api_access_token(super_admin_user)
     user_simple = await create_user_with_groups([GroupType.AE])
     global token_simple
     token_simple = create_api_access_token(user_simple)
@@ -37,7 +37,7 @@ async def init_objects() -> None:
 def test_get_module_visibility(client: TestClient) -> None:
     response = client.get(
         "/module-visibility",
-        headers={"Authorization": f"Bearer {token_admin}"},
+        headers={"Authorization": f"Bearer {token_super_admin}"},
     )
     assert response.status_code == 200
 
@@ -57,7 +57,7 @@ def test_add_group_module_visibility(client: TestClient) -> None:
             "root": "root",
             "allowed_group_id": GroupType.AE.value,
         },
-        headers={"Authorization": f"Bearer {token_admin}"},
+        headers={"Authorization": f"Bearer {token_super_admin}"},
     )
     assert response.status_code == 201
 
@@ -65,7 +65,7 @@ def test_add_group_module_visibility(client: TestClient) -> None:
 def test_delete_group_visibility(client: TestClient) -> None:
     response = client.delete(
         f"/module-visibility/{root}/groups/{group_id}",
-        headers={"Authorization": f"Bearer {token_admin}"},
+        headers={"Authorization": f"Bearer {token_super_admin}"},
     )
     assert response.status_code == 204
 
@@ -77,7 +77,7 @@ def test_add_account_type_module_visibility(client: TestClient) -> None:
             "root": "root",
             "allowed_account_type": AccountType.demo.value,
         },
-        headers={"Authorization": f"Bearer {token_admin}"},
+        headers={"Authorization": f"Bearer {token_super_admin}"},
     )
     assert response.status_code == 201
 
@@ -85,7 +85,7 @@ def test_add_account_type_module_visibility(client: TestClient) -> None:
 def test_delete_account_type_visibility(client: TestClient) -> None:
     response = client.delete(
         f"/module-visibility/{root}/account-types/{AccountType.demo.value}",
-        headers={"Authorization": f"Bearer {token_admin}"},
+        headers={"Authorization": f"Bearer {token_super_admin}"},
     )
     assert response.status_code == 204
 

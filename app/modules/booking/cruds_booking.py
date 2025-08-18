@@ -64,10 +64,9 @@ async def get_user_managers(
     user: models_users.CoreUser,
     db: AsyncSession,
 ) -> Sequence[models_booking.Manager]:
-    groups_id = [group.id for group in user.groups]
     result = await db.execute(
         select(models_booking.Manager).where(
-            models_booking.Manager.group_id.in_(groups_id),
+            models_booking.Manager.group_id.in_(user.group_ids),
         ),
     )
     return result.scalars().all()
