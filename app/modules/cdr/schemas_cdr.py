@@ -131,6 +131,7 @@ class ProductBase(BaseModel):
     description_fr: str | None = None
     description_en: str | None = None
     available_online: bool
+    needs_validation: bool
     related_membership: schemas_memberships.MembershipSimple | None = None
     tickets: list[GenerateTicketBase] = []
     product_constraints: list[UUID]
@@ -143,6 +144,7 @@ class ProductCompleteNoConstraint(BaseModel):
     description_fr: str | None = None
     description_en: str | None = None
     available_online: bool
+    needs_validation: bool
     id: UUID
     seller_id: UUID
     variants: list[ProductVariantComplete] = []
@@ -158,6 +160,7 @@ class ProductComplete(BaseModel):
     description_fr: str | None = None
     description_en: str | None = None
     available_online: bool
+    needs_validation: bool
     id: UUID
     seller_id: UUID
     variants: list[ProductVariantComplete] = []
