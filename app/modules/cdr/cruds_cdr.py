@@ -142,6 +142,18 @@ async def get_products_by_seller_id(
     return result.unique().scalars().all()
 
 
+async def get_all_products_by_seller_id(
+    db: AsyncSession,
+    seller_id: UUID,
+) -> Sequence[models_cdr.CdrProduct]:
+    result = await db.execute(
+        select(models_cdr.CdrProduct).where(
+            models_cdr.CdrProduct.seller_id == seller_id,
+        ),
+    )
+    return result.unique().scalars().all()
+
+
 async def get_online_products_by_seller_id(
     db: AsyncSession,
     seller_id: UUID,
@@ -425,6 +437,18 @@ async def get_purchases_by_user_id(
     return result.scalars().all()
 
 
+async def get_all_purchases_by_user_id(
+    db: AsyncSession,
+    user_id: str,
+) -> Sequence[models_cdr.Purchase]:
+    result = await db.execute(
+        select(models_cdr.Purchase).where(
+            models_cdr.Purchase.user_id == user_id,
+        ),
+    )
+    return result.scalars().all()
+
+
 async def get_purchase_by_id(
     db: AsyncSession,
     user_id: str,
@@ -459,6 +483,7 @@ async def get_purchases_by_user_id_by_seller_id(
     db: AsyncSession,
     user_id: str,
     seller_id: UUID,
+    cdr_year: int,
 ) -> Sequence[models_cdr.Purchase]:
     result = await db.execute(
         select(models_cdr.Purchase)
@@ -467,6 +492,7 @@ async def get_purchases_by_user_id_by_seller_id(
         .where(
             models_cdr.CdrProduct.seller_id == seller_id,
             models_cdr.Purchase.user_id == user_id,
+            extract("year", models_cdr.Purchase.purchased_on) == cdr_year,
         ),
     )
     return result.scalars().all()
@@ -932,7 +958,6 @@ def create_ticket_generator(db: AsyncSession, ticket: models_cdr.TicketGenerator
 async def get_product_validated_purchases(
     db: AsyncSession,
     product_id: UUID,
-    cdr_year: int,
 ) -> Sequence[models_cdr.Purchase]:
     variant = await get_product_variants(
         db=db,

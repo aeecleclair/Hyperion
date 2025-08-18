@@ -665,10 +665,9 @@ async def delete_seller(
     **User must be CDR Admin to use this endpoint**
     """
     await check_request_consistency(db=db, seller_id=seller_id)
-    if await cruds_cdr.get_products_by_seller_id(
+    if await cruds_cdr.get_all_products_by_seller_id(
         db=db,
         seller_id=seller_id,
-        cdr_year=cdr_year.year,
     ) or await cruds_cdr.get_documents_by_seller_id(db=db, seller_id=seller_id):
         raise HTTPException(
             status_code=403,
@@ -1358,6 +1357,7 @@ async def get_purchases_by_user_id_by_seller_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get a user's purchases.
@@ -1371,6 +1371,7 @@ async def get_purchases_by_user_id_by_seller_id(
         db=db,
         user_id=user_id,
         seller_id=seller_id,
+        cdr_year=cdr_year.year,
     )
     result = []
     for purchase in purchases:
@@ -2074,7 +2075,6 @@ async def create_curriculum_membership(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Add a curriculum to a user.
@@ -2106,10 +2106,9 @@ async def create_curriculum_membership(
         )
     curriculum = await cruds_cdr.get_curriculum_by_user_id(db=db, user_id=user_id)
     if curriculum:
-        purchases = await cruds_cdr.get_purchases_by_user_id(
+        purchases = await cruds_cdr.get_all_purchases_by_user_id(
             db=db,
             user_id=user_id,
-            cdr_year=cdr_year.year,
         )
         if purchases:
             raise HTTPException(
@@ -2876,7 +2875,6 @@ async def generate_ticket_for_product(
     ticket_data: schemas_cdr.GenerateTicketBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
     product = await check_request_consistency(
@@ -2901,7 +2899,6 @@ async def generate_ticket_for_product(
     validated_purchases = await cruds_cdr.get_product_validated_purchases(
         db=db,
         product_id=ticketgen.product_id,
-        cdr_year=cdr_year.year,
     )
     for purchase in validated_purchases:
         ticket = models_cdr.Ticket(
