@@ -22,8 +22,10 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.add_column(
         "cdr_product",
-        sa.Column("needs_validation", sa.Boolean(), nullable=False, default=True),
+        sa.Column("needs_validation", sa.Boolean(), nullable=True),
     )
+    op.execute("UPDATE cdr_product SET needs_validation = true")
+    op.alter_column("cdr_product", "needs_validation", nullable=False)
 
 
 def downgrade() -> None:
