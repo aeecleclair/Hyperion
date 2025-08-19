@@ -81,6 +81,7 @@ class UserDemoFactoryConfig(BaseModel):
     email: str
     password: str | None  # If None, the password will be generated randomly
     groups: list[str] = []  # Groups id to which the user will be added
+    is_super_admin: bool = False
 
 
 class Settings(BaseSettings):

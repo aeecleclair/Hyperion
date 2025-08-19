@@ -124,6 +124,7 @@ class CoreUsersFactory(Factory):
                 account_type=groups_type.AccountType.student,
                 birthday=None,
                 created_on=datetime.now(tz=UTC),
+                is_super_admin=user_info.is_super_admin,
             )
             await cruds_users.create_user(db=db, user=user)
             for group in user_info.groups:
