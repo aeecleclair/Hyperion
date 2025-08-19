@@ -47,6 +47,7 @@ class CoreUser(CoreUserSimple):
     created_on: datetime | None = None
     groups: "list[CoreGroupSimple]" = []
     school: CoreSchool | None = None
+    is_super_admin: bool = False
 
 
 class CoreUserUpdate(BaseModel):
