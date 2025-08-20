@@ -178,8 +178,15 @@ async def update_product(
         .values(
             **product.model_dump(
                 exclude_none=True,
-                exclude={"product_constraints", "document_constraints"},
+                exclude={
+                    "product_constraints",
+                    "document_constraints",
+                    "related_membership",
+                },
             ),
+            related_membership_id=product.related_membership.id
+            if product.related_membership
+            else None,
         ),
     )
 
@@ -895,7 +902,19 @@ async def delete_customdata(db: AsyncSession, field_id: UUID, user_id: str):
 
 async def get_pending_validation_users(db: AsyncSession) -> Sequence[CoreUser]:
     result = await db.execute(
-        select(models_cdr.Purchase).where(models_cdr.Purchase.validated.is_(False)),
+        select(models_cdr.Purchase)
+        .join(
+            models_cdr.ProductVariant,
+            models_cdr.Purchase.product_variant_id == models_cdr.ProductVariant.id,
+        )
+        .join(
+            models_cdr.CdrProduct,
+            models_cdr.ProductVariant.product_id == models_cdr.CdrProduct.id,
+        )
+        .where(
+            models_cdr.Purchase.validated.is_(False),
+            models_cdr.CdrProduct.needs_validation.is_(True),
+        ),
     )
     user_ids = set(purchase.user_id for purchase in result.scalars().all())
     result_users = await db.execute(select(CoreUser).where(CoreUser.id.in_(user_ids)))

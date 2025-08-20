@@ -132,6 +132,7 @@ async def init_objects():
         description_fr="Un Produit",
         description_en="A Product",
         available_online=False,
+        needs_validation=True,
     )
     await add_object_to_db(product)
 
@@ -144,6 +145,7 @@ async def init_objects():
         description_fr="Un Produit disponible en ligne",
         description_en="An online available Product",
         available_online=True,
+        needs_validation=True,
     )
     await add_object_to_db(online_product)
 
@@ -154,6 +156,7 @@ async def init_objects():
         name_fr="Produit sans variante",
         name_en="Unused product",
         available_online=False,
+        needs_validation=True,
     )
     await add_object_to_db(empty_product)
 
@@ -164,6 +167,7 @@ async def init_objects():
         name_fr="Produit utilisable",
         name_en="Usable product",
         available_online=False,
+        needs_validation=True,
     )
     await add_object_to_db(usable_product)
 
@@ -331,6 +335,7 @@ async def init_objects():
         name_fr="Produit a ticket",
         name_en="Usable product",
         available_online=False,
+        needs_validation=True,
     )
     await add_object_to_db(ticket_product)
 
@@ -2444,6 +2449,7 @@ async def test_validate_purchase(client: TestClient):
         name_en="Product",
         available_online=False,
         related_membership_id=association_membership.id,
+        needs_validation=True,
     )
     await add_object_to_db(product_membership)
     product_membership_to_purchase = models_cdr.CdrProduct(
@@ -2453,6 +2459,7 @@ async def test_validate_purchase(client: TestClient):
         name_en="Product",
         available_online=False,
         related_membership_id=association_membership.id,
+        needs_validation=True,
     )
     await add_object_to_db(product_membership_to_purchase)
     product_2 = models_cdr.CdrProduct(
@@ -2461,6 +2468,7 @@ async def test_validate_purchase(client: TestClient):
         name_fr="Produit à adhésion",
         name_en="Product",
         available_online=False,
+        needs_validation=True,
     )
     await add_object_to_db(product_2)
     variant_to_validate = models_cdr.ProductVariant(
