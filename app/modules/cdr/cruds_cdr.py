@@ -178,8 +178,15 @@ async def update_product(
         .values(
             **product.model_dump(
                 exclude_none=True,
-                exclude={"product_constraints", "document_constraints"},
+                exclude={
+                    "product_constraints",
+                    "document_constraints",
+                    "related_membership",
+                },
             ),
+            related_membership_id=product.related_membership.id
+            if product.related_membership
+            else None,
         ),
     )
 
