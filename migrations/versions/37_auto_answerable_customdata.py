@@ -29,7 +29,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_column("cdr_customdata_field", "needs_validation")
+    op.drop_column("cdr_customdata_field", "can_user_answer")
 
 
 def pre_test_upgrade(

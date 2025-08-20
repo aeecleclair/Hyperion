@@ -2549,7 +2549,7 @@ async def test_validate_purchase(client: TestClient):
 def test_create_customdata_field(client: TestClient):
     response = client.post(
         f"/cdr/sellers/{seller.id}/products/{product.id}/data/",
-        json={"name": "Chambre"},
+        json={"name": "Chambre", "can_user_answer": False},
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 201
@@ -2558,7 +2558,7 @@ def test_create_customdata_field(client: TestClient):
 def test_create_customdata_field_user(client: TestClient):
     response = client.post(
         f"/cdr/sellers/{seller.id}/products/{product.id}/data/",
-        json={"name": "Chambre"},
+        json={"name": "Chambre", "can_user_answer": False},
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 403
