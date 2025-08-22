@@ -244,7 +244,6 @@ class SignatureComplete(SignatureBase):
 class PaymentBase(BaseModel):
     total: int
     payment_type: PaymentType
-    year: int
 
 
 class PaymentComplete(PaymentBase):
