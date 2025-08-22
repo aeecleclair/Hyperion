@@ -1324,6 +1324,7 @@ async def get_purchases_by_user_id(
                             price=product_variant.price,
                             product=schemas_cdr.ProductComplete(
                                 id=product.id,
+                                year=product.year,
                                 seller_id=product.seller_id,
                                 name_fr=product.name_fr,
                                 name_en=product.name_en,
@@ -1416,6 +1417,7 @@ async def get_purchases_by_user_id_by_seller_id(
                             price=product_variant.price,
                             product=schemas_cdr.ProductComplete(
                                 id=product.id,
+                                year=product.year,
                                 seller_id=product.seller_id,
                                 name_fr=product.name_fr,
                                 name_en=product.name_en,
