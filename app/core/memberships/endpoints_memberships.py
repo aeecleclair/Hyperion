@@ -20,6 +20,7 @@ from app.dependencies import (
     is_user_in,
 )
 from app.types.module import CoreModule
+from app.utils.tools import is_user_member_of_any_group
 
 router = APIRouter(tags=["Memberships"])
 
@@ -227,17 +228,18 @@ async def read_user_memberships(
 ):
     """
     Return all memberships for a user.
-
-    **This endpoint is only usable by administrators**
     """
+    # Check if the user is trying to access their own memberships or if they are an admin
+    # If the user is not an admin or the user_id does not match the current user,
+    # filter the query to get the managed memberships from user's groups.
     if user_id != user.id and GroupType.admin not in [
         group.id for group in user.groups
     ]:
-        raise HTTPException(
-            status_code=403,
-            detail="User is not allowed to access other users' memberships",
+        return await cruds_memberships.get_user_memberships_by_user_id(
+            db,
+            user_id,
+            manager_restriction=[group.id for group in user.groups],
         )
-
     return await cruds_memberships.get_user_memberships_by_user_id(
         db,
         user_id,
@@ -253,13 +255,26 @@ async def read_user_association_membership_history(
     user_id: str,
     association_membership_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Return all user memberships for a specific association membership for a user.
 
-    **This endpoint is only usable by administrators**
+    **This endpoint is only usable by administrators and membership managers**
     """
+
+    db_membership = await cruds_memberships.get_association_membership_by_id(
+        db,
+        association_membership_id,
+    )
+    if db_membership is None:
+        raise HTTPException(status_code=404, detail="Association membership not found")
+
+    if not is_user_member_of_any_group(
+        user,
+        [GroupType.admin, GroupType.admin_cdr, db_membership.manager_group_id],
+    ):
+        raise HTTPException(status_code=403, detail="Unauthorized")
 
     return await cruds_memberships.get_user_memberships_by_user_id_and_association_membership_id(
         db,
@@ -277,12 +292,12 @@ async def create_user_membership(
     user_id: str,
     user_membership: schemas_memberships.UserMembershipBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Create a new user membership.
 
-    **This endpoint is only usable by administrators**
+    **This endpoint is only usable by administrators and membership managers**
     """
 
     db_association_membership = (
@@ -296,6 +311,15 @@ async def create_user_membership(
             status_code=404,
             detail="Association membership not found",
         )
+    if not is_user_member_of_any_group(
+        user,
+        [
+            GroupType.admin,
+            GroupType.admin_cdr,
+            db_association_membership.manager_group_id,
+        ],
+    ):
+        raise HTTPException(status_code=403, detail="Unauthorized")
 
     db_user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
     if db_user is None:
@@ -339,14 +363,14 @@ async def add_batch_membership(
     association_membership_id: uuid.UUID,
     memberships_details: list[schemas_memberships.MembershipUserMappingEmail],
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Add a batch of user to a membership.
 
     Return the list of unknown users whose email is not in the database.
 
-    **User must be an administrator to use this endpoint.**
+    **User must be an administrator or a membership manager to use this endpoint.**
     """
     db_association_membership = (
         await cruds_memberships.get_association_membership_by_id(
@@ -359,6 +383,16 @@ async def add_batch_membership(
             status_code=400,
             detail="Association membership not found",
         )
+
+    if not is_user_member_of_any_group(
+        user,
+        [
+            GroupType.admin,
+            GroupType.admin_cdr,
+            db_association_membership.manager_group_id,
+        ],
+    ):
+        raise HTTPException(status_code=403, detail="Unauthorized")
 
     unknown_users: list[schemas_memberships.MembershipUserMappingEmail] = []
     for detail in memberships_details:
@@ -399,12 +433,12 @@ async def update_user_membership(
     membership_id: uuid.UUID,
     user_membership: schemas_memberships.UserMembershipEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Update a user membership.
 
-    **This endpoint is only usable by administrators**
+    **This endpoint is only usable by administrators and membership managers**
     """
 
     db_user_membership = await cruds_memberships.get_user_membership_by_id(
@@ -413,6 +447,18 @@ async def update_user_membership(
     )
     if db_user_membership is None:
         raise HTTPException(status_code=404, detail="User membership not found")
+    db_membership = await cruds_memberships.get_association_membership_by_id(
+        db,
+        db_user_membership.association_membership_id,
+    )
+    if db_membership is None:
+        raise ValueError
+
+    if not is_user_member_of_any_group(
+        user,
+        [GroupType.admin, GroupType.admin_cdr, db_membership.manager_group_id],
+    ):
+        raise HTTPException(status_code=403, detail="Unauthorized")
 
     new_membership = schemas_memberships.UserMembershipSimple(
         id=db_user_membership.id,
@@ -440,12 +486,12 @@ async def update_user_membership(
 async def delete_user_membership(
     membership_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Delete a user membership.
 
-    **This endpoint is only usable by administrators**
+    **This endpoint is only usable by administrators and membership managers**
     """
 
     db_user_membership = await cruds_memberships.get_user_membership_by_id(
@@ -454,6 +500,18 @@ async def delete_user_membership(
     )
     if db_user_membership is None:
         raise HTTPException(status_code=404, detail="User membership not found")
+    db_membership = await cruds_memberships.get_association_membership_by_id(
+        db,
+        db_user_membership.association_membership_id,
+    )
+    if db_membership is None:
+        raise ValueError
+
+    if not is_user_member_of_any_group(
+        user,
+        [GroupType.admin, GroupType.admin_cdr, db_membership.manager_group_id],
+    ):
+        raise HTTPException(status_code=403, detail="Unauthorized")
 
     await cruds_memberships.delete_user_membership(
         db=db,
