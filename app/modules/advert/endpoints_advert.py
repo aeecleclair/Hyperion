@@ -423,6 +423,15 @@ async def create_advert_image(
             detail="The advert does not exist",
         )
 
+    if not is_user_member_of_any_group(
+        user,
+        [GroupType.admin, advert.advertiser.group_manager_id],
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Unauthorized to manage {advert.advertiser.name} adverts",
+        )
+
     await save_file_as_data(
         upload_file=image,
         directory="adverts",

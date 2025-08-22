@@ -95,6 +95,7 @@ class ProductVariantBase(BaseModel):
     unique: bool
     allowed_curriculum: list[UUID]
     related_membership_added_duration: timedelta | None = None
+    year: int
 
 
 class ProductVariantComplete(BaseModel):
@@ -136,6 +137,7 @@ class ProductBase(BaseModel):
     tickets: list[GenerateTicketBase] = []
     product_constraints: list[UUID]
     document_constraints: list[UUID]
+    year: int | None = None
 
 
 class ProductCompleteNoConstraint(BaseModel):
@@ -242,6 +244,7 @@ class SignatureComplete(SignatureBase):
 class PaymentBase(BaseModel):
     total: int
     payment_type: PaymentType
+    year: int
 
 
 class PaymentComplete(PaymentBase):

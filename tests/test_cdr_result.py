@@ -106,6 +106,7 @@ async def init_objects():
         description_fr="Un Produit",
         description_en="A Product",
         available_online=False,
+        year=datetime.now(UTC).year,
         needs_validation=True,
     )
 
@@ -118,6 +119,7 @@ async def init_objects():
         description_fr="Un Produit2",
         description_en="A Product2",
         available_online=False,
+        year=datetime.now(UTC).year,
         needs_validation=True,
     )
 
@@ -130,6 +132,7 @@ async def init_objects():
         description_fr="Un Produit3",
         description_en="A Product3",
         available_online=False,
+        year=datetime.now(UTC).year,
         needs_validation=True,
     )
 
@@ -158,6 +161,7 @@ async def init_objects():
         price=100,
         unique=False,
         enabled=True,
+        year=datetime.now(UTC).year,
     )
 
     global product1_variant2
@@ -169,6 +173,7 @@ async def init_objects():
         price=200,
         unique=False,
         enabled=True,
+        year=datetime.now(UTC).year,
     )
 
     global product1_variant3
@@ -180,6 +185,7 @@ async def init_objects():
         price=300,
         unique=False,
         enabled=True,
+        year=datetime.now(UTC).year,
     )
 
     global product2_variant1
@@ -191,6 +197,7 @@ async def init_objects():
         price=100,
         unique=True,
         enabled=True,
+        year=datetime.now(UTC).year,
     )
 
     global product3_variant1
@@ -202,6 +209,7 @@ async def init_objects():
         price=100,
         unique=False,
         enabled=True,
+        year=datetime.now(UTC).year,
     )
 
     global purchase_user1_product1_variant1

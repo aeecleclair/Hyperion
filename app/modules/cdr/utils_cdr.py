@@ -14,14 +14,9 @@ from app.core.users import models_users
 from app.dependencies import (
     hyperion_access_logger,
 )
-from app.modules.cdr import cruds_cdr, models_cdr
-from app.modules.cdr.types_cdr import (
-    CdrLogActionType,
-    PaymentType,
-)
-from app.utils.tools import (
-    is_user_member_of_any_group,
-)
+from app.modules.cdr import coredata_cdr, cruds_cdr, models_cdr
+from app.modules.cdr.types_cdr import CdrLogActionType, PaymentType
+from app.utils.tools import get_core_data, is_user_member_of_any_group
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -43,11 +38,15 @@ async def validate_payment(
         )
         raise ValueError(f"User checkout {checkout_id} not found.")  # noqa: TRY003
 
+    # Retrieve current CDR year from core data instead of requiring it as a dependency
+    cdr_year = await get_core_data(coredata_cdr.CdrYear, db)
+
     db_payment = models_cdr.Payment(
         id=uuid4(),
         user_id=checkout.user_id,
         total=paid_amount,
         payment_type=PaymentType.helloasso,
+        year=cdr_year.year,
     )
     db_action = models_cdr.CdrAction(
         id=uuid4(),

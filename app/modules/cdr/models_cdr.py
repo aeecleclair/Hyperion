@@ -75,6 +75,7 @@ class CdrProduct(Base):
     name_fr: Mapped[str]
     name_en: Mapped[str | None]
     available_online: Mapped[bool]
+    year: Mapped[int]
 
     needs_validation: Mapped[bool]
 
@@ -163,6 +164,8 @@ class ProductVariant(Base):
     price: Mapped[int]
     enabled: Mapped[bool]
     unique: Mapped[bool]
+    year: Mapped[int]
+
     related_membership_added_duration: Mapped[timedelta | None] = mapped_column(
         default=None,
     )
@@ -238,6 +241,7 @@ class Payment(Base):
     payment_type: Mapped[PaymentType] = mapped_column(
         index=True,
     )
+    year: Mapped[int]
 
 
 class CdrAction(Base):

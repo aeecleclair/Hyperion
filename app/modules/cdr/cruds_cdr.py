@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, extract, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import noload, selectinload
 
@@ -41,8 +41,12 @@ async def get_sellers(
 
 async def get_online_sellers(
     db: AsyncSession,
+    cdr_year: int,
 ) -> Sequence[models_cdr.Seller]:
-    online_products = await get_online_products(db=db)
+    online_products = await get_online_products(
+        db=db,
+        cdr_year=cdr_year,
+    )
     seller_ids = set(product.seller_id for product in online_products)
     result = await db.execute(
         select(models_cdr.Seller).where(models_cdr.Seller.id.in_(seller_ids)),
@@ -52,18 +56,23 @@ async def get_online_sellers(
 
 async def get_online_products(
     db: AsyncSession,
+    cdr_year: int,
 ) -> Sequence[models_cdr.CdrProduct]:
     result = await db.execute(
-        select(models_cdr.CdrProduct).where(models_cdr.CdrProduct.available_online),
+        select(models_cdr.CdrProduct).where(
+            models_cdr.CdrProduct.available_online,
+            models_cdr.CdrProduct.year == cdr_year,
+        ),
     )
     return result.unique().scalars().all()
 
 
 async def get_products(
     db: AsyncSession,
+    cdr_year: int,
 ) -> Sequence[models_cdr.CdrProduct]:
     result = await db.execute(
-        select(models_cdr.CdrProduct),
+        select(models_cdr.CdrProduct).where(models_cdr.CdrProduct.year == cdr_year),
     )
     return result.unique().scalars().all()
 
@@ -122,6 +131,20 @@ async def delete_seller(
 async def get_products_by_seller_id(
     db: AsyncSession,
     seller_id: UUID,
+    cdr_year: int,
+) -> Sequence[models_cdr.CdrProduct]:
+    result = await db.execute(
+        select(models_cdr.CdrProduct).where(
+            models_cdr.CdrProduct.seller_id == seller_id,
+            models_cdr.CdrProduct.year == cdr_year,
+        ),
+    )
+    return result.unique().scalars().all()
+
+
+async def get_all_products_by_seller_id(
+    db: AsyncSession,
+    seller_id: UUID,
 ) -> Sequence[models_cdr.CdrProduct]:
     result = await db.execute(
         select(models_cdr.CdrProduct).where(
@@ -134,11 +157,13 @@ async def get_products_by_seller_id(
 async def get_online_products_by_seller_id(
     db: AsyncSession,
     seller_id: UUID,
+    cdr_year: int,
 ) -> Sequence[models_cdr.CdrProduct]:
     result = await db.execute(
         select(models_cdr.CdrProduct).where(
             models_cdr.CdrProduct.seller_id == seller_id,
             models_cdr.CdrProduct.available_online,
+            models_cdr.CdrProduct.year == cdr_year,
         ),
     )
     return result.unique().scalars().all()
@@ -149,7 +174,9 @@ async def get_product_by_id(
     product_id: UUID,
 ) -> models_cdr.CdrProduct | None:
     result = await db.execute(
-        select(models_cdr.CdrProduct).where(models_cdr.CdrProduct.id == product_id),
+        select(models_cdr.CdrProduct).where(
+            models_cdr.CdrProduct.id == product_id,
+        ),
     )
     return result.unique().scalars().first()
 
@@ -404,11 +431,27 @@ async def get_all_purchases(db: AsyncSession) -> Sequence[models_cdr.Purchase]:
 async def get_purchases_by_user_id(
     db: AsyncSession,
     user_id: str,
+    cdr_year: int,
 ) -> Sequence[models_cdr.Purchase]:
     result = await db.execute(
         select(models_cdr.Purchase)
-        .where(models_cdr.Purchase.user_id == user_id)
+        .where(
+            models_cdr.Purchase.user_id == user_id,
+            extract("year", models_cdr.Purchase.purchased_on) == cdr_year,
+        )
         .options(selectinload("*")),
+    )
+    return result.scalars().all()
+
+
+async def get_all_purchases_by_user_id(
+    db: AsyncSession,
+    user_id: str,
+) -> Sequence[models_cdr.Purchase]:
+    result = await db.execute(
+        select(models_cdr.Purchase).where(
+            models_cdr.Purchase.user_id == user_id,
+        ),
     )
     return result.scalars().all()
 
@@ -447,6 +490,7 @@ async def get_purchases_by_user_id_by_seller_id(
     db: AsyncSession,
     user_id: str,
     seller_id: UUID,
+    cdr_year: int,
 ) -> Sequence[models_cdr.Purchase]:
     result = await db.execute(
         select(models_cdr.Purchase)
@@ -455,6 +499,7 @@ async def get_purchases_by_user_id_by_seller_id(
         .where(
             models_cdr.CdrProduct.seller_id == seller_id,
             models_cdr.Purchase.user_id == user_id,
+            extract("year", models_cdr.Purchase.purchased_on) == cdr_year,
         ),
     )
     return result.scalars().all()
@@ -684,9 +729,13 @@ async def delete_curriculum_membership(
 async def get_payments_by_user_id(
     db: AsyncSession,
     user_id: str,
+    cdr_year: int,
 ) -> Sequence[models_cdr.Payment]:
     result = await db.execute(
-        select(models_cdr.Payment).where(models_cdr.Payment.user_id == user_id),
+        select(models_cdr.Payment).where(
+            models_cdr.Payment.user_id == user_id,
+            models_cdr.Payment.year == cdr_year,
+        ),
     )
     return result.scalars().all()
 
@@ -943,7 +992,10 @@ async def get_product_validated_purchases(
     db: AsyncSession,
     product_id: UUID,
 ) -> Sequence[models_cdr.Purchase]:
-    variant = await get_product_variants(db=db, product_id=product_id)
+    variant = await get_product_variants(
+        db=db,
+        product_id=product_id,
+    )
     variant_ids = [v.id for v in variant]
     result = await db.execute(
         select(models_cdr.Purchase).where(
