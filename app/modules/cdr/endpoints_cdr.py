@@ -3020,11 +3020,54 @@ async def create_custom_data_field(
         id=uuid4(),
         product_id=product_id,
         name=custom_data_field.name,
+        can_user_answer=custom_data_field.can_user_answer,
     )
 
     cruds_cdr.create_customdata_field(db, db_data)
     await db.flush()
     return db_data
+
+
+@module.router.patch(
+    "/cdr/sellers/{seller_id}/products/{product_id}/data/{field_id}/",
+    status_code=204,
+)
+async def update_custom_data_field(
+    seller_id: UUID,
+    product_id: UUID,
+    field_id: UUID,
+    custom_data_field: schemas_cdr.CustomDataFieldBase,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_a_member),
+):
+    await is_user_in_a_seller_group(
+        seller_id,
+        user,
+        db=db,
+    )
+    await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
+    db_datafield = await cruds_cdr.get_customdata_field(db=db, field_id=field_id)
+    if db_datafield is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Field not found.",
+        )
+    if db_datafield.product_id != product_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Field does not belong to this product.",
+        )
+
+    datafield = schemas_cdr.CustomDataFieldBase(
+        name=custom_data_field.name,
+        can_user_answer=custom_data_field.can_user_answer,
+    )
+
+    await cruds_cdr.update_customdata_field(
+        db,
+        field_id=field_id,
+        datafield=datafield,
+    )
 
 
 @module.router.delete(
@@ -3105,11 +3148,6 @@ async def create_custom_data(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
 ):
-    await is_user_in_a_seller_group(
-        seller_id,
-        user,
-        db=db,
-    )
     await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
     db_field = await cruds_cdr.get_customdata_field(db=db, field_id=field_id)
     if db_field is None:
@@ -3117,6 +3155,22 @@ async def create_custom_data(
             status_code=404,
             detail="Field not found.",
         )
+    if not (
+        is_user_member_of_any_group(user, [GroupType.admin_cdr])
+        or seller_id
+        in [
+            s.id
+            for s in await cruds_cdr.get_sellers_by_group_ids(
+                db=db,
+                group_ids=[g.id for g in user.groups],
+            )
+        ]
+    ) and not (db_field.can_user_answer and user_id == user.id):
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to add data for this field.",
+        )
+
     if db_field.product_id != product_id:
         raise HTTPException(
             status_code=403,
@@ -3147,17 +3201,27 @@ async def update_custom_data(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
 ):
-    await is_user_in_a_seller_group(
-        seller_id,
-        user,
-        db=db,
-    )
     await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
     db_data = await cruds_cdr.get_customdata(db=db, field_id=field_id, user_id=user_id)
     if db_data is None:
         raise HTTPException(
             status_code=404,
             detail="Field Data not found.",
+        )
+    if not (
+        is_user_member_of_any_group(user, [GroupType.admin_cdr])
+        or seller_id
+        in [
+            s.id
+            for s in await cruds_cdr.get_sellers_by_group_ids(
+                db=db,
+                group_ids=[g.id for g in user.groups],
+            )
+        ]
+    ) and not (db_data.field.can_user_answer and user_id == user.id):
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to edit data for this field.",
         )
     if db_data.field.product_id != product_id:
         raise HTTPException(
@@ -3185,17 +3249,27 @@ async def delete_customdata(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
 ):
-    await is_user_in_a_seller_group(
-        seller_id,
-        user,
-        db=db,
-    )
     await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
     db_data = await cruds_cdr.get_customdata(db=db, field_id=field_id, user_id=user_id)
     if db_data is None:
         raise HTTPException(
             status_code=404,
             detail="Field Data not found.",
+        )
+    if not (
+        is_user_member_of_any_group(user, [GroupType.admin_cdr])
+        or seller_id
+        in [
+            s.id
+            for s in await cruds_cdr.get_sellers_by_group_ids(
+                db=db,
+                group_ids=[g.id for g in user.groups],
+            )
+        ]
+    ) and not (db_data.field.can_user_answer and user_id == user.id):
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to delete data for this field.",
         )
     if db_data.field.product_id != product_id:
         raise HTTPException(

@@ -867,6 +867,20 @@ def create_customdata_field(db: AsyncSession, datafield: models_cdr.CustomDataFi
     db.add(datafield)
 
 
+async def update_customdata_field(
+    db: AsyncSession,
+    field_id: UUID,
+    datafield: schemas_cdr.CustomDataFieldBase,
+):
+    await db.execute(
+        update(models_cdr.CustomDataField)
+        .where(
+            models_cdr.CustomDataField.id == field_id,
+        )
+        .values(**datafield.model_dump(exclude_none=True)),
+    )
+
+
 async def get_customdata_field(
     db: AsyncSession,
     field_id: UUID,

@@ -301,6 +301,7 @@ class UpdateUserWSMessageModel(WSMessageModel):
 
 class CustomDataFieldBase(BaseModel):
     name: str
+    can_user_answer: bool
 
 
 class CustomDataFieldComplete(CustomDataFieldBase):

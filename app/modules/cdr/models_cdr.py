@@ -305,6 +305,7 @@ class CustomDataField(Base):
         ForeignKey("cdr_product.id"),
     )
     name: Mapped[str]
+    can_user_answer: Mapped[bool]
 
 
 class CustomData(Base):

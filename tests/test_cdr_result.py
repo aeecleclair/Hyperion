@@ -141,6 +141,7 @@ async def init_objects():
         id=uuid.uuid4(),
         product_id=product1.id,
         name="Champ 1",
+        can_user_answer=False,
     )
 
     global customdata_field2
@@ -148,6 +149,7 @@ async def init_objects():
         id=uuid.uuid4(),
         product_id=product2.id,
         name="Champ 2",
+        can_user_answer=False,
     )
 
     global product1_variant1

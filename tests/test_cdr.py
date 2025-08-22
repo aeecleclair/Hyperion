@@ -2569,7 +2569,7 @@ async def test_validate_purchase(client: TestClient):
 def test_create_customdata_field(client: TestClient):
     response = client.post(
         f"/cdr/sellers/{seller.id}/products/{product.id}/data/",
-        json={"name": "Chambre"},
+        json={"name": "Chambre", "can_user_answer": False},
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 201
@@ -2578,7 +2578,7 @@ def test_create_customdata_field(client: TestClient):
 def test_create_customdata_field_user(client: TestClient):
     response = client.post(
         f"/cdr/sellers/{seller.id}/products/{product.id}/data/",
-        json={"name": "Chambre"},
+        json={"name": "Chambre", "can_user_answer": False},
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 403
@@ -2589,6 +2589,7 @@ async def test_delete_customdata_field(client: TestClient):
         id=uuid.uuid4(),
         product_id=product.id,
         name="Supprime",
+        can_user_answer=False,
     )
     await add_object_to_db(field)
 
@@ -2610,6 +2611,7 @@ async def test_create_customdata(client: TestClient):
         id=uuid.uuid4(),
         product_id=product.id,
         name="Field",
+        can_user_answer=False,
     )
     await add_object_to_db(customdata_field)
     response = client.post(
@@ -2625,6 +2627,7 @@ async def test_create_customdata_user(client: TestClient):
         id=uuid.uuid4(),
         product_id=product.id,
         name="Field",
+        can_user_answer=False,
     )
     await add_object_to_db(customdata_field)
     response = client.post(
@@ -2640,6 +2643,7 @@ async def test_update_customdata(client: TestClient):
         id=uuid.uuid4(),
         product_id=product.id,
         name="Edit",
+        can_user_answer=False,
     )
     await add_object_to_db(field)
     customdata = models_cdr.CustomData(
@@ -2669,6 +2673,7 @@ async def test_update_customdata_user(client: TestClient):
         id=uuid.uuid4(),
         product_id=product.id,
         name="Edit",
+        can_user_answer=False,
     )
     await add_object_to_db(field)
     customdata = models_cdr.CustomData(
@@ -2691,6 +2696,7 @@ async def test_delete_customdata(client: TestClient):
         id=uuid.uuid4(),
         product_id=product.id,
         name="Supprime",
+        can_user_answer=False,
     )
     await add_object_to_db(field)
     customdata = models_cdr.CustomData(
@@ -2718,6 +2724,7 @@ async def test_customdata_deletion_on_purchase_deletion(client: TestClient):
         id=uuid.uuid4(),
         product_id=product.id,
         name="Supprime",
+        can_user_answer=False,
     )
     await add_object_to_db(field)
     customdata = models_cdr.CustomData(
