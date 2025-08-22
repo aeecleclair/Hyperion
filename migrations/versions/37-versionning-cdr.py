@@ -14,7 +14,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "1294f07e0c02"
-down_revision: str | None = "7da0e98a9e32"
+down_revision: str | None = "98e2557c00c8"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -57,3 +57,4 @@ def test_upgrade(
     alembic_connection: sa.Connection,
 ) -> None:
     pass
+
