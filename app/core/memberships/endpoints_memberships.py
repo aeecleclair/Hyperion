@@ -452,7 +452,7 @@ async def update_user_membership(
         db_user_membership.association_membership_id,
     )
     if db_membership is None:
-        raise HTTPException(status_code=500, detail="Association membership not found")
+        raise ValueError
 
     if not is_user_member_of_any_group(
         user,
@@ -505,7 +505,7 @@ async def delete_user_membership(
         db_user_membership.association_membership_id,
     )
     if db_membership is None:
-        raise HTTPException(status_code=500, detail="Association membership not found")
+        raise ValueError
 
     if not is_user_member_of_any_group(
         user,
