@@ -57,4 +57,3 @@ def test_upgrade(
     alembic_connection: sa.Connection,
 ) -> None:
     pass
-
