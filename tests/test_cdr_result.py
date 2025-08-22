@@ -107,6 +107,7 @@ async def init_objects():
         description_en="A Product",
         available_online=False,
         year=datetime.now(UTC).year,
+        needs_validation=True,
     )
 
     global product2
@@ -119,6 +120,7 @@ async def init_objects():
         description_en="A Product2",
         available_online=False,
         year=datetime.now(UTC).year,
+        needs_validation=True,
     )
 
     global product3
@@ -131,6 +133,7 @@ async def init_objects():
         description_en="A Product3",
         available_online=False,
         year=datetime.now(UTC).year,
+        needs_validation=True,
     )
 
     global customdata_field1

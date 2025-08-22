@@ -761,6 +761,7 @@ async def create_product(
         name_fr=product.name_fr,
         name_en=product.name_en,
         available_online=product.available_online,
+        needs_validation=product.needs_validation,
         description_fr=product.description_fr,
         description_en=product.description_en,
         related_membership_id=product.related_membership.id
@@ -964,6 +965,11 @@ async def create_product_variant(
             status_code=403,
             detail="CDR is closed. You cant add a new product.",
         )
+    if product and not product.needs_validation and product_variant.price != 0:
+        raise HTTPException(
+            status_code=403,
+            detail="A product that does not need validation must be free.",
+        )
     db_product_variant = models_cdr.ProductVariant(
         id=uuid4(),
         product_id=product_id,
@@ -1073,6 +1079,15 @@ async def update_product_variant(
         raise HTTPException(
             status_code=403,
             detail="This product has no related membership. You can't specify a membership duration.",
+        )
+    if (
+        product_variant.price is not None
+        and db_product
+        and (not db_product.needs_validation and product_variant.price != 0)
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="A product that does not need validation must be free.",
         )
 
     await cruds_cdr.update_product_variant(
@@ -1313,6 +1328,7 @@ async def get_purchases_by_user_id(
                                 name_fr=product.name_fr,
                                 name_en=product.name_en,
                                 available_online=product.available_online,
+                                needs_validation=product.needs_validation,
                                 description_fr=product.description_fr,
                                 description_en=product.description_en,
                                 related_membership=schemas_memberships.MembershipSimple(
@@ -1404,6 +1420,7 @@ async def get_purchases_by_user_id_by_seller_id(
                                 name_fr=product.name_fr,
                                 name_en=product.name_en,
                                 available_online=product.available_online,
+                                needs_validation=product.needs_validation,
                                 description_fr=product.description_fr,
                                 description_en=product.description_en,
                                 related_membership=schemas_memberships.MembershipSimple(
@@ -1618,7 +1635,7 @@ async def mark_purchase_as_validated(
         db=db,
         product_id=product_variant.product_id,
     )
-    if not product:
+    if not product or not product.needs_validation:
         raise HTTPException(
             status_code=404,
             detail="Invalid product.",

@@ -77,6 +77,8 @@ class CdrProduct(Base):
     available_online: Mapped[bool]
     year: Mapped[int]
 
+    needs_validation: Mapped[bool]
+
     description_fr: Mapped[str | None] = mapped_column(default=None)
     description_en: Mapped[str | None] = mapped_column(default=None)
     related_membership_id: Mapped[uuid.UUID | None] = mapped_column(
