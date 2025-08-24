@@ -2555,9 +2555,9 @@ async def get_cdr_year(
     status_code=204,
 )
 async def update_cdr_year(
+    cdr_year: coredata_cdr.CdrYear,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     await set_core_data(cdr_year, db)
 
