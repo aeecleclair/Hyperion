@@ -7,11 +7,9 @@ from pydantic import BaseModel, ConfigDict, StringConstraints, field_validator
 from app.core.memberships import schemas_memberships
 from app.core.users.schemas_users import CoreUserSimple
 from app.modules.cdr.types_cdr import (
-    CdrStatus,
     DocumentSignatureType,
     PaymentType,
 )
-from app.types.core_data import BaseCoreData
 from app.types.floors_type import FloorsType
 from app.types.websocket import WSMessageModel
 from app.utils import validators
@@ -253,10 +251,6 @@ class PaymentComplete(PaymentBase):
     year: int
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class Status(BaseCoreData):
-    status: CdrStatus = CdrStatus.pending
 
 
 class PaymentUrl(BaseModel):
