@@ -1658,7 +1658,7 @@ async def mark_purchase_as_validated(
             )
             if not purchases:
                 if product_constraint.related_membership:
-                    if product_constraint.related_membership not in [
+                    if product_constraint.related_membership.id not in [
                         m.association_membership_id for m in memberships
                     ]:
                         raise HTTPException(
@@ -1713,7 +1713,7 @@ async def mark_purchase_as_validated(
                 (
                     m
                     for m in memberships
-                    if m.association_membership_id == product.related_membership
+                    if m.association_membership_id == product.related_membership.id
                 ),
                 None,
             )
@@ -1824,7 +1824,7 @@ async def delete_purchase(
                         all_possible_purchases.remove(db_purchase)
                         if not all_possible_purchases:
                             if product.related_membership:
-                                if product.related_membership not in [
+                                if product.related_membership.id not in [
                                     m.association_membership_id for m in memberships
                                 ]:
                                     raise HTTPException(
