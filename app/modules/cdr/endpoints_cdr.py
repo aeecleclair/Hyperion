@@ -1145,7 +1145,7 @@ async def delete_product_variant(
             status_code=403,
             detail="You can't delete a product once CDR has started.",
         )
-
+    await cruds_cdr.delete_allowed_curriculums(db=db, variant_id=variant_id)
     await cruds_cdr.delete_product_variant(
         variant_id=variant_id,
         db=db,
