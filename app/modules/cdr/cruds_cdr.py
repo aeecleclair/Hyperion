@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import delete, extract, select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import noload, selectinload
 
@@ -435,9 +435,13 @@ async def get_purchases_by_user_id(
 ) -> Sequence[models_cdr.Purchase]:
     result = await db.execute(
         select(models_cdr.Purchase)
+        .join(
+            models_cdr.ProductVariant,
+            models_cdr.Purchase.product_variant_id == models_cdr.ProductVariant.id,
+        )
         .where(
             models_cdr.Purchase.user_id == user_id,
-            extract("year", models_cdr.Purchase.purchased_on) == cdr_year,
+            models_cdr.ProductVariant.year == cdr_year,
         )
         .options(selectinload("*")),
     )
@@ -494,12 +498,18 @@ async def get_purchases_by_user_id_by_seller_id(
 ) -> Sequence[models_cdr.Purchase]:
     result = await db.execute(
         select(models_cdr.Purchase)
-        .join(models_cdr.ProductVariant)
-        .join(models_cdr.CdrProduct)
+        .join(
+            models_cdr.ProductVariant,
+            models_cdr.Purchase.product_variant_id == models_cdr.ProductVariant.id,
+        )
+        .join(
+            models_cdr.CdrProduct,
+            models_cdr.ProductVariant.product_id == models_cdr.CdrProduct.id,
+        )
         .where(
             models_cdr.CdrProduct.seller_id == seller_id,
             models_cdr.Purchase.user_id == user_id,
-            extract("year", models_cdr.Purchase.purchased_on) == cdr_year,
+            models_cdr.ProductVariant.year == cdr_year,
         ),
     )
     return result.scalars().all()
