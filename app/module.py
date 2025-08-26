@@ -31,7 +31,7 @@ for endpoints_file in Path().glob("app/core/*/endpoints_*.py"):
     if hasattr(endpoint_module, "core_module"):
         core_module: CoreModule = endpoint_module.core_module
         core_module_list.append(core_module)
-        all_modules.append(module)
+        all_modules.append(core_module)
     else:
         hyperion_error_logger.error(
             f"Core module {endpoints_file} does not declare a core module. It won't be enabled.",
