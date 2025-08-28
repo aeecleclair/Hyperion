@@ -521,13 +521,15 @@ async def generate_and_send_results(
 async def send_seller_results(
     seller_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get a seller's results.
 
     **User must be CDR Admin to use this endpoint**
     """
+
+    await is_user_in_a_seller_group(seller_id, user=user, db=db)
 
     path = await generate_and_send_results(seller_id=seller_id, db=db)
     return FileResponse(path)
