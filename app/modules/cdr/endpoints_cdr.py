@@ -2547,7 +2547,6 @@ async def get_payment_url(
 )
 async def get_cdr_year(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
 ):
     return await get_core_data(coredata_cdr.CdrYear, db)
 
@@ -2571,7 +2570,6 @@ async def update_cdr_year(
 )
 async def get_status(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
 ):
     return await get_core_data(schemas_cdr.Status, db)
 
