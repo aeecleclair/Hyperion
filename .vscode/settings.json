@@ -25,9 +25,5 @@
     // on config.yaml and dotenv files
     "yaml": false,
     "dotenv": false
-  },
-  "files.associations": {
-    ".env": "dotenv",
-    ".env.template": "dotenv"
   }
 }

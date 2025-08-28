@@ -141,7 +141,7 @@ class Settings(BaseSettings):
     # Configure AuthClients, to allow services to authenticate users using OAuth2 or Openid connect
     # The following format should be used in yaml config files:
     # ```yml
-    # AUTH_CLIENTS_DICT:
+    # AUTH_CLIENTS:
     #   <ClientId>:
     #     secret: <ClientSecret>
     #     redirect_uri:

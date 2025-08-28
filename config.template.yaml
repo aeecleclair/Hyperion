@@ -23,7 +23,7 @@ CLIENT_URL: "http://127.0.0.1:8000/"
 # Configure AuthClients, to allow services to authenticate users using OAuth2 or Openid connect
 # The following format should be used in yaml config files:
 # ```yml
-# AUTH_CLIENTS_DICT:
+# AUTH_CLIENTS:
 #   <ClientId>:
 #     secret: <ClientSecret>
 #     redirect_uri:
@@ -34,17 +34,23 @@ CLIENT_URL: "http://127.0.0.1:8000/"
 # `AuthClientClassName` should be a class from `app.utils.auth.providers`
 # `secret` may be omitted to use PKCE instead of a client secret
 AUTH_CLIENTS:
+  Titan:
+    secret:
+    redirect_uri:
+      - http://localhost:3000/static.html
+    auth_client: AppAuthClient
 
 #####################
 # Hyperion settings #
 #####################
 
-LOG_DEBUG_MESSAGES: true
+LOG_DEBUG_MESSAGES: True
 
 # Origins for the CORS middleware. `["http://localhost"]` can be used for development.
 # See https://fastapi.tiangolo.com/tutorial/cors/
 # It should begin with 'http://' or 'https:// and should never end with a '/'
-CORS_ORIGINS: ["http://localhost"]
+CORS_ORIGINS:
+  - "http://localhost"
 
 # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (if possible Postgresql should be used instead)
 SQLITE_DB: "app.db"
