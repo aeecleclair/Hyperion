@@ -1456,7 +1456,7 @@ def test_patch_product_variant_cdr_started(client: TestClient):
     response = client.patch(
         f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/variants/{variant.id}/",
         json={
-            "name_fr": "Variante modifiée",
+            "price": "700",
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
@@ -2118,17 +2118,6 @@ def test_create_product_closed(client: TestClient):
             "available_online": False,
             "product_constraints": [],
             "document_constraints": [],
-        },
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 403
-
-
-def test_patch_product_closed(client: TestClient):
-    response = client.patch(
-        f"/cdr/sellers/{seller.id!s}/products/{product.id}/",
-        json={
-            "name_fr": "Produit modifié",
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )

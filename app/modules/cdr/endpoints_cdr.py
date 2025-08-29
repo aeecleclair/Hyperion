@@ -837,21 +837,19 @@ async def update_product(
         user,
         db=db,
     )
-    status = await get_core_data(schemas_cdr.Status, db)
-    db_product = await check_request_consistency(
+    await check_request_consistency(
         db=db,
         seller_id=seller_id,
         product_id=product_id,
     )
-    if status.status in [
-        CdrStatus.onsite,
-        CdrStatus.closed,
-    ] or (
-        db_product and status.status == CdrStatus.online and db_product.available_online
-    ):
+    variants = await cruds_cdr.get_product_variants(
+        db=db,
+        product_id=product_id,
+    )
+    if variants and product.related_membership:
         raise HTTPException(
             status_code=403,
-            detail="This product can't be edited now. Please try creating a new product.",
+            detail="You can't link or unlink this product to a membership if it has variant in it.",
         )
 
     await cruds_cdr.update_product(
@@ -901,22 +899,13 @@ async def delete_product(
         user,
         db=db,
     )
-    status = await get_core_data(schemas_cdr.Status, db)
-    db_product = await check_request_consistency(
+
+    await check_request_consistency(
         db=db,
         seller_id=seller_id,
         product_id=product_id,
     )
-    if status.status in [
-        CdrStatus.onsite,
-        CdrStatus.closed,
-    ] or (
-        db_product and status.status == CdrStatus.online and db_product.available_online
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You can't delete a product once CDR has started.",
-        )
+
     variants = await cruds_cdr.get_product_variants(
         db=db,
         product_id=product_id,
@@ -1050,29 +1039,31 @@ async def update_product_variant(
         user,
         db=db,
     )
-    status = await get_core_data(schemas_cdr.Status, db)
+
     db_product = await check_request_consistency(
         db=db,
         seller_id=seller_id,
         product_id=product_id,
         variant_id=variant_id,
     )
-    if product_variant.model_fields_set != {
-        "enabled",
-    }:
-        if status.status in [
-            CdrStatus.onsite,
-            CdrStatus.closed,
-        ] or (
-            db_product
-            and status.status == CdrStatus.online
-            and db_product.available_online
-        ):
-            # We allow to update the enabled field even if CDR is onsite or closed
-            raise HTTPException(
-                status_code=403,
-                detail="This product can't be edited now. Please try creating a new product.",
-            )
+    purchases = await cruds_cdr.get_purchases_by_variant_id(
+        db=db,
+        product_variant_id=variant_id,
+    )
+    if purchases and "price" in product_variant.model_fields_set:
+        raise HTTPException(
+            status_code=403,
+            detail="You can't edit the price of this variant because it has already been purchased.",
+        )
+    if (
+        purchases
+        and "related_membership_added_duration" in product_variant.model_fields_set
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You can't edit the membership added duration of this variant because it has already been purchased.",
+        )
+
     if (
         db_product
         and not db_product.related_membership
@@ -1130,22 +1121,21 @@ async def delete_product_variant(
         user,
         db=db,
     )
-    status = await get_core_data(schemas_cdr.Status, db)
-    db_product = await check_request_consistency(
+    await check_request_consistency(
         db=db,
         seller_id=seller_id,
         product_id=product_id,
         variant_id=variant_id,
     )
-    if status.status in [
-        CdrStatus.onsite,
-        CdrStatus.closed,
-    ] or (
-        db_product and status.status == CdrStatus.online and db_product.available_online
-    ):
+
+    purchases = await cruds_cdr.get_purchases_by_variant_id(
+        db=db,
+        product_variant_id=variant_id,
+    )
+    if purchases:
         raise HTTPException(
             status_code=403,
-            detail="You can't delete a product once CDR has started.",
+            detail="You can't delete this variant because it has been purchased.",
         )
     await cruds_cdr.delete_allowed_curriculums(db=db, variant_id=variant_id)
     await cruds_cdr.delete_product_variant(
