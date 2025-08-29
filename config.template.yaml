@@ -4,7 +4,7 @@
 # ACCESS_TOKEN_SECRET_KEY should contain a random string with enough entropy (at least 32 bytes long) to securely sign all access_tokens for OAuth and Openid connect
 ACCESS_TOKEN_SECRET_KEY: ""
 # RSA_PRIVATE_PEM_STRING should be a string containing the PEM certificate of a private RSA key. It will be used to sign id_tokens for Openid connect authentication
-# In the pem certificates newlines can be replaced by `\n`
+# The example below was generated using a 2048-bit RSA key generator
 RSA_PRIVATE_PEM_STRING: |
   #-----BEGIN RSA PRIVATE KEY-----
   #MIIEpQIBAAKCAQEA1tpj3TZDkJakp2RygsM392pQbcmNBOGFT8FlETcRG/JVFT7k
