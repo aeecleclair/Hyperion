@@ -5,7 +5,7 @@ google-auth-stubs==0.3.0
 httpx==0.27.0                       # needed for tests as a replacement of requests in TestClient
 mypy[faster-cache]==1.16.0
 pandas-stubs == 2.2.2.240807
-psycopg[binary]==3.2.1              # PostgreSQL adapter for synchronous operations at startup (database initializations & migrations), binary installation is the easiest way to install it
+psycopg[binary]==3.2.9              # PostgreSQL adapter for synchronous operations at startup (database initializations & migrations), binary installation is the easiest way to install it
 pytest-alembic==0.12.1
 pytest-asyncio==0.26.0
 pytest-cov==6.1.1
@@ -14,7 +14,7 @@ pytest==8.3.5
 ruff==0.11.8
 types-aiofiles==24.1.0.20250516
 types-Authlib==1.5.0.20250516
-types-fpdf2==2.8.3.20250516
+types-fpdf2==2.8.4.20250822
 types-psutil==7.0.0.20250601
 types-redis==4.6.0.20241004
-types-requests==2.32.0.20250515
+types-requests==2.32.4.20250809
