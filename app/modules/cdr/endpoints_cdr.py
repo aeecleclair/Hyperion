@@ -521,13 +521,15 @@ async def generate_and_send_results(
 async def send_seller_results(
     seller_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get a seller's results.
 
     **User must be CDR Admin to use this endpoint**
     """
+
+    await is_user_in_a_seller_group(seller_id, user=user, db=db)
 
     path = await generate_and_send_results(seller_id=seller_id, db=db)
     return FileResponse(path)
@@ -1145,7 +1147,7 @@ async def delete_product_variant(
             status_code=403,
             detail="You can't delete a product once CDR has started.",
         )
-
+    await cruds_cdr.delete_allowed_curriculums(db=db, variant_id=variant_id)
     await cruds_cdr.delete_product_variant(
         variant_id=variant_id,
         db=db,
@@ -1658,7 +1660,7 @@ async def mark_purchase_as_validated(
             )
             if not purchases:
                 if product_constraint.related_membership:
-                    if product_constraint.related_membership not in [
+                    if product_constraint.related_membership.id not in [
                         m.association_membership_id for m in memberships
                     ]:
                         raise HTTPException(
@@ -1713,7 +1715,7 @@ async def mark_purchase_as_validated(
                 (
                     m
                     for m in memberships
-                    if m.association_membership_id == product.related_membership
+                    if m.association_membership_id == product.related_membership.id
                 ),
                 None,
             )
@@ -1824,7 +1826,7 @@ async def delete_purchase(
                         all_possible_purchases.remove(db_purchase)
                         if not all_possible_purchases:
                             if product.related_membership:
-                                if product.related_membership not in [
+                                if product.related_membership.id not in [
                                     m.association_membership_id for m in memberships
                                 ]:
                                     raise HTTPException(
@@ -2545,7 +2547,6 @@ async def get_payment_url(
 )
 async def get_cdr_year(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
 ):
     return await get_core_data(coredata_cdr.CdrYear, db)
 
@@ -2555,9 +2556,9 @@ async def get_cdr_year(
     status_code=204,
 )
 async def update_cdr_year(
+    cdr_year: coredata_cdr.CdrYear,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     await set_core_data(cdr_year, db)
 
@@ -2569,7 +2570,6 @@ async def update_cdr_year(
 )
 async def get_status(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
 ):
     return await get_core_data(coredata_cdr.Status, db)
 

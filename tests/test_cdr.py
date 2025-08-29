@@ -9,16 +9,20 @@ from app.core.groups.groups_type import GroupType
 from app.core.memberships import models_memberships
 from app.core.users import models_users
 from app.modules.cdr import models_cdr
+from app.modules.cdr.coredata_cdr import CdrYear
 from app.modules.cdr.types_cdr import (
     CdrStatus,
     DocumentSignatureType,
     PaymentType,
 )
 from tests.commons import (
+    add_coredata_to_db,
     add_object_to_db,
     create_api_access_token,
     create_user_with_groups,
 )
+
+year = datetime.now(UTC).year
 
 cdr_admin: models_users.CoreUser
 cdr_bde: models_users.CoreUser
@@ -71,6 +75,8 @@ ticket_generator: models_cdr.TicketGenerator
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
+    await add_coredata_to_db(CdrYear(year=year))
+
     global cdr_admin
     cdr_admin = await create_user_with_groups(
         [GroupType.admin_cdr],
@@ -132,7 +138,7 @@ async def init_objects():
         description_fr="Un Produit",
         description_en="A Product",
         available_online=False,
-        year=datetime.now(UTC).year,
+        year=year,
         needs_validation=True,
     )
     await add_object_to_db(product)
@@ -146,7 +152,7 @@ async def init_objects():
         description_fr="Un Produit disponible en ligne",
         description_en="An online available Product",
         available_online=True,
-        year=datetime.now(UTC).year,
+        year=year,
         needs_validation=True,
     )
     await add_object_to_db(online_product)
@@ -158,7 +164,7 @@ async def init_objects():
         name_fr="Produit sans variante",
         name_en="Unused product",
         available_online=False,
-        year=datetime.now(UTC).year,
+        year=year,
         needs_validation=True,
     )
     await add_object_to_db(empty_product)
@@ -170,7 +176,7 @@ async def init_objects():
         name_fr="Produit utilisable",
         name_en="Usable product",
         available_online=False,
-        year=datetime.now(UTC).year,
+        year=year,
         needs_validation=True,
     )
     await add_object_to_db(usable_product)
@@ -222,7 +228,7 @@ async def init_objects():
         price=100,
         unique=False,
         enabled=True,
-        year=datetime.now(UTC).year,
+        year=year,
     )
     await add_object_to_db(variant)
 
@@ -235,7 +241,7 @@ async def init_objects():
         price=100,
         unique=False,
         enabled=True,
-        year=datetime.now(UTC).year,
+        year=year,
     )
     await add_object_to_db(empty_variant)
 
@@ -313,7 +319,7 @@ async def init_objects():
         user_id=cdr_user.id,
         total=5000,
         payment_type=PaymentType.cash,
-        year=datetime.now(UTC).year,
+        year=year,
     )
     await add_object_to_db(payment)
 
@@ -342,7 +348,7 @@ async def init_objects():
         name_fr="Produit a ticket",
         name_en="Usable product",
         available_online=False,
-        year=datetime.now(UTC).year,
+        year=year,
         needs_validation=True,
     )
     await add_object_to_db(ticket_product)
@@ -356,7 +362,7 @@ async def init_objects():
         price=100,
         unique=False,
         enabled=True,
-        year=datetime.now(UTC).year,
+        year=year,
     )
     await add_object_to_db(ticket_variant)
 
@@ -934,7 +940,7 @@ def test_create_product_variant_seller(client: TestClient):
             "price": 5000,
             "unique": True,
             "allowed_curriculum": [str(curriculum.id)],
-            "year": datetime.now(UTC).year,
+            "year": year,
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
@@ -963,7 +969,7 @@ def test_create_product_variant_user(client: TestClient):
             "price": 5000,
             "unique": True,
             "allowed_curriculum": [str(curriculum.id)],
-            "year": datetime.now(UTC).year,
+            "year": year,
         },
         headers={"Authorization": f"Bearer {token_user}"},
     )
@@ -2139,7 +2145,7 @@ def test_create_product_variant_closed(client: TestClient):
             "price": 5000,
             "unique": True,
             "allowed_curriculum": [str(curriculum.id)],
-            "year": datetime.now(UTC).year,
+            "year": year,
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
@@ -2241,7 +2247,7 @@ async def test_pay(mocker: MockerFixture, client: TestClient):
         price=100,
         unique=False,
         enabled=True,
-        year=datetime.now(UTC).year,
+        year=year,
     )
     await add_object_to_db(variant_new)
     purchase_bde = models_cdr.Purchase(
@@ -2462,7 +2468,7 @@ async def test_validate_purchase(client: TestClient):
         name_en="Product",
         available_online=False,
         related_membership_id=association_membership.id,
-        year=datetime.now(UTC).year,
+        year=year,
         needs_validation=True,
     )
     await add_object_to_db(product_membership)
@@ -2473,7 +2479,7 @@ async def test_validate_purchase(client: TestClient):
         name_en="Product",
         available_online=False,
         related_membership_id=association_membership.id,
-        year=datetime.now(UTC).year,
+        year=year,
         needs_validation=True,
     )
     await add_object_to_db(product_membership_to_purchase)
@@ -2483,7 +2489,7 @@ async def test_validate_purchase(client: TestClient):
         name_fr="Produit à adhésion",
         name_en="Product",
         available_online=False,
-        year=datetime.now(UTC).year,
+        year=year,
         needs_validation=True,
     )
     await add_object_to_db(product_2)
@@ -2495,7 +2501,7 @@ async def test_validate_purchase(client: TestClient):
         price=100,
         unique=False,
         enabled=True,
-        year=datetime.now(UTC).year,
+        year=year,
     )
     await add_object_to_db(variant_to_validate)
     variant_purchased = models_cdr.ProductVariant(
@@ -2506,7 +2512,7 @@ async def test_validate_purchase(client: TestClient):
         price=100,
         unique=False,
         enabled=True,
-        year=datetime.now(UTC).year,
+        year=year,
     )
     await add_object_to_db(variant_purchased)
     purchase_product_constraint = models_cdr.ProductConstraint(

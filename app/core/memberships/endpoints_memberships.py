@@ -79,9 +79,14 @@ async def read_association_membership(
     if db_association_membership is None:
         raise HTTPException(status_code=404, detail="Association Membership not found")
 
-    if db_association_membership.manager_group_id not in [
-        group.id for group in user.groups
-    ] and GroupType.admin not in [group.id for group in user.groups]:
+    if not is_user_member_of_any_group(
+        user,
+        [
+            db_association_membership.manager_group_id,
+            GroupType.admin,
+            GroupType.admin_cdr,
+        ],
+    ):
         raise HTTPException(
             status_code=403,
             detail="User is not allowed to access this membership",
@@ -232,9 +237,10 @@ async def read_user_memberships(
     # Check if the user is trying to access their own memberships or if they are an admin
     # If the user is not an admin or the user_id does not match the current user,
     # filter the query to get the managed memberships from user's groups.
-    if user_id != user.id and GroupType.admin not in [
-        group.id for group in user.groups
-    ]:
+    if user_id != user.id and not is_user_member_of_any_group(
+        user,
+        [GroupType.admin, GroupType.admin_cdr],
+    ):
         return await cruds_memberships.get_user_memberships_by_user_id(
             db,
             user_id,
