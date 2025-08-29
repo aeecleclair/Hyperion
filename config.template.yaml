@@ -39,6 +39,13 @@ AUTH_CLIENTS:
     redirect_uri:
       - http://localhost:3000/static.html
     auth_client: AppAuthClient
+  Postman:
+    secret: PostmanSecret
+    redirect_uri:
+      - https://oauth.pstmn.io/v1/callback
+      - http://localhost:8000/docs/oauth2-redirect
+      - http://postman/
+    auth_client: APIToolAuthClient
 
 #####################
 # Hyperion settings #
