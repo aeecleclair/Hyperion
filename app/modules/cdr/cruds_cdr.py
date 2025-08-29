@@ -515,6 +515,18 @@ async def get_purchases_by_user_id_by_seller_id(
     return result.scalars().all()
 
 
+async def get_purchases_by_variant_id(
+    db: AsyncSession,
+    product_variant_id: UUID,
+) -> Sequence[models_cdr.Purchase]:
+    result = await db.execute(
+        select(models_cdr.Purchase).where(
+            models_cdr.Purchase.product_variant_id == product_variant_id,
+        ),
+    )
+    return result.scalars().all()
+
+
 def create_purchase(
     db: AsyncSession,
     purchase: models_cdr.Purchase,
