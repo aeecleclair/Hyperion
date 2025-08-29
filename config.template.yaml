@@ -5,12 +5,17 @@
 ACCESS_TOKEN_SECRET_KEY: ""
 # RSA_PRIVATE_PEM_STRING should be a string containing the PEM certificate of a private RSA key. It will be used to sign id_tokens for Openid connect authentication
 # In the pem certificates newlines can be replaced by `\n`
-RSA_PRIVATE_PEM_STRING: ""
+RSA_PRIVATE_PEM_STRING: |
+  #-----BEGIN RSA PRIVATE KEY-----
+  #MIIEpQIBAAKCAQEA1tpj3TZDkJakp2RygsM392pQbcmNBOGFT8FlETcRG/JVFT7k
+  #AZERTYUIOPqsdfghjklm1234567890WXCVBNazertyuiop1234567890QSDFGHJK
+  #LMetcETC=
+  #-----END RSA PRIVATE KEY-----
 
 # Host or url of the instance of Hyperion
 # This url will be especially used for oidc/oauth2 discovery endpoint and links send by email
 # NOTE: A trailing / is required
-CLIENT_URL: "http://127.0.0.1:8000/"
+CLIENT_URL: http://127.0.0.1:8000/
 
 # Sometimes, when running third services with oidc inside Docker containers, and running Hyperion on your local device
 # you may need to use a different url for call made from docker and call made from your device
@@ -38,12 +43,14 @@ AUTH_CLIENTS:
     secret:
     redirect_uri:
       - http://localhost:3000/static.html
+      - http://127.0.0.1:3000/static.html
     auth_client: AppAuthClient
   Postman:
     secret: PostmanSecret
     redirect_uri:
       - https://oauth.pstmn.io/v1/callback
       - http://localhost:8000/docs/oauth2-redirect
+      - http://127.0.0.1:8000/docs/oauth2-redirect
       - http://postman/
     auth_client: APIToolAuthClient
 
@@ -57,8 +64,9 @@ LOG_DEBUG_MESSAGES: True
 # See https://fastapi.tiangolo.com/tutorial/cors/
 # It should begin with 'http://' or 'https:// and should never end with a '/'
 CORS_ORIGINS:
-  - "http://localhost:3000"
-#  - "*"
+  - http://localhost:3000
+  - http://127.0.0.1:3000/
+#  - *
 
 # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (if possible Postgresql should be used instead)
 SQLITE_DB: "app.db"
