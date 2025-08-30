@@ -39,7 +39,7 @@ from app.types.websocket import WebsocketConnectionManager
 from app.utils.auth import auth_utils
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.state import (
-    LifespanState,
+    GlobalState,
     RuntimeLifespanState,
     disconnect_redis_client,
     disconnect_scheduler,
@@ -61,28 +61,31 @@ from app.utils.tools import (
 hyperion_access_logger = logging.getLogger("hyperion.access")
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
+GLOBAL_STATE: GlobalState
 
-async def init_app_state(
+
+async def init_state(
     app: FastAPI,
     settings: Settings,
     hyperion_error_logger: logging.Logger,
-) -> LifespanState:
+) -> None:
     """
-    Initialize the state of the application. This dependency should be used at the start of the application lifespan.
+    Initialize the global state for the project. This dependency should be called at the start of the application lifespan.
 
     This methode should be called as a dependency, and test may override it to provide their own state.
     ```python
-    state = app.dependency_overrides.get(
-        init_app_state,
-        init_app_state,
+    app.dependency_overrides.get(
+        init_state,
+        init_state,
     )(
         app=app,
         settings=settings,
         hyperion_error_logger=hyperion_error_logger,
     )
-    state = cast("LifespanState", state)
     ```
     """
+    global GLOBAL_STATE
+
     engine = init_engine(settings=settings)
 
     SessionLocal = init_SessionLocal(engine)
@@ -94,7 +97,7 @@ async def init_app_state(
 
     scheduler = await init_scheduler(
         settings=settings,
-        app=app,
+        _dependency_overrides=app.dependency_overrides,
     )
 
     ws_manager = await init_websocket_connection_manager(
@@ -112,7 +115,7 @@ async def init_app_state(
 
     mail_templates = init_mail_templates(settings=settings)
 
-    return LifespanState(
+    GLOBAL_STATE = GlobalState(
         engine=engine,
         SessionLocal=SessionLocal,
         redis_client=redis_client,
@@ -126,17 +129,17 @@ async def init_app_state(
 
 
 async def disconnect_state(
-    state: LifespanState,
     hyperion_error_logger: logging.Logger,
 ) -> None:
     """
     Disconnect items requiring it. This dependency should be used at the end of the application lifespan.
 
-    This methode should be called as a dependency as test may need to run additional steps
+    This methode should be called as a dependency as tests may need to run additional steps
     """
-    disconnect_redis_client(state["redis_client"])
-    await disconnect_scheduler(state["scheduler"])
-    await disconnect_websocket_connection_manager(state["ws_manager"])
+
+    disconnect_redis_client(GLOBAL_STATE["redis_client"])
+    await disconnect_scheduler(GLOBAL_STATE["scheduler"])
+    await disconnect_websocket_connection_manager(GLOBAL_STATE["ws_manager"])
 
     hyperion_error_logger.info("Application state disconnected successfully.")
 
@@ -179,7 +182,7 @@ def get_settings() -> Settings:
     return construct_prod_settings()
 
 
-async def get_db(state: AppState) -> AsyncGenerator[AsyncSession, None]:
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Return a database session that will be automatically committed and closed after usage.
 
@@ -202,7 +205,7 @@ async def get_db(state: AppState) -> AsyncGenerator[AsyncSession, None]:
         # Add objects that may be rolled back in case of an error here
     ```
     """
-    async with state["SessionLocal"]() as db:
+    async with GLOBAL_STATE["SessionLocal"]() as db:
         try:
             yield db
         except HTTPException:
@@ -217,42 +220,42 @@ async def get_db(state: AppState) -> AsyncGenerator[AsyncSession, None]:
             await db.close()
 
 
-async def get_unsafe_db(state: AppState) -> AsyncGenerator[AsyncSession, None]:
+async def get_unsafe_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Return a database session but don't close it automatically
 
     It should only be used for really specific cases where `get_db` will not work
     """
 
-    async with state["SessionLocal"]() as db:
+    async with GLOBAL_STATE["SessionLocal"]() as db:
         yield db
 
 
-def get_redis_client(state: AppState) -> redis.Redis | None:
+def get_redis_client() -> redis.Redis | None:
     """
     Dependency that returns the redis client
 
     If the redis client is not available, it will return None.
     """
-    return state["redis_client"]
+    return GLOBAL_STATE["redis_client"]
 
 
-def get_scheduler(state: AppState) -> Scheduler:
-    return state["scheduler"]
+def get_scheduler() -> Scheduler:
+    return GLOBAL_STATE["scheduler"]
 
 
-def get_websocket_connection_manager(state: AppState) -> WebsocketConnectionManager:
-    return state["ws_manager"]
+def get_websocket_connection_manager() -> WebsocketConnectionManager:
+    return GLOBAL_STATE["ws_manager"]
 
 
-def get_notification_manager(state: AppState) -> NotificationManager:
+def get_notification_manager() -> NotificationManager:
     """
     Dependency that returns the notification manager.
     This dependency provide a low level tool allowing to use notification manager internal methods.
 
     If you want to send a notification, prefer `get_notification_tool` dependency.
     """
-    return state["notification_manager"]
+    return GLOBAL_STATE["notification_manager"]
 
 
 def get_notification_tool(
@@ -271,22 +274,20 @@ def get_notification_tool(
     )
 
 
-def get_drive_file_manager(state: AppState) -> DriveFileManager:
+def get_drive_file_manager() -> DriveFileManager:
     """
     Dependency that returns the drive file manager.
     """
 
-    return state["drive_file_manager"]
+    return GLOBAL_STATE["drive_file_manager"]
 
 
 @lru_cache
 def get_payment_tool(
     name: HelloAssoConfigName,
-) -> Callable[[AppState], PaymentTool]:
-    def get_payment_tool(
-        state: AppState,
-    ) -> PaymentTool:
-        payment_tools = state["payment_tools"]
+) -> Callable[[], PaymentTool]:
+    def get_payment_tool() -> PaymentTool:
+        payment_tools = GLOBAL_STATE["payment_tools"]
         if name not in payment_tools:
             hyperion_error_logger.warning(
                 f"HelloAsso API credentials are not set for {name.value}, payment won't be available",
@@ -298,14 +299,12 @@ def get_payment_tool(
     return get_payment_tool
 
 
-def get_mail_templates(
-    state: AppState,
-) -> calypsso.MailTemplates:
+def get_mail_templates() -> calypsso.MailTemplates:
     """
     Dependency that returns the mail templates manager.
     """
 
-    return state["mail_templates"]
+    return GLOBAL_STATE["mail_templates"]
 
 
 def get_token_data(

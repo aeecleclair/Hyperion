@@ -1,12 +1,18 @@
 import datetime
 import uuid
+from collections.abc import Callable
 from typing import Annotated
 
 from sqlalchemy import DateTime, types
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+)
 from sqlalchemy.orm import DeclarativeBase, MappedAsDataclass, mapped_column
 from sqlalchemy.types import TypeDecorator
 
 from app.types.exceptions import MissingTZInfoInDatetimeError
+
+SessionLocalType = Callable[[], AsyncSession]
 
 
 class TZDateTime(TypeDecorator):

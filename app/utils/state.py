@@ -1,10 +1,9 @@
 import logging
 from collections.abc import Callable
-from typing import TypedDict
+from typing import Any, TypedDict
 
 import calypsso
 import redis
-from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -17,15 +16,20 @@ from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.utils.config import Settings
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.types.scheduler import OfflineScheduler, Scheduler
+from app.types.sqlalchemy import SessionLocalType
 from app.types.websocket import WebsocketConnectionManager
 from app.utils.communication.notifications import NotificationManager
 
 
-class LifespanState(TypedDict):
+class GlobalState(TypedDict):
+    """
+    This global state is contained as a global Python object. Use dependencies to access it
+    """
+
     # Database engine
     engine: AsyncEngine
     # Database session creator
-    SessionLocal: Callable[[], AsyncSession]
+    SessionLocal: SessionLocalType
     # We may not have a Redis Client if it was not configured
     redis_client: redis.Redis | None
     scheduler: Scheduler
@@ -36,7 +40,17 @@ class LifespanState(TypedDict):
     mail_templates: calypsso.MailTemplates
 
 
+class LifespanState(TypedDict):
+    """
+    The LifespanState is contained instead of the FastAPI app
+    """
+
+
 class RuntimeLifespanState(LifespanState):
+    """
+    Requests contains an extended version of the LifespanState for each request.
+    """
+
     request_id: str
 
 
@@ -56,7 +70,7 @@ def init_engine(settings: Settings) -> AsyncEngine:
     )
 
 
-def init_SessionLocal(engine: AsyncEngine) -> Callable[[], AsyncSession]:
+def init_SessionLocal(engine: AsyncEngine) -> SessionLocalType:
     return async_sessionmaker(
         engine,
         class_=AsyncSession,
@@ -96,7 +110,7 @@ def disconnect_redis_client(redis_client: redis.Redis | None) -> None:
 
 async def init_scheduler(
     settings: Settings,
-    app: FastAPI,
+    _dependency_overrides: dict[Callable[..., Any], Callable[..., Any]],
 ) -> Scheduler:
     if settings.REDIS_HOST:
         scheduler = Scheduler()
@@ -105,7 +119,7 @@ async def init_scheduler(
             redis_host=settings.REDIS_HOST,
             redis_port=settings.REDIS_PORT,
             redis_password=settings.REDIS_PASSWORD,
-            _dependency_overrides=app.dependency_overrides,
+            _dependency_overrides=_dependency_overrides,
         )
     else:
         scheduler = OfflineScheduler()

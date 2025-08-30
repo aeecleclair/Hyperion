@@ -22,9 +22,9 @@ from app.core.users import schemas_users
 from app.types.module import Module
 from tests.commons import (
     MockedPaymentTool,
-    TestingSessionLocal,
     add_object_to_db,
     create_user_with_groups,
+    get_TestingSessionLocal,
 )
 
 if TYPE_CHECKING:
@@ -243,7 +243,7 @@ async def test_webhook_payment(
 
     assert response.status_code == 204
 
-    async with TestingSessionLocal() as db:
+    async with get_TestingSessionLocal()() as db:
         checkout_model = await cruds_payment.get_checkout_by_id(
             checkout_id=checkout.id,
             db=db,
@@ -269,7 +269,7 @@ async def test_webhook_payment(
 
     assert response.status_code == 204
 
-    async with TestingSessionLocal() as db:
+    async with get_TestingSessionLocal()() as db:
         checkout_model = await cruds_payment.get_checkout_by_id(
             checkout_id=checkout.id,
             db=db,
@@ -387,7 +387,7 @@ async def test_payment_tool_get_checkout(
 ):
     payment_tool = MockedPaymentTool()
 
-    async with TestingSessionLocal() as db:
+    async with get_TestingSessionLocal()() as db:
         # Get existing checkout
         existing_checkout = await payment_tool.get_checkout(
             checkout_id=checkout_with_existing_checkout_payment.id,
@@ -443,7 +443,7 @@ async def test_payment_tool_init_checkout(
         return_value=mock_checkout_api,
     )
 
-    async with TestingSessionLocal() as db:
+    async with get_TestingSessionLocal()() as db:
         returned_checkout = await payment_tool.init_checkout(
             module="testtool",
             checkout_amount=100,
@@ -518,7 +518,7 @@ async def test_payment_tool_init_checkout_with_one_failure(
         return_value=mock_checkout_api,
     )
 
-    async with TestingSessionLocal() as db:
+    async with get_TestingSessionLocal()() as db:
         returned_checkout = await payment_tool.init_checkout(
             module="testtool",
             checkout_amount=100,
@@ -584,7 +584,7 @@ async def test_payment_tool_init_checkout_fail(
     )
 
     with pytest.raises(ValueError, match="Mocked Exception"):
-        async with TestingSessionLocal() as db:
+        async with get_TestingSessionLocal()() as db:
             await payment_tool.init_checkout(
                 module="testtool",
                 checkout_amount=100,
