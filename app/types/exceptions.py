@@ -1,4 +1,5 @@
 from typing import Any
+from uuid import UUID
 
 from fastapi import HTTPException
 
@@ -209,4 +210,18 @@ class InvalidS3FolderError(Exception):
     def __init__(self, subfolder: str):
         super().__init__(
             f"Invalid S3 subfolder: {subfolder} - it should not contain '/'",
+        )
+
+
+class ObjectExpectedInDbNotFoundError(Exception):
+    """
+    This exception should be raised when an object is expected to be found in database, but the select crud return None.
+    It may be used when selecting an object to load relationship just after this creation, or selecting an object we know existing because of a foreign key.
+
+    This should never happen. Raising this exception should lead to a logged 500 internal server error.
+    """
+
+    def __init__(self, object_name: str, object_id: str | UUID):
+        super().__init__(
+            f"Object {object_name} with id {object_id} was expected in database but not found",
         )
