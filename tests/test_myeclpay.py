@@ -2313,7 +2313,7 @@ async def test_store_scan_store_successful_scan(client: TestClient):
     )
 
     async with get_TestingSessionLocal()() as db:
-        store_wallet_before_scan = await cruds_mypayment.get_wallet(
+        store_wallet_before_scan = await cruds_myeclpay.get_wallet(
             db=db,
             wallet_id=store_wallet.id,
         )
@@ -2341,7 +2341,7 @@ async def test_store_scan_store_successful_scan(client: TestClient):
     ensure_qr_code_id_is_already_used(qr_code_id=qr_code_id, client=client)
 
     async with get_TestingSessionLocal()() as db:
-        store_wallet_after_scan = await cruds_mypayment.get_wallet(
+        store_wallet_after_scan = await cruds_myeclpay.get_wallet(
             db=db,
             wallet_id=store_wallet.id,
         )
@@ -2416,7 +2416,7 @@ async def test_transaction_refund_unauthorized_user(client: TestClient):
 
 async def test_transaction_refund_complete(client: TestClient):
     async with get_TestingSessionLocal()() as db:
-        debited_wallet_before_refund = await cruds_mypayment.get_wallet(
+        debited_wallet_before_refund = await cruds_myeclpay.get_wallet(
             db=db,
             wallet_id=ecl_user_wallet.id,
         )
@@ -2451,7 +2451,7 @@ async def test_transaction_refund_complete(client: TestClient):
     assert response.status_code == 204
 
     async with get_TestingSessionLocal()() as db:
-        transaction_after_refund = await cruds_mypayment.get_transaction(
+        transaction_after_refund = await cruds_myeclpay.get_transaction(
             db=db,
             transaction_id=transaction.id,
         )
@@ -2536,7 +2536,7 @@ async def test_transaction_refund_partial_invalid_amount(client: TestClient):
 
 async def test_transaction_refund_partial(client: TestClient):
     async with get_TestingSessionLocal()() as db:
-        debited_wallet_before_refund = await cruds_mypayment.get_wallet(
+        debited_wallet_before_refund = await cruds_myeclpay.get_wallet(
             db=db,
             wallet_id=ecl_user_wallet.id,
         )
@@ -2574,7 +2574,7 @@ async def test_transaction_refund_partial(client: TestClient):
     assert response.status_code == 204
 
     async with get_TestingSessionLocal()() as db:
-        transaction_after_refund = await cruds_mypayment.get_transaction(
+        transaction_after_refund = await cruds_myeclpay.get_transaction(
             db=db,
             transaction_id=transaction.id,
         )

@@ -244,7 +244,7 @@ async def test_webhook_payment(
     assert response.status_code == 204
 
     async with get_TestingSessionLocal()() as db:
-        checkout_model = await cruds_checkout.get_checkout_by_id(
+        checkout_model = await cruds_payment.get_checkout_by_id(
             checkout_id=checkout.id,
             db=db,
         )
@@ -270,7 +270,7 @@ async def test_webhook_payment(
     assert response.status_code == 204
 
     async with get_TestingSessionLocal()() as db:
-        checkout_model = await cruds_checkout.get_checkout_by_id(
+        checkout_model = await cruds_payment.get_checkout_by_id(
             checkout_id=checkout.id,
             db=db,
         )
