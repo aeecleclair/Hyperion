@@ -135,7 +135,7 @@ class CurriculumMembership(Base):
     )
     curriculum_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("cdr_curriculum.id"),
-        primary_key=True,
+        nullable=False,
     )
 
 
