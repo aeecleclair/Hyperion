@@ -46,6 +46,7 @@ from app.modules.cdr.utils_cdr import (
     is_user_in_a_seller_group,
     validate_payment,
 )
+from app.types.exceptions import ObjectExpectedInDbNotFoundError
 from app.types.module import Module
 from app.types.websocket import (
     HyperionWebsocketsRoom,
@@ -303,7 +304,22 @@ async def update_cdr_user(
             detail="User not found.",
         )
 
-    curriculum = await cruds_cdr.get_cdr_user_curriculum(db, user_id)
+    curriculum_membership = await cruds_cdr.get_cdr_user_curriculum(db, user_id)
+    curriculum: schemas_cdr.CurriculumComplete | None = None
+    if curriculum_membership:
+        curriculum_db = await cruds_cdr.get_curriculum_by_id(
+            db=db,
+            curriculum_id=curriculum_membership.curriculum_id,
+        )
+        if curriculum_db is None:
+            raise ObjectExpectedInDbNotFoundError(
+                object_name="curriculum",
+                object_id=curriculum_membership.curriculum_id,
+            )
+        curriculum = schemas_cdr.CurriculumComplete(
+            id=curriculum_db.id,
+            name=curriculum_db.name,
+        )
 
     cdr_status = await get_core_data(schemas_cdr.Status, db)
     if cdr_status.status == CdrStatus.onsite:
@@ -311,9 +327,7 @@ async def update_cdr_user(
             await ws_manager.send_message_to_room(
                 message=schemas_cdr.UpdateUserWSMessageModel(
                     data=schemas_cdr.CdrUser(
-                        curriculum=schemas_cdr.CurriculumComplete(
-                            **curriculum.__dict__,
-                        ),
+                        curriculum=curriculum,
                         school_id=user_db.school_id,
                         account_type=user_db.account_type,
                         name=user_db.name,
