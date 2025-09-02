@@ -464,6 +464,9 @@ async def delete_all_teams(
     # Delete all teams from the database
     await cruds_raid.delete_all_teams(db)
 
+    # Delete all participants from the database
+    await cruds_raid.delete_all_participant(db)
+
     delete_all_folder_from_data("raid")
 
 
