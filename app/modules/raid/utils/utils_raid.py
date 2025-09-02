@@ -89,7 +89,7 @@ async def validate_payment(
     participant_id = participant_checkout.participant_id
     prices = await get_core_data(coredata_raid.RaidPrice, db)
     if prices.student_price and (
-        paid_amount in (prices.student_price, prices.external_price)
+        paid_amount in (prices.student_price, prices.external_price or 0)
     ):
         await cruds_raid.confirm_payment(participant_id, db)
     elif prices.t_shirt_price and paid_amount == prices.t_shirt_price:
@@ -100,7 +100,7 @@ async def validate_payment(
         and paid_amount
         in (
             prices.student_price + prices.t_shirt_price,
-            prices.external_price + prices.t_shirt_price,
+            (prices.external_price or 0) + prices.t_shirt_price,
         )
     ):
         await cruds_raid.confirm_payment(participant_id, db)
