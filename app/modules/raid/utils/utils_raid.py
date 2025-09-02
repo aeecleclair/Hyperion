@@ -94,13 +94,14 @@ async def validate_payment(
         await cruds_raid.confirm_payment(participant_id, db)
     elif prices.t_shirt_price and paid_amount == prices.t_shirt_price:
         await cruds_raid.confirm_t_shirt_payment(participant_id, db)
-    elif (
-        prices.student_price
-        and prices.t_shirt_price
-        and paid_amount
-        in (
-            prices.student_price + prices.t_shirt_price,
-            (prices.external_price or 0) + prices.t_shirt_price,
+    elif prices.t_shirt_price and (
+        (
+            prices.student_price
+            and paid_amount == prices.student_price + prices.t_shirt_price
+        )
+        or (
+            prices.external_price
+            and paid_amount == prices.external_price + prices.t_shirt_price
         )
     ):
         await cruds_raid.confirm_payment(participant_id, db)
