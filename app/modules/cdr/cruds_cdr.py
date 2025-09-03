@@ -174,9 +174,11 @@ async def get_product_by_id(
     product_id: UUID,
 ) -> models_cdr.CdrProduct | None:
     result = await db.execute(
-        select(models_cdr.CdrProduct).where(
+        select(models_cdr.CdrProduct)
+        .where(
             models_cdr.CdrProduct.id == product_id,
-        ),
+        )
+        .options(selectinload(models_cdr.CdrProduct.product_constraints)),
     )
     return result.unique().scalars().first()
 
