@@ -65,7 +65,7 @@ LOG_DEBUG_MESSAGES: True
 # It should begin with 'http://' or 'https:// and should never end with a '/'
 CORS_ORIGINS:
   - http://localhost:3000
-  - http://127.0.0.1:3000/
+  - http://127.0.0.1:3000
 #  - *
 
 # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (if possible Postgresql should be used instead)
