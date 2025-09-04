@@ -123,7 +123,7 @@ async def write_teams_csv(
     file_name = "Équipes - " + datetime.now(UTC).strftime("%Y-%m-%d_%H_%M_%S") + ".csv"
     file_path = "data/raid/" + file_name
     data: list[list[str]] = [
-        ["RaidTeam name", "Captain", "Second", "Difficulty", "Number"],
+        ["Team name", "Captain", "Second", "Difficulty", "Number"],
     ]
     data.extend(
         [
@@ -533,7 +533,7 @@ async def get_participant(
 ) -> models_raid.RaidParticipant:
     participant = await cruds_raid.get_participant_by_id(participant_id, db)
     if not participant:
-        raise HTTPException(status_code=404, detail="RaidParticipant not found.")
+        raise HTTPException(status_code=404, detail="Participant not found.")
     return participant
 
 
