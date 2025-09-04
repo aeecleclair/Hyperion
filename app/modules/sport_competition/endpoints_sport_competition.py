@@ -1441,6 +1441,17 @@ async def join_sport(
             status_code=400,
             detail="Sport declared needs to be played individually",
         )
+    else:
+        new_team = schemas_sport_competition.Team(
+            id=uuid4(),
+            edition_id=edition.id,
+            school_id=user.user.school_id,
+            sport_id=sport_id,
+            captain_id=user.user_id,
+            created_at=datetime.now(UTC),
+            name=f"{user.user.firstname} {user.user.name} - {school.school.name}",
+        )
+        await cruds_sport_competition.add_team(new_team, db)
     is_licence_valid = False
     if participant_info.license:
         is_licence_valid = validate_participant_ffsu_licence(
@@ -1456,7 +1467,7 @@ async def join_sport(
         license=participant_info.license,
         substitute=participant_info.substitute,
         is_licence_valid=is_licence_valid,
-        team_id=participant_info.team_id,
+        team_id=participant_info.team_id or new_team.id,
         created_at=datetime.now(UTC),
     )
     await cruds_sport_competition.add_participant(
