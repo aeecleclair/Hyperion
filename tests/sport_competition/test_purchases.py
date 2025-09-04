@@ -25,6 +25,7 @@ from tests.commons import (
     create_api_access_token,
     create_user_with_groups,
     get_TestingSessionLocal,
+    mocked_checkout_id,
 )
 
 school_from_lyon: models_schools.CoreSchool
@@ -1212,3 +1213,40 @@ async def test_delete_payment(
     )
     assert invalid_purchase is not None
     assert invalid_purchase["validated"] is False
+
+
+async def test_pay(client: TestClient):
+    response = client.post(
+        "/competition/pay",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+    assert response.json()["url"] == "https://some.url.fr/checkout"
+
+    response = client.post(
+        "/payment/helloasso/webhook",
+        json={
+            "eventType": "Payment",
+            "data": {"amount": 800, "id": 123},
+            "metadata": {
+                "hyperion_checkout_id": str(mocked_checkout_id),
+                "secret": "checkoutsecret",
+            },
+        },
+    )
+    assert response.status_code == 204
+
+    purchases = client.get(
+        "/competition/purchases/me",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    purchases_data = purchases.json()
+    assert all(purchase["validated"] is True for purchase in purchases_data)
+
+    payments = client.get(
+        f"/competition/users/{admin_user.id}/payments",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    payments_data = payments.json()
+
+    assert any(payment["total"] == 800 for payment in payments_data)
