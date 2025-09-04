@@ -14,11 +14,6 @@ class InconsistentData(Exception):
         return "Inconsistent data"
 
 
-class MultipleEditions(Exception):
-    def __str__(self) -> str:
-        return "Multiple activated editions"
-
-
 class UnauthorizedAction(Exception):
     def __str__(self) -> str:
         return "Unauthorized action"
