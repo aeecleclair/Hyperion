@@ -61,6 +61,7 @@ def upgrade() -> None:
         sa.Column("start_date", TZDateTime(), nullable=False),
         sa.Column("end_date", TZDateTime(), nullable=False),
         sa.Column("active", sa.Boolean(), nullable=False),
+        sa.Column("inscription_enabled", sa.Boolean(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
@@ -100,6 +101,7 @@ def upgrade() -> None:
         sa.Column("school_id", sa.Uuid(), nullable=False),
         sa.Column("from_lyon", sa.Boolean(), nullable=False),
         sa.Column("active", sa.Boolean(), nullable=False),
+        sa.Column("inscription_enabled", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(["school_id"], ["core_school.id"]),
         sa.PrimaryKeyConstraint("school_id"),
     )
@@ -152,6 +154,7 @@ def upgrade() -> None:
         sa.Column("edition_id", sa.Uuid(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("captain_id", sa.String(), nullable=False),
+        sa.Column("created_at", TZDateTime(), nullable=False),
         sa.ForeignKeyConstraint(["captain_id"], ["competition_user.user_id"]),
         sa.ForeignKeyConstraint(["edition_id"], ["competition_edition.id"]),
         sa.ForeignKeyConstraint(
@@ -159,6 +162,16 @@ def upgrade() -> None:
             ["competition_school_extension.school_id"],
         ),
         sa.ForeignKeyConstraint(["sport_id"], ["competition_sport.id"]),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
+        "competition_location",
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("name", sa.String(), nullable=False),
+        sa.Column("address", sa.String(), nullable=True),
+        sa.Column("latitude", sa.Float(), nullable=True),
+        sa.Column("longitude", sa.Float(), nullable=True),
+        sa.Column("description", sa.String(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
@@ -170,7 +183,7 @@ def upgrade() -> None:
         sa.Column("team1_id", sa.Uuid(), nullable=False),
         sa.Column("team2_id", sa.Uuid(), nullable=False),
         sa.Column("date", TZDateTime(), nullable=True),
-        sa.Column("location", sa.String(), nullable=True),
+        sa.Column("location_id", sa.Uuid(), nullable=False),
         sa.Column("score_team1", sa.Integer(), nullable=True),
         sa.Column("score_team2", sa.Integer(), nullable=True),
         sa.Column("winner_id", sa.Uuid(), nullable=True),
@@ -179,6 +192,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["team1_id"], ["competition_team.id"]),
         sa.ForeignKeyConstraint(["team2_id"], ["competition_team.id"]),
         sa.ForeignKeyConstraint(["winner_id"], ["competition_team.id"]),
+        sa.ForeignKeyConstraint(["location_id"], ["competition_location.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
@@ -191,6 +205,7 @@ def upgrade() -> None:
         sa.Column("substitute", sa.Boolean(), nullable=False),
         sa.Column("license", sa.String(), nullable=True),
         sa.Column("validated", sa.Boolean(), nullable=False),
+        sa.Column("created_at", TZDateTime(), nullable=False),
         sa.ForeignKeyConstraint(["edition_id"], ["competition_edition.id"]),
         sa.ForeignKeyConstraint(["sport_id"], ["competition_sport.id"]),
         sa.ForeignKeyConstraint(
@@ -201,6 +216,126 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["user_id"], ["competition_user.user_id"]),
         sa.PrimaryKeyConstraint("user_id", "sport_id", "edition_id"),
     )
+    op.create_table(
+        "competition_sport_podium",
+        sa.Column("sport_id", sa.Uuid(), nullable=False),
+        sa.Column("edition_id", sa.Uuid(), nullable=False),
+        sa.Column("first_place_points", sa.Integer(), nullable=False),
+        sa.Column("second_place_points", sa.Integer(), nullable=False),
+        sa.Column("third_place_points", sa.Integer(), nullable=False),
+        sa.Column("team1_id", sa.Uuid(), nullable=True),
+        sa.Column("team2_id", sa.Uuid(), nullable=True),
+        sa.Column("team3_id", sa.Uuid(), nullable=True),
+        sa.Column("user1_id", sa.String(), nullable=True),
+        sa.Column("user2_id", sa.String(), nullable=True),
+        sa.Column("user3_id", sa.String(), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["edition_id"],
+            ["competition_edition.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["sport_id"],
+            ["competition_sport.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["team1_id"],
+            ["competition_team.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["team2_id"],
+            ["competition_team.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["team3_id"],
+            ["competition_team.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["user1_id"],
+            ["competition_user.user_id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["user2_id"],
+            ["competition_user.user_id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["user3_id"],
+            ["competition_user.user_id"],
+        ),
+        sa.PrimaryKeyConstraint("sport_id", "edition_id"),
+    )
+    op.create_table(
+        "competition_product",
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("name", sa.String(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
+        "competition_product_variant",
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("product_id", sa.Uuid(), nullable=False),
+        sa.Column("name", sa.String(), nullable=False),
+        sa.Column("price", sa.Integer(), nullable=False),
+        sa.Column("enabled", sa.Boolean(), nullable=False),
+        sa.Column("competition_group_id", sa.Uuid(), nullable=True),
+        sa.Column("description", sa.String(), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["competition_group_id"],
+            ["competition_group.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["product_id"],
+            ["competition_product.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
+        "competition_payment",
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("user_id", sa.String(), nullable=False),
+        sa.Column("total", sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["user_id"],
+            ["core_user.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
+        "competition_purchase",
+        sa.Column("user_id", sa.String(), nullable=False),
+        sa.Column("product_variant_id", sa.Uuid(), nullable=False),
+        sa.Column("validated", sa.Boolean(), nullable=False),
+        sa.Column("paid", sa.Boolean(), nullable=False),
+        sa.Column("purchased_on", TZDateTime(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["product_variant_id"],
+            ["competition_product_variant.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["user_id"],
+            ["core_user.id"],
+        ),
+        sa.PrimaryKeyConstraint("user_id", "product_variant_id"),
+    )
+    op.create_table(
+        "competition_school_product_quota",
+        sa.Column("product_id", sa.Uuid(), nullable=False),
+        sa.Column("school_id", sa.Uuid(), nullable=False),
+        sa.Column("edition_id", sa.Uuid(), nullable=False),
+        sa.Column("quota", sa.Integer(), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["edition_id"],
+            ["competition_edition.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["product_id"],
+            ["competition_product.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["school_id"],
+            ["competition_school_extension.school_id"],
+        ),
+        sa.PrimaryKeyConstraint("product_id", "school_id", "edition_id"),
+    )
     for group_type in CompetitionGroupType:
         op.execute(
             f"INSERT INTO competition_group (id, name) VALUES ('{group_type.value}', '{group_type.name}') ON CONFLICT DO NOTHING;",
@@ -210,8 +345,15 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_table("competition_school_product_quota")
+    op.drop_table("competition_purchase")
+    op.drop_table("competition_payment")
+    op.drop_table("competition_product_variant")
+    op.drop_table("competition_product")
+    op.drop_table("competition_sport_podium")
     op.drop_table("competition_participant")
     op.drop_table("competition_match")
+    op.drop_table("competition_location")
     op.drop_table("competition_team")
     op.drop_table("competition_sport_quota")
     op.drop_table("competition_school_general_quota")
