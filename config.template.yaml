@@ -7,7 +7,6 @@ ACCESS_TOKEN_SECRET_KEY: ""
 # The example below was generated using a 2048-bit RSA key generator
 RSA_PRIVATE_PEM_STRING: |
   #-----BEGIN RSA PRIVATE KEY-----
-  #0000000000000000000000000000000000000000000000000000000000000000
   #-----END RSA PRIVATE KEY-----
 
 # Host or url of the instance of Hyperion
