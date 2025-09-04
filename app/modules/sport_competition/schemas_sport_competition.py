@@ -192,7 +192,7 @@ class Participant(BaseModel):
     edition_id: UUID
     school_id: UUID
     license: str
-    is_licence_valid: bool
+    is_license_valid: bool
     substitute: bool = False
     team_id: UUID
 

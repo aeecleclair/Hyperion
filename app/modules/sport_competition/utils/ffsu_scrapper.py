@@ -8,14 +8,14 @@ from app.modules.sport_competition import (
 
 
 class FFSUData(BaseModel):
-    licences: list[str]
+    licenses: list[str]
     name: str
     firstname: str
     sport_without_constraints: str
     sport_with_constraints: str
 
 
-def scrap_ffsu_licences(
+def scrap_ffsu_licenses(
     school_ffsu_id: str,
     user_name: str,
     user_firstname: str,
@@ -24,7 +24,7 @@ def scrap_ffsu_licences(
     Scrape the FFSU information from the user's profile.
     """
 
-    url = "https://www.sport-u-licences.com/sport-u/resultat.php"
+    url = "https://www.sport-u-licenses.com/sport-u/resultat.php"
 
     data = {
         "NUMAS": school_ffsu_id,
@@ -49,7 +49,7 @@ def scrap_ffsu_licences(
             continue
         result.append(
             FFSUData(
-                licences=cells[0].get_text(strip=True).split(" "),
+                licenses=cells[0].get_text(strip=True).split(" "),
                 name=cells[4].get_text(strip=True),
                 firstname=cells[5].get_text(strip=True),
                 sport_without_constraints=cells[9].get_text(strip=True),
@@ -61,14 +61,14 @@ def scrap_ffsu_licences(
     return result
 
 
-def validate_participant_ffsu_licence(
+def validate_participant_ffsu_license(
     school: schemas_sport_competition.SchoolExtensionComplete,
     user: schemas_sport_competition.CompetitionUser,
-    ffsu_licence: str,
+    ffsu_license: str,
 ):
-    ffsu_data = scrap_ffsu_licences(
+    ffsu_data = scrap_ffsu_licenses(
         school.ffsu_id or "",
         user.user.firstname,
         user.user.name,
     )
-    return any(ffsu_licence in data.licences for data in ffsu_data)
+    return any(ffsu_license in data.licenses for data in ffsu_data)
