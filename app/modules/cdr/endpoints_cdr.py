@@ -467,6 +467,13 @@ async def generate_and_send_results(
     hyperion_error_logger.info(
         f"Data for seller {seller.name} fetched. Starting to construct the dataframe.",
     )
+
+    file_directory = "/app/data/cdr"
+    file_uuid = uuid4()
+    # file_name = f"CdR {datetime.now(tz=UTC).year} ventes {seller.name}.xlsx"
+
+    Path.mkdir(Path(file_directory), parents=True, exist_ok=True)
+
     df = construct_dataframe_from_users_purchases(
         users_purchases=purchases_by_users,
         users=list(users),
@@ -474,22 +481,12 @@ async def generate_and_send_results(
         variants=variants,
         data_fields=product_fields,
         users_answers=users_answers,
+        export_path=Path(file_directory, str(file_uuid)),
     )
     hyperion_error_logger.info(
         f"Dataframe for seller {seller.name} constructed. Generating the Excel file.",
     )
 
-    file_directory = "/app/data/cdr"
-    file_uuid = uuid4()
-    # file_name = f"CdR {datetime.now(tz=UTC).year} ventes {seller.name}.xlsx"
-
-    Path.mkdir(Path(file_directory), parents=True, exist_ok=True)
-    df.to_excel(
-        Path(file_directory, str(file_uuid)),
-        index=False,
-        freeze_panes=(2, 3),
-        engine="xlsxwriter",
-    )
     return Path(file_directory, str(file_uuid))
 
     # Not working, we have to keep the file in the server
