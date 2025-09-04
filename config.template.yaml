@@ -7,9 +7,7 @@ ACCESS_TOKEN_SECRET_KEY: ""
 # The example below was generated using a 2048-bit RSA key generator
 RSA_PRIVATE_PEM_STRING: |
   #-----BEGIN RSA PRIVATE KEY-----
-  #MIIEpQIBAAKCAQEA1tpj3TZDkJakp2RygsM392pQbcmNBOGFT8FlETcRG/JVFT7k
-  #AZERTYUIOPqsdfghjklm1234567890WXCVBNazertyuiop1234567890QSDFGHJK
-  #LMetcETC=
+  #0000000000000000000000000000000000000000000000000000000000000000
   #-----END RSA PRIVATE KEY-----
 
 # Host or url of the instance of Hyperion
@@ -49,9 +47,9 @@ AUTH_CLIENTS:
     secret: PostmanSecret
     redirect_uri:
       - https://oauth.pstmn.io/v1/callback
+      - http://postman
       - http://localhost:8000/docs/oauth2-redirect
       - http://127.0.0.1:8000/docs/oauth2-redirect
-      - http://postman/
     auth_client: APIToolAuthClient
 
 #####################
@@ -69,9 +67,11 @@ CORS_ORIGINS:
 #  - *
 
 # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (if possible Postgresql should be used instead)
-SQLITE_DB: "app.db"
+SQLITE_DB: app.db
 # If True, will print all SQL queries in the console
 DATABASE_DEBUG: False
+# if True and the database is empty, it will be seeded with mocked data
+USE_FACTORIES: True
 
 #####################################
 # SMTP configuration using starttls #
