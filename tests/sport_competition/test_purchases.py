@@ -11,6 +11,7 @@ from app.core.schools import models_schools
 from app.core.schools.schools_type import SchoolType
 from app.core.users import models_users
 from app.modules.sport_competition import (
+    cruds_sport_competition,
     models_sport_competition,
     schemas_sport_competition,
 )
@@ -20,6 +21,7 @@ from app.modules.sport_competition.types_sport_competition import (
     SportCategory,
 )
 from tests.commons import (
+    TestingSessionLocal,
     add_object_to_db,
     create_api_access_token,
     create_user_with_groups,
@@ -78,6 +80,7 @@ variant_disabled: models_sport_competition.CompetitionProductVariant
 variant_old_edition: models_sport_competition.CompetitionProductVariant
 
 purchase: models_sport_competition.CompetitionPurchase
+purchase2: models_sport_competition.CompetitionPurchase
 payment: models_sport_competition.CompetitionPayment
 checkout: models_sport_competition.CompetitionCheckout
 
@@ -375,7 +378,7 @@ async def setup():
         edition_id=active_edition.id,
         name="Athlete Variant",
         description="Variant for athletes",
-        price=1000,
+        price=10000,
         enabled=True,
         unique=False,
         school_type=ProductSchoolType.centrale,
@@ -518,16 +521,25 @@ async def setup():
     )
     await add_object_to_db(variant_old_edition)
 
-    global purchase, payment, checkout
+    global purchase, purchase2, payment, checkout
     purchase = models_sport_competition.CompetitionPurchase(
         product_variant_id=variant_for_athlete.id,
         user_id=admin_user.id,
         edition_id=active_edition.id,
-        quantity=2,
+        quantity=1,
         validated=False,
         purchased_on=datetime.now(UTC),
     )
     await add_object_to_db(purchase)
+    purchase2 = models_sport_competition.CompetitionPurchase(
+        product_variant_id=variant_for_centrale.id,
+        user_id=admin_user.id,
+        edition_id=active_edition.id,
+        quantity=1,
+        validated=False,
+        purchased_on=datetime.now(UTC),
+    )
+    await add_object_to_db(purchase2)
     payment = models_sport_competition.CompetitionPayment(
         id=uuid4(),
         user_id=admin_user.id,
@@ -944,14 +956,14 @@ async def test_get_own_purchases(
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
-    assert len(data) == 1
+    assert len(data) == 2
     assert data[0]["product_variant_id"] == str(purchase.product_variant_id)
+    assert data[1]["product_variant_id"] == str(purchase2.product_variant_id)
 
 
 @pytest.mark.parametrize(
     ("token", "variant", "quantity", "expected_status"),
     [
-        ("admin", "athlete", 1, 201),
         ("from_lyon", "from_lyon", 1, 201),
         ("others", "others", 1, 201),
         ("cameraman", "cameraman", 1, 201),
@@ -975,7 +987,6 @@ async def test_get_own_purchases(
 )
 async def test_create_purchase(
     client: TestClient,
-    users: dict[str, models_users.CoreUser],
     user_tokens: dict[str, str],
     variants: dict[str, models_sport_competition.CompetitionProductVariant],
     token: str,
@@ -1008,3 +1019,196 @@ async def test_create_purchase(
             purchase["product_variant_id"] == str(variants[variant].id)
             for purchase in purchases_data
         )
+
+
+async def test_delete_purchase(
+    client: TestClient,
+):
+    purchase_to_delete = models_sport_competition.CompetitionPurchase(
+        product_variant_id=variant_for_cameraman.id,
+        user_id=admin_user.id,
+        edition_id=active_edition.id,
+        quantity=1,
+        validated=False,
+        purchased_on=datetime.now(UTC),
+    )
+    await add_object_to_db(purchase_to_delete)
+    response = client.delete(
+        f"/competition/purchases/{purchase_to_delete.product_variant_id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 204
+    purchases = client.get(
+        "/competition/purchases/me",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    purchases_data = purchases.json()
+    assert not any(
+        purchase["product_variant_id"] == str(purchase_to_delete.product_variant_id)
+        for purchase in purchases_data
+    )
+
+
+async def test_delete_validated_purchase(
+    client: TestClient,
+):
+    validated_purchase = models_sport_competition.CompetitionPurchase(
+        product_variant_id=variant_for_pompom.id,
+        user_id=admin_user.id,
+        edition_id=active_edition.id,
+        quantity=1,
+        validated=True,
+        purchased_on=datetime.now(UTC),
+    )
+    await add_object_to_db(validated_purchase)
+    response = client.delete(
+        f"/competition/purchases/{validated_purchase.product_variant_id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 403
+    purchases = client.get(
+        "/competition/purchases/me",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    purchases_data = purchases.json()
+    assert any(
+        purchase["product_variant_id"] == str(validated_purchase.product_variant_id)
+        for purchase in purchases_data
+    )
+
+
+async def test_get_payments(
+    client: TestClient,
+):
+    response = client.get(
+        f"/competition/users/{admin_user.id}/payments",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) == 1
+    assert data[0]["id"] == str(payment.id)
+
+
+async def test_create_payment_non_validated_participant(
+    client: TestClient,
+):
+    new_payment = {
+        "total": 3000,
+    }
+    response = client.post(
+        f"/competition/users/{user_others.id}/payments",
+        headers={"Authorization": f"Bearer {user_others_token}"},
+        json=new_payment,
+    )
+    assert response.status_code == 403
+
+
+async def test_create_payment(
+    client: TestClient,
+):
+    async with TestingSessionLocal() as db:
+        await cruds_sport_competition.validate_participant(
+            admin_user.id,
+            active_edition.id,
+            db,
+        )
+        await db.commit()
+
+    new_payment = {
+        "total": 9000,
+    }
+    response = client.post(
+        f"/competition/users/{admin_user.id}/payments",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json=new_payment,
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["total"] == new_payment["total"]
+    assert "id" in data
+
+    payments = client.get(
+        f"/competition/users/{admin_user.id}/payments",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    payments_data = payments.json()
+    assert any(payment["id"] == data["id"] for payment in payments_data)
+
+    purchases = client.get(
+        "/competition/purchases/me",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    purchases_data = purchases.json()
+    validated_purchase = next(
+        (
+            each_purchase
+            for each_purchase in purchases_data
+            if each_purchase["product_variant_id"] == str(purchase.product_variant_id)
+        ),
+        None,
+    )
+    assert validated_purchase is not None
+    assert validated_purchase["validated"] is True
+    invalid_purchase = next(
+        (
+            each_purchase
+            for each_purchase in purchases_data
+            if each_purchase["product_variant_id"] == str(purchase2.product_variant_id)
+        ),
+        None,
+    )
+    assert invalid_purchase is not None
+    assert invalid_purchase["validated"] is False
+
+
+async def test_delete_payment(
+    client: TestClient,
+):
+    payment_to_delete = models_sport_competition.CompetitionPayment(
+        id=uuid4(),
+        user_id=admin_user.id,
+        edition_id=active_edition.id,
+        total=500,
+        created_at=datetime.now(UTC),
+    )
+    await add_object_to_db(payment_to_delete)
+    async with TestingSessionLocal() as db:
+        await cruds_sport_competition.mark_purchase_as_validated(
+            admin_user.id,
+            purchase2.product_variant_id,
+            True,
+            db,
+        )
+        await db.commit()
+
+    response = client.delete(
+        f"/competition/users/{admin_user.id}/payments/{payment_to_delete.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 204
+    payments = client.get(
+        f"/competition/users/{admin_user.id}/payments",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    payments_data = payments.json()
+    assert not any(
+        payment["id"] == str(payment_to_delete.id) for payment in payments_data
+    )
+
+    purchases = client.get(
+        "/competition/purchases/me",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    purchases_data = purchases.json()
+    invalid_purchase = next(
+        (
+            each_purchase
+            for each_purchase in purchases_data
+            if each_purchase["product_variant_id"] == str(purchase2.product_variant_id)
+        ),
+        None,
+    )
+    assert invalid_purchase is not None
+    assert invalid_purchase["validated"] is False

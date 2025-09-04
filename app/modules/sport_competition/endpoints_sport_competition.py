@@ -6,14 +6,12 @@ from fastapi import Body, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import GroupType, get_account_types_except_externals
-from app.core.payment import schemas_payment
 from app.core.payment.payment_tool import PaymentTool
 from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.schools import cruds_schools
 from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users, models_users, schemas_users
-from app.core.utils.config import Settings
-from app.dependencies import get_db, get_payment_tool, get_settings, is_user, is_user_in
+from app.dependencies import get_db, get_payment_tool, is_user, is_user_in
 from app.modules.sport_competition import (
     cruds_sport_competition,
     schemas_sport_competition,
@@ -24,7 +22,6 @@ from app.modules.sport_competition.dependencies_sport_competition import (
 )
 from app.modules.sport_competition.types_sport_competition import (
     CompetitionGroupType,
-    ProductPublicType,
     ProductSchoolType,
 )
 from app.modules.sport_competition.utils.ffsu_scrapper import (
@@ -33,6 +30,8 @@ from app.modules.sport_competition.utils.ffsu_scrapper import (
 from app.modules.sport_competition.utils_sport_competition import (
     checksport_category_compatibility,
     get_public_type_from_user,
+    validate_payment,
+    validate_product_variant_purchase,
 )
 from app.types.module import Module
 from app.utils.tools import is_user_member_of_any_group
@@ -43,6 +42,7 @@ module = Module(
     root="sport_competition",
     tag="Sport Competition",
     default_allowed_account_types=get_account_types_except_externals(),
+    payment_callback=validate_payment,
     factory=None,
 )
 
@@ -2517,73 +2517,6 @@ async def get_my_purchases(
     return await get_purchases_by_user_id(user.id, db, user, edition)
 
 
-def validate_purchase(
-    purchase: schemas_sport_competition.PurchaseBase,
-    product_variant: schemas_sport_competition.ProductVariantWithProduct,
-    user: schemas_sport_competition.CompetitionUser,
-    user_school: schemas_sport_competition.SchoolExtensionComplete,
-    edition: schemas_sport_competition.CompetitionEdition,
-) -> None:
-    if purchase.quantity < 1:
-        raise HTTPException(
-            status_code=400,
-            detail="Quantity must be at least 1",
-        )
-    if product_variant.product.edition_id != edition.id:
-        raise HTTPException(
-            status_code=403,
-            detail="Product variant does not belong to the current edition",
-        )
-    if not product_variant.enabled:
-        raise HTTPException(
-            status_code=403,
-            detail="This product variant is not available for purchase",
-        )
-    if product_variant.unique and purchase.quantity > 1:
-        raise HTTPException(
-            status_code=403,
-            detail="You can only purchase one of this product variant",
-        )
-    if (
-        (
-            product_variant.school_type == ProductSchoolType.centrale
-            and user.user.school_id != SchoolType.centrale_lyon.value
-        )
-        or (
-            product_variant.school_type == ProductSchoolType.from_lyon
-            and user_school.from_lyon is False
-        )
-        or (
-            product_variant.school_type == ProductSchoolType.others
-            and user_school.from_lyon is True
-        )
-        or (
-            product_variant.public_type == ProductPublicType.athlete
-            and not user.is_athlete
-        )
-        or (
-            product_variant.public_type == ProductPublicType.cameraman
-            and not user.is_cameraman
-        )
-        or (
-            product_variant.public_type == ProductPublicType.pompom
-            and not user.is_pompom
-        )
-        or (
-            product_variant.public_type == ProductPublicType.volunteer
-            and not user.is_volunteer
-        )
-        or (
-            product_variant.public_type == ProductPublicType.fanfare
-            and not user.is_fanfare
-        )
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You are not allowed to purchase this product variant",
-        )
-
-
 @module.router.post(
     "/competition/purchases/me",
     response_model=schemas_sport_competition.Purchase,
@@ -2631,7 +2564,7 @@ async def create_purchase(
             status_code=404,
             detail="Invalid product_variant_id",
         )
-    validate_purchase(
+    validate_product_variant_purchase(
         purchase,
         product_variant,
         competition_user,
@@ -2673,11 +2606,10 @@ async def create_purchase(
 
 
 @module.router.delete(
-    "/competition/users/{user_id}/purchases/{product_variant_id}",
+    "/competition/purchases/{product_variant_id}",
     status_code=204,
 )
 async def delete_purchase(
-    user_id: str,
     product_variant_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
@@ -2692,7 +2624,7 @@ async def delete_purchase(
     """
 
     db_purchase = await cruds_sport_competition.load_purchase_by_ids(
-        user_id,
+        user.id,
         product_variant_id,
         db,
     )
@@ -2708,7 +2640,7 @@ async def delete_purchase(
         )
 
     await cruds_sport_competition.delete_purchase(
-        user_id,
+        user.id,
         product_variant_id,
         db,
     )
@@ -2734,10 +2666,11 @@ async def get_payments_by_user_id(
     """
     Get a user's payments.
 
-    **User must get his own payments or be CDR Admin to use this endpoint**
+    **User must get his own payments or be competition admin to use this endpoint**
     """
     if not (
-        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_cdr])
+        user_id == user.id
+        or is_user_member_of_any_group(user, [GroupType.competition_admin])
     ):
         raise HTTPException(
             status_code=403,
@@ -2759,7 +2692,7 @@ async def create_payment(
     user_id: str,
     payment: schemas_sport_competition.PaymentBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.competition_admin)),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -2767,8 +2700,24 @@ async def create_payment(
     """
     Create a payment.
 
-    **User must be CDR Admin to use this endpoint**
+    **User must be competition admin to use this endpoint**
     """
+    user_competition = await cruds_sport_competition.load_competition_user_by_id(
+        user_id,
+        edition.id,
+        db,
+    )
+    if not user_competition:
+        raise HTTPException(
+            status_code=404,
+            detail="The user is not registered for the competition.",
+        )
+    if not user_competition.validated:
+        raise HTTPException(
+            status_code=403,
+            detail="The user registration is not validated.",
+        )
+
     db_payment = schemas_sport_competition.PaymentComplete(
         id=uuid4(),
         user_id=user_id,
@@ -2776,9 +2725,48 @@ async def create_payment(
         edition_id=edition.id,
     )
 
+    purchases = await cruds_sport_competition.load_purchases_by_user_id(
+        user_id,
+        edition.id,
+        db,
+    )
+    payments = await cruds_sport_competition.load_user_payments(
+        user_id,
+        edition.id,
+        db,
+    )
+
+    purchases_total = sum(
+        purchase.product_variant.price * purchase.quantity for purchase in purchases
+    )
+    payments_total = sum(payment.total for payment in payments)
+    total_paid = payments_total + db_payment.total
+
+    if total_paid == purchases_total:
+        for purchase in purchases:
+            await cruds_sport_competition.mark_purchase_as_validated(
+                purchase.user_id,
+                purchase.product_variant_id,
+                True,
+                db,
+            )
+    else:
+        purchases.sort(key=lambda x: x.purchased_on)
+        for purchase in purchases:
+            if total_paid <= 0:
+                break
+            if purchase.validated:
+                total_paid -= purchase.product_variant.price * purchase.quantity
+                continue
+            if purchase.product_variant.price * purchase.quantity <= total_paid:
+                await cruds_sport_competition.mark_purchase_as_validated(
+                    purchase.user_id,
+                    purchase.product_variant_id,
+                    True,
+                    db,
+                )
+                total_paid -= purchase.product_variant.price * purchase.quantity
     await cruds_sport_competition.add_payment(db_payment, db)
-    # cruds_sport_competition.create_action(db, db_action)
-    await db.flush()
     return db_payment
 
 
@@ -2791,11 +2779,14 @@ async def delete_payment(
     payment_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.competition_admin)),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
 ):
     """
     Remove a payment.
 
-    **User must be CDR Admin to use this endpoint**
+    **User must be competition admin to use this endpoint**
     """
     db_payment = await cruds_sport_competition.load_payment_by_id(
         payment_id,
@@ -2816,7 +2807,26 @@ async def delete_payment(
         payment_id=payment_id,
         db=db,
     )
-    # cruds_sport_competition.create_action(db, db_action)
+    purchases = await cruds_sport_competition.load_purchases_by_user_id(
+        user_id,
+        edition.id,
+        db,
+    )
+
+    amount = db_payment.total
+    purchases.sort(key=lambda x: x.purchased_on, reverse=True)
+    for purchase in purchases:
+        if amount <= 0:
+            break
+        if not purchase.validated:
+            continue
+        await cruds_sport_competition.mark_purchase_as_validated(
+            purchase.user_id,
+            purchase.product_variant_id,
+            False,
+            db,
+        )
+        amount -= purchase.product_variant.price * purchase.quantity
 
 
 @module.router.post(
@@ -2827,7 +2837,6 @@ async def delete_payment(
 async def get_payment_url(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
-    settings: Settings = Depends(get_settings),
     payment_tool: PaymentTool = Depends(
         get_payment_tool(HelloAssoConfigName.CHALLENGER),
     ),
@@ -2893,73 +2902,6 @@ async def get_payment_url(
     return schemas_sport_competition.PaymentUrl(
         url=checkout.payment_url,
     )
-
-
-async def validate_payment(
-    checkout_payment: schemas_payment.CheckoutPayment,
-    db: AsyncSession,
-) -> None:
-    paid_amount = checkout_payment.paid_amount
-    checkout_id = checkout_payment.checkout_id
-
-    checkout = await cruds_sport_competition.get_checkout_by_checkout_id(
-        checkout_id,
-        db,
-    )
-    if not checkout:
-        hyperion_error_logger.error(
-            f"Competition payment callback: user checkout {checkout_id} not found.",
-        )
-        raise ValueError(f"User checkout {checkout_id} not found.")  # noqa: TRY003
-
-    db_payment = schemas_sport_competition.PaymentComplete(
-        id=uuid4(),
-        user_id=checkout.user_id,
-        total=paid_amount,
-        edition_id=checkout.edition_id,
-    )
-    purchases = await cruds_sport_competition.load_purchases_by_user_id(
-        checkout.user_id,
-        checkout.edition_id,
-        db,
-    )
-    payments = await cruds_sport_competition.load_user_payments(
-        checkout.user_id,
-        checkout.edition_id,
-        db,
-    )
-
-    purchases_total = sum(
-        purchase.product_variant.price * purchase.quantity for purchase in purchases
-    )
-    payments_total = sum(payment.total for payment in payments)
-
-    amount = purchases_total - payments_total
-    if amount == checkout_payment.paid_amount:
-        for purchase in purchases:
-            await cruds_sport_competition.mark_purchase_as_validated(
-                purchase.user_id,
-                purchase.product_variant_id,
-                True,
-                db,
-            )
-    else:
-        purchases.sort(key=lambda x: x.purchased_on)
-        for purchase in purchases:
-            if amount == 0:
-                break
-            if purchase.product_variant.price * purchase.quantity <= amount:
-                await cruds_sport_competition.mark_purchase_as_validated(
-                    purchase.user_id,
-                    purchase.product_variant_id,
-                    True,
-                    db,
-                )
-                amount -= purchase.product_variant.price * purchase.quantity
-
-    await cruds_sport_competition.add_payment(db_payment, db)
-    # cruds_sport_competition.create_action(db=db, action=db_action)
-    await db.flush()
 
 
 # endregion: Payments
