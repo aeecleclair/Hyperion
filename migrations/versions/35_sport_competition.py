@@ -6,6 +6,7 @@ Create Date: 2025-06-04 19:45:18.373071
 from collections.abc import Sequence
 from enum import Enum
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 if TYPE_CHECKING:
     from pytest_alembic import MigrationContext
@@ -35,6 +36,15 @@ class AccountType(Enum):
     external = "external"
     other_school_student = "other_school_student"
     demo = "demo"
+
+
+class CompetitionGroupType(Enum):
+    fanfaron = UUID("c69ed623-1cf5-4769-acc7-ddbc6490fb07")
+    pompom = UUID("22af0472-0a15-4f05-a670-fa02eda5e33f")
+    cameraman = UUID("9cb535c7-ca19-4dbc-8b04-8b34017b5cff")
+    non_athlete = UUID("84a9972c-56b0-4024-86ec-a284058e1cb1")
+    sport_manager = UUID("a3f48a0b-ada1-4fe0-b987-f4170d8896c4")
+    schools_bds = UUID("96f8ffb8-c585-4ca5-8360-dc3881f9f1e2")
 
 
 def upgrade() -> None:
@@ -191,6 +201,10 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["user_id"], ["competition_user.user_id"]),
         sa.PrimaryKeyConstraint("user_id", "sport_id", "edition_id"),
     )
+    for group_type in CompetitionGroupType:
+        op.execute(
+            f"INSERT INTO competition_group (id, name) VALUES ('{group_type.value}', '{group_type.name}') ON CONFLICT DO NOTHING;",
+        )
     # ### end Alembic commands ###
 
 
