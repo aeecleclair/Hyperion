@@ -550,7 +550,11 @@ async def generate_teams_pdf_util(
         hyperion_error_logger.info(f"RAID: team {index}/{len(teams)}")
 
         # We reset the team number to -1 to force the update of the team number
-        await cruds_raid.update_team(team.id, schemas_raid.TeamUpdate(number=-1), db)
+        await cruds_raid.update_team(
+            team.id,
+            schemas_raid.RaidTeamUpdate(number=-1),
+            db,
+        )
         await post_update_actions(
             team,
             db,
