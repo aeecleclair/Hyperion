@@ -2124,7 +2124,7 @@ async def get_school_podiums(
 
 
 @module.router.post(
-    "/competition/podiums/sport/{sport_id}/",
+    "/competition/podiums/sport/{sport_id}",
     response_model=list[schemas_sport_competition.TeamSportResult],
     status_code=201,
 )
@@ -2174,7 +2174,7 @@ async def create_sport_podium(
 
 
 @module.router.delete(
-    "/competition/podiums/sport/{sport_id}/",
+    "/competition/podiums/sport/{sport_id}",
     status_code=204,
 )
 async def delete_sport_podium(
@@ -2210,7 +2210,7 @@ async def delete_sport_podium(
 
 
 @module.router.get(
-    "/competition/products/",
+    "/competition/products",
     response_model=list[schemas_sport_competition.ProductComplete],
     status_code=200,
 )
@@ -2228,7 +2228,7 @@ async def get_all_products(
 
 
 @module.router.post(
-    "/competition/products/",
+    "/competition/products",
     response_model=schemas_sport_competition.ProductComplete,
     status_code=201,
 )
@@ -2257,10 +2257,11 @@ async def create_product(
         db_product,
         db,
     )
+    return db_product
 
 
 @module.router.patch(
-    "/competition/products/{product_id}/",
+    "/competition/products/{product_id}",
     status_code=204,
 )
 async def update_product(
@@ -2299,7 +2300,7 @@ async def update_product(
 
 
 @module.router.delete(
-    "/competition/products/{product_id}/",
+    "/competition/products/{product_id}",
     status_code=204,
 )
 async def delete_product(
@@ -2390,7 +2391,7 @@ async def get_available_product_variants(
 
 
 @module.router.post(
-    "/competition/products/{product_id}/variants/",
+    "/competition/products/{product_id}/variants",
     response_model=schemas_sport_competition.ProductVariantComplete,
     status_code=201,
 )
@@ -2439,10 +2440,11 @@ async def create_product_variant(
         db_product_variant,
         db,
     )
+    return db_product_variant
 
 
 @module.router.patch(
-    "/competition/products/variants/{variant_id}/",
+    "/competition/products/variants/{variant_id}",
     status_code=204,
 )
 async def update_product_variant(
@@ -2467,20 +2469,21 @@ async def update_product_variant(
         variant_id,
         db,
     )
-    if db_product_variant is None:
+    if db_product_variant is None or db_product_variant.edition_id != edition.id:
         raise HTTPException(
             status_code=404,
             detail="Product variant not found.",
         )
-    db_product = await cruds_sport_competition.load_product_by_id(
-        db_product_variant.product_id,
-        db,
-    )
-    if db_product is None or db_product.edition_id != edition.id:
-        raise HTTPException(
-            status_code=404,
-            detail="Product not found.",
+    if product_variant.price and product_variant.price != db_product_variant.price:
+        purchases = await cruds_sport_competition.load_purchases_by_variant_id(
+            variant_id,
+            db,
         )
+        if purchases:
+            raise HTTPException(
+                status_code=403,
+                detail="You can't edit this product variant price because some purchases are related to it.",
+            )
 
     await cruds_sport_competition.update_product_variant(
         variant_id,
@@ -2490,17 +2493,19 @@ async def update_product_variant(
 
 
 @module.router.delete(
-    "/competition/products/variants/{variant_id}/",
+    "/competition/products/variants/{variant_id}",
     status_code=204,
 )
 async def delete_product_variant(
-    product_id: UUID,
     variant_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
         is_user_in(
             group_id=GroupType.competition_admin,
         ),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
     ),
 ):
     """
@@ -2512,19 +2517,20 @@ async def delete_product_variant(
         variant_id,
         db,
     )
-    if db_product_variant is None:
+    if db_product_variant is None or db_product_variant.edition_id != edition.id:
         raise HTTPException(
             status_code=404,
             detail="Product variant not found.",
         )
-    db_product = await cruds_sport_competition.load_product_by_id(
-        db_product_variant.product_id,
+
+    purchases = await cruds_sport_competition.load_purchases_by_variant_id(
+        variant_id,
         db,
     )
-    if db_product is None:
+    if purchases:
         raise HTTPException(
-            status_code=404,
-            detail="Product not found.",
+            status_code=403,
+            detail="You can't edit this product variant because some purchases are related to it.",
         )
     await cruds_sport_competition.delete_product_variant_by_id(
         variant_id,
@@ -2570,7 +2576,7 @@ async def get_purchases_by_user_id(
 
 
 @module.router.get(
-    "/competition/purchases/me/",
+    "/competition/purchases/me",
     response_model=list[schemas_sport_competition.Purchase],
     status_code=200,
 )
@@ -2582,7 +2588,7 @@ async def get_my_purchases(
 
 
 @module.router.post(
-    "/competition/purchases/users/{user_id}/",
+    "/competition/purchases/users/{user_id}",
     response_model=schemas_sport_competition.Purchase,
     status_code=201,
 )
@@ -2696,7 +2702,7 @@ async def mark_purchase_as_validated(
 
 
 @module.router.delete(
-    "/competition/users/{user_id}/purchases/{product_variant_id}/",
+    "/competition/users/{user_id}/purchases/{product_variant_id}",
     status_code=204,
 )
 async def delete_purchase(
@@ -2745,7 +2751,7 @@ async def delete_purchase(
 
 
 @module.router.get(
-    "/competition/users/{user_id}/payments/",
+    "/competition/users/{user_id}/payments",
     response_model=list[schemas_sport_competition.PaymentComplete],
     status_code=200,
 )
@@ -2777,7 +2783,7 @@ async def get_payments_by_user_id(
 
 
 @module.router.post(
-    "/competition/users/{user_id}/payments/",
+    "/competition/users/{user_id}/payments",
     response_model=schemas_sport_competition.PaymentComplete,
     status_code=201,
 )
@@ -2809,7 +2815,7 @@ async def create_payment(
 
 
 @module.router.delete(
-    "/competition/users/{user_id}/payments/{payment_id}/",
+    "/competition/users/{user_id}/payments/{payment_id}",
     status_code=204,
 )
 async def delete_payment(
@@ -2846,7 +2852,7 @@ async def delete_payment(
 
 
 @module.router.post(
-    "/competition/pay/",
+    "/competition/pay",
     response_model=schemas_sport_competition.PaymentUrl,
     status_code=200,
 )
