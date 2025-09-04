@@ -225,23 +225,15 @@ def construct_dataframe_from_users_purchases(
         }
 
         for prod_struct in product_structure:
-            product = prod_struct["product"]
-            needs_validation = prod_struct["needs_validation"]
-
             for vinfo in prod_struct["variants_info"]:
-                variant = vinfo["variant"]
-                qty_col = vinfo["qty_col"]
-                valid_col = vinfo["valid_col"]
-
-                p = purchases_map.get(variant.id, None)
-                if p and p.quantity > 0:
-                    row[qty_col] = p.quantity
-                    if needs_validation and valid_col is not None:
-                        row[valid_col] = "OUI" if p.validated else "NON"
-                else:
-                    row[qty_col] = ""
-                    if needs_validation and valid_col is not None:
-                        row[valid_col] = ""
+                p = purchases_map.get(vinfo["variant"].id, None)
+                row[vinfo["qty_col"]] = p.quantity if p and p.quantity > 0 else ""
+                if prod_struct["needs_validation"] and vinfo["valid_col"] is not None:
+                    row[vinfo["valid_col"]] = (
+                        ("OUI" if p.validated else "NON")
+                        if p and p.quantity > 0
+                        else ""
+                    )
 
             for field, ccol in zip(
                 prod_struct["fields"],
@@ -263,14 +255,6 @@ def construct_dataframe_from_users_purchases(
             "bg_color": "#0D47A1",
             "align": "center",
             "valign": "vcenter",
-            "border": 1,
-        },
-    )
-
-    border_fmt = workbook.add_format(
-        {
-            "border": 1,
-            "font_name": "Raleway",
         },
     )
 
@@ -280,7 +264,6 @@ def construct_dataframe_from_users_purchases(
             "bold": True,
             "align": "center",
             "font_name": "Raleway",
-            "border": 1,
         },
     )
 
@@ -290,20 +273,153 @@ def construct_dataframe_from_users_purchases(
             "bold": True,
             "align": "center",
             "font_name": "Raleway",
-            "border": 1,
         },
     )
 
     center_fmt = workbook.add_format(
         {
             "align": "center",
-            "border": 1,
             "font_name": "Raleway",
+        },
+    )
+
+    # Fine right border (for variant separation)
+    center_fmt_right_border = workbook.add_format(
+        {
+            "align": "center",
+            "right": 1,
+            "font_name": "Raleway",
+        },
+    )
+
+    # Thick right border (for product separation)
+    center_fmt_thick_border = workbook.add_format(
+        {
+            "align": "center",
+            "right": 2,  # 2 = épaisse
+            "font_name": "Raleway",
+        },
+    )
+
+    # Versions pour OUI/NON
+    oui_fmt_thick = workbook.add_format(
+        {
+            "font_color": "green",
+            "bold": True,
+            "align": "center",
+            "font_name": "Raleway",
+            "right": 2,
+        },
+    )
+    non_fmt_thick = workbook.add_format(
+        {
+            "font_color": "red",
+            "bold": True,
+            "align": "center",
+            "font_name": "Raleway",
+            "right": 2,
+        },
+    )
+
+    # Versions pour OUI/NON
+    oui_fmt_right = workbook.add_format(
+        {
+            "font_color": "green",
+            "bold": True,
+            "align": "center",
+            "font_name": "Raleway",
+            "right": 1,
+        },
+    )
+    non_fmt_right = workbook.add_format(
+        {
+            "font_color": "red",
+            "bold": True,
+            "align": "center",
+            "font_name": "Raleway",
+            "right": 1,
+        },
+    )
+
+    # Pour cellule normale avec ligne épaisse en bas
+    center_fmt_bottom_border = workbook.add_format(
+        {
+            "align": "center",
+            "font_name": "Raleway",
+            "bottom": 2,
+        },
+    )
+
+    # Variante avec bordure droite fine (variante + ligne)
+    center_fmt_right_bottom_border = workbook.add_format(
+        {
+            "align": "center",
+            "font_name": "Raleway",
+            "right": 1,
+            "bottom": 2,
+        },
+    )
+
+    # Variante avec bordure droite épaisse (produit + ligne)
+    center_fmt_thick_right_bottom_border = workbook.add_format(
+        {
+            "align": "center",
+            "font_name": "Raleway",
+            "right": 2,
+            "bottom": 2,
+        },
+    )
+
+    # OUI / NON avec ligne épaisse en bas
+    oui_fmt_bottom = workbook.add_format(
+        {
+            "font_color": "green",
+            "bold": True,
+            "align": "center",
+            "font_name": "Raleway",
+            "bottom": 2,
+        },
+    )
+    non_fmt_bottom = workbook.add_format(
+        {
+            "font_color": "red",
+            "bold": True,
+            "align": "center",
+            "font_name": "Raleway",
+            "bottom": 2,
+        },
+    )
+    # Avec bordure droite
+    oui_fmt_thick_bottom = workbook.add_format(
+        {
+            "font_color": "green",
+            "bold": True,
+            "align": "center",
+            "font_name": "Raleway",
+            "right": 2,
+            "bottom": 2,
+        },
+    )
+    non_fmt_thick_bottom = workbook.add_format(
+        {
+            "font_color": "red",
+            "bold": True,
+            "align": "center",
+            "font_name": "Raleway",
+            "right": 2,
+            "bottom": 2,
         },
     )
 
     for col, title in enumerate(fixed_columns):
         worksheet.merge_range(0, col, 2, col, title, header_fmt)
+
+    max_lens = [len(c) for c in fixed_columns] + [0] * (col_idx - len(fixed_columns))
+
+    product_end_cols = [
+        len(fixed_columns) - 1,
+    ]  # Colonnes après lesquelles on mettra une bordure épaisse
+    variant_end_cols = set()  # Colonnes après lesquelles on mettra une bordure fine
 
     for prod_struct in product_structure:
         product = prod_struct["product"]
@@ -321,119 +437,113 @@ def construct_dataframe_from_users_purchases(
             )
         elif custom_cols:
             start_col = custom_cols[0]
-            end_col = custom_cols[-1]
         else:
             continue
+        if custom_cols:
+            end_col = custom_cols[-1]
 
-        if fields:
-            end_col = max(end_col, custom_cols[-1])
+        if start_col < end_col:
+            worksheet.merge_range(0, start_col, 0, end_col, product.name_fr, header_fmt)
+        else:
+            worksheet.write(0, start_col, product.name_fr, header_fmt)
 
-        worksheet.merge_range(0, start_col, 0, end_col, product.name_fr, header_fmt)
+        product_end_cols.append(end_col)
 
         for vinfo in variants_info:
             qty_col = vinfo["qty_col"]
-            valid_col = vinfo["valid_col"]
-            last_col = (
-                valid_col if (needs_validation and valid_col is not None) else qty_col
-            )
-            worksheet.merge_range(
-                1,
-                qty_col,
-                1,
-                last_col,
-                vinfo["variant"].name_fr,
-                header_fmt,
-            )
+            if needs_validation:
+                worksheet.merge_range(
+                    1, qty_col, 1, qty_col + 1, vinfo["variant"].name_fr, header_fmt,
+                )
+            else:
+                worksheet.write(1, qty_col, vinfo["variant"].name_fr, header_fmt)
 
-        if fields:
-            worksheet.merge_range(
-                1,
-                custom_cols[0],
-                1,
-                custom_cols[-1],
-                "Informations complémentaires",
-                header_fmt,
-            )
+            if needs_validation and vinfo["valid_col"] is not None:
+                variant_end_cols.add(vinfo["valid_col"])
+            else:
+                variant_end_cols.add(vinfo["qty_col"])
+
+        if custom_cols:
+            if len(custom_cols) > 1:
+                worksheet.merge_range(
+                    1,
+                    custom_cols[0],
+                    1,
+                    custom_cols[-1],
+                    "Informations complémentaires",
+                    header_fmt,
+                )
+            else:
+                worksheet.write(
+                    1, custom_cols[0], "Informations complémentaires", header_fmt,
+                )
+
+            info_comp_len = len("Informations complémentaires")
+            for c in range(custom_cols[0], custom_cols[-1] + 1):
+                max_lens[c] = max(max_lens[c], info_comp_len)
 
         for vinfo in variants_info:
             worksheet.write(2, vinfo["qty_col"], "Quantité", header_fmt)
-            if needs_validation and vinfo["valid_col"] is not None:
-                worksheet.write(2, vinfo["valid_col"], "Validé", header_fmt)
-
-        for i, field in enumerate(fields):
-            worksheet.write(2, custom_cols[i], field.name, header_fmt)
-
-        if len(variants_info) == 1 and not needs_validation and len(fields) == 0:
-            col = variants_info[0]["qty_col"]
-            worksheet.merge_range(0, col, 0, col, product.name_fr, header_fmt)
-            worksheet.merge_range(
-                1,
-                col,
-                2,
-                col,
-                variants_info[0]["variant"].name_fr,
-                header_fmt,
-            )
-
-    start_row = 3
-    for row_idx, row in enumerate(data_rows, start=start_row):
-        for col_idx_data, val in enumerate(row):
-            if val == "OUI":
-                worksheet.write(row_idx, col_idx_data, val, oui_fmt)
-            elif val == "NON":
-                worksheet.write(row_idx, col_idx_data, val, non_fmt)
-            elif isinstance(val, int):
-                worksheet.write(row_idx, col_idx_data, val, center_fmt)
-            else:
-                worksheet.write(row_idx, col_idx_data, val, border_fmt)
-
-    max_lens = [len(c) for c in fixed_columns] + [0] * (col_idx - len(fixed_columns))
-
-    for prod_struct in product_structure:
-        product_name = prod_struct["product"].name_fr
-        variants_info = prod_struct["variants_info"]
-        fields = prod_struct["fields"]
-        custom_cols = prod_struct["custom_cols"]
-        needs_validation = prod_struct["needs_validation"]
-
-        if variants_info:
-            start_col = variants_info[0]["qty_col"]
-            end_col = (
-                variants_info[-1]["valid_col"]
-                if (needs_validation and variants_info[-1]["valid_col"] is not None)
-                else variants_info[-1]["qty_col"]
-            )
-        elif custom_cols:
-            start_col = custom_cols[0]
-            end_col = custom_cols[-1]
-        else:
-            continue
-
-        if fields:
-            end_col = max(end_col, custom_cols[-1])
-
-        for c in range(start_col, end_col + 1):
-            max_lens[c] = max(max_lens[c], len(product_name))
-
-        for vinfo in variants_info:
-            variant_name = vinfo["variant"].name_fr
             max_lens[vinfo["qty_col"]] = max(
                 max_lens[vinfo["qty_col"]],
-                len(variant_name),
+                len(vinfo["variant"].name_fr),
             )
             if needs_validation and vinfo["valid_col"] is not None:
+                worksheet.write(2, vinfo["valid_col"], "Validé", header_fmt)
                 max_lens[vinfo["valid_col"]] = max(
                     max_lens[vinfo["valid_col"]],
                     len("Validé"),
                 )
 
         for i, field in enumerate(fields):
+            worksheet.write(2, custom_cols[i], field.name, header_fmt)
             max_lens[custom_cols[i]] = max(max_lens[custom_cols[i]], len(field.name))
 
-        if fields:
-            info_comp_len = len("Informations complémentaires")
-            for c in range(custom_cols[0], custom_cols[-1] + 1):
-                max_lens[c] = max(max_lens[c], info_comp_len)
+        for c in range(start_col, end_col + 1):
+            max_lens[c] = max(max_lens[c], len(product.name_fr))
+
+    start_row = 3
+    for row_idx, row in enumerate(data_rows, start=start_row):
+        apply_bottom_border = row_idx == start_row + len(data_rows) - 1 or row_idx == 2
+        for col_idx_data, val in enumerate(row):
+            if col_idx_data in product_end_cols:
+                if val == "OUI":
+                    cell_fmt = (
+                        oui_fmt_thick_bottom if apply_bottom_border else oui_fmt_thick
+                    )
+                elif val == "NON":
+                    cell_fmt = (
+                        non_fmt_thick_bottom if apply_bottom_border else non_fmt_thick
+                    )
+                else:
+                    cell_fmt = (
+                        center_fmt_thick_right_bottom_border
+                        if apply_bottom_border
+                        else center_fmt_thick_border
+                    )
+            elif col_idx_data in variant_end_cols:
+                if val == "OUI":
+                    cell_fmt = oui_fmt_bottom if apply_bottom_border else oui_fmt_right
+                elif val == "NON":
+                    cell_fmt = non_fmt_bottom if apply_bottom_border else non_fmt_right
+                else:
+                    cell_fmt = (
+                        center_fmt_right_bottom_border
+                        if apply_bottom_border
+                        else center_fmt_right_border
+                    )
+            elif val == "OUI":
+                cell_fmt = oui_fmt_bottom if apply_bottom_border else oui_fmt
+            elif val == "NON":
+                cell_fmt = non_fmt_bottom if apply_bottom_border else non_fmt
+            else:
+                cell_fmt = (
+                    center_fmt_bottom_border if apply_bottom_border else center_fmt
+                )
+
+            worksheet.write(row_idx, col_idx_data, val, cell_fmt)
+
+            max_lens[col_idx_data] = max(max_lens[col_idx_data], len(str(val)))
 
     for i, length in enumerate(max_lens):
         worksheet.set_column(i, i, length + 3)
