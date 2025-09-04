@@ -83,6 +83,20 @@ checkout: models_sport_competition.CompetitionCheckout
 
 
 @pytest.fixture
+def users():
+    return {
+        "admin": admin_user,
+        "from_lyon": user_from_lyon,
+        "others": user_others,
+        "cameraman": user_cameraman,
+        "pompom": user_pompom,
+        "fanfare": user_fanfare,
+        "volunteer": user_volunteer,
+        "multiple": user_multiple,
+    }
+
+
+@pytest.fixture
 def user_tokens():
     return {
         "admin": admin_token,
@@ -415,7 +429,7 @@ async def setup():
         description="Variant for volunteers",
         price=200,
         enabled=True,
-        unique=False,
+        unique=True,
         school_type=ProductSchoolType.centrale,
         public_type=ProductPublicType.volunteer,
     )
@@ -908,3 +922,89 @@ async def get_user_purchases(
     assert isinstance(data, list)
     assert len(data) == 1
     assert data[0]["product_variant_id"] == str(purchase.product_variant_id)
+
+
+async def test_get_user_purchases_unauthorized(
+    client: TestClient,
+):
+    response = client.get(
+        f"/competition/purchases/users/{user_others.id}",
+        headers={"Authorization": f"Bearer {user_others_token}"},
+    )
+    assert response.status_code == 403
+
+
+async def test_get_own_purchases(
+    client: TestClient,
+):
+    response = client.get(
+        "/competition/purchases/me",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) == 1
+    assert data[0]["product_variant_id"] == str(purchase.product_variant_id)
+
+
+@pytest.mark.parametrize(
+    ("token", "variant", "quantity", "expected_status"),
+    [
+        ("admin", "athlete", 1, 201),
+        ("from_lyon", "from_lyon", 1, 201),
+        ("others", "others", 1, 201),
+        ("cameraman", "cameraman", 1, 201),
+        ("pompom", "pompom", 1, 201),
+        ("fanfare", "fanfare", 1, 201),
+        ("volunteer", "volunteer", 2, 403),
+        ("volunteer", "volunteer", 1, 201),
+        ("multiple", "athlete", 1, 201),
+        ("from_lyon", "others", 1, 403),
+        ("others", "from_lyon", 1, 403),
+        ("cameraman", "athlete", 1, 403),
+        ("pompom", "athlete", 1, 403),
+        ("fanfare", "athlete", 1, 403),
+        ("volunteer", "athlete", 1, 403),
+        ("multiple", "cameraman", 1, 201),
+        ("multiple", "volunteer", 1, 201),
+        ("multiple", "fanfare", 1, 403),
+        ("admin", "disabled", 1, 403),
+        ("admin", "old_edition", 1, 403),
+    ],
+)
+async def test_create_purchase(
+    client: TestClient,
+    users: dict[str, models_users.CoreUser],
+    user_tokens: dict[str, str],
+    variants: dict[str, models_sport_competition.CompetitionProductVariant],
+    token: str,
+    variant: str,
+    quantity: int,
+    expected_status: int,
+):
+    new_purchase = {
+        "product_variant_id": str(variants[variant].id),
+        "quantity": quantity,
+    }
+    response = client.post(
+        "/competition/purchases/me",
+        headers={"Authorization": f"Bearer {user_tokens[token]}"},
+        json=new_purchase,
+    )
+    assert response.status_code == expected_status
+    purchases = client.get(
+        "/competition/purchases/me",
+        headers={"Authorization": f"Bearer {user_tokens[token]}"},
+    )
+    purchases_data = purchases.json()
+    if response.status_code != 201:
+        assert not any(
+            purchase["product_variant_id"] == str(variants[variant].id)
+            for purchase in purchases_data
+        )
+    else:
+        assert any(
+            purchase["product_variant_id"] == str(variants[variant].id)
+            for purchase in purchases_data
+        )

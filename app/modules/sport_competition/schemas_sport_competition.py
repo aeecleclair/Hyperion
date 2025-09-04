@@ -351,10 +351,17 @@ class ProductBase(BaseModel):
     description: str | None = None
 
 
-class ProductComplete(ProductBase):
+class Product(ProductBase):
     id: UUID
     edition_id: UUID
+
+
+class ProductComplete(Product):
     variants: list[ProductVariantComplete] = []
+
+
+class ProductVariantWithProduct(ProductVariantComplete):
+    product: Product
 
 
 class ProductEdit(BaseModel):

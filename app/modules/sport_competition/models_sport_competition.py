@@ -323,7 +323,8 @@ class CompetitionProduct(Base):
     variants: Mapped[list["CompetitionProductVariant"]] = relationship(
         "CompetitionProductVariant",
         lazy="selectin",
-        default_factory=list,
+        init=False,
+        viewonly=True,
     )
 
 
@@ -344,6 +345,13 @@ class CompetitionProductVariant(Base):
     school_type: Mapped[ProductSchoolType]
     public_type: Mapped[ProductPublicType | None]
     description: Mapped[str | None] = mapped_column(default=None)
+
+    product: Mapped["CompetitionProduct"] = relationship(
+        "CompetitionProduct",
+        lazy="joined",
+        init=False,
+        viewonly=True,
+    )
 
 
 class CompetitionPurchase(Base):
