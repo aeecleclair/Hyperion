@@ -181,8 +181,8 @@ async def set_team_number(team: models_raid.RaidTeam, db: AsyncSession) -> None:
 
 
 async def save_team_info(
-    information: coredata_raid.RaidInformation,
     team: models_raid.RaidTeam,
+    information: coredata_raid.RaidInformation,
     db: AsyncSession,
     drive_file_manager: DriveFileManager,
     settings: Settings,
@@ -268,7 +268,7 @@ async def post_update_actions(
 
 
 async def generate_security_file_pdf(
-    participant: models_raid.Participant,
+    participant: models_raid.RaidParticipant,
     information: coredata_raid.RaidInformation,
     team_number: int | None = None,
 ):
@@ -300,7 +300,7 @@ async def generate_security_file_pdf(
 
 
 async def generate_recap_file_pdf(
-    team: models_raid.Team,
+    team: models_raid.RaidTeam,
 ):
     context = {
         "team_name": team.name,
@@ -341,7 +341,7 @@ def scale_rect_to_fit(container, content_width, content_height):
 
 
 async def prepare_complete_team_file(
-    team: models_raid.Team,
+    team: models_raid.RaidTeam,
     information: coredata_raid.RaidInformation,
 ):
     recap_file_id = await generate_recap_file_pdf(
