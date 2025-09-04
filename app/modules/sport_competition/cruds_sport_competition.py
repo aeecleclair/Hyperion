@@ -25,6 +25,177 @@ from app.modules.sport_competition.utils_sport_competition import (
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
+# region: Competition Editions
+
+
+async def add_edition(
+    edition: schemas_sport_competition.CompetitionEdition,
+    db: AsyncSession,
+):
+    db.add(models_sport_competition.CompetitionEdition(**edition.model_dump()))
+    await db.flush()
+
+
+async def update_edition(
+    edition_id: UUID,
+    edition: schemas_sport_competition.CompetitionEditionEdit,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_sport_competition.CompetitionEdition)
+        .where(models_sport_competition.CompetitionEdition.id == edition_id)
+        .values(**edition.model_dump(exclude_unset=True)),
+    )
+    await db.flush()
+
+
+async def set_active_edition(
+    edition_id: UUID,
+    db: AsyncSession,
+):
+    # Deactivate all other editions
+    await db.execute(
+        update(models_sport_competition.CompetitionEdition)
+        .where(models_sport_competition.CompetitionEdition.active)
+        .values(active=False),
+    )
+    # Activate the specified edition
+    await db.execute(
+        update(models_sport_competition.CompetitionEdition)
+        .where(models_sport_competition.CompetitionEdition.id == edition_id)
+        .values(active=True),
+    )
+    await db.flush()
+
+
+async def patch_edition_inscription(
+    edition_id: UUID,
+    enable: bool,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_sport_competition.CompetitionEdition)
+        .where(models_sport_competition.CompetitionEdition.id == edition_id)
+        .values(inscription_enabled=enable),
+    )
+    await db.execute(
+        update(models_sport_competition.SchoolExtension)
+        .where(models_sport_competition.SchoolExtension.active)
+        .values(inscription_enabled=enable),
+    )
+    await db.flush()
+
+
+async def delete_edition_by_id(
+    edition_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_sport_competition.CompetitionEdition).where(
+            models_sport_competition.CompetitionEdition.id == edition_id,
+        ),
+    )
+    await db.flush()
+
+
+async def load_edition_by_id(
+    edition_id,
+    db: AsyncSession,
+) -> schemas_sport_competition.CompetitionEdition | None:
+    edition = await db.get(models_sport_competition.CompetitionEdition, edition_id)
+    return (
+        schemas_sport_competition.CompetitionEdition(
+            id=edition.id,
+            name=edition.name,
+            year=edition.year,
+            start_date=edition.start_date,
+            end_date=edition.end_date,
+            active=edition.active,
+            inscription_enabled=edition.inscription_enabled,
+        )
+        if edition
+        else None
+    )
+
+
+async def load_edition_by_name(
+    name: str,
+    db: AsyncSession,
+) -> schemas_sport_competition.CompetitionEdition | None:
+    edition = (
+        (
+            await db.execute(
+                select(models_sport_competition.CompetitionEdition).where(
+                    models_sport_competition.CompetitionEdition.name == name,
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return (
+        schemas_sport_competition.CompetitionEdition(
+            id=edition.id,
+            name=edition.name,
+            year=edition.year,
+            start_date=edition.start_date,
+            end_date=edition.end_date,
+            active=edition.active,
+            inscription_enabled=edition.inscription_enabled,
+        )
+        if edition
+        else None
+    )
+
+
+async def load_active_edition(
+    db: AsyncSession,
+) -> schemas_sport_competition.CompetitionEdition | None:
+    edition = (
+        (
+            await db.execute(
+                select(models_sport_competition.CompetitionEdition).where(
+                    models_sport_competition.CompetitionEdition.active,
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return (
+        schemas_sport_competition.CompetitionEdition(
+            id=edition.id,
+            name=edition.name,
+            year=edition.year,
+            start_date=edition.start_date,
+            end_date=edition.end_date,
+            active=edition.active,
+            inscription_enabled=edition.inscription_enabled,
+        )
+        if edition
+        else None
+    )
+
+
+async def load_all_editions(
+    db: AsyncSession,
+) -> list[schemas_sport_competition.CompetitionEdition]:
+    editions = await db.execute(select(models_sport_competition.CompetitionEdition))
+    return [
+        schemas_sport_competition.CompetitionEdition(
+            id=edition.id,
+            name=edition.name,
+            year=edition.year,
+            start_date=edition.start_date,
+            end_date=edition.end_date,
+            active=edition.active,
+            inscription_enabled=edition.inscription_enabled,
+        )
+        for edition in editions.scalars().all()
+    ]
+
+
+# endregion: Competition Editions
 # region: Competition Groups
 
 
@@ -719,7 +890,7 @@ async def delete_school_general_quota_by_ids(
 
 
 async def add_sport_quota(
-    quota: schemas_sport_competition.Quota,
+    quota: schemas_sport_competition.SportQuota,
     db: AsyncSession,
 ):
     db.add(models_sport_competition.SchoolSportQuota(**quota.model_dump()))
@@ -730,7 +901,7 @@ async def update_sport_quota(
     school_id: UUID,
     sport_id: UUID,
     edition_id: UUID,
-    quota: schemas_sport_competition.QuotaEdit,
+    quota: schemas_sport_competition.SportQuotaEdit,
     db: AsyncSession,
 ):
     await db.execute(
@@ -766,13 +937,13 @@ async def load_sport_quota_by_ids(
     sport_id: UUID,
     edition_id: UUID,
     db: AsyncSession,
-) -> schemas_sport_competition.Quota | None:
+) -> schemas_sport_competition.SportQuota | None:
     quota = await db.get(
         models_sport_competition.SchoolSportQuota,
         (sport_id, school_id, edition_id),
     )
     return (
-        schemas_sport_competition.Quota(
+        schemas_sport_competition.SportQuota(
             school_id=quota.school_id,
             sport_id=quota.sport_id,
             edition_id=quota.edition_id,
@@ -788,7 +959,7 @@ async def load_all_sport_quotas_by_school_id(
     school_id: UUID,
     edition_id: UUID,
     db: AsyncSession,
-) -> list[schemas_sport_competition.Quota]:
+) -> list[schemas_sport_competition.SportQuota]:
     quotas = await db.execute(
         select(models_sport_competition.SchoolSportQuota).where(
             models_sport_competition.SchoolSportQuota.school_id == school_id,
@@ -796,7 +967,7 @@ async def load_all_sport_quotas_by_school_id(
         ),
     )
     return [
-        schemas_sport_competition.Quota(
+        schemas_sport_competition.SportQuota(
             school_id=quota.school_id,
             sport_id=quota.sport_id,
             edition_id=quota.edition_id,
@@ -811,7 +982,7 @@ async def load_all_sport_quotas_by_sport_id(
     sport_id: UUID,
     edition_id: UUID,
     db: AsyncSession,
-) -> list[schemas_sport_competition.Quota]:
+) -> list[schemas_sport_competition.SportQuota]:
     quotas = await db.execute(
         select(models_sport_competition.SchoolSportQuota).where(
             models_sport_competition.SchoolSportQuota.sport_id == sport_id,
@@ -819,7 +990,7 @@ async def load_all_sport_quotas_by_sport_id(
         ),
     )
     return [
-        schemas_sport_competition.Quota(
+        schemas_sport_competition.SportQuota(
             school_id=quota.school_id,
             sport_id=quota.sport_id,
             edition_id=quota.edition_id,
@@ -1096,177 +1267,6 @@ async def count_teams_by_school_and_sport_ids(
 
 
 # endregion: Teams
-# region: Competition Editions
-
-
-async def add_edition(
-    edition: schemas_sport_competition.CompetitionEdition,
-    db: AsyncSession,
-):
-    db.add(models_sport_competition.CompetitionEdition(**edition.model_dump()))
-    await db.flush()
-
-
-async def update_edition(
-    edition_id: UUID,
-    edition: schemas_sport_competition.CompetitionEditionEdit,
-    db: AsyncSession,
-):
-    await db.execute(
-        update(models_sport_competition.CompetitionEdition)
-        .where(models_sport_competition.CompetitionEdition.id == edition_id)
-        .values(**edition.model_dump(exclude_unset=True)),
-    )
-    await db.flush()
-
-
-async def set_active_edition(
-    edition_id: UUID,
-    db: AsyncSession,
-):
-    # Deactivate all other editions
-    await db.execute(
-        update(models_sport_competition.CompetitionEdition)
-        .where(models_sport_competition.CompetitionEdition.active)
-        .values(active=False),
-    )
-    # Activate the specified edition
-    await db.execute(
-        update(models_sport_competition.CompetitionEdition)
-        .where(models_sport_competition.CompetitionEdition.id == edition_id)
-        .values(active=True),
-    )
-    await db.flush()
-
-
-async def patch_edition_inscription(
-    edition_id: UUID,
-    enable: bool,
-    db: AsyncSession,
-):
-    await db.execute(
-        update(models_sport_competition.CompetitionEdition)
-        .where(models_sport_competition.CompetitionEdition.id == edition_id)
-        .values(inscription_enabled=enable),
-    )
-    await db.execute(
-        update(models_sport_competition.SchoolExtension)
-        .where(models_sport_competition.SchoolExtension.active)
-        .values(inscription_enabled=enable),
-    )
-    await db.flush()
-
-
-async def delete_edition_by_id(
-    edition_id: UUID,
-    db: AsyncSession,
-):
-    await db.execute(
-        delete(models_sport_competition.CompetitionEdition).where(
-            models_sport_competition.CompetitionEdition.id == edition_id,
-        ),
-    )
-    await db.flush()
-
-
-async def load_edition_by_id(
-    edition_id,
-    db: AsyncSession,
-) -> schemas_sport_competition.CompetitionEdition | None:
-    edition = await db.get(models_sport_competition.CompetitionEdition, edition_id)
-    return (
-        schemas_sport_competition.CompetitionEdition(
-            id=edition.id,
-            name=edition.name,
-            year=edition.year,
-            start_date=edition.start_date,
-            end_date=edition.end_date,
-            active=edition.active,
-            inscription_enabled=edition.inscription_enabled,
-        )
-        if edition
-        else None
-    )
-
-
-async def load_edition_by_name(
-    name: str,
-    db: AsyncSession,
-) -> schemas_sport_competition.CompetitionEdition | None:
-    edition = (
-        (
-            await db.execute(
-                select(models_sport_competition.CompetitionEdition).where(
-                    models_sport_competition.CompetitionEdition.name == name,
-                ),
-            )
-        )
-        .scalars()
-        .first()
-    )
-    return (
-        schemas_sport_competition.CompetitionEdition(
-            id=edition.id,
-            name=edition.name,
-            year=edition.year,
-            start_date=edition.start_date,
-            end_date=edition.end_date,
-            active=edition.active,
-            inscription_enabled=edition.inscription_enabled,
-        )
-        if edition
-        else None
-    )
-
-
-async def load_active_edition(
-    db: AsyncSession,
-) -> schemas_sport_competition.CompetitionEdition | None:
-    edition = (
-        (
-            await db.execute(
-                select(models_sport_competition.CompetitionEdition).where(
-                    models_sport_competition.CompetitionEdition.active,
-                ),
-            )
-        )
-        .scalars()
-        .first()
-    )
-    return (
-        schemas_sport_competition.CompetitionEdition(
-            id=edition.id,
-            name=edition.name,
-            year=edition.year,
-            start_date=edition.start_date,
-            end_date=edition.end_date,
-            active=edition.active,
-            inscription_enabled=edition.inscription_enabled,
-        )
-        if edition
-        else None
-    )
-
-
-async def load_all_editions(
-    db: AsyncSession,
-) -> list[schemas_sport_competition.CompetitionEdition]:
-    editions = await db.execute(select(models_sport_competition.CompetitionEdition))
-    return [
-        schemas_sport_competition.CompetitionEdition(
-            id=edition.id,
-            name=edition.name,
-            year=edition.year,
-            start_date=edition.start_date,
-            end_date=edition.end_date,
-            active=edition.active,
-            inscription_enabled=edition.inscription_enabled,
-        )
-        for edition in editions.scalars().all()
-    ]
-
-
-# endregion: Competition Editions
 # region: Locations
 
 
@@ -1275,7 +1275,7 @@ async def add_location(
     db: AsyncSession,
 ):
     db.add(
-        models_sport_competition.CompetitionLocation(
+        models_sport_competition.MatchLocation(
             id=location.id,
             name=location.name,
             description=location.description,
@@ -1294,8 +1294,8 @@ async def update_location(
     db: AsyncSession,
 ):
     await db.execute(
-        update(models_sport_competition.CompetitionLocation)
-        .where(models_sport_competition.CompetitionLocation.id == location_id)
+        update(models_sport_competition.MatchLocation)
+        .where(models_sport_competition.MatchLocation.id == location_id)
         .values(**location.model_dump(exclude_unset=True)),
     )
     await db.flush()
@@ -1306,8 +1306,8 @@ async def delete_location_by_id(
     db: AsyncSession,
 ):
     await db.execute(
-        delete(models_sport_competition.CompetitionLocation).where(
-            models_sport_competition.CompetitionLocation.id == location_id,
+        delete(models_sport_competition.MatchLocation).where(
+            models_sport_competition.MatchLocation.id == location_id,
         ),
     )
     await db.flush()
@@ -1317,7 +1317,7 @@ async def load_location_by_id(
     location_id: UUID,
     db: AsyncSession,
 ) -> schemas_sport_competition.Location | None:
-    location = await db.get(models_sport_competition.CompetitionLocation, location_id)
+    location = await db.get(models_sport_competition.MatchLocation, location_id)
     return (
         schemas_sport_competition.Location(
             id=location.id,
@@ -1338,8 +1338,8 @@ async def load_all_locations_by_edition_id(
     db: AsyncSession,
 ) -> list[schemas_sport_competition.Location]:
     locations = await db.execute(
-        select(models_sport_competition.CompetitionLocation).where(
-            models_sport_competition.CompetitionLocation.edition_id == edition_id,
+        select(models_sport_competition.MatchLocation).where(
+            models_sport_competition.MatchLocation.edition_id == edition_id,
         ),
     )
     return [
@@ -1364,10 +1364,9 @@ async def load_location_by_name(
     location = (
         (
             await db.execute(
-                select(models_sport_competition.CompetitionLocation).where(
-                    models_sport_competition.CompetitionLocation.name == name,
-                    models_sport_competition.CompetitionLocation.edition_id
-                    == edition_id,
+                select(models_sport_competition.MatchLocation).where(
+                    models_sport_competition.MatchLocation.name == name,
+                    models_sport_competition.MatchLocation.edition_id == edition_id,
                 ),
             )
         )
@@ -1535,6 +1534,127 @@ async def load_all_matches_by_location_id(
 
 
 # endregion: Matches
+# region: Podiums
+
+
+async def get_global_podiums(
+    edition_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_sport_competition.SchoolResult]:
+    podiums = await db.execute(
+        select(
+            models_sport_competition.SportPodium.school_id,
+            func.sum(models_sport_competition.SportPodium.points).label("points"),
+        )
+        .where(
+            models_sport_competition.SportPodium.edition_id == edition_id,
+        )
+        .group_by(models_sport_competition.SportPodium.school_id),
+    )
+    return [
+        schemas_sport_competition.SchoolResult(
+            school_id=podium[0],
+            total_points=podium[1],
+        )
+        for podium in podiums.all()
+    ]
+
+
+async def get_sport_podiums(
+    sport_id: UUID,
+    edition_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_sport_competition.TeamSportResultComplete]:
+    podiums = await db.execute(
+        select(models_sport_competition.SportPodium)
+        .where(
+            models_sport_competition.SportPodium.sport_id == sport_id,
+            models_sport_competition.SportPodium.edition_id == edition_id,
+        )
+        .options(
+            selectinload(models_sport_competition.SportPodium.team).selectinload(
+                models_sport_competition.CompetitionTeam.participants,
+            ),
+        ),
+    )
+    return [
+        schemas_sport_competition.TeamSportResultComplete(
+            edition_id=podium.edition_id,
+            school_id=podium.school_id,
+            sport_id=podium.sport_id,
+            team_id=podium.team_id,
+            rank=podium.rank,
+            points=podium.points,
+            team=team_model_to_schema(podium.team),
+        )
+        for podium in podiums.scalars().all()
+    ]
+
+
+async def get_school_podiums(
+    school_id: UUID,
+    edition_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_sport_competition.TeamSportResultComplete]:
+    podiums = await db.execute(
+        select(models_sport_competition.SportPodium)
+        .where(
+            models_sport_competition.SportPodium.school_id == school_id,
+            models_sport_competition.SportPodium.edition_id == edition_id,
+        )
+        .options(
+            selectinload(models_sport_competition.SportPodium.team).selectinload(
+                models_sport_competition.CompetitionTeam.participants,
+            ),
+        ),
+    )
+    return [
+        schemas_sport_competition.TeamSportResultComplete(
+            edition_id=podium.edition_id,
+            school_id=podium.school_id,
+            sport_id=podium.sport_id,
+            team_id=podium.team_id,
+            rank=podium.rank,
+            points=podium.points,
+            team=team_model_to_schema(podium.team),
+        )
+        for podium in podiums.scalars().all()
+    ]
+
+
+async def add_sport_ranking(
+    rankings: list[schemas_sport_competition.TeamSportResult],
+    db: AsyncSession,
+):
+    for ranking in rankings:
+        db.add(
+            models_sport_competition.SportPodium(
+                school_id=ranking.school_id,
+                sport_id=ranking.sport_id,
+                team_id=ranking.team_id,
+                edition_id=ranking.edition_id,
+                rank=ranking.rank,
+                points=ranking.points,
+            ),
+        )
+    await db.flush()
+
+
+async def delete_sport_ranking(
+    sport_id: UUID,
+    edition_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_sport_competition.SportPodium).where(
+            models_sport_competition.SportPodium.sport_id == sport_id,
+            models_sport_competition.SportPodium.edition_id == edition_id,
+        ),
+    )
+    await db.flush()
+
+
+# endregion: Podiums
 # region: Products
 
 

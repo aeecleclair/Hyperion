@@ -1,9 +1,9 @@
 from datetime import UTC, datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from sqlalchemy import delete
+from sqlalchemy import delete, update
 
 from app.core.groups.groups_type import GroupType
 from app.core.schools import models_schools
@@ -62,6 +62,40 @@ team2: models_sport_competition.CompetitionTeam
 
 participant1: models_sport_competition.CompetitionParticipant
 participant2: models_sport_competition.CompetitionParticipant
+participant3: models_sport_competition.CompetitionParticipant
+
+location: models_sport_competition.MatchLocation
+
+match1: models_sport_competition.Match
+
+product: models_sport_competition.CompetitionProduct
+variant_for_athlete: models_sport_competition.CompetitionProductVariant
+variant_for_cameraman: models_sport_competition.CompetitionProductVariant
+variant_for_pompom: models_sport_competition.CompetitionProductVariant
+variant_for_fanfare: models_sport_competition.CompetitionProductVariant
+variant_for_volunteer: models_sport_competition.CompetitionProductVariant
+
+
+async def create_competition_user(
+    edition_id: UUID,
+    school_id: UUID,
+    sport_category: SportCategory,
+) -> tuple[models_users.CoreUser, models_sport_competition.CompetitionUser, str]:
+    new_user = await create_user_with_groups(
+        [],
+        school_id=school_id,
+    )
+    new_competition_user = models_sport_competition.CompetitionUser(
+        user_id=new_user.id,
+        edition_id=edition_id,
+        sport_category=sport_category,
+        created_at=datetime.now(UTC),
+        validated=False,
+        is_athlete=True,
+    )
+    await add_object_to_db(new_competition_user)
+    token = create_api_access_token(new_user)
+    return new_user, new_competition_user, token
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -303,7 +337,7 @@ async def init_objects() -> None:
     )
     await add_object_to_db(team2)
 
-    global participant1, participant2
+    global participant1, participant2, participant3
     participant1 = models_sport_competition.CompetitionParticipant(
         user_id=admin_user.id,
         school_id=SchoolType.centrale_lyon.value,
@@ -326,6 +360,26 @@ async def init_objects() -> None:
         is_licence_valid=True,
     )
     await add_object_to_db(participant2)
+    (
+        participant3_user,
+        _,
+        _,
+    ) = await create_competition_user(
+        edition_id=active_edition.id,
+        school_id=school1.id,
+        sport_category=SportCategory.masculine,
+    )
+    participant3 = models_sport_competition.CompetitionParticipant(
+        user_id=participant3_user.id,
+        school_id=SchoolType.centrale_lyon.value,
+        edition_id=active_edition.id,
+        sport_id=sport_with_team.id,
+        team_id=team1.id,
+        substitute=False,
+        license="1122334455",
+        is_licence_valid=True,
+    )
+    await add_object_to_db(participant3)
 
 
 async def test_get_sports(
@@ -1788,6 +1842,16 @@ async def test_user_participate_with_invalid_category(
         "Sport category does not match user sport category" in response.json()["detail"]
     )
 
+    particiants = client.get(
+        f"/competition/participants/sports/{sport_feminine.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert particiants.status_code == 200, particiants.json()
+    particiants_json = particiants.json()
+    assert not any(p["user_id"] == str(school_bds_user.id) for p in particiants_json), (
+        particiants_json
+    )
+
 
 async def test_user_participate_without_team(
     client: TestClient,
@@ -1803,6 +1867,16 @@ async def test_user_participate_without_team(
     )
     assert response.status_code == 400, response.json()
     assert "Sport declared needs to be played in a team" in response.json()["detail"]
+
+    participants = client.get(
+        f"/competition/participants/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert participants.status_code == 200, participants.json()
+    participants_json = participants.json()
+    assert not any(p["user_id"] == str(user3.id) for p in participants_json), (
+        participants_json
+    )
 
 
 async def test_user_participate_with_invalid_team_school(
@@ -1824,6 +1898,16 @@ async def test_user_participate_with_invalid_team_school(
         in response.json()["detail"]
     )
 
+    participants = client.get(
+        f"/competition/participants/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert participants.status_code == 200, participants.json()
+    participants_json = participants.json()
+    assert not any(p["user_id"] == str(user3.id) for p in participants_json), (
+        participants_json
+    )
+
 
 async def test_user_participate_with_unknown_team(
     client: TestClient,
@@ -1840,6 +1924,101 @@ async def test_user_participate_with_unknown_team(
     )
     assert response.status_code == 404, response.json()
     assert "Team not found in the database" in response.json()["detail"]
+
+    participants = client.get(
+        f"/competition/participants/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert participants.status_code == 200, participants.json()
+    participants_json = participants.json()
+    assert not any(p["user_id"] == str(user3.id) for p in participants_json), (
+        participants_json
+    )
+
+
+async def test_user_participate_with_maximum_team_size(
+    client: TestClient,
+) -> None:
+    new_user, _, new_user_token = await create_competition_user(
+        edition_id=active_edition.id,
+        school_id=SchoolType.centrale_lyon.value,
+        sport_category=SportCategory.masculine,
+    )
+    async with TestingSessionLocal() as db:
+        await db.execute(
+            update(models_sport_competition.Sport)
+            .where(
+                models_sport_competition.Sport.id == sport_with_team.id,
+            )
+            .values(
+                team_size=2,  # Set team size to 1 for testing
+            ),
+        )
+        await db.commit()
+
+    info = ParticipantInfo(
+        license="12345670089",
+        substitute=False,
+        team_id=team1.id,  # team1 is from the same school
+    )
+    response = client.post(
+        f"/competition/sports/{sport_with_team.id}/participate",
+        headers={"Authorization": f"Bearer {new_user_token}"},
+        json=info.model_dump(exclude_none=True, mode="json"),
+    )
+    assert response.status_code == 400, response.json()
+    assert "Maximum number of players in the team reached" in response.json()["detail"]
+
+    async with TestingSessionLocal() as db:
+        await db.execute(
+            update(models_sport_competition.Sport)
+            .where(
+                models_sport_competition.Sport.id == sport_with_team.id,
+            )
+            .values(
+                team_size=5,  # Reset team size to a valid number
+            ),
+        )
+        await db.commit()
+
+    participants = client.get(
+        f"/competition/participants/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert participants.status_code == 200, participants.json()
+    participants_json = participants.json()
+    assert not any(p["user_id"] == str(new_user.id) for p in participants_json), (
+        participants_json
+    )
+
+
+async def test_user_participate_with_maximum_substitute_size(
+    client: TestClient,
+) -> None:
+    info = ParticipantInfo(
+        license="12345670089",
+        substitute=True,
+        team_id=team1.id,  # team1 is from the same school
+    )
+    response = client.post(
+        f"/competition/sports/{sport_with_team.id}/participate",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json=info.model_dump(exclude_none=True, mode="json"),
+    )
+    assert response.status_code == 400, response.json()
+    assert (
+        "Maximum number of substitutes in the team reached" in response.json()["detail"]
+    )
+
+    participants = client.get(
+        f"/competition/participants/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert participants.status_code == 200, participants.json()
+    participants_json = participants.json()
+    assert not any(p["user_id"] == str(user3.id) for p in participants_json), (
+        participants_json
+    )
 
 
 async def test_user_participate_with_valid_data(
