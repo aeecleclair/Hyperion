@@ -176,7 +176,9 @@ class PiwigoAuthClient(BaseAuthClient):
         return {
             "sub": user.id,
             "name": user.full_name,
-            "groups": [group.name for group in user.groups] + [user.account_type.value],
+            "groups": [group.name for group in user.groups]
+            + [user.account_type.value]
+            + [str(user.promo)],
             "email": user.email,
         }
 
