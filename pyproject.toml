@@ -152,6 +152,7 @@ disallow_untyped_defs = false
 disallow_any_generics = false
 disallow_untyped_calls = false
 
+
 [[tool.mypy.overrides]]
 # google_auth_oauthlib : https://github.com/googleapis/google-auth-library-python-oauthlib/issues/288
 # googleapiclient : https://github.com/googleapis/google-api-python-client/issues/2426
@@ -163,6 +164,7 @@ module = [
     "googleapiclient.*",
     "sqlalchemy_utils",
     "weasyprint",
+    "xlsxwriter",
 ]
 ignore_missing_imports = true
 

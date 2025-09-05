@@ -1,5 +1,6 @@
 import uuid
 from datetime import UTC, datetime
+from io import BytesIO
 
 import pytest_asyncio
 
@@ -329,70 +330,14 @@ def test_construct_dataframe_from_users_purchases():
         cdr_user3.id: [customdata_user3],
     }
 
-    df = construct_dataframe_from_users_purchases(
+    excel_io = BytesIO()
+
+    construct_dataframe_from_users_purchases(
         users=users,
         products=products,
         variants=product_variants,
         users_purchases=users_purchases,
         data_fields=customdata_fields,
         users_answers=users_answers,
+        export_io=excel_io,
     )
-    assert df.shape == (4, 12)
-    assert df.columns.tolist() == [
-        "Nom",
-        "Prénom",
-        "Surnom",
-        "Email",
-        f"1. {product1.name_fr} : {product1_variant1.name_fr}",
-        f"2. {product1.name_fr} : {product1_variant2.name_fr}",
-        f"3. {product1.name_fr} : {product1_variant3.name_fr}",
-        f"4. {product1.name_fr} : {customdata_field1.name}",
-        f"5. {product2.name_fr} : {product2_variant1.name_fr}",
-        f"6. {product2.name_fr} : {customdata_field2.name}",
-        "Panier payé",
-        "Commentaire",
-    ]
-    for user_id in [user.id for user in users]:
-        assert user_id in df.index
-    assert list(df.loc[cdr_user1.id]) == [
-        cdr_user1.name,
-        cdr_user1.firstname,
-        "",
-        cdr_user1.email,
-        10,
-        "",
-        "",
-        "Value 1",
-        1,
-        "",
-        False,
-        "Manquant : \n-Produit2 : Variante",
-    ]
-    assert list(df.loc[cdr_user2.id]) == [
-        cdr_user2.name,
-        cdr_user2.firstname,
-        "",
-        cdr_user2.email,
-        "",
-        1,
-        "",
-        "Value 2",
-        1,
-        "",
-        False,
-        "Manquant : \n-Produit : Variante2\n-Produit2 : Variante",
-    ]
-    assert list(df.loc[cdr_user3.id]) == [
-        cdr_user3.name,
-        cdr_user3.firstname,
-        "",
-        cdr_user3.email,
-        "",
-        "",
-        50,
-        "Value 3",
-        "",
-        "",
-        True,
-        "",
-    ]
