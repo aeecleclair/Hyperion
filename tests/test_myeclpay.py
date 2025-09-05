@@ -2269,7 +2269,7 @@ def test_store_scan_store_insufficient_ballance(client: TestClient):
 
     qr_code_content = QRCodeContentData(
         id=qr_code_id,
-        tot=2000,
+        tot=3000,
         iat=datetime.now(UTC),
         store=True,
         key=ecl_user_wallet_device.id,
