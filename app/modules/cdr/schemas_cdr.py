@@ -38,10 +38,10 @@ class CurriculumComplete(CurriculumBase):
 
 class CdrUserPreview(CoreUserSimple):
     curriculum: CurriculumComplete | None = None
+    promo: int | None = None
 
 
 class CdrUser(CdrUserPreview):
-    promo: int | None = None
     email: str
     birthday: date | None = None
     phone: str | None = None
