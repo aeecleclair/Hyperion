@@ -28,6 +28,7 @@ from app.modules.sport_competition.utils.ffsu_scrapper import (
     validate_participant_ffsu_license,
 )
 from app.modules.sport_competition.utils_sport_competition import (
+    check_validation_consistency,
     checksport_category_compatibility,
     get_public_type_from_user,
     validate_payment,
@@ -635,7 +636,7 @@ async def get_schools(
 
 @module.router.get(
     "/competition/schools/{school_id}",
-    response_model=schemas_sport_competition.SchoolExtensionComplete,
+    response_model=schemas_sport_competition.SchoolExtension,
 )
 async def get_school(
     school_id: UUID,
@@ -644,7 +645,7 @@ async def get_school(
         get_current_edition,
     ),
     user: models_users.CoreUser = Depends(is_user()),
-) -> schemas_sport_competition.SchoolExtensionComplete:
+) -> schemas_sport_competition.SchoolExtension:
     school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
     if school is None:
         raise HTTPException(
@@ -824,7 +825,7 @@ async def edit_school_general_quota(
 
 @module.router.get(
     "/competition/sports/{sport_id}/quotas",
-    response_model=list[schemas_sport_competition.SportQuota],
+    response_model=list[schemas_sport_competition.SchoolSportQuota],
 )
 async def get_quotas_for_sport(
     sport_id: UUID,
@@ -835,7 +836,7 @@ async def get_quotas_for_sport(
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
-) -> list[schemas_sport_competition.SportQuota]:
+) -> list[schemas_sport_competition.SchoolSportQuota]:
     sport = await cruds_sport_competition.load_sport_by_id(sport_id, db)
     if sport is None:
         raise HTTPException(
@@ -851,7 +852,7 @@ async def get_quotas_for_sport(
 
 @module.router.get(
     "/competition/schools/{school_id}/quotas",
-    response_model=list[schemas_sport_competition.SportQuota],
+    response_model=list[schemas_sport_competition.SchoolSportQuota],
 )
 async def get_quotas_for_school(
     school_id: UUID,
@@ -860,7 +861,7 @@ async def get_quotas_for_school(
         get_current_edition,
     ),
     user: models_users.CoreUser = Depends(is_user()),
-) -> list[schemas_sport_competition.SportQuota]:
+) -> list[schemas_sport_competition.SchoolSportQuota]:
     school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
     if school is None:
         raise HTTPException(
@@ -910,7 +911,7 @@ async def create_sport_quota(
     )
     if stored is not None:
         raise HTTPException(status_code=400, detail="Quota already exists")
-    quota = schemas_sport_competition.SportQuota(
+    quota = schemas_sport_competition.SchoolSportQuota(
         school_id=school_id,
         sport_id=sport_id,
         participant_quota=quota_info.participant_quota,
@@ -927,7 +928,7 @@ async def create_sport_quota(
 async def edit_sport_quota(
     school_id: UUID,
     sport_id: UUID,
-    quota_info: schemas_sport_competition.SportQuotaEdit,
+    quota_info: schemas_sport_competition.SchoolSportQuotaEdit,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
         is_user_in(group_id=GroupType.competition_admin),
@@ -1439,12 +1440,11 @@ async def join_sport(
 
 
 @module.router.patch(
-    "/competition/participants/{user_id}/sports/{sport_id}/validate",
+    "/competition/users/{user_id}/validate",
     status_code=204,
 )
 async def validate_participant(
     user_id: str,
-    sport_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
         is_competition_user(
@@ -1455,18 +1455,22 @@ async def validate_participant(
         get_current_edition,
     ),
 ) -> None:
-    participant = await cruds_sport_competition.load_participant_by_ids(
+    user_to_validate = await cruds_sport_competition.load_competition_user_by_id(
         user_id,
-        sport_id,
         edition.id,
         db,
     )
-    if participant is None:
+    if user_to_validate is None:
         raise HTTPException(
             status_code=404,
-            detail="Participant not found in the database",
+            detail="User not found in the database",
         )
-    if participant.is_license_valid is False:
+    participant = await cruds_sport_competition.load_participant_by_user_id(
+        user_id,
+        edition.id,
+        db,
+    )
+    if participant and not participant.is_license_valid:
         raise HTTPException(
             status_code=400,
             detail="Participant license is not valid",
@@ -1474,36 +1478,62 @@ async def validate_participant(
     if (
         GroupType.competition_admin.value
         not in [group.id for group in user.user.groups]
-        and user.user.school_id != participant.school_id
+        and user.user.school_id != user_to_validate.user.school_id
     ):
         raise HTTPException(
             status_code=403,
             detail="Unauthorized action",
         )
-    sport = await cruds_sport_competition.load_sport_by_id(sport_id, db)
-    if sport is None:
+    sport = (
+        await cruds_sport_competition.load_sport_by_id(participant.sport_id, db)
+        if participant
+        else None
+    )
+    if participant and sport is None:
         raise HTTPException(
             status_code=404,
             detail="Sport not found in the database",
         )
-    school_quota = await cruds_sport_competition.load_sport_quota_by_ids(
-        user.user.school_id,
-        sport_id,
-        edition.id,
-        db,
-    )
-    if school_quota is not None and school_quota.participant_quota is not None:
-        nb_participants = await cruds_sport_competition.load_validated_participants_number_by_school_and_sport_ids(
-            user.user.school_id,
-            sport_id,
+    school_sport_quota = (
+        await cruds_sport_competition.load_sport_quota_by_ids(
+            participant.school_id,
+            participant.sport_id,
             edition.id,
             db,
         )
-        if nb_participants >= school_quota.participant_quota:
-            raise HTTPException(
-                status_code=400,
-                detail="Participant quota reached",
-            )
+        if participant
+        else None
+    )
+    school_general_quota = await cruds_sport_competition.get_school_general_quota(
+        user_to_validate.user.school_id,
+        edition.id,
+        db,
+    )
+    school_products_quota = await cruds_sport_competition.get_school_products_quota(
+        user_to_validate.user.school_id,
+        edition.id,
+        db,
+    )
+    purchases = await cruds_sport_competition.load_purchases_by_user_id(
+        user_id,
+        edition.id,
+        db,
+    )
+    required_products = await cruds_sport_competition.load_required_products(
+        edition.id,
+        db,
+    )
+    await check_validation_consistency(
+        user_to_validate,
+        participant,
+        purchases,
+        school_sport_quota,
+        school_general_quota,
+        school_products_quota,
+        required_products,
+        edition,
+        db,
+    )
     await cruds_sport_competition.validate_participant(
         user_id,
         edition.id,
@@ -1929,7 +1959,7 @@ async def create_match(
         id=uuid4(),
         sport_id=sport_id,
         edition_id=match_info.edition_id,
-        datetime=match_info.date,
+        date=match_info.date,
         location_id=match_info.location_id,
         name=match_info.name,
         team1_id=match_info.team1_id,
@@ -2195,6 +2225,7 @@ async def create_product(
     db_product = schemas_sport_competition.ProductComplete(
         id=uuid4(),
         edition_id=edition.id,
+        required=product.required,
         name=product.name,
         description=product.description,
     )

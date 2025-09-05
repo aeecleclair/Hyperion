@@ -66,7 +66,7 @@ def scrap_ffsu_licenses(
 
 
 def validate_participant_ffsu_license(
-    school: schemas_sport_competition.SchoolExtensionComplete,
+    school: schemas_sport_competition.SchoolExtension,
     user: schemas_sport_competition.CompetitionUser,
     ffsu_license: str,
 ):

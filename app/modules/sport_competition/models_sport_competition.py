@@ -94,17 +94,6 @@ class SchoolExtension(Base):
         lazy="joined",
         init=False,
     )
-    general_quota: Mapped["SchoolGeneralQuota | None"] = relationship(
-        "SchoolGeneralQuota",
-        lazy="selectin",
-        init=False,
-    )
-    product_quotas: Mapped[list["SchoolProductQuota"]] = relationship(
-        "SchoolProductQuota",
-        lazy="selectin",
-        default_factory=list,
-        init=False,
-    )
 
 
 class SchoolGeneralQuota(Base):
@@ -318,6 +307,7 @@ class CompetitionProduct(Base):
         ForeignKey("competition_edition.id"),
     )
     name: Mapped[str]
+    required: Mapped[bool]
     description: Mapped[str | None] = mapped_column(default=None)
 
     variants: Mapped[list["CompetitionProductVariant"]] = relationship(

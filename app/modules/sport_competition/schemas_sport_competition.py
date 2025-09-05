@@ -46,10 +46,6 @@ class SchoolExtension(SchoolExtensionBase):
     school: schemas_schools.CoreSchool
 
 
-class SchoolExtensionComplete(SchoolExtension):
-    general_quota: "SchoolGeneralQuota | None" = None
-
-
 class SchoolExtensionEdit(BaseModel):
     from_lyon: bool | None = None
     ffsu_id: str | None = None
@@ -163,19 +159,16 @@ class SportEdit(BaseModel):
 
 
 class SportQuotaInfo(BaseModel):
-    participant_quota: NonNegativeInt
-    team_quota: NonNegativeInt
-
-
-class SportQuota(BaseModel):
-    school_id: UUID
-    sport_id: UUID
-    edition_id: UUID
     participant_quota: NonNegativeInt | None = None
     team_quota: NonNegativeInt | None = None
 
 
-class SportQuotaEdit(BaseModel):
+class SchoolSportQuota(SportQuotaInfo):
+    school_id: UUID
+    sport_id: UUID
+
+
+class SchoolSportQuotaEdit(BaseModel):
     participant_quota: NonNegativeInt | None = None
     team_quota: NonNegativeInt | None = None
 
@@ -281,6 +274,7 @@ class Match(MatchBase):
     id: UUID
     team1: Team
     team2: Team
+    location: Location | None = None
 
 
 class MatchEdit(BaseModel):
@@ -348,6 +342,7 @@ class ProductVariantEdit(BaseModel):
 
 class ProductBase(BaseModel):
     name: str
+    required: bool = False
     description: str | None = None
 
 
@@ -366,7 +361,22 @@ class ProductVariantWithProduct(ProductVariantComplete):
 
 class ProductEdit(BaseModel):
     name: str | None = None
+    required: bool | None = None
     description: str | None = None
+
+
+class SchoolProductQuotaBase(BaseModel):
+    product_id: UUID
+    school_id: UUID
+    quota: NonNegativeInt
+
+
+class SchoolProductQuota(SchoolProductQuotaBase):
+    edition_id: UUID
+
+
+class SchoolProductQuotaEdit(BaseModel):
+    quota: NonNegativeInt
 
 
 class PurchaseBase(BaseModel):

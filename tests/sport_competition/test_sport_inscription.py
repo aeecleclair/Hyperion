@@ -1877,15 +1877,15 @@ async def test_user_participate_with_invalid_category(
         "Sport category does not match user sport category" in response.json()["detail"]
     )
 
-    particiants = client.get(
+    participants = client.get(
         f"/competition/participants/sports/{sport_feminine.id}",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
-    assert particiants.status_code == 200, particiants.json()
-    particiants_json = particiants.json()
-    assert not any(p["user_id"] == str(school_bds_user.id) for p in particiants_json), (
-        particiants_json
-    )
+    assert participants.status_code == 200, participants.json()
+    participants_json = participants.json()
+    assert not any(
+        p["user_id"] == str(school_bds_user.id) for p in participants_json
+    ), participants_json
 
 
 async def test_user_participate_without_team(
