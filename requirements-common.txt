@@ -15,7 +15,6 @@ helloasso-python==1.0.5
 icalendar==5.0.13
 jellyfish==1.0.4                    # String Matching
 Jinja2==3.1.6                       # template engine for html files
-pandas==2.2.2
 phonenumbers==8.13.43               # Used for phone number validation
 psutil==7.0.0                       # psutil is used to determine the number of Hyperion workers
 pydantic-settings==2.3.4
