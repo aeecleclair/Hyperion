@@ -474,7 +474,11 @@ async def generate_and_send_results(
 
     Path.mkdir(Path(file_directory), parents=True, exist_ok=True)
 
-    df = construct_dataframe_from_users_purchases(
+    hyperion_error_logger.info(
+        f"Data for seller {seller.name} fetched. Generating the Excel file.",
+    )
+
+    construct_dataframe_from_users_purchases(
         users_purchases=purchases_by_users,
         users=list(users),
         products=list(products),
@@ -482,9 +486,6 @@ async def generate_and_send_results(
         data_fields=product_fields,
         users_answers=users_answers,
         export_path=Path(file_directory, str(file_uuid)),
-    )
-    hyperion_error_logger.info(
-        f"Dataframe for seller {seller.name} constructed. Generating the Excel file.",
     )
 
     return Path(file_directory, str(file_uuid))

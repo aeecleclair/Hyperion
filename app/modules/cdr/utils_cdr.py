@@ -1,5 +1,6 @@
 import logging
 from datetime import UTC, datetime
+from pathlib import Path
 from uuid import UUID, uuid4
 
 import xlsxwriter
@@ -153,16 +154,146 @@ async def check_request_consistency(
     return db_product
 
 
-def construct_dataframe_from_users_purchases(
-    users_purchases: dict[str, list[models_cdr.Purchase]],
-    users_answers: dict[str, list[models_cdr.CustomData]],
-    users: list[models_users.CoreUser],
-    products: list[models_cdr.CdrProduct],
-    variants: list[models_cdr.ProductVariant],
-    data_fields: dict[UUID, list[models_cdr.CustomDataField]],
-    export_path: str,
-):
-    variants_by_product = {}
+def generate_format(workbook):
+    def make_format(
+        workbook,
+        *,
+        color=None,
+        bold=False,
+        align="center",
+        font="Raleway",
+        right=None,
+        left=None,
+        bottom=None,
+        bg_color=None,
+        font_color=None,
+    ):
+        fmt_dict = {
+            "align": align,
+            "font_name": font,
+        }
+        if color:
+            fmt_dict["font_color"] = color
+        if font_color:
+            fmt_dict["font_color"] = font_color
+        if bg_color:
+            fmt_dict["bg_color"] = bg_color
+        if bold:
+            fmt_dict["bold"] = True
+        if right is not None:
+            fmt_dict["right"] = right
+        if left is not None:
+            fmt_dict["right"] = left
+        if bottom is not None:
+            fmt_dict["bottom"] = bottom
+        return workbook.add_format(fmt_dict)
+
+    return {
+        "header": {
+            "base": make_format(
+                workbook,
+                bold=True,
+                font_color="white",
+                bg_color="#0D47A1",
+            ),
+            "right": make_format(
+                workbook,
+                bold=True,
+                font_color="white",
+                bg_color="#0D47A1",
+                right=1,
+            ),
+            "left": make_format(
+                workbook,
+                bold=True,
+                font_color="white",
+                bg_color="#0D47A1",
+                left=1,
+            ),
+            "left_right": make_format(
+                workbook,
+                bold=True,
+                font_color="white",
+                bg_color="#0D47A1",
+                right=1,
+                left=1,
+            ),
+            "right_thick": make_format(
+                workbook,
+                bold=True,
+                font_color="white",
+                bg_color="#0D47A1",
+                right=2,
+            ),
+            "left_thick": make_format(
+                workbook,
+                bold=True,
+                font_color="white",
+                bg_color="#0D47A1",
+                left=2,
+            ),
+            "left_right_thick": make_format(
+                workbook,
+                bold=True,
+                font_color="white",
+                bg_color="#0D47A1",
+                right=2,
+                left=2,
+            ),
+        },
+        "validated": {
+            "base": make_format(workbook, bold=True, font_color="green"),
+            "right": make_format(workbook, bold=True, font_color="green", right=1),
+            "thick": make_format(workbook, bold=True, font_color="green", right=2),
+            "bottom": make_format(workbook, bold=True, font_color="green", bottom=2),
+            "bottom_right": make_format(
+                workbook,
+                bold=True,
+                font_color="green",
+                bottom=2,
+                right=1,
+            ),
+            "bottom_thick": make_format(
+                workbook,
+                bold=True,
+                font_color="green",
+                bottom=2,
+                right=2,
+            ),
+        },
+        "not_validated": {
+            "base": make_format(workbook, bold=True, font_color="red"),
+            "right": make_format(workbook, bold=True, font_color="red", right=1),
+            "thick": make_format(workbook, bold=True, font_color="red", right=2),
+            "bottom": make_format(workbook, bold=True, font_color="red", bottom=2),
+            "bottom_right": make_format(
+                workbook,
+                bold=True,
+                font_color="red",
+                bottom=2,
+                right=1,
+            ),
+            "bottom_thick": make_format(
+                workbook,
+                bold=True,
+                font_color="red",
+                bottom=2,
+                right=2,
+            ),
+        },
+        "other": {
+            "base": make_format(workbook),
+            "right": make_format(workbook, right=1),
+            "thick": make_format(workbook, right=2),
+            "bottom": make_format(workbook, bottom=2),
+            "bottom_right": make_format(workbook, bottom=2, right=1),
+            "bottom_thick": make_format(workbook, bottom=2, right=2),
+        },
+    }
+
+
+def build_product_structure(products, variants, data_fields):
+    variants_by_product: dict[UUID, list[models_cdr.ProductVariant]] = {}
     for v in variants:
         variants_by_product.setdefault(v.product_id, []).append(v)
 
@@ -204,14 +335,18 @@ def construct_dataframe_from_users_purchases(
             },
         )
 
-    users_to_write = []
-    for user in users:
-        purchases = users_purchases.get(user.id, [])
-        if any(p.quantity > 0 for p in purchases):
-            users_to_write.append(user)
+    return product_structure, col_idx
 
+
+def filter_users_with_purchases(users, users_purchases):
+    return [
+        u for u in users if any(p.quantity > 0 for p in users_purchases.get(u.id, []))
+    ]
+
+
+def build_data_rows(users, users_purchases, users_answers, product_structure, col_idx):
     data_rows = []
-    for user in users_to_write:
+    for user in users:
         row = [""] * col_idx
         row[0] = user.name
         row[1] = user.firstname
@@ -244,183 +379,25 @@ def construct_dataframe_from_users_purchases(
 
         data_rows.append(row)
 
-    workbook = xlsxwriter.Workbook(export_path)
-    worksheet = workbook.add_worksheet("Ventes")
+    return data_rows
 
-    header_fmt = workbook.add_format(
-        {
-            "bold": True,
-            "font_name": "Raleway",
-            "font_color": "white",
-            "bg_color": "#0D47A1",
-            "align": "center",
-            "valign": "vcenter",
-        },
-    )
 
-    oui_fmt = workbook.add_format(
-        {
-            "font_color": "green",
-            "bold": True,
-            "align": "center",
-            "font_name": "Raleway",
-        },
-    )
-
-    non_fmt = workbook.add_format(
-        {
-            "font_color": "red",
-            "bold": True,
-            "align": "center",
-            "font_name": "Raleway",
-        },
-    )
-
-    center_fmt = workbook.add_format(
-        {
-            "align": "center",
-            "font_name": "Raleway",
-        },
-    )
-
-    # Fine right border (for variant separation)
-    center_fmt_right_border = workbook.add_format(
-        {
-            "align": "center",
-            "right": 1,
-            "font_name": "Raleway",
-        },
-    )
-
-    # Thick right border (for product separation)
-    center_fmt_thick_border = workbook.add_format(
-        {
-            "align": "center",
-            "right": 2,  # 2 = épaisse
-            "font_name": "Raleway",
-        },
-    )
-
-    # Versions pour OUI/NON
-    oui_fmt_thick = workbook.add_format(
-        {
-            "font_color": "green",
-            "bold": True,
-            "align": "center",
-            "font_name": "Raleway",
-            "right": 2,
-        },
-    )
-    non_fmt_thick = workbook.add_format(
-        {
-            "font_color": "red",
-            "bold": True,
-            "align": "center",
-            "font_name": "Raleway",
-            "right": 2,
-        },
-    )
-
-    # Versions pour OUI/NON
-    oui_fmt_right = workbook.add_format(
-        {
-            "font_color": "green",
-            "bold": True,
-            "align": "center",
-            "font_name": "Raleway",
-            "right": 1,
-        },
-    )
-    non_fmt_right = workbook.add_format(
-        {
-            "font_color": "red",
-            "bold": True,
-            "align": "center",
-            "font_name": "Raleway",
-            "right": 1,
-        },
-    )
-
-    # Pour cellule normale avec ligne épaisse en bas
-    center_fmt_bottom_border = workbook.add_format(
-        {
-            "align": "center",
-            "font_name": "Raleway",
-            "bottom": 2,
-        },
-    )
-
-    # Variante avec bordure droite fine (variante + ligne)
-    center_fmt_right_bottom_border = workbook.add_format(
-        {
-            "align": "center",
-            "font_name": "Raleway",
-            "right": 1,
-            "bottom": 2,
-        },
-    )
-
-    # Variante avec bordure droite épaisse (produit + ligne)
-    center_fmt_thick_right_bottom_border = workbook.add_format(
-        {
-            "align": "center",
-            "font_name": "Raleway",
-            "right": 2,
-            "bottom": 2,
-        },
-    )
-
-    # OUI / NON avec ligne épaisse en bas
-    oui_fmt_bottom = workbook.add_format(
-        {
-            "font_color": "green",
-            "bold": True,
-            "align": "center",
-            "font_name": "Raleway",
-            "bottom": 2,
-        },
-    )
-    non_fmt_bottom = workbook.add_format(
-        {
-            "font_color": "red",
-            "bold": True,
-            "align": "center",
-            "font_name": "Raleway",
-            "bottom": 2,
-        },
-    )
-    # Avec bordure droite
-    oui_fmt_thick_bottom = workbook.add_format(
-        {
-            "font_color": "green",
-            "bold": True,
-            "align": "center",
-            "font_name": "Raleway",
-            "right": 2,
-            "bottom": 2,
-        },
-    )
-    non_fmt_thick_bottom = workbook.add_format(
-        {
-            "font_color": "red",
-            "bold": True,
-            "align": "center",
-            "font_name": "Raleway",
-            "right": 2,
-            "bottom": 2,
-        },
-    )
-
+def write_fixed_headers(worksheet, fixed_columns, formats):
     for col, title in enumerate(fixed_columns):
-        worksheet.merge_range(0, col, 2, col, title, header_fmt)
+        worksheet.merge_range(0, col, 2, col, title, formats["header"]["base"])
 
-    max_lens = [len(c) for c in fixed_columns] + [0] * (col_idx - len(fixed_columns))
 
+def write_product_headers(
+    worksheet,
+    product_structure,
+    fixed_columns,
+    formats,
+    max_lens,
+):
     product_end_cols = [
         len(fixed_columns) - 1,
-    ]  # Colonnes après lesquelles on mettra une bordure épaisse
-    variant_end_cols = set()  # Colonnes après lesquelles on mettra une bordure fine
-
+    ]
+    variant_end_cols = set()
     for prod_struct in product_structure:
         product = prod_struct["product"]
         variants_info = prod_struct["variants_info"]
@@ -443,9 +420,16 @@ def construct_dataframe_from_users_purchases(
             end_col = custom_cols[-1]
 
         if start_col < end_col:
-            worksheet.merge_range(0, start_col, 0, end_col, product.name_fr, header_fmt)
+            worksheet.merge_range(
+                0,
+                start_col,
+                0,
+                end_col,
+                product.name_fr,
+                formats["header"]["base"],
+            )
         else:
-            worksheet.write(0, start_col, product.name_fr, header_fmt)
+            worksheet.write(0, start_col, product.name_fr, formats["header"]["base"])
 
         product_end_cols.append(end_col)
 
@@ -453,10 +437,20 @@ def construct_dataframe_from_users_purchases(
             qty_col = vinfo["qty_col"]
             if needs_validation:
                 worksheet.merge_range(
-                    1, qty_col, 1, qty_col + 1, vinfo["variant"].name_fr, header_fmt,
+                    1,
+                    qty_col,
+                    1,
+                    qty_col + 1,
+                    vinfo["variant"].name_fr,
+                    formats["header"]["base"],
                 )
             else:
-                worksheet.write(1, qty_col, vinfo["variant"].name_fr, header_fmt)
+                worksheet.write(
+                    1,
+                    qty_col,
+                    vinfo["variant"].name_fr,
+                    formats["header"]["base"],
+                )
 
             if needs_validation and vinfo["valid_col"] is not None:
                 variant_end_cols.add(vinfo["valid_col"])
@@ -471,11 +465,14 @@ def construct_dataframe_from_users_purchases(
                     1,
                     custom_cols[-1],
                     "Informations complémentaires",
-                    header_fmt,
+                    formats["header"]["base"],
                 )
             else:
                 worksheet.write(
-                    1, custom_cols[0], "Informations complémentaires", header_fmt,
+                    1,
+                    custom_cols[0],
+                    "Informations complémentaires",
+                    formats["header"]["base"],
                 )
 
             info_comp_len = len("Informations complémentaires")
@@ -483,70 +480,152 @@ def construct_dataframe_from_users_purchases(
                 max_lens[c] = max(max_lens[c], info_comp_len)
 
         for vinfo in variants_info:
-            worksheet.write(2, vinfo["qty_col"], "Quantité", header_fmt)
+            worksheet.write(2, vinfo["qty_col"], "Quantité", formats["header"]["base"])
             max_lens[vinfo["qty_col"]] = max(
                 max_lens[vinfo["qty_col"]],
-                len(vinfo["variant"].name_fr),
+                len("Quantité"),
             )
             if needs_validation and vinfo["valid_col"] is not None:
-                worksheet.write(2, vinfo["valid_col"], "Validé", header_fmt)
+                worksheet.write(
+                    2,
+                    vinfo["valid_col"],
+                    "Validé",
+                    formats["header"]["base"],
+                )
                 max_lens[vinfo["valid_col"]] = max(
                     max_lens[vinfo["valid_col"]],
                     len("Validé"),
                 )
 
         for i, field in enumerate(fields):
-            worksheet.write(2, custom_cols[i], field.name, header_fmt)
+            worksheet.write(2, custom_cols[i], field.name, formats["header"]["base"])
             max_lens[custom_cols[i]] = max(max_lens[custom_cols[i]], len(field.name))
 
         for c in range(start_col, end_col + 1):
             max_lens[c] = max(max_lens[c], len(product.name_fr))
 
-    start_row = 3
+    return product_end_cols, variant_end_cols
+
+
+def write_data_rows(
+    worksheet,
+    data_rows,
+    product_end_cols,
+    variant_end_cols,
+    formats,
+    max_lens,
+    start_row=3,
+):
     for row_idx, row in enumerate(data_rows, start=start_row):
-        apply_bottom_border = row_idx == start_row + len(data_rows) - 1 or row_idx == 2
-        for col_idx_data, val in enumerate(row):
-            if col_idx_data in product_end_cols:
-                if val == "OUI":
-                    cell_fmt = (
-                        oui_fmt_thick_bottom if apply_bottom_border else oui_fmt_thick
-                    )
-                elif val == "NON":
-                    cell_fmt = (
-                        non_fmt_thick_bottom if apply_bottom_border else non_fmt_thick
-                    )
-                else:
-                    cell_fmt = (
-                        center_fmt_thick_right_bottom_border
-                        if apply_bottom_border
-                        else center_fmt_thick_border
-                    )
-            elif col_idx_data in variant_end_cols:
-                if val == "OUI":
-                    cell_fmt = oui_fmt_bottom if apply_bottom_border else oui_fmt_right
-                elif val == "NON":
-                    cell_fmt = non_fmt_bottom if apply_bottom_border else non_fmt_right
-                else:
-                    cell_fmt = (
-                        center_fmt_right_bottom_border
-                        if apply_bottom_border
-                        else center_fmt_right_border
-                    )
-            elif val == "OUI":
-                cell_fmt = oui_fmt_bottom if apply_bottom_border else oui_fmt
-            elif val == "NON":
-                cell_fmt = non_fmt_bottom if apply_bottom_border else non_fmt
-            else:
-                cell_fmt = (
-                    center_fmt_bottom_border if apply_bottom_border else center_fmt
+        is_last_row = row_idx == start_row + len(data_rows) - 1
+        for col_idx, val in enumerate(row):
+            # Choix du format selon la colonne
+            if col_idx in product_end_cols:
+                base = (
+                    formats["validated"]
+                    if val == "OUI"
+                    else formats["not_validated"]
+                    if val == "NON"
+                    else formats["other"]
                 )
+                fmt = base["bottom_thick"] if is_last_row else base["thick"]
 
-            worksheet.write(row_idx, col_idx_data, val, cell_fmt)
+            elif col_idx in variant_end_cols:
+                base = (
+                    formats["validated"]
+                    if val == "OUI"
+                    else formats["not_validated"]
+                    if val == "NON"
+                    else formats["other"]
+                )
+                fmt = base["bottom_right"] if is_last_row else base["right"]
 
-            max_lens[col_idx_data] = max(max_lens[col_idx_data], len(str(val)))
+            else:
+                base = (
+                    formats["validated"]
+                    if val == "OUI"
+                    else formats["not_validated"]
+                    if val == "NON"
+                    else formats["other"]
+                )
+                fmt = base["bottom"] if is_last_row else base["base"]
 
+            worksheet.write(row_idx, col_idx, val, fmt)
+            max_lens[col_idx] = max(max_lens[col_idx], len(str(val)))
+
+
+def autosize_columns(worksheet, max_lens):
     for i, length in enumerate(max_lens):
         worksheet.set_column(i, i, length + 3)
 
+
+def write_to_excel(
+    workbook,
+    worksheet_name,
+    fixed_columns,
+    product_structure,
+    data_rows,
+    col_idx,
+    formats,
+):
+    worksheet = workbook.add_worksheet(worksheet_name)
+    max_lens = [len(c) for c in fixed_columns] + [0] * (col_idx - len(fixed_columns))
+
+    write_fixed_headers(worksheet, fixed_columns, formats)
+    product_end_cols, variant_end_cols = write_product_headers(
+        worksheet,
+        product_structure,
+        fixed_columns,
+        formats,
+        max_lens,
+    )
+    write_data_rows(
+        worksheet,
+        data_rows,
+        product_end_cols,
+        variant_end_cols,
+        formats,
+        max_lens,
+    )
+    autosize_columns(worksheet, max_lens)
     worksheet.freeze_panes(3, len(fixed_columns))
+
+
+def construct_dataframe_from_users_purchases(
+    users_purchases: dict[str, list[models_cdr.Purchase]],
+    users_answers: dict[str, list[models_cdr.CustomData]],
+    users: list[models_users.CoreUser],
+    products: list[models_cdr.CdrProduct],
+    variants: list[models_cdr.ProductVariant],
+    data_fields: dict[UUID, list[models_cdr.CustomDataField]],
+    export_path: Path | str,
+):
+    fixed_columns = ["Nom", "Prénom", "Surnom", "Email"]
+
+    product_structure, col_idx = build_product_structure(
+        products,
+        variants,
+        data_fields,
+    )
+    users_to_write = filter_users_with_purchases(users, users_purchases)
+    data_rows = build_data_rows(
+        users_to_write,
+        users_purchases,
+        users_answers,
+        product_structure,
+        col_idx,
+    )
+
+    workbook = xlsxwriter.Workbook(export_path)
+    formats = generate_format(workbook)
+
+    write_to_excel(
+        workbook,
+        "Données",
+        fixed_columns,
+        product_structure,
+        data_rows,
+        col_idx,
+        formats,
+    )
     workbook.close()
