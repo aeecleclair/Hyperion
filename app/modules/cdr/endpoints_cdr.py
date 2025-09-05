@@ -46,6 +46,7 @@ from app.modules.cdr.utils_cdr import (
     is_user_in_a_seller_group,
     validate_payment,
 )
+from app.types.exceptions import ObjectExpectedInDbNotFoundError
 from app.types.module import Module
 from app.types.websocket import (
     HyperionWebsocketsRoom,
@@ -303,17 +304,30 @@ async def update_cdr_user(
             detail="User not found.",
         )
 
-    curriculum = await cruds_cdr.get_cdr_user_curriculum(db, user_id)
+    curriculum_membership = await cruds_cdr.get_cdr_user_curriculum(db, user_id)
+    curriculum: schemas_cdr.CurriculumComplete | None = None
+    if curriculum_membership:
+        curriculum_db = await cruds_cdr.get_curriculum_by_id(
+            db=db,
+            curriculum_id=curriculum_membership.curriculum_id,
+        )
+        if curriculum_db is None:
+            raise ObjectExpectedInDbNotFoundError(
+                object_name="curriculum",
+                object_id=curriculum_membership.curriculum_id,
+            )
+        curriculum = schemas_cdr.CurriculumComplete(
+            id=curriculum_db.id,
+            name=curriculum_db.name,
+        )
 
-    cdr_status = await get_core_data(schemas_cdr.Status, db)
+    cdr_status = await get_core_data(coredata_cdr.Status, db)
     if cdr_status.status == CdrStatus.onsite:
         try:
             await ws_manager.send_message_to_room(
                 message=schemas_cdr.UpdateUserWSMessageModel(
                     data=schemas_cdr.CdrUser(
-                        curriculum=schemas_cdr.CurriculumComplete(
-                            **curriculum.__dict__,
-                        ),
+                        curriculum=curriculum,
                         school_id=user_db.school_id,
                         account_type=user_db.account_type,
                         name=user_db.name,
@@ -749,7 +763,7 @@ async def create_product(
         user=user,
         db=db,
     )
-    status = await get_core_data(schemas_cdr.Status, db)
+    status = await get_core_data(coredata_cdr.Status, db)
     if status.status == CdrStatus.closed:
         raise HTTPException(
             status_code=403,
@@ -948,7 +962,7 @@ async def create_product_variant(
         seller_id=seller_id,
         product_id=product_id,
     )
-    status = await get_core_data(schemas_cdr.Status, db)
+    status = await get_core_data(coredata_cdr.Status, db)
     if status.status == CdrStatus.closed:
         raise HTTPException(
             status_code=403,
@@ -1209,7 +1223,7 @@ async def create_document(
     **User must be part of the seller's group to use this endpoint**
     """
     await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
-    status = await get_core_data(schemas_cdr.Status, db)
+    status = await get_core_data(coredata_cdr.Status, db)
     if status.status == CdrStatus.closed:
         raise HTTPException(
             status_code=403,
@@ -1452,7 +1466,7 @@ async def create_purchase(
 
     **User must create a purchase for themself and for an online available product or be part of the seller's group to use this endpoint**
     """
-    status = await get_core_data(schemas_cdr.Status, db)
+    status = await get_core_data(coredata_cdr.Status, db)
     if status.status in [CdrStatus.pending, CdrStatus.closed]:
         raise HTTPException(
             status_code=403,
@@ -1913,7 +1927,7 @@ async def create_signature(
 
     **User must sign numerically or be part of the seller's group to use this endpoint**
     """
-    status = await get_core_data(schemas_cdr.Status, db)
+    status = await get_core_data(coredata_cdr.Status, db)
     if status.status == CdrStatus.pending:
         raise HTTPException(
             status_code=403,
@@ -2028,7 +2042,7 @@ async def create_curriculum(
 
     **User must be CDR Admin to use this endpoint**
     """
-    status = await get_core_data(schemas_cdr.Status, db)
+    status = await get_core_data(coredata_cdr.Status, db)
     if status.status == CdrStatus.closed:
         raise HTTPException(
             status_code=403,
@@ -2143,7 +2157,7 @@ async def create_curriculum_membership(
     )
     await db.flush()
 
-    cdr_status = await get_core_data(schemas_cdr.Status, db)
+    cdr_status = await get_core_data(coredata_cdr.Status, db)
     if cdr_status.status == CdrStatus.onsite:
         try:
             await ws_manager.send_message_to_room(
@@ -2220,7 +2234,7 @@ async def update_curriculum_membership(
     )
     await db.flush()
 
-    cdr_status = await get_core_data(schemas_cdr.Status, db)
+    cdr_status = await get_core_data(coredata_cdr.Status, db)
     if cdr_status.status == CdrStatus.onsite:
         try:
             await ws_manager.send_message_to_room(
@@ -2297,7 +2311,7 @@ async def delete_curriculum_membership(
     )
     await db.flush()
 
-    cdr_status = await get_core_data(schemas_cdr.Status, db)
+    cdr_status = await get_core_data(coredata_cdr.Status, db)
     if cdr_status.status == CdrStatus.onsite:
         try:
             await ws_manager.send_message_to_room(
@@ -2372,7 +2386,7 @@ async def create_payment(
 
     **User must be CDR Admin to use this endpoint**
     """
-    status = await get_core_data(schemas_cdr.Status, db)
+    status = await get_core_data(coredata_cdr.Status, db)
     if status.status == CdrStatus.pending:
         raise HTTPException(
             status_code=403,
@@ -2553,13 +2567,13 @@ async def update_cdr_year(
 
 @module.router.get(
     "/cdr/status/",
-    response_model=schemas_cdr.Status,
+    response_model=coredata_cdr.Status,
     status_code=200,
 )
 async def get_status(
     db: AsyncSession = Depends(get_db),
 ):
-    return await get_core_data(schemas_cdr.Status, db)
+    return await get_core_data(coredata_cdr.Status, db)
 
 
 @module.router.patch(
@@ -2567,11 +2581,11 @@ async def get_status(
     status_code=204,
 )
 async def update_status(
-    status: schemas_cdr.Status,
+    status: coredata_cdr.Status,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
 ):
-    current_status = await get_core_data(schemas_cdr.Status, db)
+    current_status = await get_core_data(coredata_cdr.Status, db)
     match status.status:
         case CdrStatus.pending:
             if current_status.status != CdrStatus.closed:

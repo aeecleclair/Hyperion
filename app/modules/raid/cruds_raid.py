@@ -192,6 +192,13 @@ async def delete_participant(
     await db.flush()
 
 
+async def delete_all_participant(
+    db: AsyncSession,
+) -> None:
+    await db.execute(delete(models_raid.Participant))
+    await db.flush()
+
+
 async def delete_team_invite_tokens(
     team_id: str,
     db: AsyncSession,
