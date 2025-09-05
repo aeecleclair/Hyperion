@@ -543,8 +543,14 @@ async def send_seller_results(
 
     res = await generate_and_send_results(seller_id=seller_id, db=db)
 
-    headers = {"Content-Disposition": f'attachment; filename="results_{seller_id}.pdf"'}
-    return Response(res, headers=headers, media_type="application/pdf")
+    headers = {
+        "Content-Disposition": f'attachment; filename="results_{seller_id}.xlsx"',
+    }
+    return Response(
+        res,
+        headers=headers,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
 
 @module.router.get(
