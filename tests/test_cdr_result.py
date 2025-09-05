@@ -1,5 +1,6 @@
 import uuid
 from datetime import UTC, datetime
+from io import BytesIO
 
 import pytest_asyncio
 
@@ -329,6 +330,8 @@ def test_construct_dataframe_from_users_purchases():
         cdr_user3.id: [customdata_user3],
     }
 
+    excel_io = BytesIO()
+
     construct_dataframe_from_users_purchases(
         users=users,
         products=products,
@@ -336,5 +339,5 @@ def test_construct_dataframe_from_users_purchases():
         users_purchases=users_purchases,
         data_fields=customdata_fields,
         users_answers=users_answers,
-        export_path="test",
+        export_io=excel_io,
     )

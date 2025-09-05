@@ -1,6 +1,6 @@
 import logging
 from datetime import UTC, datetime
-from pathlib import Path
+from io import BytesIO
 from uuid import UUID, uuid4
 
 import xlsxwriter
@@ -154,7 +154,7 @@ async def check_request_consistency(
     return db_product
 
 
-def generate_format(workbook):
+def generate_format(workbook: xlsxwriter.Workbook):
     def make_format(
         workbook,
         *,
@@ -292,7 +292,11 @@ def generate_format(workbook):
     }
 
 
-def build_product_structure(products, variants, data_fields):
+def build_product_structure(
+    products: list[models_cdr.CdrProduct],
+    variants: list[models_cdr.ProductVariant],
+    data_fields: dict[UUID, list[models_cdr.CustomDataField]],
+):
     variants_by_product: dict[UUID, list[models_cdr.ProductVariant]] = {}
     for v in variants:
         variants_by_product.setdefault(v.product_id, []).append(v)
@@ -338,19 +342,28 @@ def build_product_structure(products, variants, data_fields):
     return product_structure, col_idx
 
 
-def filter_users_with_purchases(users, users_purchases):
+def filter_users_with_purchases(
+    users: list[models_users.CoreUser],
+    users_purchases: dict[str, list[models_cdr.Purchase]],
+):
     return [
         u for u in users if any(p.quantity > 0 for p in users_purchases.get(u.id, []))
     ]
 
 
-def build_data_rows(users, users_purchases, users_answers, product_structure, col_idx):
+def build_data_rows(
+    users: list[models_users.CoreUser],
+    users_purchases: dict[str, list[models_cdr.Purchase]],
+    users_answers: dict[str, list[models_cdr.CustomData]],
+    product_structure: dict,
+    col_idx: int,
+):
     data_rows = []
     for user in users:
         row = [""] * col_idx
         row[0] = user.name
         row[1] = user.firstname
-        row[2] = user.nickname
+        row[2] = user.nickname if user.nickname else ""
         row[3] = user.email
 
         answers = users_answers.get(user.id, [])
@@ -362,7 +375,7 @@ def build_data_rows(users, users_purchases, users_answers, product_structure, co
         for prod_struct in product_structure:
             for vinfo in prod_struct["variants_info"]:
                 p = purchases_map.get(vinfo["variant"].id, None)
-                row[vinfo["qty_col"]] = p.quantity if p and p.quantity > 0 else ""
+                row[vinfo["qty_col"]] = str(p.quantity) if p and p.quantity > 0 else ""
                 if prod_struct["needs_validation"] and vinfo["valid_col"] is not None:
                     row[vinfo["valid_col"]] = (
                         ("OUI" if p.validated else "NON")
@@ -382,17 +395,21 @@ def build_data_rows(users, users_purchases, users_answers, product_structure, co
     return data_rows
 
 
-def write_fixed_headers(worksheet, fixed_columns, formats):
+def write_fixed_headers(
+    worksheet: xlsxwriter.Workbook.worksheet_class,
+    fixed_columns: list[str],
+    formats: dict,
+):
     for col, title in enumerate(fixed_columns):
         worksheet.merge_range(0, col, 2, col, title, formats["header"]["base"])
 
 
 def write_product_headers(
-    worksheet,
-    product_structure,
-    fixed_columns,
-    formats,
-    max_lens,
+    worksheet: xlsxwriter.Workbook.worksheet_class,
+    product_structure: dict,
+    fixed_columns: list[str],
+    formats: dict,
+    max_lens: list[int],
 ):
     product_end_cols = [
         len(fixed_columns) - 1,
@@ -508,13 +525,13 @@ def write_product_headers(
 
 
 def write_data_rows(
-    worksheet,
-    data_rows,
-    product_end_cols,
-    variant_end_cols,
-    formats,
-    max_lens,
-    start_row=3,
+    worksheet: xlsxwriter.Workbook.worksheet_class,
+    data_rows: list,
+    product_end_cols: list[int],
+    variant_end_cols: list[int],
+    formats: dict,
+    max_lens: list[int],
+    start_row: int = 3,
 ):
     for row_idx, row in enumerate(data_rows, start=start_row):
         is_last_row = row_idx == start_row + len(data_rows) - 1
@@ -554,19 +571,22 @@ def write_data_rows(
             max_lens[col_idx] = max(max_lens[col_idx], len(str(val)))
 
 
-def autosize_columns(worksheet, max_lens):
+def autosize_columns(
+    worksheet: xlsxwriter.Workbook.worksheet_class,
+    max_lens: list[int],
+):
     for i, length in enumerate(max_lens):
         worksheet.set_column(i, i, length + 3)
 
 
 def write_to_excel(
-    workbook,
-    worksheet_name,
-    fixed_columns,
+    workbook: xlsxwriter.Workbook,
+    worksheet_name: str,
+    fixed_columns: list[str],
     product_structure,
-    data_rows,
-    col_idx,
-    formats,
+    data_rows: list,
+    col_idx: int,
+    formats: dict,
 ):
     worksheet = workbook.add_worksheet(worksheet_name)
     max_lens = [len(c) for c in fixed_columns] + [0] * (col_idx - len(fixed_columns))
@@ -598,7 +618,7 @@ def construct_dataframe_from_users_purchases(
     products: list[models_cdr.CdrProduct],
     variants: list[models_cdr.ProductVariant],
     data_fields: dict[UUID, list[models_cdr.CustomDataField]],
-    export_path: Path | str,
+    export_io: BytesIO,
 ):
     fixed_columns = ["Nom", "Prénom", "Surnom", "Email"]
 
@@ -616,7 +636,7 @@ def construct_dataframe_from_users_purchases(
         col_idx,
     )
 
-    workbook = xlsxwriter.Workbook(export_path)
+    workbook = xlsxwriter.Workbook(export_io)
     formats = generate_format(workbook)
 
     write_to_excel(

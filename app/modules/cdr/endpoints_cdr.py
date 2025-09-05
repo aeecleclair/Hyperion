@@ -2,13 +2,14 @@ import logging
 import re
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
-from pathlib import Path
+from io import BytesIO
 from uuid import UUID, uuid4
 
 import calypsso
 from fastapi import (
     Depends,
     HTTPException,
+    Response,
     WebSocket,
 )
 from fastapi.responses import FileResponse
@@ -418,7 +419,7 @@ async def generate_and_send_results(
     # emails: schemas_cdr.ResultRequest,
     db: AsyncSession,
     # settings: Settings,
-) -> Path:
+) -> bytes:
     cdr_year = await get_core_data(coredata_cdr.CdrYear, db)
     seller = await cruds_cdr.get_seller_by_id(db, seller_id)
     if not seller:
@@ -478,19 +479,12 @@ async def generate_and_send_results(
                 each_user.id,
             ),
         )
-    hyperion_error_logger.info(
-        f"Data for seller {seller.name} fetched. Starting to construct the dataframe.",
-    )
-
-    file_directory = "/app/data/cdr"
-    file_uuid = uuid4()
-    # file_name = f"CdR {datetime.now(tz=UTC).year} ventes {seller.name}.xlsx"
-
-    Path.mkdir(Path(file_directory), parents=True, exist_ok=True)
 
     hyperion_error_logger.info(
         f"Data for seller {seller.name} fetched. Generating the Excel file.",
     )
+
+    excel_io = BytesIO()
 
     construct_dataframe_from_users_purchases(
         users_purchases=purchases_by_users,
@@ -499,10 +493,14 @@ async def generate_and_send_results(
         variants=variants,
         data_fields=product_fields,
         users_answers=users_answers,
-        export_path=Path(file_directory, str(file_uuid)),
+        export_io=excel_io,
     )
 
-    return Path(file_directory, str(file_uuid))
+    res = excel_io.getvalue()
+
+    excel_io.close()
+
+    return res
 
     # Not working, we have to keep the file in the server
     # hyperion_error_logger.debug(
@@ -543,8 +541,10 @@ async def send_seller_results(
 
     await is_user_in_a_seller_group(seller_id, user=user, db=db)
 
-    path = await generate_and_send_results(seller_id=seller_id, db=db)
-    return FileResponse(path)
+    res = await generate_and_send_results(seller_id=seller_id, db=db)
+
+    headers = {"Content-Disposition": f'attachment; filename="results_{seller_id}.pdf"'}
+    return Response(res, headers=headers, media_type="application/pdf")
 
 
 @module.router.get(
