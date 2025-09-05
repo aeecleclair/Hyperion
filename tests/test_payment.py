@@ -497,7 +497,7 @@ async def test_payment_tool_init_checkout_with_one_failure(
         if init_checkout_body.payer is not None:
             r = Response()
             r.status_code = 400
-            raise UnauthorizedException  # noqa: TRY002
+            raise UnauthorizedException
         return HelloAssoApiV5ModelsCartsInitCheckoutResponse(
             id=7,
             redirect_url=redirect_url,
