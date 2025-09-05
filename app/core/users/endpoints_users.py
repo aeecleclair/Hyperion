@@ -704,10 +704,7 @@ async def migrate_mail(
         email=mail_migration.new_email,
         db=db,
     )
-    if (
-        user.school_id is not SchoolType.no_school.value
-        and user.school_id != new_school_id
-    ):
+    if user.school_id not in (SchoolType.no_school.value, new_school_id):
         raise HTTPException(
             status_code=400,
             detail="New email address is not compatible with the current school",

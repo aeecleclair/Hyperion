@@ -1,11 +1,13 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from app.module import all_modules
-from tests.commons import TestingSessionLocal
+from tests.commons import get_TestingSessionLocal
 
 
-async def test_factories(factory_running_client: TestClient) -> None:
-    async with TestingSessionLocal() as db:
+@pytest.mark.parametrize("client", [True], indirect=True)
+async def test_factories(client: TestClient) -> None:
+    async with get_TestingSessionLocal()() as db:
         factories = [
             module.factory for module in all_modules if module.factory is not None
         ]
