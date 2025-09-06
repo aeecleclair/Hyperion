@@ -60,7 +60,7 @@ module = Module(
 
 @module.router.get(
     "/raid/participants/{participant_id}",
-    response_model=schemas_raid.Participant,
+    response_model=schemas_raid.RaidParticipant,
     status_code=200,
 )
 async def get_participant_by_id(
@@ -85,11 +85,11 @@ async def get_participant_by_id(
 
 @module.router.post(
     "/raid/participants",
-    response_model=schemas_raid.Participant,
+    response_model=schemas_raid.RaidParticipant,
     status_code=201,
 )
 async def create_participant(
-    participant: schemas_raid.ParticipantBase,
+    participant: schemas_raid.RaidParticipantBase,
     user: models_users.CoreUser = Depends(is_user()),
     db: AsyncSession = Depends(get_db),
 ):
@@ -109,7 +109,7 @@ async def create_participant(
         raid_start_date=raid_information.raid_start_date,
     )
 
-    db_participant = models_raid.Participant(
+    db_participant = models_raid.RaidParticipant(
         **participant.__dict__,
         id=user.id,
         is_minor=is_minor,
@@ -123,7 +123,7 @@ async def create_participant(
 )
 async def update_participant(
     participant_id: str,
-    participant: schemas_raid.ParticipantUpdate,
+    participant: schemas_raid.RaidParticipantUpdate,
     user: models_users.CoreUser = Depends(is_user()),
     db: AsyncSession = Depends(get_db),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
@@ -231,11 +231,11 @@ async def update_participant(
 
 @module.router.post(
     "/raid/teams",
-    response_model=schemas_raid.Team,
+    response_model=schemas_raid.RaidTeam,
     status_code=201,
 )
 async def create_team(
-    team: schemas_raid.TeamBase,
+    team: schemas_raid.RaidTeamBase,
     user: models_users.CoreUser = Depends(is_user()),
     db: AsyncSession = Depends(get_db),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
@@ -252,7 +252,7 @@ async def create_team(
     if await cruds_raid.get_team_by_participant_id(user.id, db):
         raise HTTPException(status_code=403, detail="You already have a team.")
 
-    db_team = models_raid.Team(
+    db_team = models_raid.RaidTeam(
         id=str(uuid.uuid4()),
         name=team.name,
         number=None,
@@ -298,7 +298,7 @@ async def generate_teams_pdf(
 
 @module.router.get(
     "/raid/participants/{participant_id}/team",
-    response_model=schemas_raid.Team,
+    response_model=schemas_raid.RaidTeam,
     status_code=200,
 )
 async def get_team_by_participant_id(
@@ -325,7 +325,7 @@ async def get_team_by_participant_id(
 
 @module.router.get(
     "/raid/teams",
-    response_model=list[schemas_raid.TeamPreview],
+    response_model=list[schemas_raid.RaidTeamPreview],
     status_code=200,
 )
 async def get_all_teams(
@@ -340,7 +340,7 @@ async def get_all_teams(
 
 @module.router.get(
     "/raid/teams/{team_id}",
-    response_model=schemas_raid.Team,
+    response_model=schemas_raid.RaidTeam,
     status_code=200,
 )
 async def get_team_by_id(
@@ -360,7 +360,7 @@ async def get_team_by_id(
 )
 async def update_team(
     team_id: str,
-    team: schemas_raid.TeamUpdate,
+    team: schemas_raid.RaidTeamUpdate,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
@@ -857,7 +857,7 @@ async def join_team(
 
 @module.router.post(
     "/raid/teams/{team_id}/kick/{participant_id}",
-    response_model=schemas_raid.Team,
+    response_model=schemas_raid.RaidTeam,
     status_code=201,
 )
 async def kick_team_member(
@@ -899,7 +899,7 @@ async def kick_team_member(
 
 @module.router.post(
     "/raid/teams/merge",
-    response_model=schemas_raid.Team,
+    response_model=schemas_raid.RaidTeam,
     status_code=201,
 )
 async def merge_teams(
@@ -929,7 +929,7 @@ async def merge_teams(
     new_number = (
         min(team1.number, team2.number) if team1.number and team2.number else None
     )
-    team_update: schemas_raid.TeamUpdate = schemas_raid.TeamUpdate(
+    team_update: schemas_raid.RaidTeamUpdate = schemas_raid.RaidTeamUpdate(
         name=new_name,
         difficulty=new_difficulty,
         meeting_place=new_meeting_place,
@@ -1166,7 +1166,7 @@ async def get_payment_url(
     )
     hyperion_error_logger.info(f"RAID: Logging Checkout id {checkout.id}")
     await cruds_raid.create_participant_checkout(
-        models_raid.ParticipantCheckout(
+        models_raid.RaidParticipantCheckout(
             id=str(uuid.uuid4()),
             participant_id=user.id,
             # TODO: use UUID

@@ -25,7 +25,7 @@ from app.core.auth import schemas_auth
 from app.core.groups.groups_type import AccountType, GroupType, get_ecl_account_types
 from app.core.payment.payment_tool import PaymentTool
 from app.core.payment.types_payment import HelloAssoConfigName
-from app.core.users import models_users
+from app.core.users import cruds_users, models_users
 from app.core.utils import security
 from app.core.utils.config import Settings, construct_prod_settings
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
@@ -322,10 +322,42 @@ def get_token_data(
     )
 
 
+def get_user_id_from_token_with_scopes(
+    scopes: list[list[ScopeType]],
+) -> Callable[
+    [schemas_auth.TokenData],
+    Coroutine[Any, Any, str],
+]:
+    """
+    Generate a dependency which will:
+     * check the request header contain a valid JWT token
+     * make sure the token contain the given scopes
+     * return the corresponding user_id of the token
+
+    This endpoint allows to require scopes other than the API scope. This should only be used by the auth endpoints.
+    To restrict an endpoint from the API, use `is_user_in`.
+    """
+
+    async def get_current_user_id(
+        token_data: schemas_auth.TokenData = Depends(get_token_data),
+    ) -> str:
+        """
+        Dependency that makes sure the token is valid, contains the expected scopes and returns the corresponding user_id.
+        The expected scopes are passed as list of list of scopes, each list of scopes is an "AND" condition, and the list of list of scopes is an "OR" condition.
+        """
+
+        return await auth_utils.get_user_id_from_token_with_scopes(
+            scopes=scopes,
+            token_data=token_data,
+        )
+
+    return get_current_user_id
+
+
 def get_user_from_token_with_scopes(
     scopes: list[list[ScopeType]],
 ) -> Callable[
-    [AsyncSession, schemas_auth.TokenData],
+    [AsyncSession, str],
     Coroutine[Any, Any, models_users.CoreUser],
 ]:
     """
@@ -338,22 +370,20 @@ def get_user_from_token_with_scopes(
     To restrict an endpoint from the API, use `is_user_in`.
     """
 
-    async def get_current_user(
+    async def get_user_from_user_id(
         db: AsyncSession = Depends(get_db),
-        token_data: schemas_auth.TokenData = Depends(get_token_data),
+        user_id: str = Depends(get_user_id_from_token_with_scopes(scopes)),
     ) -> models_users.CoreUser:
         """
         Dependency that makes sure the token is valid, contains the expected scopes and returns the corresponding user.
         The expected scopes are passed as list of list of scopes, each list of scopes is an "AND" condition, and the list of list of scopes is an "OR" condition.
         """
+        user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        return user
 
-        return await auth_utils.get_user_from_token_with_scopes(
-            scopes=scopes,
-            db=db,
-            token_data=token_data,
-        )
-
-    return get_current_user
+    return get_user_from_user_id
 
 
 def is_user(

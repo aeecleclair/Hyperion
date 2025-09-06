@@ -20,6 +20,7 @@ from tests.commons import (
     add_object_to_db,
     create_api_access_token,
     create_user_with_groups,
+    mocked_checkout_id,
 )
 
 year = datetime.now(UTC).year
@@ -2261,7 +2262,7 @@ async def test_pay(mocker: MockerFixture, client: TestClient):
             "eventType": "Payment",
             "data": {"amount": 500, "id": 123},
             "metadata": {
-                "hyperion_checkout_id": "81c9ad91-f415-494a-96ad-87bf647df82c",
+                "hyperion_checkout_id": str(mocked_checkout_id),
                 "secret": "checkoutsecret",
             },
         },
