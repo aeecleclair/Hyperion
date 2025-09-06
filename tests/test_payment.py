@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
+from helloasso_python.exceptions import UnauthorizedException
 from helloasso_python.models.hello_asso_api_v5_models_carts_init_checkout_body import (
     HelloAssoApiV5ModelsCartsInitCheckoutBody,
 )
@@ -496,7 +497,7 @@ async def test_payment_tool_init_checkout_with_one_failure(
         if init_checkout_body.payer is not None:
             r = Response()
             r.status_code = 400
-            raise Exception  # noqa: TRY002
+            raise UnauthorizedException
         return HelloAssoApiV5ModelsCartsInitCheckoutResponse(
             id=7,
             redirect_url=redirect_url,
