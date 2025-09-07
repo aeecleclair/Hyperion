@@ -83,19 +83,19 @@ def test_upgrade(
 ) -> None:
     assert (
         alembic_connection.execute(
-            sa.text(f"SELECT promo FROM core_user WHERE user_id = '{user_id_23}'"),
+            sa.text(f"SELECT promo FROM core_user WHERE id = '{user_id_23}'"),
         ).all()[0][0]
         == 2023
     )
     assert (
         alembic_connection.execute(
-            sa.text(f"SELECT promo FROM core_user WHERE user_id = '{user_id_2023}'"),
+            sa.text(f"SELECT promo FROM core_user WHERE id = '{user_id_2023}'"),
         ).all()[0][0]
         == 2023
     )
     assert (
         alembic_connection.execute(
-            sa.text(f"SELECT promo FROM core_user WHERE user_id = '{user_id_null}'"),
+            sa.text(f"SELECT promo FROM core_user WHERE id = '{user_id_null}'"),
         ).all()[0][0]
         is None
     )
