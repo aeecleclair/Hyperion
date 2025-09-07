@@ -4,7 +4,8 @@ Create Date: 2025-09-07 09:54:34.421809
 """
 
 import uuid
-from typing import TYPE_CHECKING, Sequence, Union
+from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 from app.core.schools.schools_type import SchoolType
 
@@ -13,8 +14,6 @@ if TYPE_CHECKING:
 
 import sqlalchemy as sa
 from alembic import op
-
-from app.types.sqlalchemy import TZDateTime
 
 # revision identifiers, used by Alembic.
 revision: str = "91fadc90f892"
@@ -84,19 +83,19 @@ def test_upgrade(
 ) -> None:
     assert (
         alembic_connection.execute(
-            sa.text(f"SELECT promo FROM core_user WHERE user_id = {user_id_23}"),
-        ).first()[9]
+            sa.text(f"SELECT promo FROM core_user WHERE user_id = '{user_id_23}'"),
+        ).first()[0]
         == 2023
     )
     assert (
         alembic_connection.execute(
-            sa.text(f"SELECT promo FROM core_user WHERE user_id = {user_id_2023}"),
-        ).first()[9]
+            sa.text(f"SELECT promo FROM core_user WHERE user_id = '{user_id_2023}'"),
+        ).first()[0]
         == 2023
     )
     assert (
         alembic_connection.execute(
-            sa.text(f"SELECT promo FROM core_user WHERE user_id = {user_id_null}"),
-        ).first()[9]
+            sa.text(f"SELECT promo FROM core_user WHERE user_id = '{user_id_null}'"),
+        ).first()[0]
         is None
     )
