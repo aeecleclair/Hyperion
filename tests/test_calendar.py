@@ -73,6 +73,7 @@ async def init_objects() -> None:
         ticket_url_opening=datetime.datetime.now(datetime.UTC)
         + datetime.timedelta(days=6),
         ticket_url="url",
+        notification=False,
     )
     await add_object_to_db(calendar_event)
 
@@ -92,6 +93,7 @@ async def init_objects() -> None:
         ticket_url_opening=datetime.datetime.now(datetime.UTC)
         - datetime.timedelta(days=6),
         ticket_url="url",
+        notification=False,
     )
     await add_object_to_db(confirmed_calendar_event)
 
@@ -110,6 +112,7 @@ async def init_objects() -> None:
         recurrence_rule=None,
         ticket_url_opening=None,
         ticket_url=None,
+        notification=False,
     )
     await add_object_to_db(calendar_event_to_delete)
 
@@ -224,6 +227,7 @@ def test_add_event(client: TestClient) -> None:
             "all_day": False,
             "location": "Skylab",
             "description": "Apprendre à coder !",
+            "notification": False,
         },
         headers={"Authorization": f"Bearer {token_amap}"},
     )
@@ -242,6 +246,7 @@ def test_add_event_with_missing_ticket_field(client: TestClient) -> None:
             "location": "Skylab",
             "description": "Apprendre à coder !",
             "ticket_url_opening": "2019-08-24T14:15:22Z",
+            "notification": False,
         },
         headers={"Authorization": f"Bearer {token_amap}"},
     )
@@ -258,6 +263,7 @@ def test_add_event_with_missing_ticket_field(client: TestClient) -> None:
             "location": "Skylab",
             "description": "Apprendre à coder !",
             "ticket_url": "https://example.com/ticket",
+            "notification": False,
         },
         headers={"Authorization": f"Bearer {token_amap}"},
     )
@@ -275,6 +281,7 @@ def test_add_event_non_member_of_association(client: TestClient) -> None:
             "all_day": False,
             "location": "Skylab",
             "description": "Apprendre à coder !",
+            "notification": False,
         },
         headers={"Authorization": f"Bearer {token_simple}"},
     )
@@ -292,6 +299,7 @@ def test_add_event_non_existing_association(client: TestClient) -> None:
             "all_day": False,
             "location": "Skylab",
             "description": "Apprendre à coder !",
+            "notification": False,
         },
         headers={"Authorization": f"Bearer {token_amap}"},
     )

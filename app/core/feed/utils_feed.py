@@ -3,7 +3,7 @@ from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.feed import cruds_feed, models_feed
+from app.core.feed import cruds_feed, models_feed, schemas_feed
 from app.core.feed.types_feed import NewsStatus
 from app.core.groups.groups_type import GroupType
 from app.core.notification.schemas_notification import Message
@@ -61,6 +61,63 @@ async def create_feed_news(
         message = Message(
             title="🔔 Feed - a news require approval",
             content=f"{entity} has created {title}",
+            action_module="feed",
+        )
+        await notification_tool.send_notification_to_group(
+            group_id=GroupType.admin_feed,
+            message=message,
+        )
+
+
+async def edit_feed_news(
+    module: str,
+    module_object_id: uuid.UUID,
+    title: str | None,
+    start: datetime | None,
+    end: datetime | None,
+    entity: str | None,
+    location: str | None,
+    action_start: datetime | None,
+    require_feed_admin_approval: bool,
+    db: AsyncSession,
+    notification_tool: NotificationTool,
+):
+    """
+    Edit a news in the feed
+
+    news_id: identifier of the news to edit
+    title: title of the news,
+    start: datetime corresponding to the start of the news. The news should be visible at this day
+    end: optional end datetime, may be used to compute the news subtitle
+    entity: name of the entity that created the news, usually the name of an association or a group
+    location: optional location related to the news
+    action_start: optional datetime corresponding to an action related to the news. If provided, an action button should be displayed at this datetime
+    """
+
+    await cruds_feed.edit_news_by_module_object_id(
+        module=module,
+        module_object_id=module_object_id,
+        news_edit=schemas_feed.NewsEdit(
+            title=title,
+            start=start,
+            end=end,
+            entity=entity,
+            location=location,
+            action_start=action_start,
+        ),
+        db=db,
+    )
+    if require_feed_admin_approval:
+        await cruds_feed.change_news_status_by_module_object_id(
+            module=module,
+            module_object_id=module_object_id,
+            status=NewsStatus.WAITING_APPROVAL,
+            db=db,
+        )
+    if require_feed_admin_approval:
+        message = Message(
+            title="🔔 Feed - a news has been modified",
+            content=f"{entity} has modified {title}",
             action_module="feed",
         )
         await notification_tool.send_notification_to_group(

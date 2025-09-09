@@ -5,7 +5,7 @@ import aiofiles
 from icalendar import Calendar, Event, vRecur
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.feed.utils_feed import create_feed_news
+from app.core.feed.utils_feed import create_feed_news, edit_feed_news
 from app.core.utils.config import Settings
 from app.modules.calendar import models_calendar
 from app.modules.calendar.types_calendar import Decision
@@ -31,6 +31,26 @@ async def add_event_to_feed(
         module_object_id=event.id,
         image_directory="event",
         image_id=event.id,
+        require_feed_admin_approval=False,
+        db=db,
+        notification_tool=notification_tool,
+    )
+
+
+async def edit_event_feed_news(
+    event: models_calendar.Event,
+    db: AsyncSession,
+    notification_tool: NotificationTool,
+):
+    await edit_feed_news(
+        module=root,
+        module_object_id=event.id,
+        title=event.name,
+        start=event.start,
+        end=event.end,
+        entity=event.association.name,
+        location=event.location,
+        action_start=event.ticket_url_opening,
         require_feed_admin_approval=False,
         db=db,
         notification_tool=notification_tool,

@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.feed import models_feed
+from app.core.feed import models_feed, schemas_feed
 from app.core.feed.types_feed import NewsStatus
 
 
@@ -59,4 +59,36 @@ async def change_news_status(
         update(models_feed.News)
         .where(models_feed.News.id == news_id)
         .values(status=status),
+    )
+
+
+async def change_news_status_by_module_object_id(
+    module: str,
+    module_object_id: UUID,
+    status: NewsStatus,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_feed.News)
+        .where(
+            models_feed.News.module == module,
+            models_feed.News.module_object_id == module_object_id,
+        )
+        .values(status=status),
+    )
+
+
+async def edit_news_by_module_object_id(
+    module: str,
+    module_object_id: UUID,
+    news_edit: schemas_feed.NewsEdit,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_feed.News)
+        .where(
+            models_feed.News.module == module,
+            models_feed.News.module_object_id == module_object_id,
+        )
+        .values(**news_edit.model_dump(exclude_unset=True)),
     )

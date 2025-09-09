@@ -131,41 +131,43 @@ async def create_advert(
         title=advert.title,
         content=advert.content,
         post_to_feed=advert.post_to_feed,
+        notification=advert.notification,
     )
 
     await cruds_advert.create_advert(db_advert=db_advert, db=db)
 
-    message = Message(
-        title=f"📣 Annonce - {db_advert.title}",
-        content=db_advert.content,
-        action_module=module.root,
-    )
+    if advert.notification:
+        message = Message(
+            title=f"📣 Annonce - {db_advert.title}",
+            content=db_advert.content,
+            action_module=module.root,
+        )
 
-    topic = await get_topic_by_root_and_identifier(
-        module_root=root,
-        topic_identifier=str(association.id),
-        db=db,
-    )
-    if topic is None:
-        # This means that the association never sent a news before, we have thus
-        # never registred its topic
-        topic_id = uuid.uuid4()
-        await notification_manager.register_new_topic(
-            topic_id=topic_id,
-            name=f"📣 Annonce - {association.name}",
+        topic = await get_topic_by_root_and_identifier(
             module_root=root,
             topic_identifier=str(association.id),
-            restrict_to_group_id=None,
-            restrict_to_members=True,
             db=db,
         )
-    else:
-        topic_id = topic.id
+        if topic is None:
+            # This means that the association never sent a news before, we have thus
+            # never registred its topic
+            topic_id = uuid.uuid4()
+            await notification_manager.register_new_topic(
+                topic_id=topic_id,
+                name=f"📣 Annonce - {association.name}",
+                module_root=root,
+                topic_identifier=str(association.id),
+                restrict_to_group_id=None,
+                restrict_to_members=True,
+                db=db,
+            )
+        else:
+            topic_id = topic.id
 
-    await notification_tool.send_notification_to_topic(
-        topic_id=topic_id,
-        message=message,
-    )
+        await notification_tool.send_notification_to_topic(
+            topic_id=topic_id,
+            message=message,
+        )
 
     if advert.post_to_feed:
         await create_feed_news(

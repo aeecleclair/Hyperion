@@ -34,6 +34,7 @@ class Event(Base):
 
     ticket_url: Mapped[str | None]
     ticket_url_opening: Mapped[datetime | None]
+    notification: Mapped[bool]
 
     association: Mapped[CoreAssociation] = relationship("CoreAssociation", init=False)
 

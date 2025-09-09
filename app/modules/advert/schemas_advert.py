@@ -12,6 +12,7 @@ class AdvertBase(BaseModel):
         default=False,
         description="If the advert should be posted in the feed. It will be pending validation be admin",
     )
+    notification: bool
 
 
 class AdvertComplete(AdvertBase):

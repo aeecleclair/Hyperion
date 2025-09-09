@@ -30,6 +30,7 @@ class CalendarFactory(Factory):
             recurrence_rule=None,
             ticket_url_opening=None,
             ticket_url=None,
+            notification=False,
         )
         await cruds_calendar.add_event(db, event)
 
@@ -47,6 +48,7 @@ class CalendarFactory(Factory):
             recurrence_rule=None,
             ticket_url_opening=None,
             ticket_url=None,
+            notification=False,
         )
         await cruds_calendar.add_event(db, day_long_event)
 

@@ -64,6 +64,7 @@ async def init_objects() -> None:
         content="Example of advert",
         date=datetime.datetime.now(tz=datetime.UTC),
         post_to_feed=False,
+        notification=True,
     )
 
     await add_object_to_db(advert)
@@ -105,6 +106,7 @@ def test_create_advert(client: TestClient) -> None:
             "content": "2nd example of advert",
             "advertiser_id": str(association.id),
             "post_to_feed": True,
+            "notification": False,
         },
         headers={"Authorization": f"Bearer {token_advertiser}"},
     )
@@ -128,6 +130,7 @@ async def test_delete_advert(client: TestClient) -> None:
         content="Example of advert",
         date=datetime.datetime.now(tz=datetime.UTC),
         post_to_feed=False,
+        notification=True,
     )
 
     await add_object_to_db(advert)

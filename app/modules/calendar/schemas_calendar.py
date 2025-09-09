@@ -19,6 +19,8 @@ class EventBase(BaseModel):
 
     ticket_url_opening: datetime | None = None
 
+    notification: bool
+
     association_id: UUID
 
 
@@ -59,6 +61,7 @@ class EventEdit(BaseModel):
     recurrence_rule: str | None = None
     ticket_url_opening: datetime | None = None
     ticket_url: str | None = None
+    notification: bool | None = None
 
 
 class IcalSecret(BaseModel):

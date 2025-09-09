@@ -33,3 +33,16 @@ class News(BaseModel):
 class NewsComplete(News):
     image_directory: str
     image_id: UUID
+
+
+class NewsEdit(BaseModel):
+    title: str | None = None
+
+    start: datetime | None = None
+    end: datetime | None = None
+
+    entity: str | None = None
+
+    location: str | None = None
+
+    action_start: datetime | None = None
