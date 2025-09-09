@@ -2978,11 +2978,11 @@ async def delete_ticket_generator_for_product(
             status_code=404,
             detail="Product Ticket not found.",
         )
-    await cruds_cdr.delete_ticket_generator(
+    await cruds_cdr.delete_product_generated_tickets(
         db=db,
         ticket_generator_id=ticket_generator_id,
     )
-    await cruds_cdr.delete_product_generated_tickets(
+    await cruds_cdr.delete_ticket_generator(
         db=db,
         ticket_generator_id=ticket_generator_id,
     )
