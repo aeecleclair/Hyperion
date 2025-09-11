@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import get_account_types_except_externals
+from app.core.groups.groups_type import GroupType, get_account_types_except_externals
 from app.core.schools import cruds_schools
 from app.core.users import cruds_users, models_users, schemas_users
 from app.dependencies import get_db, is_user
@@ -52,7 +52,7 @@ async def create_sport(
     db: AsyncSession = Depends(get_db),
     user: competition_schemas.CompetitionUser = Depends(
         is_user_a_member_of_extended(
-            comptition_group_id=CompetitionGroupType.competition_admin,
+            group_id=GroupType.competition_admin,
         ),
     ),
 ):
@@ -74,7 +74,7 @@ async def edit_sport(
     db: AsyncSession = Depends(get_db),
     user: competition_schemas.CompetitionUser = Depends(
         is_user_a_member_of_extended(
-            comptition_group_id=CompetitionGroupType.competition_admin,
+            group_id=GroupType.competition_admin,
         ),
     ),
 ):
@@ -95,7 +95,7 @@ async def delete_sport(
     db: AsyncSession = Depends(get_db),
     user: competition_schemas.CompetitionUser = Depends(
         is_user_a_member_of_extended(
-            comptition_group_id=CompetitionGroupType.competition_admin,
+            group_id=GroupType.competition_admin,
         ),
     ),
 ):
@@ -121,7 +121,7 @@ async def get_editions(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
         is_user_a_member_of_extended(
-            comptition_group_id=CompetitionGroupType.competition_admin,
+            group_id=GroupType.competition_admin,
         ),
     ),
 ):
@@ -153,7 +153,7 @@ async def create_edition(
     db: AsyncSession = Depends(get_db),
     user: competition_schemas.CompetitionUser = Depends(
         is_user_a_member_of_extended(
-            comptition_group_id=CompetitionGroupType.competition_admin,
+            group_id=GroupType.competition_admin,
         ),
     ),
 ):
@@ -178,7 +178,7 @@ async def edit_edition(
     db: AsyncSession = Depends(get_db),
     user: competition_schemas.CompetitionUser = Depends(
         is_user_a_member_of_extended(
-            comptition_group_id=CompetitionGroupType.competition_admin,
+            group_id=GroupType.competition_admin,
         ),
     ),
 ):
@@ -219,7 +219,7 @@ async def create_group(
     db: AsyncSession = Depends(get_db),
     user: competition_schemas.CompetitionUser = Depends(
         is_user_a_member_of_extended(
-            comptition_group_id=CompetitionGroupType.competition_admin,
+            group_id=GroupType.competition_admin,
         ),
     ),
 ):
@@ -238,7 +238,7 @@ async def edit_group(
     db: AsyncSession = Depends(get_db),
     user: competition_schemas.CompetitionUser = Depends(
         is_user_a_member_of_extended(
-            comptition_group_id=CompetitionGroupType.competition_admin,
+            group_id=GroupType.competition_admin,
         ),
     ),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
@@ -255,7 +255,7 @@ async def delete_group(
     db: AsyncSession = Depends(get_db),
     user: competition_schemas.CompetitionUser = Depends(
         is_user_a_member_of_extended(
-            comptition_group_id=CompetitionGroupType.competition_admin,
+            group_id=GroupType.competition_admin,
         ),
     ),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
@@ -269,6 +269,85 @@ async def delete_group(
     await competition_cruds.delete_group_by_id(group_id, db)
 
 
+@module.router.post(
+    "/competition/groups/{group_id}/users/{user_id}",
+    status_code=201,
+    response_model=competition_schemas.UserGroupMembership,
+)
+async def add_user_to_group(
+    group_id: UUID,
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: competition_schemas.CompetitionUser = Depends(
+        is_user_a_member_of_extended(
+            group_id=GroupType.competition_admin,
+        ),
+    ),
+    edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
+):
+    group = await competition_cruds.load_group_by_id(group_id, edition.id, db)
+    if group is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Group not found in the database",
+        ) from None
+    user_to_add = await cruds_users.get_user_by_id(db, user_id)
+    if user_to_add is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found in the database",
+        ) from None
+    membership = await competition_cruds.load_active_user_memberships(
+        user_id,
+        edition.id,
+        db,
+    )
+    if group_id in [m.group_id for m in membership]:
+        raise HTTPException(
+            status_code=400,
+            detail="User is already a member of this group",
+        ) from None
+    await competition_cruds.add_user_to_group(user_id, group_id, edition.id, db)
+    return competition_schemas.UserGroupMembership(
+        user_id=user_to_add.id,
+        group_id=group.id,
+        edition_id=edition.id,
+    )
+
+
+@module.router.delete(
+    "/competition/groups/{group_id}/users/{user_id}",
+    status_code=204,
+)
+async def remove_user_from_group(
+    group_id: UUID,
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: competition_schemas.CompetitionUser = Depends(
+        is_user_a_member_of_extended(
+            group_id=GroupType.competition_admin,
+        ),
+    ),
+    edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
+):
+    membership = await competition_cruds.load_active_user_memberships(
+        user_id,
+        edition.id,
+        db,
+    )
+    if group_id not in [m.group_id for m in membership]:
+        raise HTTPException(
+            status_code=404,
+            detail="User is not a member of this group",
+        ) from None
+    await competition_cruds.remove_user_from_group(
+        user_id,
+        group_id,
+        edition.id,
+        db,
+    )
+
+
 @module.router.get(
     "/competition/sports/{sport_id}/quotas",
     response_model=list[competition_schemas.Quota],
@@ -278,7 +357,7 @@ async def get_quotas_for_sport(
     db: AsyncSession = Depends(get_db),
     user: competition_schemas.CompetitionUser = Depends(
         is_user_a_member_of_extended(
-            comptition_group_id=CompetitionGroupType.competition_admin,
+            group_id=GroupType.competition_admin,
         ),
     ),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
@@ -330,7 +409,7 @@ async def create_quota(
     db: AsyncSession = Depends(get_db),
     user: competition_schemas.CompetitionUser = Depends(
         is_user_a_member_of_extended(
-            comptition_group_id=CompetitionGroupType.competition_admin,
+            group_id=GroupType.competition_admin,
         ),
     ),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
@@ -373,7 +452,7 @@ async def edit_quota(
     db: AsyncSession = Depends(get_db),
     user: competition_schemas.CompetitionUser = Depends(
         is_user_a_member_of_extended(
-            comptition_group_id=CompetitionGroupType.competition_admin,
+            group_id=GroupType.competition_admin,
         ),
     ),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
@@ -412,7 +491,7 @@ async def delete_quota(
     db: AsyncSession = Depends(get_db),
     user: competition_schemas.CompetitionUser = Depends(
         is_user_a_member_of_extended(
-            comptition_group_id=CompetitionGroupType.competition_admin,
+            group_id=GroupType.competition_admin,
         ),
     ),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
@@ -458,7 +537,7 @@ async def create_school(
     db: AsyncSession = Depends(get_db),
     user: competition_schemas.CompetitionUser = Depends(
         is_user_a_member_of_extended(
-            comptition_group_id=CompetitionGroupType.competition_admin,
+            group_id=GroupType.competition_admin,
         ),
     ),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
@@ -486,7 +565,7 @@ async def edit_school(
     db: AsyncSession = Depends(get_db),
     user: competition_schemas.CompetitionUser = Depends(
         is_user_a_member_of_extended(
-            comptition_group_id=CompetitionGroupType.competition_admin,
+            group_id=GroupType.competition_admin,
         ),
     ),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
@@ -506,7 +585,7 @@ async def delete_school(
     db: AsyncSession = Depends(get_db),
     user: competition_schemas.CompetitionUser = Depends(
         is_user_a_member_of_extended(
-            comptition_group_id=CompetitionGroupType.competition_admin,
+            group_id=GroupType.competition_admin,
         ),
     ),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
@@ -567,7 +646,7 @@ async def get_teams_for_sport(
     db: AsyncSession = Depends(get_db),
     user: competition_schemas.CompetitionUser = Depends(
         is_user_a_member_of_extended(
-            comptition_group_id=CompetitionGroupType.competition_admin,
+            group_id=GroupType.competition_admin,
         ),
     ),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
@@ -623,11 +702,9 @@ async def create_team(
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
     user: schemas_users.CoreUser = Depends(is_user),
 ):
-    if (
-        user.id != team_info.captain_id
-        and CompetitionGroupType.competition_admin.value
-        not in [group.id for group in user.groups]
-    ):
+    if user.id != team_info.captain_id and GroupType.competition_admin.value not in [
+        group.id for group in user.groups
+    ]:
         raise HTTPException(status_code=403, detail="Unauthorized action") from None
     global_team = await competition_cruds.load_team_by_name(
         team_info.name,
@@ -675,11 +752,9 @@ async def edit_team(
             status_code=404,
             detail="Team not found in the database",
         ) from None
-    if (
-        user.id != stored.captain_id
-        and CompetitionGroupType.competition_admin.value
-        not in [group.id for group in user.groups]
-    ):
+    if user.id != stored.captain_id and GroupType.competition_admin.value not in [
+        group.id for group in user.groups
+    ]:
         raise HTTPException(status_code=403, detail="Unauthorized action") from None
     if team_info.captain_id is not None and team_info.captain_id != stored.captain_id:
         captain = await cruds_users.get_user_by_id(
@@ -718,11 +793,9 @@ async def delete_team(
             status_code=404,
             detail="Team not found in the database",
         ) from None
-    if (
-        user.id != stored.captain_id
-        and CompetitionGroupType.competition_admin.value
-        not in [group.id for group in user.groups]
-    ):
+    if user.id != stored.captain_id and GroupType.competition_admin.value not in [
+        group.id for group in user.groups
+    ]:
         raise HTTPException(status_code=403, detail="Unauthorized action") from None
     await competition_cruds.delete_team_by_id(stored.id, db)
 
@@ -786,7 +859,7 @@ async def get_participants_for_sport(
     db: AsyncSession = Depends(get_db),
     user: competition_schemas.CompetitionUser = Depends(
         is_user_a_member_of_extended(
-            comptition_group_id=CompetitionGroupType.competition_admin,
+            group_id=GroupType.competition_admin,
         ),
     ),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
@@ -819,7 +892,7 @@ async def get_participants_for_school(
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
 ):
     if (
-        CompetitionGroupType.competition_admin.value
+        GroupType.competition_admin.value
         not in [group.id for group in user.competition_groups]
         and user.school_id != school_id
     ):
@@ -860,7 +933,7 @@ async def validate_participant(
             detail="Participant not found in the database",
         ) from None
     if (
-        CompetitionGroupType.competition_admin.value
+        GroupType.competition_admin.value
         not in [group.id for group in user.competition_groups]
         and user.school_id != participant.school_id
     ):
