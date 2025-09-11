@@ -165,7 +165,7 @@ async def create_edition(
         ) from None
     edition = competition_schemas.CompetitionEdition(
         **edition.model_dump(),
-        id=str(uuid4()),
+        id=uuid4(),
     )
     await competition_cruds.store_edition(edition, db)
     return edition
