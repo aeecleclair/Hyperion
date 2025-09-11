@@ -365,6 +365,7 @@ async def init_objects() -> None:
         team_id=team_admin_user.id,
         substitute=False,
         license="1234567890",
+        certificate_file_id=None,
         is_license_valid=True,
     )
     await add_object_to_db(participant1)
@@ -376,6 +377,7 @@ async def init_objects() -> None:
         team_id=team1.id,
         substitute=False,
         license="0987654321",
+        certificate_file_id=None,
         is_license_valid=True,
     )
     await add_object_to_db(participant2)
@@ -396,6 +398,7 @@ async def init_objects() -> None:
         team_id=team1.id,
         substitute=False,
         license="1122334455",
+        certificate_file_id=None,
         is_license_valid=True,
     )
     await add_object_to_db(participant3)
@@ -2185,6 +2188,86 @@ async def test_user_participate_with_team(
     )
     assert user_participation is not None, participants_json
     assert user_participation["edition_id"] == str(active_edition.id)
+
+
+async def test_add_user_certificate(
+    client: TestClient,
+):
+    file = b"this is a test file"
+    file_content = {
+        "certificate": ("test_certificate.pdf", file, "application/pdf"),
+    }
+    response = client.post(
+        f"/competition/participants/sports/{sport_free_quota.id}/certificate",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        files=file_content,
+    )
+    assert response.status_code == 204, response.json()
+
+    participants = client.get(
+        f"/competition/participants/sports/{sport_free_quota.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert participants.status_code == 200, participants.json()
+    participants_json = participants.json()
+    user_participation = next(
+        (u for u in participants_json if u["user_id"] == str(admin_user.id)),
+        None,
+    )
+    assert user_participation is not None, participants_json
+    assert user_participation["certificate_file_id"] is not None, participants_json
+
+    file_response = client.get(
+        f"/competition/participants/users/{admin_user.id}/certificate",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert file_response.status_code == 200, file_response.json()
+    assert file_response.content == file, file_response.json()
+
+
+async def test_delete_user_certificate(
+    client: TestClient,
+) -> None:
+    response = client.delete(
+        f"/competition/participants/sports/{sport_free_quota.id}/certificate",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 204, response.json()
+
+    participants = client.get(
+        f"/competition/participants/sports/{sport_free_quota.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert participants.status_code == 200, participants.json()
+    participants_json = participants.json()
+    user_participation = next(
+        (u for u in participants_json if u["user_id"] == str(admin_user.id)),
+        None,
+    )
+    assert user_participation is not None, participants_json
+    assert user_participation["certificate_file_id"] is None, participants_json
+
+
+async def test_user_withdraw_participation(
+    client: TestClient,
+) -> None:
+    response = client.delete(
+        f"/competition/sports/{sport_with_team.id}/withdraw",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 204, response.json()
+
+    participants = client.get(
+        f"/competition/participants/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert participants.status_code == 200, participants.json()
+    participants_json = participants.json()
+    user_participation = next(
+        (u for u in participants_json if u["user_id"] == str(user3.id)),
+        None,
+    )
+    assert user_participation is None, participants_json
 
 
 # endregion

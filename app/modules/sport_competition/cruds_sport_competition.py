@@ -582,6 +582,7 @@ async def add_participant(
             school_id=participant.school_id,
             substitute=participant.substitute,
             license=participant.license,
+            certificate_file_id=participant.certificate_file_id,
             is_license_valid=participant.is_license_valid,
         ),
     )
@@ -873,6 +874,27 @@ async def count_validated_participants_by_school_and_sport_ids(
         ),
     )
     return result.scalar() or 0
+
+
+async def update_participant_certificate_file_id(
+    user_id: str,
+    sport_id: UUID,
+    edition_id: UUID,
+    certificate_file_id: UUID | None,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_sport_competition.CompetitionParticipant)
+        .where(
+            and_(
+                models_sport_competition.CompetitionParticipant.user_id == user_id,
+                models_sport_competition.CompetitionParticipant.sport_id == sport_id,
+                models_sport_competition.CompetitionParticipant.edition_id
+                == edition_id,
+            ),
+        )
+        .values(certificate_file_id=certificate_file_id),
+    )
 
 
 async def update_participant_license_validity(

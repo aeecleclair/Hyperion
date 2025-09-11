@@ -67,6 +67,7 @@ def participant_complete_model_to_schema(
         school_id=participant.school_id,
         substitute=participant.substitute,
         license=participant.license,
+        certificate_file_id=participant.certificate_file_id,
         is_license_valid=participant.is_license_valid,
         user=competition_user_model_to_schema(participant.user),
     )

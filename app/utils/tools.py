@@ -295,7 +295,7 @@ def get_file_path_from_data(
 def get_file_from_data(
     directory: str,
     filename: str,
-    default_asset: str,
+    default_asset: str | None = None,
 ) -> FileResponse:
     """
     If there is a file with the provided filename in the data folder, return it. The file extension will be inferred from the provided content file.

@@ -2,7 +2,8 @@ import logging
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from fastapi import Body, Depends, HTTPException
+from fastapi import Body, Depends, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import GroupType, get_account_types_except_externals
@@ -34,8 +35,14 @@ from app.modules.sport_competition.utils_sport_competition import (
     validate_payment,
     validate_product_variant_purchase,
 )
+from app.types.content_type import ContentType
 from app.types.module import Module
-from app.utils.tools import is_user_member_of_any_group
+from app.utils.tools import (
+    delete_file_from_data,
+    get_file_from_data,
+    is_user_member_of_any_group,
+    save_file_as_data,
+)
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -1504,6 +1511,47 @@ async def get_participants_for_school(
     )
 
 
+@module.router.get(
+    "/competition/participants/users/{user_id}/certificate",
+    response_class=FileResponse,
+)
+async def download_participant_certificate(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> FileResponse:
+    if (
+        GroupType.competition_admin.value not in [group.id for group in user.groups]
+        and user.id != user_id
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Unauthorized action",
+        )
+    participant = await cruds_sport_competition.load_participant_by_user_id(
+        user_id,
+        edition.id,
+        db,
+    )
+    if participant is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Participant not found in the database",
+        )
+    if participant.certificate_file_id is None:
+        raise HTTPException(
+            status_code=404,
+            detail="No certificate uploaded for this participant",
+        )
+    return get_file_from_data(
+        directory="sport_competition/certificates",
+        filename=str(participant.certificate_file_id),
+    )
+
+
 @module.router.post(
     "/competition/sports/{sport_id}/participate",
     status_code=201,
@@ -1642,6 +1690,53 @@ async def join_sport(
     return participant
 
 
+@module.router.post(
+    "/competition/participants/sports/{sport_id}/certificate",
+    status_code=204,
+)
+async def upload_participant_certificate(
+    sport_id: UUID,
+    certificate: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> None:
+    participant = await cruds_sport_competition.load_participant_by_ids(
+        user.id,
+        sport_id,
+        edition.id,
+        db,
+    )
+    if participant is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Participant not found in the database",
+        )
+    filename = uuid4()
+    if participant.certificate_file_id is not None:
+        filename = participant.certificate_file_id
+    await save_file_as_data(
+        upload_file=certificate,
+        directory="sport_competition/certificates",
+        filename=str(filename),
+        max_file_size=4 * 1024 * 1024,  # 4 MB
+        accepted_content_types=[
+            ContentType.jpg,
+            ContentType.png,
+            ContentType.pdf,
+        ],  # TODO : Change this value
+    )
+    await cruds_sport_competition.update_participant_certificate_file_id(
+        user.id,
+        sport_id,
+        edition.id,
+        filename,
+        db,
+    )
+
+
 @module.router.patch(
     "/competition/participants/sports/{sport_id}/users/{user_id}/license",
     status_code=204,
@@ -1676,6 +1771,47 @@ async def mark_participant_license_as_valid(
         is_license_valid,
         db,
     )
+
+
+@module.router.delete(
+    "/competition/sports/{sport_id}/withdraw",
+    status_code=204,
+)
+async def withdraw_from_sport(
+    sport_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: schemas_sport_competition.CompetitionUser = Depends(is_competition_user()),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> None:
+    participant = await cruds_sport_competition.load_participant_by_ids(
+        user.user_id,
+        sport_id,
+        edition.id,
+        db,
+    )
+    if participant is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Participant not found in the database",
+        )
+    if participant.user.validated:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot withdraw a validated participant",
+        )
+    await cruds_sport_competition.delete_participant_by_ids(
+        user.user_id,
+        sport_id,
+        edition.id,
+        db,
+    )
+    if participant.certificate_file_id is not None:
+        await delete_file_from_data(
+            directory="sport_competition/certificates",
+            filename=str(participant.certificate_file_id),
+        )
 
 
 @module.router.delete(
@@ -1726,6 +1862,48 @@ async def delete_participant(
         edition.id,
         db,
     )
+    if participant.certificate_file_id is not None:
+        await delete_file_from_data(
+            directory="sport_competition/certificates",
+            filename=str(participant.certificate_file_id),
+        )
+
+
+@module.router.delete(
+    "/competition/participants/sports/{sport_id}/certificate",
+    status_code=204,
+)
+async def delete_participant_certificate_file(
+    sport_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: schemas_users.CoreUser = Depends(is_user()),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> None:
+    participant = await cruds_sport_competition.load_participant_by_ids(
+        user.id,
+        sport_id,
+        edition.id,
+        db,
+    )
+    if participant is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Participant not found in the database",
+        )
+    if participant.certificate_file_id is not None:
+        await cruds_sport_competition.update_participant_certificate_file_id(
+            user.id,
+            sport_id,
+            edition.id,
+            None,
+            db,
+        )
+        await delete_file_from_data(
+            directory="sport_competition/certificates",
+            filename=str(participant.certificate_file_id),
+        )
 
 
 # endregion: Participants

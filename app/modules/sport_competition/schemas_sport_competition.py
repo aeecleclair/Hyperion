@@ -190,6 +190,7 @@ class Participant(BaseModel):
     edition_id: UUID
     school_id: UUID
     license: str | None = None
+    certificate_file_id: UUID | None = None
     is_license_valid: bool
     substitute: bool = False
     team_id: UUID
