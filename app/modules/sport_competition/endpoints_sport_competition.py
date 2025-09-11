@@ -855,7 +855,7 @@ async def edit_school_general_quota(
 
 @module.router.get(
     "/competition/sports/{sport_id}/quotas",
-    response_model=list[schemas_sport_competition.Quota],
+    response_model=list[schemas_sport_competition.SportQuota],
 )
 async def get_quotas_for_sport(
     sport_id: UUID,
@@ -868,7 +868,7 @@ async def get_quotas_for_sport(
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
-) -> list[schemas_sport_competition.Quota]:
+) -> list[schemas_sport_competition.SportQuota]:
     sport = await cruds_sport_competition.load_sport_by_id(sport_id, db)
     if sport is None:
         raise HTTPException(
@@ -884,7 +884,7 @@ async def get_quotas_for_sport(
 
 @module.router.get(
     "/competition/schools/{school_id}/quotas",
-    response_model=list[schemas_sport_competition.Quota],
+    response_model=list[schemas_sport_competition.SportQuota],
 )
 async def get_quotas_for_school(
     school_id: UUID,
@@ -893,7 +893,7 @@ async def get_quotas_for_school(
         get_current_edition,
     ),
     user: models_users.CoreUser = Depends(is_user()),
-) -> list[schemas_sport_competition.Quota]:
+) -> list[schemas_sport_competition.SportQuota]:
     school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
     if school is None:
         raise HTTPException(
@@ -914,7 +914,7 @@ async def get_quotas_for_school(
 async def create_sport_quota(
     school_id: UUID,
     sport_id: UUID,
-    quota_info: schemas_sport_competition.QuotaInfo,
+    quota_info: schemas_sport_competition.SportQuotaInfo,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
         is_user_in(
@@ -945,7 +945,7 @@ async def create_sport_quota(
     )
     if stored is not None:
         raise HTTPException(status_code=400, detail="Quota already exists")
-    quota = schemas_sport_competition.Quota(
+    quota = schemas_sport_competition.SportQuota(
         school_id=school_id,
         sport_id=sport_id,
         participant_quota=quota_info.participant_quota,
@@ -962,7 +962,7 @@ async def create_sport_quota(
 async def edit_sport_quota(
     school_id: UUID,
     sport_id: UUID,
-    quota_info: schemas_sport_competition.QuotaEdit,
+    quota_info: schemas_sport_competition.SportQuotaEdit,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
         is_user_in(
@@ -2037,6 +2037,160 @@ async def delete_match(
 
 
 # endregion: Matches
+# region: Podiums
+
+
+@module.router.get(
+    "/competition/podiums/global",
+    response_model=list[schemas_sport_competition.SchoolResult],
+    status_code=200,
+)
+async def get_global_podiums(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> list[schemas_sport_competition.SchoolResult]:
+    """
+    Get the global podiums for the current edition.
+    """
+    return await cruds_sport_competition.get_global_podiums(edition.id, db)
+
+
+@module.router.get(
+    "/competition/podiums/sport/{sport_id}",
+    response_model=list[schemas_sport_competition.TeamSportResultComplete],
+    status_code=200,
+)
+async def get_sport_podiums(
+    sport_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> list[schemas_sport_competition.TeamSportResultComplete]:
+    """
+    Get the podiums for a specific sport in the current edition.
+    """
+    sport = await cruds_sport_competition.load_sport_by_id(sport_id, db)
+    if sport is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Sport not found.",
+        )
+    return await cruds_sport_competition.get_sport_podiums(sport_id, edition.id, db)
+
+
+@module.router.get(
+    "/competition/podiums/school/{school_id}",
+    response_model=list[schemas_sport_competition.TeamSportResultComplete],
+    status_code=200,
+)
+async def get_school_podiums(
+    school_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> list[schemas_sport_competition.TeamSportResultComplete]:
+    """
+    Get the podiums for a specific school in the current edition.
+    """
+    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    if school is None:
+        raise HTTPException(
+            status_code=404,
+            detail="School not found.",
+        )
+    return await cruds_sport_competition.get_school_podiums(school_id, edition.id, db)
+
+
+@module.router.post(
+    "/competition/podiums/sport/{sport_id}/",
+    response_model=list[schemas_sport_competition.TeamSportResult],
+    status_code=201,
+)
+async def create_sport_podium(
+    sport_id: UUID,
+    rankings: schemas_sport_competition.SportPodiumRankings,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_competition_user(
+            competition_group=CompetitionGroupType.sport_manager,
+        ),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> list[schemas_sport_competition.TeamSportResult]:
+    """
+    Create or update the podium for a specific sport in the current edition.
+    """
+    sport = await cruds_sport_competition.load_sport_by_id(sport_id, db)
+    if sport is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Sport not found.",
+        )
+    await cruds_sport_competition.delete_sport_ranking(
+        sport_id,
+        edition.id,
+        db,
+    )
+    ranking_complete = [
+        schemas_sport_competition.TeamSportResult(
+            team_id=team.team_id,
+            school_id=team.school_id,
+            sport_id=sport_id,
+            edition_id=edition.id,
+            rank=i + 1,
+            points=team.points,
+        )
+        for i, team in enumerate(rankings.rankings)
+    ]
+    await cruds_sport_competition.add_sport_ranking(
+        ranking_complete,
+        db,
+    )
+    return ranking_complete
+
+
+@module.router.delete(
+    "/competition/podiums/sport/{sport_id}/",
+    status_code=204,
+)
+async def delete_sport_podium(
+    sport_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_competition_user(
+            competition_group=CompetitionGroupType.sport_manager,
+        ),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> None:
+    """
+    Delete the podium for a specific sport in the current edition.
+    """
+    sport = await cruds_sport_competition.load_sport_by_id(sport_id, db)
+    if sport is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Sport not found.",
+        )
+    await cruds_sport_competition.delete_sport_ranking(
+        sport_id,
+        edition.id,
+        db,
+    )
+
+
+# endregion: Podiums
 # region: Products
 
 
