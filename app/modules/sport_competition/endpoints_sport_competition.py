@@ -1808,7 +1808,7 @@ async def withdraw_from_sport(
         db,
     )
     if participant.certificate_file_id is not None:
-        await delete_file_from_data(
+        delete_file_from_data(
             directory="sport_competition/certificates",
             filename=str(participant.certificate_file_id),
         )
@@ -1863,7 +1863,7 @@ async def delete_participant(
         db,
     )
     if participant.certificate_file_id is not None:
-        await delete_file_from_data(
+        delete_file_from_data(
             directory="sport_competition/certificates",
             filename=str(participant.certificate_file_id),
         )
@@ -1900,7 +1900,7 @@ async def delete_participant_certificate_file(
             None,
             db,
         )
-        await delete_file_from_data(
+        delete_file_from_data(
             directory="sport_competition/certificates",
             filename=str(participant.certificate_file_id),
         )
