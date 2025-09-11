@@ -184,7 +184,7 @@ class Participant(BaseModel):
     sport_id: UUID
     edition_id: UUID
     school_id: UUID
-    license: str
+    license: str | None = None
     is_license_valid: bool
     substitute: bool = False
     team_id: UUID

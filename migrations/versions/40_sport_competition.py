@@ -274,6 +274,7 @@ def upgrade() -> None:
         sa.Column("edition_id", sa.Uuid(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("description", sa.String(), nullable=True),
+        sa.Column("required", sa.Boolean(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(
             ["edition_id"],
