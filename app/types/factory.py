@@ -28,12 +28,12 @@ class Factory(ABC):
         depends_on = []  # List of factories that should be run before this factory
 
         @classmethod
-        async def run(cls, db: AsyncSession):
-                pass
+        async def run(cls, db: AsyncSession, settings: Settings) -> None:
+            pass
 
         @classmethod
-        async def should_run(cls, db: AsyncSession):
-                return True
+        async def should_run(cls, db: AsyncSession) -> bool:
+            return True
     ```
     The `should_run` method should return True if the factory should run, and False if it should not.
     """

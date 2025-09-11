@@ -49,7 +49,7 @@ def get_public_type_from_user(
 
 def validate_product_variant_purchase(
     purchase: schemas_sport_competition.PurchaseBase,
-    product_variant: schemas_sport_competition.ProductVariantWithProduct,
+    product_variant: schemas_sport_competition.ProductVariantComplete,
     user: schemas_sport_competition.CompetitionUser,
     user_school: schemas_sport_competition.SchoolExtension,
     edition: schemas_sport_competition.CompetitionEdition,

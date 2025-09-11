@@ -145,7 +145,7 @@ def purchase_model_to_schema(
         quantity=purchase.quantity,
         purchased_on=purchase.purchased_on,
         validated=purchase.validated,
-        product_variant=schemas_sport_competition.ProductVariantComplete(
+        product_variant=schemas_sport_competition.ProductVariant(
             id=purchase.product_variant.id,
             edition_id=purchase.product_variant.edition_id,
             product_id=purchase.product_variant.product_id,

@@ -1,4 +1,4 @@
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,11 +11,13 @@ from app.types.factory import Factory
 class CoreSchoolsFactory(Factory):
     depends_on = []
 
+    school_id: UUID = uuid4()
+
     @classmethod
     async def run(cls, db: AsyncSession, settings: Settings) -> None:
         await cruds_schools.create_school(
             CoreSchool(
-                id=uuid4(),
+                id=cls.school_id,
                 name="ENS",
                 email_regex=r"^[a-zA-Z0-9_.+-]+@ens\.fr$",
             ),

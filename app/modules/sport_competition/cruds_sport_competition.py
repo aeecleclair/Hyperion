@@ -866,6 +866,27 @@ async def count_validated_participants_by_school_and_sport_ids(
     return result.scalar() or 0
 
 
+async def update_participant_license_validity(
+    user_id: str,
+    sport_id: UUID,
+    edition_id: UUID,
+    is_license_valid: bool,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_sport_competition.CompetitionParticipant)
+        .where(
+            and_(
+                models_sport_competition.CompetitionParticipant.user_id == user_id,
+                models_sport_competition.CompetitionParticipant.sport_id == sport_id,
+                models_sport_competition.CompetitionParticipant.edition_id
+                == edition_id,
+            ),
+        )
+        .values(is_license_valid=is_license_valid),
+    )
+
+
 # endregion: Participants
 # region: Quotas
 
@@ -903,7 +924,22 @@ async def add_school_general_quota(
     quota: schemas_sport_competition.SchoolGeneralQuota,
     db: AsyncSession,
 ):
-    db.add(models_sport_competition.SchoolGeneralQuota(**quota.model_dump()))
+    db.add(
+        models_sport_competition.SchoolGeneralQuota(
+            school_id=quota.school_id,
+            edition_id=quota.edition_id,
+            athlete_quota=quota.athlete_quota,
+            cameraman_quota=quota.cameraman_quota,
+            pompom_quota=quota.pompom_quota,
+            fanfare_quota=quota.fanfare_quota,
+            athlete_cameraman_quota=quota.athlete_cameraman_quota,
+            athlete_fanfare_quota=quota.athlete_fanfare_quota,
+            athlete_pompom_quota=quota.athlete_pompom_quota,
+            non_athlete_cameraman_quota=quota.non_athlete_cameraman_quota,
+            non_athlete_fanfare_quota=quota.non_athlete_fanfare_quota,
+            non_athlete_pompom_quota=quota.non_athlete_pompom_quota,
+        ),
+    )
     await db.flush()
 
 
@@ -942,7 +978,15 @@ async def add_sport_quota(
     quota: schemas_sport_competition.SchoolSportQuota,
     db: AsyncSession,
 ):
-    db.add(models_sport_competition.SchoolSportQuota(**quota.model_dump()))
+    db.add(
+        models_sport_competition.SchoolSportQuota(
+            sport_id=quota.sport_id,
+            school_id=quota.school_id,
+            edition_id=quota.edition_id,
+            participant_quota=quota.participant_quota,
+            team_quota=quota.team_quota,
+        ),
+    )
     await db.flush()
 
 
@@ -1842,7 +1886,7 @@ async def get_products(
             required=product.required,
             description=product.description,
             variants=[
-                schemas_sport_competition.ProductVariantComplete(
+                schemas_sport_competition.ProductVariant(
                     id=variant.id,
                     edition_id=variant.edition_id,
                     product_id=variant.product_id,
@@ -1901,7 +1945,7 @@ async def load_required_products(
 
 
 async def add_product(
-    product: schemas_sport_competition.ProductComplete,
+    product: schemas_sport_competition.Product,
     db: AsyncSession,
 ):
     db.add(
@@ -1948,14 +1992,14 @@ async def delete_product_by_id(
 async def load_product_variants(
     product_id: UUID,
     db: AsyncSession,
-) -> list[schemas_sport_competition.ProductVariantComplete]:
+) -> list[schemas_sport_competition.ProductVariant]:
     variants = await db.execute(
         select(models_sport_competition.CompetitionProductVariant).where(
             models_sport_competition.CompetitionProductVariant.product_id == product_id,
         ),
     )
     return [
-        schemas_sport_competition.ProductVariantComplete(
+        schemas_sport_competition.ProductVariant(
             id=variant.id,
             edition_id=variant.edition_id,
             product_id=variant.product_id,
@@ -1994,7 +2038,7 @@ async def load_available_product_variants(
         ),
     )
     return [
-        schemas_sport_competition.ProductVariantWithProduct(
+        schemas_sport_competition.ProductVariantComplete(
             id=variant.id,
             edition_id=variant.edition_id,
             product_id=variant.product_id,
@@ -2019,13 +2063,13 @@ async def load_available_product_variants(
 async def load_product_variant_by_id(
     variant_id: UUID,
     db: AsyncSession,
-) -> schemas_sport_competition.ProductVariantWithProduct | None:
+) -> schemas_sport_competition.ProductVariantComplete | None:
     variant = await db.get(
         models_sport_competition.CompetitionProductVariant,
         variant_id,
     )
     return (
-        schemas_sport_competition.ProductVariantWithProduct(
+        schemas_sport_competition.ProductVariantComplete(
             id=variant.id,
             edition_id=variant.edition_id,
             product_id=variant.product_id,
@@ -2049,7 +2093,7 @@ async def load_product_variant_by_id(
 
 
 async def add_product_variant(
-    variant: schemas_sport_competition.ProductVariantComplete,
+    variant: schemas_sport_competition.ProductVariant,
     db: AsyncSession,
 ):
     db.add(

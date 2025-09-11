@@ -329,7 +329,7 @@ class ProductVariantBase(BaseModel):
     public_type: ProductPublicType | None = None
 
 
-class ProductVariantComplete(ProductVariantBase):
+class ProductVariant(ProductVariantBase):
     edition_id: UUID
     id: UUID
 
@@ -356,10 +356,10 @@ class Product(ProductBase):
 
 
 class ProductComplete(Product):
-    variants: list[ProductVariantComplete] = []
+    variants: list[ProductVariant] = []
 
 
-class ProductVariantWithProduct(ProductVariantComplete):
+class ProductVariantComplete(ProductVariant):
     product: Product
 
 
@@ -396,7 +396,7 @@ class Purchase(PurchaseBase):
 
 
 class PurchaseComplete(Purchase):
-    product_variant: ProductVariantComplete
+    product_variant: ProductVariant
 
 
 class PurchaseEdit(BaseModel):

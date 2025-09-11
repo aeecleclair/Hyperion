@@ -465,7 +465,7 @@ async def edit_competition_user(
     "/competition/users/{user_id}/validate",
     status_code=204,
 )
-async def validate_participation(
+async def validate_competition_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
@@ -557,6 +557,63 @@ async def validate_participation(
         db,
     )
     await cruds_sport_competition.validate_participant(
+        user_id,
+        edition.id,
+        db,
+    )
+
+
+@module.router.patch(
+    "/competition/users/{user_id}/invalidate",
+    status_code=204,
+)
+async def invalidate_competition_user(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: schemas_sport_competition.CompetitionUser = Depends(
+        is_competition_user(
+            competition_group=CompetitionGroupType.schools_bds,
+        ),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> None:
+    user_to_invalidate = await cruds_sport_competition.load_competition_user_by_id(
+        user_id,
+        edition.id,
+        db,
+    )
+    if user_to_invalidate is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found in the database",
+        )
+    if not user_to_invalidate.validated:
+        raise HTTPException(
+            status_code=400,
+            detail="User is not validated",
+        )
+    if (
+        GroupType.competition_admin.value
+        not in [group.id for group in user.user.groups]
+        and user.user.school_id != user_to_invalidate.user.school_id
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Unauthorized action",
+        )
+    payments = await cruds_sport_competition.load_user_payments(
+        user_id,
+        edition.id,
+        db,
+    )
+    if len(payments) > 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot invalidate participant with payments",
+        )
+    await cruds_sport_competition.invalidate_participant(
         user_id,
         edition.id,
         db,
@@ -911,7 +968,16 @@ async def create_school_general_quota(
     quota = schemas_sport_competition.SchoolGeneralQuota(
         school_id=school_id,
         edition_id=edition.id,
-        **quota_info.model_dump(exclude_unset=True),
+        athlete_quota=quota_info.athlete_quota,
+        cameraman_quota=quota_info.cameraman_quota,
+        pompom_quota=quota_info.pompom_quota,
+        fanfare_quota=quota_info.fanfare_quota,
+        athlete_cameraman_quota=quota_info.athlete_cameraman_quota,
+        athlete_fanfare_quota=quota_info.athlete_fanfare_quota,
+        athlete_pompom_quota=quota_info.athlete_pompom_quota,
+        non_athlete_cameraman_quota=quota_info.non_athlete_cameraman_quota,
+        non_athlete_fanfare_quota=quota_info.non_athlete_fanfare_quota,
+        non_athlete_pompom_quota=quota_info.non_athlete_pompom_quota,
     )
     await cruds_sport_competition.add_school_general_quota(quota, db)
     return quota
@@ -1577,17 +1643,16 @@ async def join_sport(
 
 
 @module.router.patch(
-    "/competition/participants/{user_id}/sports/{sport_id}/invalidate",
+    "/competition/participants/sports/{sport_id}/users/{user_id}/license",
     status_code=204,
 )
-async def invalidate_participant(
-    user_id: str,
+async def mark_participant_license_as_valid(
     sport_id: UUID,
+    user_id: str,
+    is_license_valid: bool,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_competition_user(
-            competition_group=CompetitionGroupType.schools_bds,
-        ),
+        is_user_in(group_id=GroupType.competition_admin),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -1604,28 +1669,11 @@ async def invalidate_participant(
             status_code=404,
             detail="Participant not found in the database",
         )
-    if (
-        GroupType.competition_admin.value
-        not in [group.id for group in user.user.groups]
-        and user.user.school_id != participant.school_id
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="Unauthorized action",
-        )
-    payments = await cruds_sport_competition.load_user_payments(
+    await cruds_sport_competition.update_participant_license_validity(
         user_id,
+        sport_id,
         edition.id,
-        db,
-    )
-    if len(payments) > 0:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot invalidate participant with payments",
-        )
-    await cruds_sport_competition.invalidate_participant(
-        user_id,
-        edition.id,
+        is_license_valid,
         db,
     )
 
@@ -2257,7 +2305,7 @@ async def create_product(
     """
     Create a product.
     """
-    db_product = schemas_sport_competition.ProductComplete(
+    db_product = schemas_sport_competition.Product(
         id=uuid4(),
         edition_id=edition.id,
         required=product.required,
@@ -2358,7 +2406,7 @@ async def delete_product(
 
 @module.router.get(
     "/competition/products/available",
-    response_model=list[schemas_sport_competition.ProductVariantComplete],
+    response_model=list[schemas_sport_competition.ProductVariant],
     status_code=200,
 )
 async def get_available_product_variants(
@@ -2399,7 +2447,7 @@ async def get_available_product_variants(
 
 @module.router.post(
     "/competition/products/{product_id}/variants",
-    response_model=schemas_sport_competition.ProductVariantComplete,
+    response_model=schemas_sport_competition.ProductVariant,
     status_code=201,
 )
 async def create_product_variant(
@@ -2428,7 +2476,7 @@ async def create_product_variant(
             detail="Product not found.",
         )
 
-    db_product_variant = schemas_sport_competition.ProductVariantComplete(
+    db_product_variant = schemas_sport_competition.ProductVariant(
         id=uuid4(),
         edition_id=edition.id,
         product_id=product_id,
