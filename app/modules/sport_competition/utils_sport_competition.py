@@ -51,7 +51,7 @@ def validate_product_variant_purchase(
     purchase: schemas_sport_competition.PurchaseBase,
     product_variant: schemas_sport_competition.ProductVariantWithProduct,
     user: schemas_sport_competition.CompetitionUser,
-    user_school: schemas_sport_competition.SchoolExtensionComplete,
+    user_school: schemas_sport_competition.SchoolExtension,
     edition: schemas_sport_competition.CompetitionEdition,
 ) -> None:
     if purchase.quantity < 1:
@@ -188,3 +188,262 @@ async def validate_payment(
                 total_paid -= purchase.product_variant.price * purchase.quantity
     await cruds_sport_competition.add_payment(db_payment, db)
     await db.flush()
+
+
+async def check_validation_consistency(
+    user: schemas_sport_competition.CompetitionUser,
+    participant: schemas_sport_competition.Participant | None,
+    purchases: list[schemas_sport_competition.PurchaseComplete],
+    school_sport_quota: schemas_sport_competition.SchoolSportQuota | None,
+    school_general_quota: schemas_sport_competition.SchoolGeneralQuota | None,
+    school_product_quotas: list[schemas_sport_competition.SchoolProductQuota],
+    required_products: list[schemas_sport_competition.Product],
+    edition: schemas_sport_competition.CompetitionEdition,
+    db: AsyncSession,
+):
+    if participant and not user.is_athlete:
+        raise HTTPException(
+            status_code=400,
+            detail="User is not an athlete but is registered as a participant",
+        )
+    if participant is None and user.is_athlete:
+        raise HTTPException(
+            status_code=400,
+            detail="User is an athlete but is not registered as a participant",
+        )
+    required_product_ids = {product.id for product in required_products}
+    if not any(
+        purchase.product_variant.product_id in required_product_ids
+        for purchase in purchases
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="User has not purchased the required products",
+        )
+    if school_sport_quota and participant:
+        await check_participant_quotas(
+            user,
+            participant,
+            school_sport_quota,
+            edition,
+            db,
+        )
+    if school_general_quota:
+        await check_general_quotas(
+            user,
+            school_general_quota,
+            edition,
+            db,
+        )
+        if user.is_athlete:
+            await check_athlete_quotas(
+                user,
+                school_general_quota,
+                edition,
+                db,
+            )
+        else:
+            await check_non_athlete_quotas(
+                user,
+                school_general_quota,
+                edition,
+                db,
+            )
+    if school_product_quotas:
+        await check_product_quotas(
+            user,
+            school_product_quotas,
+            purchases,
+            db,
+        )
+
+
+async def check_general_quotas(
+    user: schemas_sport_competition.CompetitionUser,
+    school_general_quota: schemas_sport_competition.SchoolGeneralQuota,
+    edition: schemas_sport_competition.CompetitionEdition,
+    db: AsyncSession,
+):
+    if user.is_cameraman and school_general_quota.cameraman_quota is not None:
+        nb_cameraman = await cruds_sport_competition.count_validated_competition_users_by_school_id(
+            user.user.school_id,
+            edition.id,
+            db,
+            is_cameraman=True,
+        )
+        if nb_cameraman > school_general_quota.cameraman_quota:
+            raise HTTPException(
+                status_code=400,
+                detail="Cameraman quota reached",
+            )
+    if user.is_pompom and school_general_quota.pompom_quota is not None:
+        nb_pompom = await cruds_sport_competition.count_validated_competition_users_by_school_id(
+            user.user.school_id,
+            edition.id,
+            db,
+            is_pompom=True,
+        )
+        if nb_pompom > school_general_quota.pompom_quota:
+            raise HTTPException(
+                status_code=400,
+                detail="Pompom quota reached",
+            )
+    if user.is_fanfare and school_general_quota.fanfare_quota is not None:
+        nb_fanfare = await cruds_sport_competition.count_validated_competition_users_by_school_id(
+            user.user.school_id,
+            edition.id,
+            db,
+            is_fanfare=True,
+        )
+        if nb_fanfare > school_general_quota.fanfare_quota:
+            raise HTTPException(
+                status_code=400,
+                detail="Fanfare quota reached",
+            )
+
+
+async def check_participant_quotas(
+    user: schemas_sport_competition.CompetitionUser,
+    participant: schemas_sport_competition.Participant,
+    school_sport_quota: schemas_sport_competition.SchoolSportQuota,
+    edition: schemas_sport_competition.CompetitionEdition,
+    db: AsyncSession,
+):
+    if school_sport_quota.participant_quota is not None:
+        nb_participants = await cruds_sport_competition.count_validated_participants_by_school_and_sport_ids(
+            participant.school_id,
+            participant.sport_id,
+            edition.id,
+            db,
+        )
+        if nb_participants >= school_sport_quota.participant_quota:
+            raise HTTPException(
+                status_code=400,
+                detail="Participant quota reached",
+            )
+
+
+async def check_athlete_quotas(
+    user: schemas_sport_competition.CompetitionUser,
+    school_general_quota: schemas_sport_competition.SchoolGeneralQuota,
+    edition: schemas_sport_competition.CompetitionEdition,
+    db: AsyncSession,
+):
+    if user.is_cameraman and school_general_quota.athlete_cameraman_quota:
+        nb_cameraman = await cruds_sport_competition.count_validated_competition_users_by_school_id(
+            user.user.school_id,
+            edition.id,
+            db,
+            is_athlete=True,
+            is_cameraman=True,
+        )
+        if nb_cameraman >= school_general_quota.athlete_cameraman_quota:
+            raise HTTPException(
+                status_code=400,
+                detail="Athlete cameraman quota reached",
+            )
+    if user.is_pompom and school_general_quota.athlete_pompom_quota:
+        nb_pompom = await cruds_sport_competition.count_validated_competition_users_by_school_id(
+            user.user.school_id,
+            edition.id,
+            db,
+            is_athlete=True,
+            is_pompom=True,
+        )
+        if nb_pompom >= school_general_quota.athlete_pompom_quota:
+            raise HTTPException(
+                status_code=400,
+                detail="Athlete pompom quota reached",
+            )
+    if user.is_fanfare and school_general_quota.athlete_fanfare_quota:
+        nb_fanfare = await cruds_sport_competition.count_validated_competition_users_by_school_id(
+            user.user.school_id,
+            edition.id,
+            db,
+            is_athlete=True,
+            is_fanfare=True,
+        )
+        if nb_fanfare >= school_general_quota.athlete_fanfare_quota:
+            raise HTTPException(
+                status_code=400,
+                detail="Athlete fanfare quota reached",
+            )
+
+
+async def check_non_athlete_quotas(
+    user: schemas_sport_competition.CompetitionUser,
+    school_general_quota: schemas_sport_competition.SchoolGeneralQuota,
+    edition: schemas_sport_competition.CompetitionEdition,
+    db: AsyncSession,
+):
+    if (
+        user.is_cameraman
+        and school_general_quota.non_athlete_cameraman_quota is not None
+    ):
+        nb_cameraman = await cruds_sport_competition.count_validated_competition_users_by_school_id(
+            user.user.school_id,
+            edition.id,
+            db,
+            is_athlete=False,
+            is_cameraman=True,
+        )
+        if nb_cameraman > school_general_quota.non_athlete_cameraman_quota:
+            raise HTTPException(
+                status_code=400,
+                detail="Non athlete cameraman quota reached",
+            )
+    if user.is_pompom and school_general_quota.non_athlete_pompom_quota is not None:
+        nb_pompom = await cruds_sport_competition.count_validated_competition_users_by_school_id(
+            user.user.school_id,
+            edition.id,
+            db,
+            is_athlete=False,
+            is_pompom=True,
+        )
+        if nb_pompom > school_general_quota.non_athlete_pompom_quota:
+            raise HTTPException(
+                status_code=400,
+                detail="Non athlete pompom quota reached",
+            )
+    if user.is_fanfare and school_general_quota.non_athlete_fanfare_quota is not None:
+        nb_fanfare = await cruds_sport_competition.count_validated_competition_users_by_school_id(
+            user.user.school_id,
+            edition.id,
+            db,
+            is_athlete=False,
+            is_fanfare=True,
+        )
+        if nb_fanfare > school_general_quota.non_athlete_fanfare_quota:
+            raise HTTPException(
+                status_code=400,
+                detail="Non athlete fanfare quota reached",
+            )
+
+
+async def check_product_quotas(
+    user: schemas_sport_competition.CompetitionUser,
+    school_product_quotas: list[schemas_sport_competition.SchoolProductQuota],
+    purchases: list[schemas_sport_competition.PurchaseComplete],
+    db: AsyncSession,
+):
+    for purchase in purchases:
+        product_id = purchase.product_variant.product_id
+        product_quota = next(
+            (
+                quota
+                for quota in school_product_quotas
+                if quota.product_id == product_id
+            ),
+            None,
+        )
+        if product_quota and product_quota.quota is not None:
+            nb_purchased = await cruds_sport_competition.count_validated_purchases_by_product_id_and_school_id(
+                user.user.school_id,
+                product_id,
+                db,
+            )
+            if nb_purchased > product_quota.quota:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Product {purchase.product_variant.product_id} quota reached",
+                )

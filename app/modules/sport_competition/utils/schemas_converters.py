@@ -56,33 +56,6 @@ def school_extension_model_to_schema(
     )
 
 
-def school_extension_model_to_schema_complete(
-    school_extension: models_sport_competition.SchoolExtension,
-) -> schemas_sport_competition.SchoolExtensionComplete:
-    return schemas_sport_competition.SchoolExtensionComplete(
-        school_id=school_extension.school_id,
-        from_lyon=school_extension.from_lyon,
-        ffsu_id=school_extension.ffsu_id,
-        active=school_extension.active,
-        inscription_enabled=school_extension.inscription_enabled,
-        school=schemas_schools.CoreSchool(
-            id=school_extension.school.id,
-            name=school_extension.school.name,
-            email_regex=school_extension.school.email_regex,
-        ),
-        general_quota=schemas_sport_competition.SchoolGeneralQuota(
-            school_id=school_extension.school_id,
-            edition_id=school_extension.general_quota.edition_id,
-            athlete_quota=school_extension.general_quota.athlete_quota,
-            cameraman_quota=school_extension.general_quota.cameraman_quota,
-            pompom_quota=school_extension.general_quota.pompom_quota,
-            fanfare_quota=school_extension.general_quota.fanfare_quota,
-        )
-        if school_extension.general_quota
-        else None,
-    )
-
-
 def participant_complete_model_to_schema(
     participant: models_sport_competition.CompetitionParticipant,
 ) -> schemas_sport_competition.ParticipantComplete:
@@ -128,7 +101,7 @@ def match_model_to_schema(
         team1_id=match.team1_id,
         team2_id=match.team2_id,
         date=match.date,
-        location_id=match.location,
+        location_id=match.location_id,
         score_team1=match.score_team1,
         score_team2=match.score_team2,
         winner_id=match.winner_id,
@@ -149,5 +122,39 @@ def match_model_to_schema(
             captain_id=match.team2.captain_id,
             id=match.team2.id,
             created_at=match.team2.created_at,
+        ),
+        location=schemas_sport_competition.Location(
+            id=match.location.id,
+            name=match.location.name,
+            description=match.location.description,
+            address=match.location.address,
+            latitude=match.location.latitude,
+            longitude=match.location.longitude,
+            edition_id=match.location.edition_id,
+        ),
+    )
+
+
+def purchase_model_to_schema(
+    purchase: models_sport_competition.CompetitionPurchase,
+) -> schemas_sport_competition.PurchaseComplete:
+    return schemas_sport_competition.PurchaseComplete(
+        user_id=purchase.user_id,
+        product_variant_id=purchase.product_variant_id,
+        edition_id=purchase.edition_id,
+        quantity=purchase.quantity,
+        purchased_on=purchase.purchased_on,
+        validated=purchase.validated,
+        product_variant=schemas_sport_competition.ProductVariantComplete(
+            id=purchase.product_variant.id,
+            edition_id=purchase.product_variant.edition_id,
+            product_id=purchase.product_variant.product_id,
+            name=purchase.product_variant.name,
+            description=purchase.product_variant.description,
+            price=purchase.product_variant.price,
+            enabled=purchase.product_variant.enabled,
+            unique=purchase.product_variant.unique,
+            school_type=purchase.product_variant.school_type,
+            public_type=purchase.product_variant.public_type,
         ),
     )

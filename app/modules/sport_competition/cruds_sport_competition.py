@@ -21,8 +21,8 @@ from app.modules.sport_competition.utils.schemas_converters import (
     competition_user_model_to_schema,
     match_model_to_schema,
     participant_complete_model_to_schema,
+    purchase_model_to_schema,
     school_extension_model_to_schema,
-    school_extension_model_to_schema_complete,
     team_model_to_schema,
 )
 
@@ -336,6 +336,42 @@ async def load_competition_user_by_id(
     return competition_user_model_to_schema(user) if user else None
 
 
+async def count_validated_competition_users_by_school_id(
+    school_id: UUID,
+    edition_id: UUID,
+    db: AsyncSession,
+    is_athlete: bool | None = None,
+    is_cameraman: bool | None = None,
+    is_pompom: bool | None = None,
+    is_fanfare: bool | None = None,
+) -> int:
+    """
+    Load the number of validated competition users for a given school in a specific edition.
+    """
+    result = await db.execute(
+        select(func.count())
+        .select_from(models_sport_competition.CompetitionUser)
+        .where(
+            models_users.CoreUser.school_id == school_id,
+            models_sport_competition.CompetitionUser.edition_id == edition_id,
+            models_sport_competition.CompetitionUser.validated,
+            models_sport_competition.CompetitionUser.is_athlete == is_athlete
+            if is_athlete is not None
+            else and_(True),
+            models_sport_competition.CompetitionUser.is_cameraman == is_cameraman
+            if is_cameraman is not None
+            else and_(True),
+            models_sport_competition.CompetitionUser.is_pompom == is_pompom
+            if is_pompom is not None
+            else and_(True),
+            models_sport_competition.CompetitionUser.is_fanfare == is_fanfare
+            if is_fanfare is not None
+            else and_(True),
+        ),
+    )
+    return result.scalar() or 0
+
+
 async def add_competition_user(
     user: schemas_sport_competition.CompetitionUserSimple,
     db: AsyncSession,
@@ -439,7 +475,7 @@ async def load_school_by_id(
     school_id: UUID,
     edition_id: UUID,
     db: AsyncSession,
-) -> schemas_sport_competition.SchoolExtensionComplete | None:
+) -> schemas_sport_competition.SchoolExtension | None:
     school_extension = (
         (
             await db.execute(
@@ -459,12 +495,6 @@ async def load_school_by_id(
                 )
                 .options(
                     selectinload(models_sport_competition.SchoolExtension.school),
-                    selectinload(
-                        models_sport_competition.SchoolExtension.general_quota,
-                    ),
-                    selectinload(
-                        models_sport_competition.SchoolExtension.product_quotas,
-                    ),
                 ),
             )
         )
@@ -472,9 +502,7 @@ async def load_school_by_id(
         .first()
     )
     return (
-        school_extension_model_to_schema_complete(school_extension)
-        if school_extension
-        else None
+        school_extension_model_to_schema(school_extension) if school_extension else None
     )
 
 
@@ -806,7 +834,7 @@ async def load_participants_by_school_and_sport_ids(
     ]
 
 
-async def load_validated_participants_number_by_school_and_sport_ids(
+async def count_validated_participants_by_school_and_sport_ids(
     school_id: UUID,
     sport_id: UUID,
     edition_id: UUID,
@@ -816,7 +844,9 @@ async def load_validated_participants_number_by_school_and_sport_ids(
     Load the number of validated participants for a given school and sport in a specific edition.
     """
     result = await db.execute(
-        select(func.count()).where(
+        select(func.count())
+        .select_from(models_sport_competition.CompetitionParticipant)
+        .where(
             models_sport_competition.CompetitionParticipant.sport_id == sport_id,
             models_sport_competition.CompetitionParticipant.edition_id == edition_id,
             models_sport_competition.CompetitionParticipant.school_id == school_id,
@@ -893,7 +923,7 @@ async def delete_school_general_quota_by_ids(
 
 
 async def add_sport_quota(
-    quota: schemas_sport_competition.SportQuota,
+    quota: schemas_sport_competition.SchoolSportQuota,
     db: AsyncSession,
 ):
     db.add(models_sport_competition.SchoolSportQuota(**quota.model_dump()))
@@ -904,7 +934,7 @@ async def update_sport_quota(
     school_id: UUID,
     sport_id: UUID,
     edition_id: UUID,
-    quota: schemas_sport_competition.SportQuotaEdit,
+    quota: schemas_sport_competition.SchoolSportQuotaEdit,
     db: AsyncSession,
 ):
     await db.execute(
@@ -940,13 +970,13 @@ async def load_sport_quota_by_ids(
     sport_id: UUID,
     edition_id: UUID,
     db: AsyncSession,
-) -> schemas_sport_competition.SportQuota | None:
+) -> schemas_sport_competition.SchoolSportQuota | None:
     quota = await db.get(
         models_sport_competition.SchoolSportQuota,
         (sport_id, school_id, edition_id),
     )
     return (
-        schemas_sport_competition.SportQuota(
+        schemas_sport_competition.SchoolSportQuota(
             school_id=quota.school_id,
             sport_id=quota.sport_id,
             edition_id=quota.edition_id,
@@ -962,7 +992,7 @@ async def load_all_sport_quotas_by_school_id(
     school_id: UUID,
     edition_id: UUID,
     db: AsyncSession,
-) -> list[schemas_sport_competition.SportQuota]:
+) -> list[schemas_sport_competition.SchoolSportQuota]:
     quotas = await db.execute(
         select(models_sport_competition.SchoolSportQuota).where(
             models_sport_competition.SchoolSportQuota.school_id == school_id,
@@ -970,7 +1000,7 @@ async def load_all_sport_quotas_by_school_id(
         ),
     )
     return [
-        schemas_sport_competition.SportQuota(
+        schemas_sport_competition.SchoolSportQuota(
             school_id=quota.school_id,
             sport_id=quota.sport_id,
             edition_id=quota.edition_id,
@@ -985,7 +1015,7 @@ async def load_all_sport_quotas_by_sport_id(
     sport_id: UUID,
     edition_id: UUID,
     db: AsyncSession,
-) -> list[schemas_sport_competition.SportQuota]:
+) -> list[schemas_sport_competition.SchoolSportQuota]:
     quotas = await db.execute(
         select(models_sport_competition.SchoolSportQuota).where(
             models_sport_competition.SchoolSportQuota.sport_id == sport_id,
@@ -993,7 +1023,7 @@ async def load_all_sport_quotas_by_sport_id(
         ),
     )
     return [
-        schemas_sport_competition.SportQuota(
+        schemas_sport_competition.SchoolSportQuota(
             school_id=quota.school_id,
             sport_id=quota.sport_id,
             edition_id=quota.edition_id,
@@ -1002,6 +1032,119 @@ async def load_all_sport_quotas_by_sport_id(
         )
         for quota in quotas.scalars().all()
     ]
+
+
+async def get_school_products_quota(
+    school_id: UUID,
+    edition_id: UUID,
+    db: AsyncSession,
+):
+    products = await db.execute(
+        select(models_sport_competition.SchoolProductQuota).where(
+            models_sport_competition.SchoolProductQuota.school_id == school_id,
+            models_sport_competition.SchoolProductQuota.edition_id == edition_id,
+        ),
+    )
+    return [
+        schemas_sport_competition.SchoolProductQuota(
+            school_id=product.school_id,
+            edition_id=product.edition_id,
+            product_id=product.product_id,
+            quota=product.quota,
+        )
+        for product in products.scalars().all()
+    ]
+
+
+async def get_school_product_quota(
+    school_id: UUID,
+    edition_id: UUID,
+    product_id: UUID,
+    db: AsyncSession,
+) -> schemas_sport_competition.SchoolProductQuota | None:
+    product = await db.get(
+        models_sport_competition.SchoolProductQuota,
+        (school_id, edition_id, product_id),
+    )
+    return (
+        schemas_sport_competition.SchoolProductQuota(
+            school_id=product.school_id,
+            edition_id=product.edition_id,
+            product_id=product.product_id,
+            quota=product.quota,
+        )
+        if product
+        else None
+    )
+
+
+async def get_product_quotas(
+    edition_id: UUID,
+    product_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_sport_competition.SchoolProductQuota]:
+    products = await db.execute(
+        select(models_sport_competition.SchoolProductQuota).where(
+            models_sport_competition.SchoolProductQuota.edition_id == edition_id,
+            models_sport_competition.SchoolProductQuota.product_id == product_id,
+        ),
+    )
+    return [
+        schemas_sport_competition.SchoolProductQuota(
+            school_id=product.school_id,
+            edition_id=product.edition_id,
+            product_id=product.product_id,
+            quota=product.quota,
+        )
+        for product in products.scalars().all()
+    ]
+
+
+async def add_school_product_quota(
+    product_quota: schemas_sport_competition.SchoolProductQuota,
+    db: AsyncSession,
+):
+    db.add(
+        models_sport_competition.SchoolProductQuota(
+            product_id=product_quota.product_id,
+            school_id=product_quota.school_id,
+            edition_id=product_quota.edition_id,
+            quota=product_quota.quota,
+        ),
+    )
+
+
+async def update_school_product_quota(
+    school_id: UUID,
+    edition_id: UUID,
+    product_id: UUID,
+    product_quota: schemas_sport_competition.SchoolProductQuotaEdit,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_sport_competition.SchoolProductQuota)
+        .where(
+            models_sport_competition.SchoolProductQuota.school_id == school_id,
+            models_sport_competition.SchoolProductQuota.edition_id == edition_id,
+            models_sport_competition.SchoolProductQuota.product_id == product_id,
+        )
+        .values(**product_quota.model_dump(exclude_unset=True)),
+    )
+
+
+async def delete_school_product_quota_by_ids(
+    school_id: UUID,
+    edition_id: UUID,
+    product_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_sport_competition.SchoolProductQuota).where(
+            models_sport_competition.SchoolProductQuota.school_id == school_id,
+            models_sport_competition.SchoolProductQuota.edition_id == edition_id,
+            models_sport_competition.SchoolProductQuota.product_id == product_id,
+        ),
+    )
 
 
 # endregion: Quotas
@@ -1260,7 +1403,9 @@ async def count_teams_by_school_and_sport_ids(
     Count the number of teams for a given school and sport in a specific edition.
     """
     result = await db.execute(
-        select(func.count()).where(
+        select(func.count())
+        .select_from(models_sport_competition.CompetitionTeam)
+        .where(
             models_sport_competition.CompetitionTeam.school_id == school_id,
             models_sport_competition.CompetitionTeam.sport_id == sport_id,
             models_sport_competition.CompetitionTeam.edition_id == edition_id,
@@ -1679,6 +1824,7 @@ async def get_products(
             id=product.id,
             edition_id=product.edition_id,
             name=product.name,
+            required=product.required,
             description=product.description,
             variants=[
                 schemas_sport_competition.ProductVariantComplete(
@@ -1710,11 +1856,33 @@ async def load_product_by_id(
             id=product.id,
             edition_id=product.edition_id,
             name=product.name,
+            required=product.required,
             description=product.description,
         )
         if product
         else None
     )
+
+
+async def load_required_products(
+    edition_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_sport_competition.Product]:
+    products = await db.execute(
+        select(models_sport_competition.CompetitionProduct).where(
+            models_sport_competition.CompetitionProduct.edition_id == edition_id,
+            models_sport_competition.CompetitionProduct.required,
+        ),
+    )
+    return [
+        schemas_sport_competition.Product(
+            id=product.id,
+            edition_id=product.edition_id,
+            name=product.name,
+            description=product.description,
+        )
+        for product in products.scalars().all()
+    ]
 
 
 async def add_product(
@@ -1726,6 +1894,7 @@ async def add_product(
             id=product.id,
             edition_id=product.edition_id,
             name=product.name,
+            required=product.required,
             description=product.description,
         ),
     )
@@ -1930,27 +2099,7 @@ async def load_purchases_by_user_id(
         ),
     )
     return [
-        schemas_sport_competition.PurchaseComplete(
-            user_id=purchase.user_id,
-            product_variant_id=purchase.product_variant_id,
-            edition_id=purchase.edition_id,
-            quantity=purchase.quantity,
-            purchased_on=purchase.purchased_on,
-            validated=purchase.validated,
-            product_variant=schemas_sport_competition.ProductVariantComplete(
-                id=purchase.product_variant.id,
-                edition_id=purchase.product_variant.edition_id,
-                product_id=purchase.product_variant.product_id,
-                name=purchase.product_variant.name,
-                description=purchase.product_variant.description,
-                price=purchase.product_variant.price,
-                enabled=purchase.product_variant.enabled,
-                unique=purchase.product_variant.unique,
-                school_type=purchase.product_variant.school_type,
-                public_type=purchase.product_variant.public_type,
-            ),
-        )
-        for purchase in purchases.scalars().all()
+        purchase_model_to_schema(purchase) for purchase in purchases.scalars().all()
     ]
 
 
@@ -1978,30 +2127,7 @@ async def load_purchase_by_ids(
         .scalars()
         .first()
     )
-    return (
-        schemas_sport_competition.Purchase(
-            user_id=purchase.user_id,
-            product_variant_id=purchase.product_variant_id,
-            edition_id=purchase.edition_id,
-            quantity=purchase.quantity,
-            purchased_on=purchase.purchased_on,
-            validated=purchase.validated,
-            product_variant=schemas_sport_competition.ProductVariantComplete(
-                id=purchase.product_variant.id,
-                edition_id=purchase.product_variant.edition_id,
-                product_id=purchase.product_variant.product_id,
-                name=purchase.product_variant.name,
-                description=purchase.product_variant.description,
-                price=purchase.product_variant.price,
-                enabled=purchase.product_variant.enabled,
-                unique=purchase.product_variant.unique,
-                school_type=purchase.product_variant.school_type,
-                public_type=purchase.product_variant.public_type,
-            ),
-        )
-        if purchase
-        else None
-    )
+    return purchase_model_to_schema(purchase) if purchase else None
 
 
 async def load_purchases_by_variant_id(
@@ -2019,28 +2145,35 @@ async def load_purchases_by_variant_id(
         ),
     )
     return [
-        schemas_sport_competition.PurchaseComplete(
-            user_id=purchase.user_id,
-            product_variant_id=purchase.product_variant_id,
-            edition_id=purchase.edition_id,
-            quantity=purchase.quantity,
-            purchased_on=purchase.purchased_on,
-            validated=purchase.validated,
-            product_variant=schemas_sport_competition.ProductVariantComplete(
-                id=purchase.product_variant.id,
-                edition_id=purchase.product_variant.edition_id,
-                product_id=purchase.product_variant.product_id,
-                name=purchase.product_variant.name,
-                description=purchase.product_variant.description,
-                price=purchase.product_variant.price,
-                enabled=purchase.product_variant.enabled,
-                unique=purchase.product_variant.unique,
-                school_type=purchase.product_variant.school_type,
-                public_type=purchase.product_variant.public_type,
-            ),
-        )
-        for purchase in purchases.scalars().all()
+        purchase_model_to_schema(purchase) for purchase in purchases.scalars().all()
     ]
+
+
+async def count_validated_purchases_by_product_id_and_school_id(
+    product_id: UUID,
+    school_id: UUID,
+    db: AsyncSession,
+) -> int:
+    result = await db.execute(
+        select(func.count())
+        .select_from(models_sport_competition.CompetitionPurchase)
+        .join(
+            models_sport_competition.CompetitionProductVariant,
+            models_sport_competition.CompetitionPurchase.product_variant_id
+            == models_sport_competition.CompetitionProductVariant.id,
+        )
+        .join(
+            models_sport_competition.CompetitionUser,
+            models_sport_competition.CompetitionPurchase.user_id
+            == models_sport_competition.CompetitionUser.user_id,
+        )
+        .where(
+            models_sport_competition.CompetitionProductVariant.product_id == product_id,
+            models_users.CoreUser.school_id == school_id,
+            models_sport_competition.CompetitionUser.validated,
+        ),
+    )
+    return result.scalar() or 0
 
 
 async def add_purchase(

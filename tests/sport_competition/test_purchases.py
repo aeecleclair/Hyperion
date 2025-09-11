@@ -348,6 +348,7 @@ async def setup():
     product1 = models_sport_competition.CompetitionProduct(
         id=uuid4(),
         name="Product 1",
+        required=True,
         description="Description for Product 1",
         edition_id=active_edition.id,
     )
@@ -355,6 +356,7 @@ async def setup():
     product2 = models_sport_competition.CompetitionProduct(
         id=uuid4(),
         name="Product 2",
+        required=False,
         description="Description for Product 2",
         edition_id=active_edition.id,
     )
@@ -362,6 +364,7 @@ async def setup():
     product_old_edition = models_sport_competition.CompetitionProduct(
         id=uuid4(),
         name="Old Edition Product",
+        required=False,
         description="Description for Old Edition Product",
         edition_id=old_edition.id,
     )
@@ -582,11 +585,12 @@ async def test_get_products(
     assert all("name" in item for item in data)
 
 
-async def test_add_product(
+async def test_create_product(
     client: TestClient,
 ):
     new_product = schemas_sport_competition.ProductBase(
         name="New Product",
+        required=False,
         description="Description for New Product",
     )
 
@@ -645,6 +649,7 @@ async def test_delete_product(
     product = models_sport_competition.CompetitionProduct(
         id=uuid4(),
         name="Product to Delete",
+        required=False,
         description="Description for Product to Delete",
         edition_id=active_edition.id,
     )
@@ -730,7 +735,7 @@ async def test_get_product_available(
     )
 
 
-async def test_add_product_variants(
+async def test_create_product_variants(
     client: TestClient,
 ):
     response = client.post(
