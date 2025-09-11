@@ -1,6 +1,7 @@
 import logging
 import uuid
 from datetime import UTC, date, datetime
+from pathlib import Path
 
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -96,13 +97,11 @@ async def create_participant(
     """
     Create a participant
     """
-    # If the user is already a participant, return an error
+
     if await cruds_raid.is_user_a_participant(user.id, db):
         raise HTTPException(status_code=403, detail="You are already a participant.")
 
     raid_information = await get_core_data(coredata_raid.RaidInformation, db)
-    # If the start_date is not set, we will use January the first of next year to determine if participants
-    # are minors. We can safely assume that the RAID will occurre before Jan 1 of next year
 
     is_minor = will_participant_be_minor_on(
         participant=participant,
@@ -132,11 +131,10 @@ async def update_participant(
     """
     Update a participant
     """
-    # If the user is not a participant, return an error
+
     if not await cruds_raid.is_user_a_participant(participant_id, db):
         raise HTTPException(status_code=403, detail="You are not a participant.")
 
-    # If the user is not the participant, return an error
     if not await cruds_raid.are_user_in_the_same_team(user.id, participant_id, db):
         raise HTTPException(status_code=403, detail="You are not the participant.")
 
@@ -147,14 +145,12 @@ async def update_participant(
         day=1,
     )
 
-    # We only want to change the is_minor value if the birthday is changed
     is_minor = None
     if participant.birthday:
         is_minor = will_participant_be_minor_on(participant, raid_start_date)
 
     saved_participant = await get_participant(participant_id, db)
 
-    # If the t_shirt_payment is set, we cannot remove the t_shirt_size
     if saved_participant.t_shirt_payment and participant.t_shirt_size == Size.None_:
         participant.t_shirt_size = saved_participant.t_shirt_size
 
@@ -244,11 +240,10 @@ async def create_team(
     """
     Create a team
     """
-    # If the user is not a participant, return an error
+
     if not await cruds_raid.is_user_a_participant(user.id, db):
         raise HTTPException(status_code=403, detail="You are not a participant.")
 
-    # If the user already has a team, return an error
     if await cruds_raid.get_team_by_participant_id(user.id, db):
         raise HTTPException(status_code=403, detail="You already have a team.")
 
@@ -261,7 +256,7 @@ async def create_team(
         difficulty=None,
     )
     await cruds_raid.create_team(db_team, db)
-    # We need to get the team from the db to have access to relationships
+
     created_team = await cruds_raid.get_team_by_id(team_id=db_team.id, db=db)
     if created_team:
         await post_update_actions(
@@ -312,12 +307,11 @@ async def get_team_by_participant_id(
     if user.id != participant_id:
         raise HTTPException(status_code=403, detail="You are not the participant.")
 
-    # If the user is not a participant, return an error
     if not await cruds_raid.is_user_a_participant(participant_id, db):
         raise HTTPException(status_code=403, detail="You are not a participant.")
 
     participant_team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    # If the user does not have a team, return an error
+
     if not participant_team:
         raise HTTPException(status_code=404, detail="You do not have a team.")
     return participant_team
@@ -403,7 +397,7 @@ async def delete_team(
         raise HTTPException(status_code=403, detail="This team does not exists")
     await cruds_raid.delete_team_invite_tokens(team_id, db)
     await cruds_raid.delete_team(team_id, db)
-    # We will try to delete PDF associated with the team from the Google Drive
+
     if team.file_id:
         async with DriveGoogleAPI(db, settings) as google_api:
             google_api.delete_file(team.file_id)
@@ -429,24 +423,22 @@ async def delete_all_teams(
     """
     Delete all teams
     """
-    # First get all teams to access their file IDs
+
     teams = await cruds_raid.get_all_teams(db)
 
     try:
-        # Delete files associated with each team from Google Drive
         async with DriveGoogleAPI(db, settings) as google_api:
             for team in teams:
-                # Delete team PDF
                 if team.file_id:
                     google_api.delete_file(team.file_id)
-                # Delete captain's security file if exists
+
                 if (
                     team.captain
                     and team.captain.security_file
                     and team.captain.security_file.file_id
                 ):
                     google_api.delete_file(team.captain.security_file.file_id)
-                # Delete second member's security file if exists
+
                 if (
                     team.second
                     and team.second.security_file
@@ -458,13 +450,10 @@ async def delete_all_teams(
             "Google API configuration is missing in the .env file, raid-registering will not delete files from Google Drive.",
         )
 
-    # Delete team invite tokens
     await cruds_raid.delete_all_invite_tokens(db)
 
-    # Delete all teams from the database
     await cruds_raid.delete_all_teams(db)
 
-    # Delete all participants from the database
     await cruds_raid.delete_all_participant(db)
 
     delete_all_folder_from_data("raid")
@@ -490,13 +479,13 @@ async def upload_document(
         upload_file=file,
         directory="raid",
         filename=document_id,
-        max_file_size=50 * 1024 * 1024,  # TODO : Change this value
+        max_file_size=50 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,
             ContentType.png,
             ContentType.webp,
             ContentType.pdf,
-        ],  # TODO : Change this value
+        ],
     )
 
     model_document = models_raid.Document(
@@ -546,7 +535,6 @@ async def read_document(
 
     participant = await cruds_raid.get_user_by_document_id(document_id, db)
     if not participant:
-        # The document can be a global document
         information = await get_core_data(coredata_raid.RaidInformation, db)
         if document_id in {information.raid_rules_id, information.raid_information_id}:
             return get_file_from_data(
@@ -570,7 +558,7 @@ async def read_document(
         )
 
     return get_file_from_data(
-        default_asset="assets/images/default_advert.png",  # TODO: get a default document
+        default_asset="assets/images/default_advert.png",
         directory="raid",
         filename=str(document_id),
     )
@@ -631,8 +619,6 @@ async def set_security_file(
         raise HTTPException(status_code=403, detail="The participant does not exist")
 
     if participant.security_file_id:
-        # The participant already has a security file
-        # We want to delete it to replace it by the new one
         await cruds_raid.update_security_file(
             security_file_id=participant.security_file_id,
             security_file=security_file,
@@ -820,8 +806,6 @@ async def join_team(
 
     user_team = await cruds_raid.get_team_by_participant_id(user.id, db)
 
-    # An user that is in a team without a second participant will quit its teams to joint the other
-    # If there are already two participants in the user's team, we want to raise an error
     if user_team:
         if user_team.second_id:
             raise HTTPException(status_code=403, detail="You are already in a team.")
@@ -983,7 +967,7 @@ async def update_raid_information(
     """
     Update raid information
     """
-    # Checking the last saved information is a temporary fix for core data not supporting exclude None on update
+
     last_information = await get_core_data(coredata_raid.RaidInformation, db)
     await set_core_data(raid_information, db)
     if (
@@ -1163,11 +1147,70 @@ async def get_payment_url(
         models_raid.ParticipantCheckout(
             id=str(uuid.uuid4()),
             participant_id=user.id,
-            # TODO: use UUID
             checkout_id=str(checkout.id),
         ),
         db=db,
     )
     return schemas_raid.PaymentUrl(
         url=checkout.payment_url,
+    )
+
+
+@module.router.post(
+    "/raid/clear_documents",
+    status_code=204,
+)
+async def clear_documents(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
+):
+    """
+    For each participant, for all their document, check if this document exists, if not, clear the document from the participant
+    """
+
+    raid_data_path = Path("data/raid")
+    existing_file_ids = set()
+
+    if raid_data_path.exists():
+        for file_path in raid_data_path.glob("*.*"):
+            if file_path.is_file():
+                existing_file_ids.add(file_path.stem)
+
+    hyperion_error_logger.info(
+        f"RAID: Found {len(existing_file_ids)} existing files",
+    )
+
+    participants = await cruds_raid.get_all_participants(db)
+    cleared_documents_count = 0
+    checked_documents_count = 0
+
+    for participant in participants:
+        if not participant:
+            continue
+        documents = {
+            "id_card_id": participant.id_card_id,
+            "medical_certificate_id": participant.medical_certificate_id,
+            "student_card_id": participant.student_card_id,
+            "raid_rules_id": participant.raid_rules_id,
+            "parent_authorization_id": participant.parent_authorization_id,
+        }
+        for document_key, document_id in documents.items():
+            if document_id:
+                checked_documents_count += 1
+
+                file_exists = document_id in existing_file_ids
+
+                if not file_exists:
+                    await cruds_raid.assign_document(
+                        participant.id,
+                        None,
+                        document_key,
+                        db,
+                    )
+                    cleared_documents_count += 1
+
+    hyperion_error_logger.info(
+        f"RAID: Document cleanup completed. "
+        f"Checked {checked_documents_count} document references, "
+        f"cleared {cleared_documents_count} invalid ones.",
     )
