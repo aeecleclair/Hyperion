@@ -13,7 +13,7 @@ class CompetitionEditionBase(BaseModel):
     year: int
     start_date: datetime
     end_date: datetime
-    activated: bool = True
+    active: bool = True
 
 
 class CompetitionEdition(CompetitionEditionBase):
@@ -25,13 +25,13 @@ class CompetitionEditionEdit(BaseModel):
     year: PositiveInt | None = None
     start_date: datetime | None = None
     end_date: datetime | None = None
-    activated: bool | None = None
+    active: bool | None = None
 
 
 class SchoolExtensionBase(BaseModel):
     school_id: UUID
     from_lyon: bool
-    activated: bool = True
+    active: bool = True
 
 
 class SchoolExtension(SchoolExtensionBase):
@@ -41,12 +41,12 @@ class SchoolExtension(SchoolExtensionBase):
 
 class SchoolExtensionEdit(BaseModel):
     from_lyon: bool | None = None
-    activated: bool | None = None
+    active: bool | None = None
 
 
 class SchoolGeneralQuota(BaseModel):
     school_id: UUID
-    edition: str
+    edition_id: str
     athlete_quota: NonNegativeInt | None = None
     cameraman_quota: NonNegativeInt | None = None
     pompom_quota: NonNegativeInt | None = None
@@ -91,7 +91,7 @@ class SportBase(BaseModel):
     team_size: PositiveInt
     substitute_max: NonNegativeInt | None = None
     sport_category: SportCategory | None = None
-    activated: bool = True
+    active: bool = True
 
 
 class Sport(SportBase):
@@ -103,7 +103,7 @@ class SportEdit(BaseModel):
     team_size: PositiveInt | None = None
     substitute_max: NonNegativeInt | None = None
     sport_category: SportCategory | None = None
-    activated: bool | None = None
+    active: bool | None = None
 
 
 class QuotaInfo(BaseModel):

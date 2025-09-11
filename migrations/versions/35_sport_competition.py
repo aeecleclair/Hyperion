@@ -60,7 +60,7 @@ def upgrade() -> None:
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("start_date", TZDateTime(), nullable=False),
         sa.Column("end_date", TZDateTime(), nullable=False),
-        sa.Column("activated", sa.Boolean(), nullable=False),
+        sa.Column("active", sa.Boolean(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
@@ -84,7 +84,7 @@ def upgrade() -> None:
     op.create_table(
         "competition_sport",
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column("activated", sa.Boolean(), nullable=False),
+        sa.Column("active", sa.Boolean(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("team_size", sa.Integer(), nullable=False),
         sa.Column("substitute_max", sa.Integer(), nullable=True),
@@ -99,7 +99,7 @@ def upgrade() -> None:
         "competition_school_extension",
         sa.Column("school_id", sa.Uuid(), nullable=False),
         sa.Column("from_lyon", sa.Boolean(), nullable=False),
-        sa.Column("activated", sa.Boolean(), nullable=False),
+        sa.Column("active", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(["school_id"], ["core_school.id"]),
         sa.PrimaryKeyConstraint("school_id"),
     )
