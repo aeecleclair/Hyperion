@@ -3,6 +3,7 @@ from uuid import UUID, uuid4
 
 import pytest_asyncio
 from fastapi.testclient import TestClient
+from pytest_mock import MockerFixture
 from sqlalchemy import delete, update
 
 from app.core.groups.groups_type import GroupType
@@ -2046,10 +2047,15 @@ async def test_user_participate_with_maximum_substitute_size(
 
 async def test_user_participate_with_valid_data(
     client: TestClient,
+    mocker: MockerFixture,
 ) -> None:
     info = ParticipantInfo(
         license="12345670089",
         substitute=False,
+    )
+    mocker.patch(
+        "app.modules.sport_competition.utils.ffsu_scrapper.validate_participant_ffsu_license",
+        False,
     )
     response = client.post(
         f"/competition/sports/{sport_free_quota.id}/participate",
