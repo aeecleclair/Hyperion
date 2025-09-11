@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 from uuid import uuid4
 
+import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
@@ -9,7 +10,10 @@ from app.core.payment import models_payment
 from app.core.schools import models_schools
 from app.core.schools.schools_type import SchoolType
 from app.core.users import models_users
-from app.modules.sport_competition import models_sport_competition
+from app.modules.sport_competition import (
+    models_sport_competition,
+    schemas_sport_competition,
+)
 from app.modules.sport_competition.types_sport_competition import (
     ProductPublicType,
     ProductSchoolType,
@@ -76,6 +80,37 @@ variant_old_edition: models_sport_competition.CompetitionProductVariant
 purchase: models_sport_competition.CompetitionPurchase
 payment: models_sport_competition.CompetitionPayment
 checkout: models_sport_competition.CompetitionCheckout
+
+
+@pytest.fixture
+def user_tokens():
+    return {
+        "admin": admin_token,
+        "from_lyon": user_from_lyon_token,
+        "others": user_others_token,
+        "cameraman": user_cameraman_token,
+        "pompom": user_pompom_token,
+        "fanfare": user_fanfare_token,
+        "volunteer": user_volunteer_token,
+        "multiple": user_multiple_token,
+    }
+
+
+@pytest.fixture
+def variants():
+    return {
+        "athlete": variant_for_athlete,
+        "cameraman": variant_for_cameraman,
+        "pompom": variant_for_pompom,
+        "fanfare": variant_for_fanfare,
+        "volunteer": variant_for_volunteer,
+        "centrale": variant_for_centrale,
+        "from_lyon": variant_for_from_lyon,
+        "others": variant_for_others,
+        "unique": variant_unique,
+        "disabled": variant_disabled,
+        "old_edition": variant_old_edition,
+    }
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -523,14 +558,15 @@ async def test_get_products(
 async def test_add_product(
     client: TestClient,
 ):
-    new_product = {
-        "name": "New Product",
-        "description": "Description for New Product",
-    }
+    new_product = schemas_sport_competition.ProductBase(
+        name="New Product",
+        description="Description for New Product",
+    )
+
     response = client.post(
         "/competition/products",
-        json=new_product,
         headers={"Authorization": f"Bearer {admin_token}"},
+        json=new_product.model_dump(),
     )
     assert response.status_code == 201
     data = response.json()
@@ -543,7 +579,7 @@ async def test_add_product(
     products_data = products.json()
     product = next((item for item in products_data if item["id"] == data["id"]), None)
     assert product is not None
-    assert product["name"] == new_product["name"]
+    assert product["name"] == new_product.name
 
 
 async def test_edit_product(
@@ -554,15 +590,26 @@ async def test_edit_product(
         "name": "Updated Product 1",
         "description": "Updated description for Product 1",
     }
-    response = client.put(
+    response = client.patch(
         f"/competition/products/{product_id}",
         json=updated_product,
         headers={"Authorization": f"Bearer {admin_token}"},
     )
-    assert response.status_code == 200
-    data = response.json()
-    assert data["name"] == updated_product["name"]
-    assert data["description"] == updated_product["description"]
+    assert response.status_code == 204
+
+    products = client.get(
+        "/competition/products",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert products.status_code == 200
+    products_data = products.json()
+    product = next(
+        (item for item in products_data if item["id"] == str(product_id)),
+        None,
+    )
+    assert product is not None
+    assert product["name"] == updated_product["name"]
+    assert product["description"] == updated_product["description"]
 
 
 async def test_delete_product(
@@ -587,7 +634,7 @@ async def test_delete_product(
     )
     assert products.status_code == 200
     products_data = products.json()
-    assert not any(item["id"] == product.id for item in products_data)
+    assert not any(item["id"] == str(product.id) for item in products_data)
 
 
 async def test_delete_product_with_variants(
@@ -605,30 +652,259 @@ async def test_delete_product_with_variants(
     )
     assert products.status_code == 200
     products_data = products.json()
-    assert any(item["id"] == product1.id for item in products_data)
+    assert any(item["id"] == str(product1.id) for item in products_data)
 
 
+@pytest.mark.parametrize(
+    ("token", "expected_products_variants"),
+    [
+        ("admin", ["athlete", "centrale", "unique"]),
+        ("from_lyon", ["from_lyon"]),
+        ("others", ["others"]),
+        (
+            "cameraman",
+            ["cameraman", "centrale", "unique"],
+        ),
+        ("pompom", ["pompom", "centrale", "unique"]),
+        ("fanfare", ["fanfare", "centrale", "unique"]),
+        (
+            "volunteer",
+            ["volunteer", "centrale", "unique"],
+        ),
+        (
+            "multiple",
+            [
+                "athlete",
+                "volunteer",
+                "centrale",
+                "unique",
+            ],
+        ),
+    ],
+)
 async def test_get_product_available(
     client: TestClient,
+    user_tokens: dict[str, str],
+    variants: dict[str, models_sport_competition.CompetitionProductVariant],
+    token: str,
+    expected_products_variants: list[str],
 ):
     response = client.get(
         "/competition/products/available",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {user_tokens[token]}"},
     )
     assert response.status_code == 200
     data = response.json()
+    assert isinstance(data, list)
+    assert len(data) == len(expected_products_variants)
+    assert all(
+        item["id"] in [str(variants[v].id) for v in expected_products_variants]
+        for item in data
+    )
 
 
 async def test_add_product_variants(
     client: TestClient,
 ):
-    response = client.get(
+    response = client.post(
         f"/competition/products/{product1.id}/variants",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "name": "New Variant",
+            "description": "Description for New Variant",
+            "product_id": str(product1.id),
+            "price": 1500,
+            "enabled": True,
+            "unique": False,
+            "school_type": ProductSchoolType.centrale.value,
+            "public_type": ProductPublicType.athlete.value,
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+
+    products = client.get(
+        "/competition/products",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert products.status_code == 200
+    products_data = products.json()
+    product = next(
+        (item for item in products_data if item["id"] == str(product1.id)),
+        None,
+    )
+    assert product is not None
+    assert "variants" in product
+    assert any(variant["id"] == data["id"] for variant in product["variants"]), product
+
+
+async def test_edit_product_variant(
+    client: TestClient,
+):
+    variant_to_update = models_sport_competition.CompetitionProductVariant(
+        id=uuid4(),
+        product_id=product1.id,
+        edition_id=active_edition.id,
+        name="Variant to Update",
+        description="Description for Variant to Update",
+        price=1000,
+        enabled=True,
+        unique=False,
+        school_type=ProductSchoolType.centrale,
+        public_type=ProductPublicType.athlete,
+    )
+    await add_object_to_db(variant_to_update)
+    updated_variant = {
+        "name": "Updated Variant",
+        "description": "Updated description for Variant",
+        "price": 1200,
+        "enabled": False,
+        "unique": True,
+        "school_type": ProductSchoolType.others.value,
+        "public_type": ProductPublicType.pompom.value,
+    }
+    response = client.patch(
+        f"/competition/products/variants/{variant_to_update.id}",
+        json=updated_variant,
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 204
+
+    products = client.get(
+        "/competition/products",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert products.status_code == 200
+    products_data = products.json()
+    product = next(
+        (item for item in products_data if item["id"] == str(product1.id)),
+        None,
+    )
+    assert product is not None
+    variant = next(
+        (
+            variant
+            for variant in product["variants"]
+            if variant["id"] == str(variant_to_update.id)
+        ),
+        None,
+    )
+    assert variant is not None
+    assert variant["name"] == updated_variant["name"]
+    assert variant["description"] == updated_variant["description"]
+    assert variant["price"] == updated_variant["price"]
+    assert variant["enabled"] is False
+    assert variant["unique"] is True
+    assert variant["school_type"] == updated_variant["school_type"]
+    assert variant["public_type"] == updated_variant["public_type"]
+
+
+async def test_edit_product_variant_price_with_purchases(
+    client: TestClient,
+):
+    updated_variant = {"price": 1500}
+    response = client.patch(
+        f"/competition/products/variants/{variant_for_athlete.id}",
+        json=updated_variant,
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 403
+
+    products = client.get(
+        "/competition/products",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert products.status_code == 200
+    products_data = products.json()
+    product = next(
+        (item for item in products_data if item["id"] == str(product1.id)),
+        None,
+    )
+    assert product is not None
+    variant = next(
+        (
+            variant
+            for variant in product["variants"]
+            if variant["id"] == str(variant_for_athlete.id)
+        ),
+        None,
+    )
+    assert variant is not None
+    assert variant["price"] == variant_for_athlete.price
+
+
+async def test_delete_product_variant(
+    client: TestClient,
+):
+    variant_to_delete = models_sport_competition.CompetitionProductVariant(
+        id=uuid4(),
+        product_id=product1.id,
+        edition_id=active_edition.id,
+        name="Variant to Delete",
+        description="Description for Variant to Delete",
+        price=1000,
+        enabled=True,
+        unique=False,
+        school_type=ProductSchoolType.centrale,
+        public_type=ProductPublicType.athlete,
+    )
+    await add_object_to_db(variant_to_delete)
+    response = client.delete(
+        f"/competition/products/variants/{variant_to_delete.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 204
+
+    products = client.get(
+        "/competition/products",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert products.status_code == 200
+    products_data = products.json()
+    product = next(
+        (item for item in products_data if item["id"] == str(product1.id)),
+        None,
+    )
+    assert product is not None
+    assert not any(
+        variant["id"] == str(variant_to_delete.id) for variant in product["variants"]
+    )
+
+
+async def test_delete_product_variant_with_purchases(
+    client: TestClient,
+):
+    response = client.delete(
+        f"/competition/products/variants/{variant_for_athlete.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 403
+
+    products = client.get(
+        "/competition/products",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert products.status_code == 200
+    products_data = products.json()
+    product = next(
+        (item for item in products_data if item["id"] == str(product1.id)),
+        None,
+    )
+    assert product is not None
+    assert any(
+        variant["id"] == str(variant_for_athlete.id) for variant in product["variants"]
+    )
+
+
+async def get_user_purchases(
+    client: TestClient,
+):
+    response = client.get(
+        f"/competition/purchases/users/{admin_user.id}",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
-    assert len(data) > 0
-    assert all("id" in item for item in data)
-    assert all("name" in item for item in data)
+    assert len(data) == 1
+    assert data[0]["product_variant_id"] == str(purchase.product_variant_id)
