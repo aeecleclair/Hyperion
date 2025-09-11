@@ -29,15 +29,15 @@ class CompetitionGroup(Base):
 
     members: Mapped[list[CoreUser]] = relationship(
         "CoreUser",
-        secondary="competition_annual_group_membership",
+        secondary="competition_edition_group_membership",
         lazy="selectin",
         viewonly=True,
         init=False,
     )
 
 
-class AnnualGroupMembership(Base):
-    __tablename__ = "competition_annual_group_membership"
+class EditionGroupMembership(Base):
+    __tablename__ = "competition_edition_group_membership"
 
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
     group_id: Mapped[UUID] = mapped_column(

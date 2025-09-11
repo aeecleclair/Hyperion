@@ -12,6 +12,7 @@ from app.modules.sport_competition import (
     schemas_sport_competition as schemas_competition,
 )
 from app.modules.sport_competition.types_sport_competition import (
+    CompetitionGroupType,
     MultipleEditions,
 )
 
@@ -67,7 +68,7 @@ async def load_group_by_id(
                     selectinload(models_competition.CompetitionGroup.members),
                 )
                 .filter(
-                    models_competition.AnnualGroupMembership.edition_id == edition_id,
+                    models_competition.EditionGroupMembership.edition_id == edition_id,
                 ),
             )
         )
@@ -118,12 +119,12 @@ async def load_all_groups(
 
 async def load_user_membership_with_group_id(
     user_id: str,
-    group_id: UUID,
+    group_id: UUID | CompetitionGroupType,
     edition_id: UUID,
     db: AsyncSession,
 ) -> schemas_competition.UserGroupMembership | None:
     membership = await db.get(
-        models_competition.AnnualGroupMembership,
+        models_competition.EditionGroupMembership,
         (user_id, group_id, edition_id),
     )
     return (
@@ -145,9 +146,9 @@ async def load_active_user_memberships(
     memberships = (
         (
             await db.execute(
-                select(models_competition.AnnualGroupMembership).where(
-                    models_competition.AnnualGroupMembership.user_id == user_id,
-                    models_competition.AnnualGroupMembership.edition_id == edition_id,
+                select(models_competition.EditionGroupMembership).where(
+                    models_competition.EditionGroupMembership.user_id == user_id,
+                    models_competition.EditionGroupMembership.edition_id == edition_id,
                 ),
             )
         )
@@ -171,7 +172,7 @@ async def add_user_to_group(
     db: AsyncSession,
 ) -> None:
     db.add(
-        models_competition.AnnualGroupMembership(
+        models_competition.EditionGroupMembership(
             user_id=user_id,
             group_id=group_id,
             edition_id=edition_id,
@@ -187,7 +188,7 @@ async def remove_user_from_group(
     db: AsyncSession,
 ) -> None:
     await db.delete(
-        models_competition.AnnualGroupMembership(
+        models_competition.EditionGroupMembership(
             user_id=user_id,
             group_id=group_id,
             edition_id=edition_id,
