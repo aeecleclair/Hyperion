@@ -184,7 +184,14 @@ async def add_school(
     school: schemas_sport_competition.SchoolExtensionBase,
     db: AsyncSession,
 ):
-    db.add(models_sport_competition.SchoolExtension(**school.model_dump()))
+    db.add(
+        models_sport_competition.SchoolExtension(
+            school_id=school.school_id,
+            from_lyon=school.from_lyon,
+            active=school.active,
+            inscription_enabled=school.inscription_enabled,
+        ),
+    )
     await db.flush()
 
 
@@ -238,6 +245,16 @@ async def load_school_by_id(
         (
             await db.execute(
                 select(models_sport_competition.SchoolExtension)
+                .join(
+                    models_sport_competition.SchoolGeneralQuota,
+                    and_(
+                        models_sport_competition.SchoolExtension.school_id
+                        == models_sport_competition.SchoolGeneralQuota.school_id,
+                        models_sport_competition.SchoolGeneralQuota.edition_id
+                        == edition_id,
+                    ),
+                    isouter=True,
+                )
                 .where(
                     models_sport_competition.SchoolExtension.school_id == school_id,
                 )
@@ -246,10 +263,9 @@ async def load_school_by_id(
                     selectinload(
                         models_sport_competition.SchoolExtension.general_quota,
                     ),
-                )
-                .filter(
-                    models_sport_competition.SchoolGeneralQuota.edition_id
-                    == edition_id,
+                    selectinload(
+                        models_sport_competition.SchoolExtension.product_quotas,
+                    ),
                 ),
             )
         )
@@ -306,6 +322,7 @@ async def load_all_schools(
                 == models_sport_competition.SchoolGeneralQuota.school_id,
                 models_sport_competition.SchoolGeneralQuota.edition_id == edition_id,
             ),
+            isouter=True,
         )
         .options(
             selectinload(models_sport_competition.SchoolExtension.school),

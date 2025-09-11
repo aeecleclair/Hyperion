@@ -50,7 +50,9 @@ def school_extension_model_to_schema(
             pompom_quota=school_extension.general_quota.pompom_quota,
             fanfare_quota=school_extension.general_quota.fanfare_quota,
             non_athlete_quota=school_extension.general_quota.non_athlete_quota,
-        ),
+        )
+        if school_extension.general_quota
+        else None,
     )
 
 
