@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.groups.groups_type import AccountType
 from app.core.schools import cruds_schools
 from app.core.users import cruds_users, schemas_users
 from app.dependencies import get_db, is_user
@@ -16,9 +17,16 @@ from app.modules.sport_competition.dependencies_sport_competition import (
     is_user_a_member_of_extended,
 )
 from app.modules.sport_competition.types_sport_competition import CompetitionGroupType
+from app.types.module import Module
 
 router = APIRouter(tags=["Sport Competition"])
 hyperion_error_logger = logging.getLogger("hyperion.error")
+
+module = Module(
+    root="sport_competition",
+    tag="Sport Competition",
+    default_allowed_account_types=list(AccountType),
+)
 
 
 @router.get("/competition/sports", response_model=list[competition_schemas.Sport])
