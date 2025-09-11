@@ -372,7 +372,7 @@ async def update_team(
     """
     existing_team = await cruds_raid.get_team_by_participant_id(user.id, db)
     if existing_team is None:
-        raise HTTPException(status_code=404, detail="RaidTeam not found.")
+        raise HTTPException(status_code=404, detail="Team not found.")
     if existing_team.id != team_id:
         raise HTTPException(status_code=403, detail="You can only edit your own team.")
     await cruds_raid.update_team(team_id, team, db)
@@ -557,7 +557,7 @@ async def read_document(
             )
         raise HTTPException(
             status_code=404,
-            detail="RaidParticipant owning the document not found.",
+            detail="Participant owning the document not found.",
         )
 
     if not await cruds_raid.are_user_in_the_same_team(
@@ -781,7 +781,7 @@ async def create_invite_token(
     team = await cruds_raid.get_team_by_participant_id(user.id, db)
 
     if not team:
-        raise HTTPException(status_code=404, detail="RaidTeam not found.")
+        raise HTTPException(status_code=404, detail="Team not found.")
 
     if team.id != team_id:
         raise HTTPException(status_code=403, detail="You are not in the team.")
@@ -835,10 +835,10 @@ async def join_team(
     team = await cruds_raid.get_team_by_id(invite_token.team_id, db)
 
     if not team:
-        raise HTTPException(status_code=404, detail="RaidTeam not found.")
+        raise HTTPException(status_code=404, detail="Team not found.")
 
     if team.second_id:
-        raise HTTPException(status_code=403, detail="RaidTeam is already full.")
+        raise HTTPException(status_code=403, detail="Team is already full.")
 
     if team.captain_id == user.id:
         raise HTTPException(
@@ -874,7 +874,7 @@ async def kick_team_member(
     """
     team = await cruds_raid.get_team_by_id(team_id, db)
     if not team:
-        raise HTTPException(status_code=404, detail="RaidTeam not found.")
+        raise HTTPException(status_code=404, detail="Team not found.")
     if team.captain_id == participant_id:
         if not team.second_id:
             raise HTTPException(
@@ -887,7 +887,7 @@ async def kick_team_member(
             db,
         )
     elif team.second_id != participant_id:
-        raise HTTPException(status_code=404, detail="RaidParticipant not found.")
+        raise HTTPException(status_code=404, detail="Participant not found.")
     await cruds_raid.update_team_second_id(team_id, None, db)
     await post_update_actions(
         team,
@@ -917,11 +917,11 @@ async def merge_teams(
     team1 = await cruds_raid.get_team_by_id(team1_id, db)
     team2 = await cruds_raid.get_team_by_id(team2_id, db)
     if not team1 or not team2:
-        raise HTTPException(status_code=404, detail="RaidTeam not found.")
+        raise HTTPException(status_code=404, detail="Team not found.")
     if team1.second_id or team2.second_id:
         raise HTTPException(status_code=403, detail="One of the team is full.")
     if team1.captain_id == team2.captain_id:
-        raise HTTPException(status_code=403, detail="RaidTeams are the same.")
+        raise HTTPException(status_code=403, detail="Teams are the same.")
     new_name = f"{team1.name} & {team2.name}"
     new_difficulty = team1.difficulty if team1.difficulty == team2.difficulty else None
     new_meeting_place = (
