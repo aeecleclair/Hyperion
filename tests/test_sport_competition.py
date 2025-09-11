@@ -369,7 +369,7 @@ async def init_objects() -> None:
         team_id=team_admin_user.id,
         substitute=False,
         license="1234567890",
-        is_licence_valid=True,
+        is_license_valid=True,
     )
     await add_object_to_db(participant1)
     participant2 = models_sport_competition.CompetitionParticipant(
@@ -380,7 +380,7 @@ async def init_objects() -> None:
         team_id=team1.id,
         substitute=False,
         license="0987654321",
-        is_licence_valid=True,
+        is_license_valid=True,
     )
     await add_object_to_db(participant2)
     (
@@ -400,7 +400,7 @@ async def init_objects() -> None:
         team_id=team1.id,
         substitute=False,
         license="1122334455",
-        is_licence_valid=True,
+        is_license_valid=True,
     )
     await add_object_to_db(participant3)
 

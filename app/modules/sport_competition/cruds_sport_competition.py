@@ -539,7 +539,7 @@ async def add_participant(
             school_id=participant.school_id,
             substitute=participant.substitute,
             license=participant.license,
-            is_licence_valid=participant.is_licence_valid,
+            is_license_valid=participant.is_license_valid,
         ),
     )
     await db.flush()
