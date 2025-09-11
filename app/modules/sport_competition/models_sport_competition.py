@@ -6,7 +6,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.schools.models_schools import CoreSchool
 from app.core.users.models_users import CoreUser
-from app.modules.sport_competition.types_sport_competition import SportCategory
+from app.modules.sport_competition.types_sport_competition import (
+    CompetitionGroupType,
+    ProductPublicType,
+    SportCategory,
+)
 from app.types.sqlalchemy import Base, PrimaryKey
 
 
@@ -22,43 +26,19 @@ class CompetitionEdition(Base):
     inscription_enabled: Mapped[bool]
 
 
-class CompetitionGroup(Base):
-    __tablename__ = "competition_group"
-
-    id: Mapped[PrimaryKey]
-    name: Mapped[str] = mapped_column(unique=True)
-
-    members: Mapped[list["CompetitionUser"]] = relationship(
-        "CompetitionUser",
-        secondary="competition_edition_group_membership",
-        back_populates="competition_groups",
-        primaryjoin="EditionGroupMembership.group_id == CompetitionGroup.id",
-        secondaryjoin="CompetitionUser.user_id == EditionGroupMembership.user_id",
-        default_factory=list,
-    )
-
-
-class EditionGroupMembership(Base):
-    __tablename__ = "competition_edition_group_membership"
+class CompetitionGroupMembership(Base):
+    __tablename__ = "competition_group_membership"
 
     user_id: Mapped[str] = mapped_column(
+        ForeignKey("core_user.id"),
         primary_key=True,
     )
-    group_id: Mapped[UUID] = mapped_column(
-        ForeignKey("competition_group.id"),
+    group: Mapped[CompetitionGroupType] = mapped_column(
         primary_key=True,
     )
     edition_id: Mapped[UUID] = mapped_column(
         ForeignKey("competition_edition.id"),
         primary_key=True,
-    )
-
-    __table_args__ = (
-        ForeignKeyConstraint(
-            ["user_id", "edition_id"],
-            ["competition_user.user_id", "competition_user.edition_id"],
-            name="fk_edition_group_membership_user",
-        ),
     )
 
 
@@ -78,14 +58,6 @@ class CompetitionUser(Base):
         "CoreUser",
         lazy="joined",
         init=False,
-    )
-    competition_groups: Mapped[list[CompetitionGroup]] = relationship(
-        "CompetitionGroup",
-        secondary="competition_edition_group_membership",
-        primaryjoin="EditionGroupMembership.user_id == CompetitionUser.user_id and EditionGroupMembership.edition_id == CompetitionUser.edition_id",
-        back_populates="members",
-        lazy="selectin",
-        default_factory=list,
     )
 
 
@@ -419,10 +391,7 @@ class CompetitionProductVariant(Base):
     name: Mapped[str]
     price: Mapped[int]
     enabled: Mapped[bool]
-    competition_group_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("competition_group.id"),
-        nullable=True,
-    )
+    public_type: Mapped[ProductPublicType | None]
     description: Mapped[str | None] = mapped_column(default=None)
 
 

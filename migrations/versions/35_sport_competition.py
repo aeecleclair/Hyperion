@@ -6,7 +6,6 @@ Create Date: 2025-06-04 19:45:18.373071
 from collections.abc import Sequence
 from enum import Enum
 from typing import TYPE_CHECKING
-from uuid import UUID
 
 if TYPE_CHECKING:
     from pytest_alembic import MigrationContext
@@ -39,12 +38,15 @@ class AccountType(Enum):
 
 
 class CompetitionGroupType(Enum):
-    fanfaron = UUID("c69ed623-1cf5-4769-acc7-ddbc6490fb07")
-    pompom = UUID("22af0472-0a15-4f05-a670-fa02eda5e33f")
-    cameraman = UUID("9cb535c7-ca19-4dbc-8b04-8b34017b5cff")
-    non_athlete = UUID("84a9972c-56b0-4024-86ec-a284058e1cb1")
-    sport_manager = UUID("a3f48a0b-ada1-4fe0-b987-f4170d8896c4")
-    schools_bds = UUID("96f8ffb8-c585-4ca5-8360-dc3881f9f1e2")
+    sport_manager = "sport_manager"
+    schools_bds = "schools_bds"
+
+
+class ProductPublicType(Enum):
+    pompom = "pompom"
+    fanfare = "fanfare"
+    cameraman = "cameraman"
+    athlete = "athlete"
 
 
 def upgrade() -> None:
@@ -63,13 +65,6 @@ def upgrade() -> None:
         sa.Column("active", sa.Boolean(), nullable=False),
         sa.Column("inscription_enabled", sa.Boolean(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_table(
-        "competition_group",
-        sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column("name", sa.String(), nullable=False),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("name"),
     )
     op.create_table(
         "competition_user",
@@ -110,17 +105,20 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("school_id"),
     )
     op.create_table(
-        "competition_edition_group_membership",
+        "competition_group_membership",
         sa.Column("user_id", sa.String(), nullable=False),
-        sa.Column("group_id", sa.Uuid(), nullable=False),
+        sa.Column(
+            "group",
+            sa.Enum(CompetitionGroupType, name="competitiongrouptype"),
+            nullable=False,
+        ),
         sa.Column("edition_id", sa.Uuid(), nullable=False),
         sa.ForeignKeyConstraint(["edition_id"], ["competition_edition.id"]),
-        sa.ForeignKeyConstraint(["group_id"], ["competition_group.id"]),
         sa.ForeignKeyConstraint(
-            ["user_id", "edition_id"],
-            ["competition_user.user_id", "competition_user.edition_id"],
+            ["user_id"],
+            ["core_user.id"],
         ),
-        sa.PrimaryKeyConstraint("user_id", "group_id", "edition_id"),
+        sa.PrimaryKeyConstraint("user_id", "group", "edition_id"),
     )
     op.create_table(
         "competition_school_general_quota",
@@ -287,12 +285,12 @@ def upgrade() -> None:
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("price", sa.Integer(), nullable=False),
         sa.Column("enabled", sa.Boolean(), nullable=False),
-        sa.Column("competition_group_id", sa.Uuid(), nullable=True),
-        sa.Column("description", sa.String(), nullable=True),
-        sa.ForeignKeyConstraint(
-            ["competition_group_id"],
-            ["competition_group.id"],
+        sa.Column(
+            "public_type",
+            sa.Enum(ProductPublicType, name="productpublictype"),
+            nullable=True,
         ),
+        sa.Column("description", sa.String(), nullable=True),
         sa.ForeignKeyConstraint(
             ["product_id"],
             ["competition_product.id"],
@@ -357,10 +355,6 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("product_id", "school_id", "edition_id"),
     )
-    for group_type in CompetitionGroupType:
-        op.execute(
-            f"INSERT INTO competition_group (id, name) VALUES ('{group_type.value}', '{group_type.name}') ON CONFLICT DO NOTHING;",
-        )
     # ### end Alembic commands ###
 
 
@@ -378,13 +372,14 @@ def downgrade() -> None:
     op.drop_table("competition_team")
     op.drop_table("competition_sport_quota")
     op.drop_table("competition_school_general_quota")
-    op.drop_table("competition_edition_group_membership")
+    op.drop_table("competition_group_membership")
     op.drop_table("competition_school_extension")
     op.drop_table("competition_sport")
-    op.drop_table("competition_group")
     op.drop_table("competition_user")
     op.drop_table("competition_edition")
     sa.Enum(SportCategory, name="sportcategory").drop(op.get_bind())
+    sa.Enum(CompetitionGroupType, name="competitiongrouptype").drop(op.get_bind())
+    sa.Enum(ProductPublicType, name="productpublictype").drop(op.get_bind())
     # ### end Alembic commands ###
 
 

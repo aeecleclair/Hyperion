@@ -1,8 +1,32 @@
+from app.core.groups import schemas_groups
 from app.core.schools import schemas_schools
+from app.core.users import schemas_users
 from app.modules.sport_competition import (
     models_sport_competition,
     schemas_sport_competition,
 )
+
+
+def competition_user_model_to_schema(
+    user: models_sport_competition.CompetitionUser,
+) -> schemas_sport_competition.CompetitionUser:
+    return schemas_sport_competition.CompetitionUser(
+        user_id=user.user_id,
+        edition_id=user.edition_id,
+        validated=user.validated,
+        created_at=user.created_at,
+        sport_category=user.sport_category,
+        user=schemas_users.CoreUser(
+            id=user.user.id,
+            account_type=user.user.account_type,
+            school_id=user.user.school_id,
+            email=user.user.email,
+            name=user.user.name,
+            firstname=user.user.firstname,
+            phone=user.user.phone,
+            groups=[],
+        ),
+    )
 
 
 def school_extension_model_to_schema(
@@ -41,18 +65,7 @@ def participant_complete_model_to_schema(
         school_id=participant.school_id,
         substitute=participant.substitute,
         license=participant.license,
-        user=schemas_sport_competition.CompetitionUser(
-            id=participant.user.user_id,
-            edition_id=participant.user.edition_id,
-            account_type=participant.user.user.account_type,
-            school_id=participant.user.user.school_id,
-            email=participant.user.user.email,
-            name=participant.user.user.name,
-            firstname=participant.user.user.firstname,
-            phone=participant.user.user.phone,
-            validated=participant.user.validated,
-            created_at=participant.user.created_at,
-        ),
+        user=competition_user_model_to_schema(participant.user),
     )
 
 
@@ -85,7 +98,7 @@ def match_model_to_schema(
         team1_id=match.team1_id,
         team2_id=match.team2_id,
         date=match.date,
-        location=match.location,
+        location_id=match.location,
         score_team1=match.score_team1,
         score_team2=match.score_team2,
         winner_id=match.winner_id,
