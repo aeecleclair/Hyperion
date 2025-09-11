@@ -70,24 +70,6 @@ location: models_sport_competition.MatchLocation
 
 match1: models_sport_competition.Match
 
-product1: models_sport_competition.CompetitionProduct
-product2: models_sport_competition.CompetitionProduct
-
-variant_for_athlete: models_sport_competition.CompetitionProductVariant
-variant_for_cameraman: models_sport_competition.CompetitionProductVariant
-variant_for_pompom: models_sport_competition.CompetitionProductVariant
-variant_for_fanfare: models_sport_competition.CompetitionProductVariant
-variant_for_volunteer: models_sport_competition.CompetitionProductVariant
-variant_for_centrale: models_sport_competition.CompetitionProductVariant
-variant_for_from_lyon: models_sport_competition.CompetitionProductVariant
-variant_for_others: models_sport_competition.CompetitionProductVariant
-variant_unique: models_sport_competition.CompetitionProductVariant
-variant_disabled: models_sport_competition.CompetitionProductVariant
-
-purchase: models_sport_competition.CompetitionPurchase
-payment: models_sport_competition.CompetitionPayment
-checkout: models_sport_competition.CompetitionCheckout
-
 
 async def create_competition_user(
     edition_id: UUID,
