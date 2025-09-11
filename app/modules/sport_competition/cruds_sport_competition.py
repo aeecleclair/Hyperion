@@ -1810,7 +1810,7 @@ async def load_available_product_variants(
         ),
     )
     return [
-        schemas_sport_competition.ProductVariantComplete(
+        schemas_sport_competition.ProductVariantWithProduct(
             id=variant.id,
             edition_id=variant.edition_id,
             product_id=variant.product_id,
@@ -1821,6 +1821,12 @@ async def load_available_product_variants(
             unique=variant.unique,
             school_type=variant.school_type,
             public_type=variant.public_type,
+            product=schemas_sport_competition.Product(
+                id=variant.product.id,
+                edition_id=variant.product.edition_id,
+                name=variant.product.name,
+                description=variant.product.description,
+            ),
         )
         for variant in variants.scalars().all()
     ]
@@ -1829,13 +1835,13 @@ async def load_available_product_variants(
 async def load_product_variant_by_id(
     variant_id: UUID,
     db: AsyncSession,
-) -> schemas_sport_competition.ProductVariantComplete | None:
+) -> schemas_sport_competition.ProductVariantWithProduct | None:
     variant = await db.get(
         models_sport_competition.CompetitionProductVariant,
         variant_id,
     )
     return (
-        schemas_sport_competition.ProductVariantComplete(
+        schemas_sport_competition.ProductVariantWithProduct(
             id=variant.id,
             edition_id=variant.edition_id,
             product_id=variant.product_id,
@@ -1846,6 +1852,12 @@ async def load_product_variant_by_id(
             unique=variant.unique,
             school_type=variant.school_type,
             public_type=variant.public_type,
+            product=schemas_sport_competition.Product(
+                id=variant.product.id,
+                edition_id=variant.product.edition_id,
+                name=variant.product.name,
+                description=variant.product.description,
+            ),
         )
         if variant
         else None
