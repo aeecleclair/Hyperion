@@ -56,6 +56,10 @@ class School(BaseModel):
     email_placeholder: str
     # Main activation form configuration
     main_activation_form: MainActivationForm
+    # Apple Store URL
+    app_store_url: str | None = None
+    # Google Play Store URL
+    play_store_url: str | None = None
 
     # Regex for email account type validation
     # On registration, user whose email match these regex will be automatically assigned to the corresponding account type

@@ -93,6 +93,10 @@ school:
   entity_email: "eclair@myecl.fr"
   # Email placeholder
   email_placeholder: "prenom.nom@etu.ec-lyon.fr"
+  # Apple Store URL
+  # app_store_url: 
+  # Google Play Store URL
+  # play_store_url: 
 
   # Date of the end of support for the application (ex: 2025-08-25)
   end_of_support: "2025-08-25"

@@ -180,6 +180,8 @@ async def get_variables(settings: Settings = Depends(get_settings)):
         entity_name=settings.school.entity_name,
         email_placeholder=settings.school.email_placeholder,
         main_activation_form=settings.school.main_activation_form,
+        play_store_url=settings.school.play_store_url,
+        app_store_url=settings.school.app_store_url,
         student_email_regex=settings.school.student_email_regex.pattern,
         staff_email_regex=settings.school.staff_email_regex.pattern
         if settings.school.staff_email_regex
