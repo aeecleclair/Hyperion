@@ -461,6 +461,108 @@ async def edit_competition_user(
     await cruds_sport_competition.update_competition_user(user_id, edition.id, user, db)
 
 
+@module.router.patch(
+    "/competition/users/{user_id}/validate",
+    status_code=204,
+)
+async def validate_participation(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: schemas_sport_competition.CompetitionUser = Depends(
+        is_competition_user(
+            competition_group=CompetitionGroupType.schools_bds,
+        ),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> None:
+    user_to_validate = await cruds_sport_competition.load_competition_user_by_id(
+        user_id,
+        edition.id,
+        db,
+    )
+    if user_to_validate is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found in the database",
+        )
+    participant = await cruds_sport_competition.load_participant_by_user_id(
+        user_id,
+        edition.id,
+        db,
+    )
+    if participant and not participant.is_license_valid:
+        raise HTTPException(
+            status_code=400,
+            detail="Participant license is not valid",
+        )
+    if (
+        GroupType.competition_admin.value
+        not in [group.id for group in user.user.groups]
+        and user.user.school_id != user_to_validate.user.school_id
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Unauthorized action",
+        )
+    sport = (
+        await cruds_sport_competition.load_sport_by_id(participant.sport_id, db)
+        if participant
+        else None
+    )
+    if participant and sport is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Sport not found in the database",
+        )
+    school_sport_quota = (
+        await cruds_sport_competition.load_sport_quota_by_ids(
+            participant.school_id,
+            participant.sport_id,
+            edition.id,
+            db,
+        )
+        if participant
+        else None
+    )
+    school_general_quota = await cruds_sport_competition.get_school_general_quota(
+        user_to_validate.user.school_id,
+        edition.id,
+        db,
+    )
+    school_products_quota = await cruds_sport_competition.get_school_products_quota(
+        user_to_validate.user.school_id,
+        edition.id,
+        db,
+    )
+    purchases = await cruds_sport_competition.load_purchases_by_user_id(
+        user_id,
+        edition.id,
+        db,
+    )
+    required_products = await cruds_sport_competition.load_required_products(
+        edition.id,
+        db,
+    )
+    await check_validation_consistency(
+        user_to_validate,
+        participant,
+        purchases,
+        school_sport_quota,
+        school_general_quota,
+        school_products_quota,
+        required_products,
+        edition,
+        db,
+    )
+    await cruds_sport_competition.validate_participant(
+        user_id,
+        edition.id,
+        db,
+    )
+
+
 # endregion: Competition User
 # region: Competition Groups
 
@@ -1437,108 +1539,6 @@ async def join_sport(
         db,
     )
     return participant
-
-
-@module.router.patch(
-    "/competition/users/{user_id}/validate",
-    status_code=204,
-)
-async def validate_participant(
-    user_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_competition_user(
-            competition_group=CompetitionGroupType.schools_bds,
-        ),
-    ),
-    edition: schemas_sport_competition.CompetitionEdition = Depends(
-        get_current_edition,
-    ),
-) -> None:
-    user_to_validate = await cruds_sport_competition.load_competition_user_by_id(
-        user_id,
-        edition.id,
-        db,
-    )
-    if user_to_validate is None:
-        raise HTTPException(
-            status_code=404,
-            detail="User not found in the database",
-        )
-    participant = await cruds_sport_competition.load_participant_by_user_id(
-        user_id,
-        edition.id,
-        db,
-    )
-    if participant and not participant.is_license_valid:
-        raise HTTPException(
-            status_code=400,
-            detail="Participant license is not valid",
-        )
-    if (
-        GroupType.competition_admin.value
-        not in [group.id for group in user.user.groups]
-        and user.user.school_id != user_to_validate.user.school_id
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="Unauthorized action",
-        )
-    sport = (
-        await cruds_sport_competition.load_sport_by_id(participant.sport_id, db)
-        if participant
-        else None
-    )
-    if participant and sport is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Sport not found in the database",
-        )
-    school_sport_quota = (
-        await cruds_sport_competition.load_sport_quota_by_ids(
-            participant.school_id,
-            participant.sport_id,
-            edition.id,
-            db,
-        )
-        if participant
-        else None
-    )
-    school_general_quota = await cruds_sport_competition.get_school_general_quota(
-        user_to_validate.user.school_id,
-        edition.id,
-        db,
-    )
-    school_products_quota = await cruds_sport_competition.get_school_products_quota(
-        user_to_validate.user.school_id,
-        edition.id,
-        db,
-    )
-    purchases = await cruds_sport_competition.load_purchases_by_user_id(
-        user_id,
-        edition.id,
-        db,
-    )
-    required_products = await cruds_sport_competition.load_required_products(
-        edition.id,
-        db,
-    )
-    await check_validation_consistency(
-        user_to_validate,
-        participant,
-        purchases,
-        school_sport_quota,
-        school_general_quota,
-        school_products_quota,
-        required_products,
-        edition,
-        db,
-    )
-    await cruds_sport_competition.validate_participant(
-        user_id,
-        edition.id,
-        db,
-    )
 
 
 @module.router.patch(

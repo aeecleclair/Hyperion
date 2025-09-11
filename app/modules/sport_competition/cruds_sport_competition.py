@@ -351,6 +351,11 @@ async def count_validated_competition_users_by_school_id(
     result = await db.execute(
         select(func.count())
         .select_from(models_sport_competition.CompetitionUser)
+        .join(
+            models_users.CoreUser,
+            models_sport_competition.CompetitionUser.user_id
+            == models_users.CoreUser.id,
+        )
         .where(
             models_users.CoreUser.school_id == school_id,
             models_sport_competition.CompetitionUser.edition_id == edition_id,
@@ -846,6 +851,11 @@ async def count_validated_participants_by_school_and_sport_ids(
     result = await db.execute(
         select(func.count())
         .select_from(models_sport_competition.CompetitionParticipant)
+        .join(
+            models_sport_competition.CompetitionUser,
+            models_sport_competition.CompetitionParticipant.user_id
+            == models_sport_competition.CompetitionUser.user_id,
+        )
         .where(
             models_sport_competition.CompetitionParticipant.sport_id == sport_id,
             models_sport_competition.CompetitionParticipant.edition_id == edition_id,
@@ -877,6 +887,12 @@ async def get_school_general_quota(
             cameraman_quota=quota.cameraman_quota,
             pompom_quota=quota.pompom_quota,
             fanfare_quota=quota.fanfare_quota,
+            athlete_cameraman_quota=quota.athlete_cameraman_quota,
+            athlete_fanfare_quota=quota.athlete_fanfare_quota,
+            athlete_pompom_quota=quota.athlete_pompom_quota,
+            non_athlete_cameraman_quota=quota.non_athlete_cameraman_quota,
+            non_athlete_fanfare_quota=quota.non_athlete_fanfare_quota,
+            non_athlete_pompom_quota=quota.non_athlete_pompom_quota,
         )
         if quota
         else None
@@ -2166,6 +2182,11 @@ async def count_validated_purchases_by_product_id_and_school_id(
             models_sport_competition.CompetitionUser,
             models_sport_competition.CompetitionPurchase.user_id
             == models_sport_competition.CompetitionUser.user_id,
+        )
+        .join(
+            models_users.CoreUser,
+            models_sport_competition.CompetitionUser.user_id
+            == models_users.CoreUser.id,
         )
         .where(
             models_sport_competition.CompetitionProductVariant.product_id == product_id,

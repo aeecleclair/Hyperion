@@ -1,12 +1,18 @@
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
+import pytest
 import pytest_asyncio
+from fastapi.testclient import TestClient
+from sqlalchemy import update
 
 from app.core.groups.groups_type import GroupType
 from app.core.schools import models_schools
-from app.core.users import models_users
-from app.modules.sport_competition import models_sport_competition
+from app.core.users import cruds_users, models_users, schemas_users
+from app.modules.sport_competition import (
+    cruds_sport_competition,
+    models_sport_competition,
+)
 from app.modules.sport_competition.types_sport_competition import (
     ProductPublicType,
     ProductSchoolType,
@@ -16,6 +22,7 @@ from tests.commons import (
     add_object_to_db,
     create_api_access_token,
     create_user_with_groups,
+    get_TestingSessionLocal,
 )
 
 school_sport_quota: models_schools.CoreSchool
@@ -70,15 +77,40 @@ participant_athlete_fanfare_user: models_sport_competition.CompetitionParticipan
 product: models_sport_competition.CompetitionProduct
 
 variant_athlete_user: models_sport_competition.CompetitionProductVariant
-variant_cameraman_user: models_sport_competition.CompetitionProductVariant
-variant_pompom_user: models_sport_competition.CompetitionProductVariant
-variant_fanfare_user: models_sport_competition.CompetitionProductVariant
+purchase_athlete_user: models_sport_competition.CompetitionPurchase
 
 school_sport_quota_quota: models_sport_competition.SchoolSportQuota
 school_simple_general_quota_quota: models_sport_competition.SchoolGeneralQuota
 school_athlete_general_quota_quota: models_sport_competition.SchoolGeneralQuota
 school_non_athlete_general_quota_quota: models_sport_competition.SchoolGeneralQuota
 school_product_quota_quota: models_sport_competition.SchoolProductQuota
+
+
+@pytest.fixture
+def users():
+    return {
+        "admin": admin_user,
+        "athlete": athlete_user,
+        "cameraman": cameraman_user,
+        "pompom": pompom_user,
+        "fanfare": fanfare_user,
+        "volunteer": volunteer_user,
+        "athlete_cameraman": athlete_cameraman_user,
+        "athlete_pompom": athlete_pompom_user,
+        "athlete_fanfare": athlete_fanfare_user,
+    }
+
+
+@pytest.fixture
+def schools():
+    return {
+        "school_sport_quota": school_sport_quota,
+        "school_simple_general_quota": school_simple_general_quota,
+        "school_athlete_general_quota": school_athlete_general_quota,
+        "school_non_athlete_general_quota": school_non_athlete_general_quota,
+        "school_product_quota": school_product_quota,
+        "school_no_quota": school_no_quota,
+    }
 
 
 async def create_competition_user(
@@ -261,6 +293,7 @@ async def init_objects() -> None:
         sport_category=SportCategory.masculine,
         created_at=datetime.now(UTC),
         validated=False,
+        is_athlete=True,
     )
     await add_object_to_db(competition_user_admin)
     athlete_user, competition_user_athlete, _ = await create_competition_user(
@@ -451,11 +484,7 @@ async def init_objects() -> None:
     )
     await add_object_to_db(product)
 
-    global \
-        variant_athlete_user, \
-        variant_cameraman_user, \
-        variant_pompom_user, \
-        variant_fanfare_user
+    global variant_athlete_user
     variant_athlete_user = models_sport_competition.CompetitionProductVariant(
         id=uuid4(),
         edition_id=active_edition.id,
@@ -468,42 +497,17 @@ async def init_objects() -> None:
         school_type=ProductSchoolType.from_lyon,
     )
     await add_object_to_db(variant_athlete_user)
-    variant_cameraman_user = models_sport_competition.CompetitionProductVariant(
-        id=uuid4(),
+
+    global purchase_athlete_user
+    purchase_athlete_user = models_sport_competition.CompetitionPurchase(
+        user_id=athlete_user.id,
+        product_variant_id=variant_athlete_user.id,
         edition_id=active_edition.id,
-        product_id=product.id,
-        name="Cameraman Variant",
-        price=2000,
-        enabled=True,
-        unique=True,
-        public_type=ProductPublicType.cameraman,
-        school_type=ProductSchoolType.from_lyon,
+        quantity=1,
+        validated=False,
+        purchased_on=datetime.now(UTC),
     )
-    await add_object_to_db(variant_cameraman_user)
-    variant_pompom_user = models_sport_competition.CompetitionProductVariant(
-        id=uuid4(),
-        edition_id=active_edition.id,
-        product_id=product.id,
-        name="Pompom Variant",
-        price=1500,
-        enabled=True,
-        unique=True,
-        public_type=ProductPublicType.pompom,
-        school_type=ProductSchoolType.from_lyon,
-    )
-    await add_object_to_db(variant_pompom_user)
-    variant_fanfare_user = models_sport_competition.CompetitionProductVariant(
-        id=uuid4(),
-        edition_id=active_edition.id,
-        product_id=product.id,
-        name="Fanfare Variant",
-        price=1500,
-        enabled=True,
-        unique=True,
-        public_type=ProductPublicType.fanfare,
-        school_type=ProductSchoolType.from_lyon,
-    )
-    await add_object_to_db(variant_fanfare_user)
+    await add_object_to_db(purchase_athlete_user)
 
     global \
         school_sport_quota_quota, \
@@ -573,3 +577,132 @@ async def init_objects() -> None:
         quota=0,
     )
     await add_object_to_db(school_product_quota_quota)
+
+
+@pytest.mark.parametrize(
+    ("user", "school", "expected_status_code", "expected_message"),
+    [
+        (
+            "athlete",
+            "school_sport_quota",
+            400,
+            "Participant quota reached",
+        ),
+        (
+            "athlete",
+            "school_simple_general_quota",
+            400,
+            "Athlete quota reached",
+        ),
+        (
+            "cameraman",
+            "school_simple_general_quota",
+            400,
+            "Cameraman quota reached",
+        ),
+        (
+            "pompom",
+            "school_simple_general_quota",
+            400,
+            "Pompom quota reached",
+        ),
+        (
+            "fanfare",
+            "school_simple_general_quota",
+            400,
+            "Fanfare quota reached",
+        ),
+        (
+            "cameraman",
+            "school_non_athlete_general_quota",
+            400,
+            "Non athlete cameraman quota reached",
+        ),
+        (
+            "pompom",
+            "school_non_athlete_general_quota",
+            400,
+            "Non athlete pompom quota reached",
+        ),
+        (
+            "fanfare",
+            "school_non_athlete_general_quota",
+            400,
+            "Non athlete fanfare quota reached",
+        ),
+        (
+            "athlete_cameraman",
+            "school_athlete_general_quota",
+            400,
+            "Athlete cameraman quota reached",
+        ),
+        (
+            "athlete_pompom",
+            "school_athlete_general_quota",
+            400,
+            "Athlete pompom quota reached",
+        ),
+        (
+            "athlete_fanfare",
+            "school_athlete_general_quota",
+            400,
+            "Athlete fanfare quota reached",
+        ),
+        (
+            "athlete",
+            "school_product_quota",
+            400,
+            "Product quota reached",
+        ),
+        (
+            "athlete",
+            "school_no_quota",
+            204,
+            "No Content",
+        ),
+    ],
+)
+async def test_validate_competition_user(
+    client: TestClient,
+    users: dict[str, models_users.CoreUser],
+    schools: dict[str, models_schools.CoreSchool],
+    user: str,
+    school: str,
+    expected_status_code: int,
+    expected_message: str,
+) -> None:
+    async with get_TestingSessionLocal()() as db:
+        await cruds_users.update_user(
+            db,
+            users[user].id,
+            schemas_users.CoreUserUpdateAdmin(school_id=schools[school].id),
+        )
+        await db.execute(
+            update(models_sport_competition.CompetitionParticipant)
+            .where(
+                models_sport_competition.CompetitionParticipant.user_id
+                == users[user].id,
+                models_sport_competition.CompetitionParticipant.edition_id
+                == active_edition.id,
+            )
+            .values(school_id=schools[school].id),
+        )
+        await db.commit()
+    response = client.patch(
+        f"/competition/users/{users[user].id}/validate",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == expected_status_code
+    if expected_status_code != 204:
+        assert response.json()["detail"] == expected_message
+    async with get_TestingSessionLocal()() as db:
+        competition_user = await cruds_sport_competition.load_competition_user_by_id(
+            users[user].id,
+            active_edition.id,
+            db,
+        )
+        assert competition_user is not None
+        if expected_status_code != 204:
+            assert competition_user.validated is False
+        else:
+            assert competition_user.validated is True
