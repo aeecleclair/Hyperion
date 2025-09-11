@@ -1130,12 +1130,6 @@ async def get_payment_url(
     if not participant:
         raise HTTPException(status_code=404, detail="Participant not found.")
 
-    if participant.validation_progress != 100:
-        raise HTTPException(
-            status_code=400,
-            detail="You must complete your registration before paying.",
-        )
-
     if not participant.payment:
         if (
             participant.student_card is not None
