@@ -19,7 +19,6 @@ from app.modules.sport_competition.dependencies_sport_competition import (
 )
 from app.modules.sport_competition.types_sport_competition import (
     CompetitionGroupType,
-    MultipleEditions,
 )
 from app.types.module import Module
 
@@ -116,7 +115,7 @@ async def delete_sport(
             status_code=404,
             detail="Sport not found in the database",
         ) from None
-    if stored.activated:
+    if stored.active:
         raise HTTPException(
             status_code=400,
             detail="Sport is activated and cannot be deleted",
@@ -130,11 +129,7 @@ async def delete_sport(
 )
 async def get_editions(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
-        is_user_a_member_of_extended(
-            group_id=GroupType.competition_admin,
-        ),
-    ),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     return await competition_cruds.load_all_editions(db)
 
@@ -182,10 +177,13 @@ async def create_edition(
     return edition
 
 
-@module.router.patch("/competition/editions/{edition_id}")
+@module.router.patch(
+    "/competition/editions/{edition_id}",
+    response_model=competition_schemas.CompetitionEdition,
+)
 async def edit_edition(
     edition_id: UUID,
-    edition: competition_schemas.CompetitionEditionEdit,
+    edition_edit: competition_schemas.CompetitionEditionEdit,
     db: AsyncSession = Depends(get_db),
     user: competition_schemas.CompetitionUser = Depends(
         is_user_a_member_of_extended(
@@ -199,13 +197,15 @@ async def edit_edition(
             status_code=404,
             detail="Edition not found in the database",
         ) from None
-    if edition.activated is None:
+    if edition_edit.active is not None and edition_edit.active:
         active = await competition_cruds.load_active_edition(db)
-        if active and active.id != edition_id and edition.activated:
-            raise MultipleEditions
-    stored.model_copy(update=edition.model_dump())
-    await competition_cruds.add_edition(stored, db)
-    return stored
+        if active and active.id != edition_id and edition_edit.active:
+            raise HTTPException(
+                status_code=400,
+                detail="An edition is already active, please deactivate it first",
+            ) from None
+    await competition_cruds.update_edition(edition_id, edition_edit, db)
+    return stored.model_copy(update=edition_edit.model_dump(exclude_unset=True))
 
 
 @module.router.get(
@@ -612,7 +612,7 @@ async def delete_school(
             status_code=404,
             detail="School not found in the database",
         ) from None
-    if stored.activated:
+    if stored.active:
         raise HTTPException(
             status_code=400,
             detail="School is activated and cannot be deleted",

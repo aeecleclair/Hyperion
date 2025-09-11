@@ -45,7 +45,7 @@ def get_competition_user_from_token_with_scopes(
         Dependency that makes sure the token is valid, contains the expected scopes and returns the corresponding user.
         The expected scopes are passed as list of list of scopes, each list of scopes is an "AND" condition, and the list of list of scopes is an "OR" condition.
         """
-        user = await cruds_sport_competition.load_user_by_id(
+        user = await cruds_sport_competition.load_competition_user_by_id(
             db=db,
             user_id=user_id,
             edition_id=edition.id,
@@ -96,10 +96,9 @@ def is_user_a_member_of_extended(
                 status_code=403,
                 detail="User is not a member of the group",
             )
+
         if comptition_group_id is not None and not any(
-            group.id
-            in (comptition_group_id, CompetitionGroupType.competition_admin.value)
-            for group in user.competition_groups
+            group.id == comptition_group_id.value for group in user.competition_groups
         ):
             raise HTTPException(
                 status_code=403,
