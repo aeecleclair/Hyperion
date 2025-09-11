@@ -37,16 +37,11 @@ class SchoolExtensionEdit(BaseModel):
 class SchoolGeneralQuota(BaseModel):
     school_id: UUID
     edition: str
-    athlete_quota: int | None
-    cameraman_quota: int | None
-    pompom_quota: int | None
-    fanfare_quota: int | None
-    non_athlete_quota: int | None
-
-
-class GroupMembership(BaseModel):
-    user: schemas_users.CoreUser
-    edition_id: UUID
+    athlete_quota: int | None = None
+    cameraman_quota: int | None = None
+    pompom_quota: int | None = None
+    fanfare_quota: int | None = None
+    non_athlete_quota: int | None = None
 
 
 class UserGroupMembership(BaseModel):
@@ -71,11 +66,20 @@ class GroupEdit(BaseModel):
     name: str | None
 
 
+class CompetitionUser(schemas_users.CoreUser):
+    """
+    A user with additional fields for competition purposes.
+    This is used to represent a user in the context of a competition.
+    """
+
+    competition_groups: list[Group] = []
+
+
 class SportBase(BaseModel):
     name: str
     team_size: int
-    substitute_max: int | None
-    sport_category: SportCategory | None
+    substitute_max: int
+    sport_category: SportCategory | None = None
     activated: bool = True
 
 
@@ -100,8 +104,8 @@ class Quota(BaseModel):
     school_id: UUID
     sport_id: UUID
     edition_id: UUID
-    participant_quota: int
-    team_quota: int
+    participant_quota: int | None = None
+    team_quota: int | None = None
 
 
 class QuotaEdit(BaseModel):
@@ -110,18 +114,20 @@ class QuotaEdit(BaseModel):
 
 
 class ParticipantInfo(BaseModel):
-    license: str
+    license: str | None = None
     substitute: bool = False
-    team_id: UUID | None
+    team_id: UUID | None = None
 
 
 class Participant(BaseModel):
     user_id: str
     sport_id: UUID
     edition_id: UUID
+    school_id: UUID
     license: str
     substitute: bool = False
-    team_id: UUID | None
+    team_id: UUID | None = None
+    validated: bool = False
 
 
 class ParticipantEdit(BaseModel):
@@ -147,9 +153,9 @@ class TeamBase(BaseModel):
 
 class TeamInfo(BaseModel):
     name: str
-    school_id: UUID | None
-    sport_id: UUID | None
-    captain_id: UUID | None
+    school_id: UUID
+    sport_id: UUID
+    captain_id: UUID
 
 
 class Team(TeamBase):

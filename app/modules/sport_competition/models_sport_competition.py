@@ -27,19 +27,23 @@ class CompetitionGroup(Base):
     id: Mapped[PrimaryKey]
     name: Mapped[str] = mapped_column(unique=True)
 
-    members: Mapped[list[CoreUser]] = relationship(
-        "CoreUser",
+    members: Mapped[list["CompetitionUser"]] = relationship(
+        "CompetitionUser",
         secondary="competition_edition_group_membership",
-        lazy="selectin",
-        viewonly=True,
-        init=False,
+        back_populates="competition_groups",
+        primaryjoin="EditionGroupMembership.group_id == CompetitionGroup.id",
+        secondaryjoin="CompetitionUser.user_id == EditionGroupMembership.user_id",
+        default_factory=list,
     )
 
 
 class EditionGroupMembership(Base):
     __tablename__ = "competition_edition_group_membership"
 
-    user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("competition_user.user_id"),
+        primary_key=True,
+    )
     group_id: Mapped[UUID] = mapped_column(
         ForeignKey("competition_group.id"),
         primary_key=True,
@@ -47,6 +51,27 @@ class EditionGroupMembership(Base):
     edition_id: Mapped[UUID] = mapped_column(
         ForeignKey("competition_edition.id"),
         primary_key=True,
+    )
+
+
+class CompetitionUser(Base):
+    __tablename__ = "competition_user"
+
+    user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
+    sport_category: Mapped[SportCategory | None]
+
+    user: Mapped[CoreUser] = relationship(
+        "CoreUser",
+        lazy="joined",
+        init=False,
+    )
+    competition_groups: Mapped[list[CompetitionGroup]] = relationship(
+        "CompetitionGroup",
+        secondary="competition_edition_group_membership",
+        primaryjoin="EditionGroupMembership.user_id == CompetitionUser.user_id",
+        back_populates="members",
+        lazy="selectin",
+        default_factory=list,
     )
 
 
@@ -115,8 +140,8 @@ class SchoolSportQuota(Base):
         ForeignKey("competition_edition.id"),
         primary_key=True,
     )
-    participant_quota: Mapped[int]
-    team_quota: Mapped[int]
+    participant_quota: Mapped[int | None]
+    team_quota: Mapped[int | None]
 
 
 class Team(Base):
@@ -131,7 +156,7 @@ class Team(Base):
         ForeignKey("competition_edition.id"),
     )
     name: Mapped[str]
-    captain_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
+    captain_id: Mapped[str] = mapped_column(ForeignKey("competition_user.user_id"))
 
     participants: Mapped[list["Participant"]] = relationship(
         "Participant",
@@ -144,7 +169,10 @@ class Team(Base):
 class Participant(Base):
     __tablename__ = "competition_participant"
 
-    user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("competition_user.user_id"),
+        primary_key=True,
+    )
     sport_id: Mapped[UUID] = mapped_column(
         ForeignKey("competition_sport.id"),
         primary_key=True,
@@ -153,13 +181,17 @@ class Participant(Base):
         ForeignKey("competition_edition.id"),
         primary_key=True,
     )
+    # We duplicate school_id data to avoid horrible select queries
+    school_id: Mapped[UUID] = mapped_column(
+        ForeignKey("competition_school_extension.school_id"),
+    )
     team_id: Mapped[UUID | None] = mapped_column(ForeignKey("competition_team.id"))
     substitute: Mapped[bool]
-    license: Mapped[str]
+    license: Mapped[str | None]
     validated: Mapped[bool]
 
     user: Mapped[CoreUser] = relationship(
-        "CoreUser",
+        "CompetitionUser",
         lazy="joined",
         init=False,
     )

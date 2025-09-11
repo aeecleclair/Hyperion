@@ -4,10 +4,8 @@ import jwt
 from fastapi import HTTPException, status
 from jwt.exceptions import DecodeError, ExpiredSignatureError, InvalidTokenError
 from pydantic import ValidationError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
-from app.core.users import cruds_users, models_users
 from app.core.utils import security
 from app.core.utils.config import Settings
 from app.types.scopes_type import ScopeType
@@ -61,13 +59,12 @@ def get_token_data(
     return token_data
 
 
-async def get_user_from_token_with_scopes(
+async def get_user_id_from_token_with_scopes(
     scopes: list[list[ScopeType]],
-    db: AsyncSession,
     token_data: schemas_auth.TokenData,
-) -> models_users.CoreUser:
+) -> str:
     """
-    Dependency that makes sure the token is valid, contains the expected scopes and returns the corresponding user.
+    Dependency that makes sure the token is valid, contains the expected scopes and returns the corresponding user_id.
     The expected scopes are passed as list of list of scopes, each list of scopes is an "AND" condition, and the list of list of scopes is an "OR" condition.
     """
 
@@ -92,9 +89,4 @@ async def get_user_from_token_with_scopes(
             status_code=403,
             detail=f"Unauthorized, token does not contain at least one of the following scope_set {[[scope.value for scope in scope_set] for scope_set in scopes]}",
         )
-    user_id = token_data.sub
-
-    user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
+    return token_data.sub
