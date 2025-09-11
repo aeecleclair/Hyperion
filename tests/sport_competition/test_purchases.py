@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest_asyncio
+from fastapi.testclient import TestClient
 
 from app.core.groups.groups_type import GroupType
 from app.core.payment import models_payment
@@ -494,9 +495,140 @@ async def setup():
         hello_asso_checkout_id=1,
         secret="secret",
     )
+    await add_object_to_db(base_checkout)
     checkout = models_sport_competition.CompetitionCheckout(
         id=uuid4(),
         user_id=admin_user.id,
         edition_id=active_edition.id,
         checkout_id=base_checkout.id,
     )
+    await add_object_to_db(checkout)
+
+
+async def test_get_products(
+    client: TestClient,
+):
+    response = client.get(
+        "/competition/products",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) > 0
+    assert all("id" in item for item in data)
+    assert all("name" in item for item in data)
+
+
+async def test_add_product(
+    client: TestClient,
+):
+    new_product = {
+        "name": "New Product",
+        "description": "Description for New Product",
+    }
+    response = client.post(
+        "/competition/products",
+        json=new_product,
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 201
+    data = response.json()
+
+    products = client.get(
+        "/competition/products",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert products.status_code == 200
+    products_data = products.json()
+    product = next((item for item in products_data if item["id"] == data["id"]), None)
+    assert product is not None
+    assert product["name"] == new_product["name"]
+
+
+async def test_edit_product(
+    client: TestClient,
+):
+    product_id = product1.id
+    updated_product = {
+        "name": "Updated Product 1",
+        "description": "Updated description for Product 1",
+    }
+    response = client.put(
+        f"/competition/products/{product_id}",
+        json=updated_product,
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == updated_product["name"]
+    assert data["description"] == updated_product["description"]
+
+
+async def test_delete_product(
+    client: TestClient,
+):
+    product = models_sport_competition.CompetitionProduct(
+        id=uuid4(),
+        name="Product to Delete",
+        description="Description for Product to Delete",
+        edition_id=active_edition.id,
+    )
+    await add_object_to_db(product)
+    response = client.delete(
+        f"/competition/products/{product.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 204
+
+    products = client.get(
+        "/competition/products",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert products.status_code == 200
+    products_data = products.json()
+    assert not any(item["id"] == product.id for item in products_data)
+
+
+async def test_delete_product_with_variants(
+    client: TestClient,
+):
+    response = client.delete(
+        f"/competition/products/{product1.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 403
+
+    products = client.get(
+        "/competition/products",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert products.status_code == 200
+    products_data = products.json()
+    assert any(item["id"] == product1.id for item in products_data)
+
+
+async def test_get_product_available(
+    client: TestClient,
+):
+    response = client.get(
+        "/competition/products/available",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+
+async def test_add_product_variants(
+    client: TestClient,
+):
+    response = client.get(
+        f"/competition/products/{product1.id}/variants",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) > 0
+    assert all("id" in item for item in data)
+    assert all("name" in item for item in data)
