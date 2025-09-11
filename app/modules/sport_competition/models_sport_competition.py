@@ -9,6 +9,7 @@ from app.core.users.models_users import CoreUser
 from app.modules.sport_competition.types_sport_competition import (
     CompetitionGroupType,
     ProductPublicType,
+    ProductSchoolType,
     SportCategory,
 )
 from app.types.sqlalchemy import Base, PrimaryKey
@@ -330,6 +331,9 @@ class CompetitionProductVariant(Base):
     __tablename__ = "competition_product_variant"
 
     id: Mapped[PrimaryKey]
+    edition_id: Mapped[UUID] = mapped_column(
+        ForeignKey("competition_edition.id"),
+    )
     product_id: Mapped[UUID] = mapped_column(
         ForeignKey("competition_product.id"),
     )
@@ -337,6 +341,7 @@ class CompetitionProductVariant(Base):
     price: Mapped[int]
     enabled: Mapped[bool]
     unique: Mapped[bool]
+    school_type: Mapped[ProductSchoolType]
     public_type: Mapped[ProductPublicType | None]
     description: Mapped[str | None] = mapped_column(default=None)
 

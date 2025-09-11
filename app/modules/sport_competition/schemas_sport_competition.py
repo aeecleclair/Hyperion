@@ -9,6 +9,7 @@ from app.modules.sport_competition.types_sport_competition import (
     CompetitionGroupType,
     InvalidUserType,
     ProductPublicType,
+    ProductSchoolType,
     SportCategory,
 )
 
@@ -326,10 +327,12 @@ class ProductVariantBase(BaseModel):
     price: int
     enabled: bool = True
     unique: bool
+    school_type: ProductSchoolType
     public_type: ProductPublicType | None = None
 
 
 class ProductVariantComplete(ProductVariantBase):
+    edition_id: UUID
     id: UUID
 
 
@@ -339,6 +342,7 @@ class ProductVariantEdit(BaseModel):
     price: int | None = None
     enabled: bool | None = None
     unique: bool | None = None
+    school_type: ProductSchoolType | None = None
     public_type: ProductPublicType | None = None
 
 
