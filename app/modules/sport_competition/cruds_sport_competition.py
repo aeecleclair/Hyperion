@@ -304,6 +304,22 @@ async def delete_school_by_id(
     await db.flush()
 
 
+async def load_school_base_by_id(
+    school_id: UUID,
+    db: AsyncSession,
+) -> schemas_competition.SchoolExtensionBase | None:
+    school = await db.get(models_competition.SchoolExtension, school_id)
+    return (
+        schemas_competition.SchoolExtensionBase(
+            school_id=school.school_id,
+            from_lyon=school.from_lyon,
+            active=school.active,
+        )
+        if school
+        else None
+    )
+
+
 async def load_school_by_id(
     school_id: UUID,
     edition_id: UUID,

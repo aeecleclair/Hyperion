@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.groups.groups_type import GroupType, get_account_types_except_externals
 from app.core.schools import cruds_schools
 from app.core.users import cruds_users, models_users, schemas_users
-from app.dependencies import get_db, is_user
+from app.dependencies import get_db, is_user, is_user_in
 from app.modules.sport_competition import cruds_sport_competition as competition_cruds
 from app.modules.sport_competition import schemas_sport_competition
 from app.modules.sport_competition import (
@@ -158,7 +158,7 @@ async def create_edition(
     edition: competition_schemas.CompetitionEditionBase,
     db: AsyncSession = Depends(get_db),
     user: competition_schemas.CompetitionUser = Depends(
-        is_user_a_member_of_extended(
+        is_user_in(
             group_id=GroupType.competition_admin,
         ),
     ),
@@ -556,7 +556,6 @@ async def create_school(
             group_id=GroupType.competition_admin,
         ),
     ),
-    edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
 ):
     core_school = await cruds_schools.get_school_by_id(db, school.school_id)
     if core_school is None:
@@ -564,7 +563,7 @@ async def create_school(
             status_code=404,
             detail="School not found in the database",
         ) from None
-    stored = await competition_cruds.load_school_by_id(school.school_id, edition.id, db)
+    stored = await competition_cruds.load_school_base_by_id(school.school_id, db)
     if stored is not None:
         raise HTTPException(
             status_code=400,
