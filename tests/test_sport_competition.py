@@ -3,6 +3,7 @@ from uuid import uuid4
 
 import pytest_asyncio
 from fastapi.testclient import TestClient
+from sqlalchemy import delete
 
 from app.core.groups.groups_type import GroupType
 from app.core.schools import models_schools
@@ -18,6 +19,7 @@ from app.modules.sport_competition.types_sport_competition import (
     SportCategory,
 )
 from tests.commons import (
+    TestingSessionLocal,
     add_object_to_db,
     create_api_access_token,
     create_user_with_groups,
@@ -51,6 +53,7 @@ sport_free_quota: models_sport_competition.Sport
 sport_used_quota: models_sport_competition.Sport
 sport_with_team: models_sport_competition.Sport
 sport_with_substitute: models_sport_competition.Sport
+sport_feminine: models_sport_competition.Sport
 ecl_sport_free_quota: models_sport_competition.SchoolSportQuota
 ecl_sport_used_quota: models_sport_competition.SchoolSportQuota
 
@@ -173,6 +176,7 @@ async def init_objects() -> None:
     global ecl_extension, school1_extension
     ecl_extension = models_sport_competition.SchoolExtension(
         school_id=SchoolType.centrale_lyon.value,
+        ffsu_id="GM1E",
         from_lyon=True,
         active=True,
         inscription_enabled=False,
@@ -180,6 +184,7 @@ async def init_objects() -> None:
     await add_object_to_db(ecl_extension)
     school1_extension = models_sport_competition.SchoolExtension(
         school_id=school1.id,
+        ffsu_id="EM1E",
         from_lyon=False,
         active=True,
         inscription_enabled=False,
@@ -206,7 +211,12 @@ async def init_objects() -> None:
     )
     await add_object_to_db(school_general_quota)
 
-    global sport_free_quota, sport_used_quota, sport_with_team, sport_with_substitute
+    global \
+        sport_free_quota, \
+        sport_used_quota, \
+        sport_with_team, \
+        sport_with_substitute, \
+        sport_feminine
     sport_free_quota = models_sport_competition.Sport(
         id=uuid4(),
         name="Free Quota Sport",
@@ -243,6 +253,15 @@ async def init_objects() -> None:
         sport_category=None,
     )
     await add_object_to_db(sport_with_substitute)
+    sport_feminine = models_sport_competition.Sport(
+        id=uuid4(),
+        name="Feminine Sport",
+        team_size=5,
+        substitute_max=2,
+        active=True,
+        sport_category=SportCategory.feminine,
+    )
+    await add_object_to_db(sport_feminine)
 
     global ecl_sport_free_quota, ecl_sport_used_quota
     ecl_sport_free_quota = models_sport_competition.SchoolSportQuota(
@@ -293,6 +312,7 @@ async def init_objects() -> None:
         team_id=None,
         substitute=False,
         license="1234567890",
+        is_licence_valid=True,
     )
     await add_object_to_db(participant1)
     participant2 = models_sport_competition.CompetitionParticipant(
@@ -303,6 +323,7 @@ async def init_objects() -> None:
         team_id=team1.id,
         substitute=False,
         license="0987654321",
+        is_licence_valid=True,
     )
     await add_object_to_db(participant2)
 
@@ -1683,12 +1704,12 @@ async def test_get_participant_me(
     client: TestClient,
 ) -> None:
     response = client.get(
-        "/competition/users/me",
+        "/competition/participants/me",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 200, response.json()
     user = response.json()
-    assert user["user_id"] == str(user3.id)
+    assert user["user_id"] == str(admin_user.id)
     assert user["sport_id"] == str(sport_free_quota.id)
     assert user["edition_id"] == str(active_edition.id)
 
@@ -1697,7 +1718,7 @@ async def test_get_participant_for_sport(
     client: TestClient,
 ) -> None:
     response = client.get(
-        f"/competition/users/sports/{sport_free_quota.id}",
+        f"/competition/participants/sports/{sport_free_quota.id}",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 200, response.json()
@@ -1707,22 +1728,121 @@ async def test_get_participant_for_sport(
     assert all(user["sport_id"] == str(sport_free_quota.id) for user in users)
 
 
-async def test_get_participant_for_school(
+async def test_get_participant_for_school_as_admin(
     client: TestClient,
 ) -> None:
     response = client.get(
-        f"/competition/users/sports/{sport_free_quota.id}/schools/{school1.id}",
+        f"/competition/participants/schools/{SchoolType.centrale_lyon.value}",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 200, response.json()
     users = response.json()
     assert len(users) > 0
     assert all(user["edition_id"] == str(active_edition.id) for user in users)
-    assert all(user["sport_id"] == str(sport_free_quota.id) for user in users)
-    assert all(user["school_id"] == str(school1.id) for user in users)
+    assert all(
+        user["school_id"] == str(SchoolType.centrale_lyon.value) for user in users
+    )
 
 
-async def test_user_participate(
+async def test_get_participant_for_school_as_school_student(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        f"/competition/participants/schools/{SchoolType.centrale_lyon.value}",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 200, response.json()
+    users = response.json()
+    assert len(users) > 0
+    assert all(user["edition_id"] == str(active_edition.id) for user in users)
+    assert all(
+        user["school_id"] == str(SchoolType.centrale_lyon.value) for user in users
+    )
+
+
+async def test_get_participant_for_school_as_random(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        f"/competition/participants/schools/{school1.id}",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 403, response.json()
+    assert "Unauthorized action" in response.json()["detail"]
+
+
+async def test_user_participate_with_invalid_category(
+    client: TestClient,
+) -> None:
+    info = ParticipantInfo(
+        license="12345670089",
+        substitute=False,
+    )
+    response = client.post(
+        f"/competition/sports/{sport_feminine.id}/participate",
+        headers={"Authorization": f"Bearer {school_bds_token}"},
+        json=info.model_dump(exclude_none=True, mode="json"),
+    )
+    assert response.status_code == 403, response.json()
+    assert (
+        "Sport category does not match user sport category" in response.json()["detail"]
+    )
+
+
+async def test_user_participate_without_team(
+    client: TestClient,
+) -> None:
+    info = ParticipantInfo(
+        license="12345670089",
+        substitute=False,
+    )
+    response = client.post(
+        f"/competition/sports/{sport_with_team.id}/participate",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json=info.model_dump(exclude_none=True, mode="json"),
+    )
+    assert response.status_code == 400, response.json()
+    assert "Sport declared needs to be played in a team" in response.json()["detail"]
+
+
+async def test_user_participate_with_invalid_team_school(
+    client: TestClient,
+) -> None:
+    info = ParticipantInfo(
+        license="12345670089",
+        substitute=False,
+        team_id=team2.id,  # team2 is from a different school
+    )
+    response = client.post(
+        f"/competition/sports/{sport_with_team.id}/participate",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json=info.model_dump(exclude_none=True, mode="json"),
+    )
+    assert response.status_code == 403, response.json()
+    assert (
+        "Unauthorized action, team does not belong to user school"
+        in response.json()["detail"]
+    )
+
+
+async def test_user_participate_with_unknown_team(
+    client: TestClient,
+) -> None:
+    info = ParticipantInfo(
+        license="12345670089",
+        substitute=False,
+        team_id=uuid4(),
+    )
+    response = client.post(
+        f"/competition/sports/{sport_with_team.id}/participate",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json=info.model_dump(exclude_none=True, mode="json"),
+    )
+    assert response.status_code == 404, response.json()
+    assert "Team not found in the database" in response.json()["detail"]
+
+
+async def test_user_participate_with_valid_data(
     client: TestClient,
 ) -> None:
     info = ParticipantInfo(
@@ -1734,10 +1854,46 @@ async def test_user_participate(
         headers={"Authorization": f"Bearer {user3_token}"},
         json=info.model_dump(exclude_none=True, mode="json"),
     )
-    assert response.status_code == 200, response.json()
+    assert response.status_code == 201, response.json()
 
     participants = client.get(
-        f"/competition/users/sports/{sport_free_quota.id}",
+        f"/competition/participants/sports/{sport_free_quota.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert participants.status_code == 200, participants.json()
+    participants_json = participants.json()
+    user_participation = next(
+        (u for u in participants_json if u["user_id"] == str(user3.id)),
+        None,
+    )
+    assert user_participation is not None, participants_json
+    assert user_participation["edition_id"] == str(active_edition.id)
+
+
+async def test_user_participate_with_team(
+    client: TestClient,
+) -> None:
+    async with TestingSessionLocal() as db:
+        await db.execute(
+            delete(models_sport_competition.CompetitionParticipant).where(
+                models_sport_competition.CompetitionParticipant.user_id == user3.id,
+            ),
+        )
+        await db.commit()
+    info = ParticipantInfo(
+        license="12345670089",
+        substitute=False,
+        team_id=team1.id,  # team1 is from the same school
+    )
+    response = client.post(
+        f"/competition/sports/{sport_with_team.id}/participate",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json=info.model_dump(exclude_none=True, mode="json"),
+    )
+    assert response.status_code == 201, response.json()
+
+    participants = client.get(
+        f"/competition/participants/sports/{sport_with_team.id}",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert participants.status_code == 200, participants.json()

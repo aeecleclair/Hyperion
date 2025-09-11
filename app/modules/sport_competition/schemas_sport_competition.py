@@ -232,6 +232,31 @@ class TeamComplete(Team):
     participants: list[ParticipantComplete]
 
 
+class LocationBase(BaseModel):
+    name: str
+    description: str | None = None
+    address: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+
+
+class Location(LocationBase):
+    id: UUID
+    edition_id: UUID
+
+
+class LocationComplete(Location):
+    matches: list["Match"] = []
+
+
+class LocationEdit(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    address: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+
+
 class MatchBase(BaseModel):
     edition_id: UUID
     name: str

@@ -59,7 +59,7 @@ def get_competition_user_from_token_with_scopes(
 
 def is_competition_user(
     group_id: GroupType | None = None,
-    comptition_group_id: CompetitionGroupType | None = None,
+    competition_group: CompetitionGroupType | None = None,
     exclude_external: bool = False,
 ) -> Callable[
     [schemas_sport_competition.CompetitionUser],
@@ -99,6 +99,21 @@ def is_competition_user(
                 status_code=403,
                 detail="User is not a member of the group",
             )
+        if competition_group is not None and not any(
+            group.id == GroupType.competition_admin.value for group in user.user.groups
+        ):
+            user_groups = (
+                await cruds_sport_competition.load_user_competition_groups_memberships(
+                    db=db,
+                    user_id=user.user_id,
+                    edition_id=edition.id,
+                )
+            )
+            if not any(group.group == competition_group for group in user_groups):
+                raise HTTPException(
+                    status_code=403,
+                    detail="User is not a member of the competition group",
+                )
         return user
 
     return is_user_a_member_of
