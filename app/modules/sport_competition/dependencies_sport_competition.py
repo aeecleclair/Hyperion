@@ -84,25 +84,20 @@ def is_user_a_member_of_extended(
         """
         A dependency that checks that user is a member of the group with the given id then returns the corresponding user.
         """
-        if exclude_external and user.account_type == groups_type.AccountType.external:
+        if (
+            exclude_external
+            and user.user.account_type == groups_type.AccountType.external
+        ):
             raise HTTPException(
                 status_code=403,
                 detail="User is external",
             )
         if group_id is not None and not any(
-            group.id == group_id for group in user.groups
+            group.id == group_id for group in user.user.groups
         ):
             raise HTTPException(
                 status_code=403,
                 detail="User is not a member of the group",
-            )
-
-        if comptition_group_id is not None and not any(
-            group.id == comptition_group_id.value for group in user.competition_groups
-        ):
-            raise HTTPException(
-                status_code=403,
-                detail="User is not a member of the competition group",
             )
         return user
 

@@ -369,6 +369,11 @@ async def create_competition_user(
     user_simple = schemas_sport_competition.CompetitionUserSimple(
         user_id=current_user.id,
         edition_id=edition.id,
+        is_athlete=user.is_athlete,
+        is_cameraman=user.is_cameraman,
+        is_pompom=user.is_pompom,
+        is_fanfare=user.is_fanfare,
+        is_volunteer=user.is_volunteer,
         sport_category=user.sport_category,
         created_at=datetime.now(UTC),
         validated=False,

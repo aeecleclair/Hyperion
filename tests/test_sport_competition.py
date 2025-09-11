@@ -121,6 +121,7 @@ async def init_objects() -> None:
         user_id=admin_user.id,
         sport_category=SportCategory.masculine,
         edition_id=active_edition.id,
+        is_athlete=True,
         validated=True,
         created_at=datetime.now(UTC),
     )
@@ -129,6 +130,8 @@ async def init_objects() -> None:
         user_id=school_bds_user.id,
         sport_category=SportCategory.masculine,
         edition_id=active_edition.id,
+        is_athlete=True,
+        is_pompom=True,
         validated=True,
         created_at=datetime.now(UTC),
     )
@@ -137,6 +140,8 @@ async def init_objects() -> None:
         user_id=sport_manager_user.id,
         sport_category=SportCategory.masculine,
         edition_id=active_edition.id,
+        is_athlete=True,
+        is_cameraman=True,
         validated=True,
         created_at=datetime.now(UTC),
     )
@@ -801,6 +806,7 @@ async def test_post_competition_user(
         headers={"Authorization": f"Bearer {user3_token}"},
         json={
             "sport_category": SportCategory.masculine.value,
+            "is_athlete": True,
         },
     )
     assert response.status_code == 201, response.json()
