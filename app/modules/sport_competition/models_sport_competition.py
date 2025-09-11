@@ -386,6 +386,7 @@ class CompetitionPayment(Base):
         ForeignKey("competition_edition.id"),
     )
     total: Mapped[int]
+    created_at: Mapped[datetime]
 
     __table_args__ = (
         ForeignKeyConstraint(
@@ -396,7 +397,7 @@ class CompetitionPayment(Base):
     )
 
 
-class Checkout(Base):
+class CompetitionCheckout(Base):
     __tablename__ = "competition_checkout"
     id: Mapped[PrimaryKey]
     user_id: Mapped[str] = mapped_column(

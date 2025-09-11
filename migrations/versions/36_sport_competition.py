@@ -17,7 +17,7 @@ from app.types.sqlalchemy import TZDateTime
 
 # revision identifiers, used by Alembic.
 revision: str = "0f66a87dc3ce"
-down_revision: str | None = "d14266761430"
+down_revision: str | None = "7da0e98a9e32"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -316,6 +316,7 @@ def upgrade() -> None:
         sa.Column("user_id", sa.String(), nullable=False),
         sa.Column("edition_id", sa.Uuid(), nullable=False),
         sa.Column("total", sa.Integer(), nullable=False),
+        sa.Column("created_at", TZDateTime(), nullable=False),
         sa.ForeignKeyConstraint(
             ["user_id", "edition_id"],
             ["competition_user.user_id", "competition_user.edition_id"],

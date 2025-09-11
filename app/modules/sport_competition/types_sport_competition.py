@@ -1,17 +1,5 @@
-from datetime import UTC, datetime
 from enum import Enum
 from typing import Literal
-
-
-class InconsistentData(Exception):
-    def __init__(self, complement: str | None, *args: object) -> None:
-        super().__init__(*args)
-        self.complement = complement
-
-    def __str__(self) -> str:
-        if self.complement:
-            return f"Inconsistent data: {self.complement}"
-        return "Inconsistent data"
 
 
 class InvalidUserType(Exception):
@@ -23,11 +11,6 @@ class InvalidUserType(Exception):
         if self.complement == "too_many":
             return "Invalid user type: too many types selected"
         return "Invalid user type: no type selected"
-
-
-class UnauthorizedAction(Exception):
-    def __str__(self) -> str:
-        return "Unauthorized action"
 
 
 class SportCategory(Enum):
@@ -45,13 +28,10 @@ class ProductPublicType(Enum):
     fanfare = "fanfare"
     cameraman = "cameraman"
     athlete = "athlete"
+    volunteer = "volunteer"
 
 
 class ProductSchoolType(Enum):
     centrale = "centrale"
     from_lyon = "from_lyon"
     others = "others"
-
-
-class DefaultCoreData(Enum):
-    challenge_year = datetime.now(tz=UTC).year
