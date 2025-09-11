@@ -5,8 +5,8 @@ from typing import Any
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import models_core
 from app.core.groups.groups_type import GroupType
+from app.core.users import models_users
 from app.dependencies import get_db, is_user
 from app.modules.sport_competition import (
     cruds_sport_competition,
@@ -21,17 +21,17 @@ def is_user_a_member_of_extended(
     group_id: GroupType | None = None,
     comptition_group_id: CompetitionGroupType | None = None,
     exclude_external: bool = False,
-) -> Callable[[models_core.CoreUser], Coroutine[Any, Any, models_core.CoreUser]]:
+) -> Callable[[models_users.CoreUser], Coroutine[Any, Any, models_users.CoreUser]]:
     """
     Generate a dependency which will:
         * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
         * make sure the user making the request exists and is a member of the group with the given id
         * make sure the user is not an external user if `exclude_external` is True
-        * return the corresponding user `models_core.CoreUser` object
+        * return the corresponding user `models_users.CoreUser` object
     """
 
     async def is_user_a_member_of(
-        user: models_core.CoreUser = Depends(
+        user: models_users.CoreUser = Depends(
             is_user(
                 included_groups=[group_id] if group_id else None,
                 exclude_external=exclude_external,
@@ -41,7 +41,7 @@ def is_user_a_member_of_extended(
             get_current_edition,
         ),
         db: AsyncSession = Depends(get_db),
-    ) -> models_core.CoreUser:
+    ) -> models_users.CoreUser:
         """
         A dependency that checks that user is a member of the group with the given id then returns the corresponding user.
         """

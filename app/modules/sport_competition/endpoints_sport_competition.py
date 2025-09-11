@@ -1,12 +1,11 @@
 import logging
-import uuid
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import schemas_core
 from app.core.schools import cruds_schools
-from app.core.users import cruds_users
+from app.core.users import cruds_users, schemas_users
 from app.dependencies import get_db, is_user
 from app.modules.sport_competition import cruds_sport_competition as competition_cruds
 from app.modules.sport_competition import (
@@ -47,14 +46,14 @@ async def create_sport(
             status_code=400,
             detail="A sport with this name already exists",
         ) from None
-    sport = competition_schemas.Sport(**sport.model_dump(), id=str(uuid.uuid4()))
+    sport = competition_schemas.Sport(**sport.model_dump(), id=str(uuid4()))
     await competition_cruds.store_sport(sport, db)
     return sport
 
 
 @router.patch("/competition/sports/{sport_id}")
 async def edit_sport(
-    sport_id: str,
+    sport_id: UUID,
     sport: competition_schemas.SportEdit,
     db: AsyncSession = Depends(get_db),
     user=Depends(
@@ -76,7 +75,7 @@ async def edit_sport(
 
 @router.delete("/competition/sports/{sport_id}")
 async def delete_sport(
-    sport_id: str,
+    sport_id: UUID,
     db: AsyncSession = Depends(get_db),
     user=Depends(
         is_user_a_member_of_extended(
@@ -123,14 +122,14 @@ async def create_group(
     stored = await competition_cruds.load_group_by_name(group.name, db)
     if stored is not None:
         raise HTTPException(status_code=400, detail="Group already exists") from None
-    group = competition_schemas.Group(**group.model_dump(), id=str(uuid.uuid4()))
-    await competition_cruds.store_group(group, db)
+    group = competition_schemas.Group(**group.model_dump(), id=str(uuid4()))
+    await competition_cruds.add_group(group, db)
     return group
 
 
 @router.patch("/competition/groups/{group_id}")
 async def edit_group(
-    group_id: str,
+    group_id: UUID,
     group: competition_schemas.GroupEdit,
     db=Depends(get_db),
     user=Depends(
@@ -143,13 +142,12 @@ async def edit_group(
     stored = await competition_cruds.load_group_by_id(group_id, edition.id, db)
     if stored is None:
         raise HTTPException(status_code=404, detail="Group not found") from None
-    stored.model_copy(update=group.model_dump())
-    await competition_cruds.store_group(stored, db)
+    await competition_cruds.update_group(group_id, group, db)
 
 
 @router.delete("/competition/groups/{group_id}")
 async def delete_group(
-    group_id: str,
+    group_id: UUID,
     db=Depends(get_db),
     user=Depends(
         is_user_a_member_of_extended(
@@ -172,7 +170,7 @@ async def delete_group(
     response_model=list[competition_schemas.Quota],
 )
 async def get_quotas_for_sport(
-    sport_id: str,
+    sport_id: UUID,
     db=Depends(get_db),
     user=Depends(
         is_user_a_member_of_extended(
@@ -199,7 +197,7 @@ async def get_quotas_for_sport(
     response_model=list[competition_schemas.Quota],
 )
 async def get_quotas_for_school(
-    school_id: str,
+    school_id: UUID,
     db=Depends(get_db),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
 ):
@@ -221,8 +219,8 @@ async def get_quotas_for_school(
     status_code=201,
 )
 async def create_quota(
-    school_id: str,
-    sport_id: str,
+    school_id: UUID,
+    sport_id: UUID,
     quota_info: competition_schemas.QuotaInfo,
     db=Depends(get_db),
     user=Depends(
@@ -264,8 +262,8 @@ async def create_quota(
 
 @router.patch("/competition/schools/{school_id}/sports/{sport_id}/quotas")
 async def edit_quota(
-    school_id: str,
-    sport_id: str,
+    school_id: UUID,
+    sport_id: UUID,
     quota_info: competition_schemas.QuotaEdit,
     db=Depends(get_db),
     user=Depends(
@@ -304,8 +302,8 @@ async def edit_quota(
 
 @router.delete("/competition/schools/{school_id}/sports/{sport_id}/quotas")
 async def delete_quota(
-    school_id: str,
-    sport_id: str,
+    school_id: UUID,
+    sport_id: UUID,
     db=Depends(get_db),
     user=Depends(
         is_user_a_member_of_extended(
@@ -371,13 +369,13 @@ async def create_school(
             status_code=400,
             detail="School extension already exists",
         ) from None
-    await competition_cruds.store_school(school, db)
+    await competition_cruds.add_school(school, db)
     return school
 
 
 @router.patch("/competition/schools/{school_id}")
 async def edit_school(
-    school_id: str,
+    school_id: UUID,
     school: competition_schemas.SchoolExtensionEdit,
     db=Depends(get_db),
     user=Depends(
@@ -393,13 +391,12 @@ async def edit_school(
             status_code=404,
             detail="School not found in the database",
         ) from None
-    stored.model_copy(update=school.model_dump())
-    await competition_cruds.store_school(stored, db)
+    await competition_cruds.update_school(school_id, school, db)
 
 
 @router.delete("/competition/schools/{school_id}")
 async def delete_school(
-    school_id: str,
+    school_id: UUID,
     db=Depends(get_db),
     user=Depends(
         is_user_a_member_of_extended(
@@ -423,9 +420,9 @@ async def delete_school(
 
 
 async def check_team_consistency(
-    school_id: str,
-    sport_id: str,
-    team_id: str,
+    school_id: UUID,
+    sport_id: UUID,
+    team_id: UUID,
     db: AsyncSession,
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
 ) -> competition_schemas.TeamComplete:
@@ -460,7 +457,7 @@ async def check_team_consistency(
     response_model=list[competition_schemas.Team],
 )
 async def get_teams_for_sport(
-    sport_id: str,
+    sport_id: UUID,
     db=Depends(get_db),
     user=Depends(
         is_user_a_member_of_extended(
@@ -483,8 +480,8 @@ async def get_teams_for_sport(
     response_model=list[competition_schemas.Team],
 )
 async def get_sport_teams_for_school_and_sport(
-    school_id: str,
-    sport_id: str,
+    school_id: UUID,
+    sport_id: UUID,
     db=Depends(get_db),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
 ):
@@ -514,12 +511,12 @@ async def get_sport_teams_for_school_and_sport(
     response_model=competition_schemas.Team,
 )
 async def create_team(
-    school_id: str,
-    sport_id: str,
+    school_id: UUID,
+    sport_id: UUID,
     team_info: competition_schemas.TeamInfo,
     db=Depends(get_db),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
-    user: schemas_core.CoreUser = Depends(is_user),
+    user: schemas_users.CoreUser = Depends(is_user),
 ):
     if (
         user.id != team_info.captain_id
@@ -550,7 +547,7 @@ async def create_team(
         if len(stored) == quotas.team_quota:
             raise HTTPException(status_code=400, detail="Team quota reached") from None
     team = competition_schemas.Team(
-        id=uuid.uuid4(),
+        id=uuid4(),
         school_id=school_id,
         sport_id=sport_id,
         name=team_info.name,
@@ -562,10 +559,10 @@ async def create_team(
 
 @router.post("/competition/sports/{sport_id}/join}")
 async def join_team(
-    sport_id: str,
+    sport_id: UUID,
     participant_info: competition_schemas.ParticipantInfo,
     db=Depends(get_db),
-    user: schemas_core.CoreUser = Depends(is_user),
+    user: schemas_users.CoreUser = Depends(is_user),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
 ):
     sport = await competition_cruds.load_sport_by_id(sport_id, db)
@@ -617,7 +614,7 @@ async def join_team(
                 status_code=400,
                 detail="Maximum number of players in the team reached",
             ) from None
-        elif (
+        if (
             participant_info.substitute
             and len(
                 [user for user in team.participants if user.substitute],
@@ -641,10 +638,10 @@ async def join_team(
 
 @router.patch("/competition/teams/{team_id}")
 async def edit_team(
-    team_id: str,
+    team_id: UUID,
     team_info: competition_schemas.TeamEdit,
     db=Depends(get_db),
-    user: schemas_core.CoreUser = Depends(is_user),
+    user: schemas_users.CoreUser = Depends(is_user),
 ):
     stored = await competition_cruds.load_team_by_id(team_id, db)
     if stored is None:
@@ -674,9 +671,9 @@ async def edit_team(
 
 @router.delete("/competition/teams/{team_id}")
 async def delete_team(
-    team_id: str,
+    team_id: UUID,
     db=Depends(get_db),
-    user: schemas_core.CoreUser = Depends(is_user),
+    user: schemas_users.CoreUser = Depends(is_user),
 ):
     stored = await competition_cruds.load_team_by_id(team_id, db)
     if stored is None:
@@ -698,7 +695,7 @@ async def delete_team(
     response_model=list[competition_schemas.Match],
 )
 async def get_matches_for_sport_and_edition(
-    sport_id: str,
+    sport_id: UUID,
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
     db=Depends(get_db),
 ):
@@ -720,8 +717,8 @@ async def get_matches_for_sport_and_edition(
     response_model=list[competition_schemas.Match],
 )
 async def get_matches_for_school_sport_and_edition(
-    school_id: str,
-    sport_id: str,
+    school_id: UUID,
+    sport_id: UUID,
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
     db=Depends(get_db),
 ):
@@ -745,7 +742,7 @@ async def get_matches_for_school_sport_and_edition(
 
 
 def check_match_consistency(
-    sport_id: str,
+    sport_id: UUID,
     match_info: competition_schemas.MatchBase,
     team1: competition_schemas.TeamComplete,
     team2: competition_schemas.TeamComplete,
@@ -790,10 +787,10 @@ def check_match_consistency(
     response_model=competition_schemas.Match,
 )
 async def create_match(
-    sport_id: str,
+    sport_id: UUID,
     match_info: competition_schemas.MatchBase,
     db=Depends(get_db),
-    user: schemas_core.CoreUser = Depends(is_user),
+    user: schemas_users.CoreUser = Depends(is_user),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
 ):
     sport = await competition_cruds.load_sport_by_id(sport_id, db)
@@ -818,7 +815,7 @@ async def create_match(
     check_match_consistency(sport_id, match_info, team1, team2, edition)
 
     match = competition_schemas.Match(
-        id=uuid.uuid4(),
+        id=uuid4(),
         sport_id=sport_id,
         edition_id=match_info.edition_id,
         datetime=match_info.date,
@@ -837,10 +834,10 @@ async def create_match(
 
 @router.patch("/competition/matches/{match_id}")
 async def edit_match(
-    match_id: str,
+    match_id: UUID,
     match_info: competition_schemas.MatchBase,
     db=Depends(get_db),
-    user: schemas_core.CoreUser = Depends(is_user),
+    user: schemas_users.CoreUser = Depends(is_user),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
 ):
     match = await competition_cruds.load_match_by_id(match_id, db)
@@ -870,9 +867,9 @@ async def edit_match(
 
 @router.delete("/competition/matches/{match_id}")
 async def delete_match(
-    match_id: str,
+    match_id: UUID,
     db=Depends(get_db),
-    user: schemas_core.CoreUser = Depends(is_user),
+    user: schemas_users.CoreUser = Depends(is_user),
 ):
     match = await competition_cruds.load_match_by_id(match_id, db)
     if match is None:
