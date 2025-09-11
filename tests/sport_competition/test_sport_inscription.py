@@ -20,10 +20,10 @@ from app.modules.sport_competition.types_sport_competition import (
     SportCategory,
 )
 from tests.commons import (
-    TestingSessionLocal,
     add_object_to_db,
     create_api_access_token,
     create_user_with_groups,
+    get_TestingSessionLocal,
 )
 
 school1: models_schools.CoreSchool
@@ -1979,7 +1979,7 @@ async def test_user_participate_with_maximum_team_size(
         school_id=SchoolType.centrale_lyon.value,
         sport_category=SportCategory.masculine,
     )
-    async with TestingSessionLocal() as db:
+    async with get_TestingSessionLocal()() as db:
         await db.execute(
             update(models_sport_competition.Sport)
             .where(
@@ -2004,7 +2004,7 @@ async def test_user_participate_with_maximum_team_size(
     assert response.status_code == 400, response.json()
     assert "Maximum number of players in the team reached" in response.json()["detail"]
 
-    async with TestingSessionLocal() as db:
+    async with get_TestingSessionLocal()() as db:
         await db.execute(
             update(models_sport_competition.Sport)
             .where(
@@ -2092,7 +2092,7 @@ async def test_user_participate_with_valid_data(
 async def test_user_participate_with_team(
     client: TestClient,
 ) -> None:
-    async with TestingSessionLocal() as db:
+    async with get_TestingSessionLocal()() as db:
         await db.execute(
             delete(models_sport_competition.CompetitionParticipant).where(
                 models_sport_competition.CompetitionParticipant.user_id == user3.id,

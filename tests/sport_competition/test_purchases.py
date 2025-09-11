@@ -21,10 +21,10 @@ from app.modules.sport_competition.types_sport_competition import (
     SportCategory,
 )
 from tests.commons import (
-    TestingSessionLocal,
     add_object_to_db,
     create_api_access_token,
     create_user_with_groups,
+    get_TestingSessionLocal,
 )
 
 school_from_lyon: models_schools.CoreSchool
@@ -1108,7 +1108,7 @@ async def test_create_payment_non_validated_participant(
 async def test_create_payment(
     client: TestClient,
 ):
-    async with TestingSessionLocal() as db:
+    async with get_TestingSessionLocal()() as db:
         await cruds_sport_competition.validate_participant(
             admin_user.id,
             active_edition.id,
@@ -1174,7 +1174,7 @@ async def test_delete_payment(
         created_at=datetime.now(UTC),
     )
     await add_object_to_db(payment_to_delete)
-    async with TestingSessionLocal() as db:
+    async with get_TestingSessionLocal()() as db:
         await cruds_sport_competition.mark_purchase_as_validated(
             admin_user.id,
             purchase2.product_variant_id,
