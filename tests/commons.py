@@ -282,6 +282,9 @@ async def add_coredata_to_db(
             await db.close()
 
 
+mocked_checkout_id: uuid.UUID = uuid.UUID("81c9ad91-f415-494a-96ad-87bf647df82c")
+
+
 class MockedPaymentTool(PaymentTool):
     def __init__(
         self,
@@ -309,22 +312,20 @@ class MockedPaymentTool(PaymentTool):
         payer_user: schemas_users.CoreUser | None = None,
         redirection_uri: str | None = None,
     ) -> schemas_payment.Checkout:
-        checkout_id = uuid.UUID("81c9ad91-f415-494a-96ad-87bf647df82c")
-
-        exist = await cruds_payment.get_checkout_by_id(checkout_id, db)
+        exist = await cruds_payment.get_checkout_by_id(mocked_checkout_id, db)
         if exist is None:
             checkout_model = models_payment.Checkout(
-                id=checkout_id,
-                module="cdr",
+                id=mocked_checkout_id,
+                module=module,
                 name=checkout_name,
-                amount=500,
+                amount=checkout_amount,
                 hello_asso_checkout_id=123,
                 secret="checkoutsecret",
             )
             await cruds_payment.create_checkout(db, checkout_model)
 
         return schemas_payment.Checkout(
-            id=checkout_id,
+            id=mocked_checkout_id,
             payment_url="https://some.url.fr/checkout",
         )
 

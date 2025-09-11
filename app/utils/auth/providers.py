@@ -268,16 +268,8 @@ class MinecraftAuthClient(BaseAuthClient):
 class ChallengerAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.types.scopes_type.ScopeType for possible values
-    allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
-
-    @classmethod
-    def get_userinfo(cls, user: models_users.CoreUser):
-        return {
-            "sub": user.id,
-            "name": user.name,
-            "firstname": user.firstname,
-            "email": user.email,
-        }
+    allowed_scopes: set[ScopeType | str] = {ScopeType.API}
+    allowed_account_types: list[AccountType] | None = None
 
 
 class OpenProjectAuthClient(BaseAuthClient):
@@ -350,17 +342,13 @@ class RAIDRegisteringAuthClient(BaseAuthClient):
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
     allowed_scopes: set[ScopeType | str] = {ScopeType.API}
 
-    allowed_account_types: list[AccountType] | None = (
-        None  # No restriction on account types
-    )
+    allowed_account_types: list[AccountType] | None = None
 
 
 class SiarnaqAuthClient(BaseAuthClient):
     allowed_scopes: set[ScopeType | str] = {ScopeType.API}
 
-    allowed_account_types: list[AccountType] | None = (
-        None  # No restriction on account types
-    )
+    allowed_account_types: list[AccountType] | None = None
 
 
 class OverleafAuthClient(BaseAuthClient):
