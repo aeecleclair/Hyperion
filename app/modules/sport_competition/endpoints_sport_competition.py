@@ -9,6 +9,7 @@ from app.core.schools import cruds_schools
 from app.core.users import cruds_users, models_users, schemas_users
 from app.dependencies import get_db, is_user
 from app.modules.sport_competition import cruds_sport_competition as competition_cruds
+from app.modules.sport_competition import schemas_sport_competition
 from app.modules.sport_competition import (
     schemas_sport_competition as competition_schemas,
 )
@@ -63,7 +64,7 @@ async def create_sport(
             detail="A sport with this name already exists",
         ) from None
     sport = competition_schemas.Sport(**sport.model_dump(), id=str(uuid4()))
-    await competition_cruds.store_sport(sport, db)
+    await competition_cruds.add_sport(sport, db)
     return sport
 
 
@@ -84,12 +85,22 @@ async def edit_sport(
             status_code=404,
             detail="Sport not found in the database",
         ) from None
-    stored.model_copy(update=sport.model_dump())
-    await competition_cruds.store_sport(stored, db)
+    if sport.name is not None:
+        existing_sport = await competition_cruds.load_sport_by_name(sport.name, db)
+        if existing_sport is not None and existing_sport.id != sport_id:
+            raise HTTPException(
+                status_code=400,
+                detail="A sport with this name already exists",
+            ) from None
+    await competition_cruds.update_sport(
+        sport_id,
+        sport,
+        db,
+    )
     return stored
 
 
-@module.router.delete("/competition/sports/{sport_id}")
+@module.router.delete("/competition/sports/{sport_id}", status_code=204)
 async def delete_sport(
     sport_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -167,7 +178,7 @@ async def create_edition(
         **edition.model_dump(),
         id=uuid4(),
     )
-    await competition_cruds.store_edition(edition, db)
+    await competition_cruds.add_edition(edition, db)
     return edition
 
 
@@ -193,7 +204,7 @@ async def edit_edition(
         if active and active.id != edition_id and edition.activated:
             raise MultipleEditions
     stored.model_copy(update=edition.model_dump())
-    await competition_cruds.store_edition(stored, db)
+    await competition_cruds.add_edition(stored, db)
     return stored
 
 
@@ -441,7 +452,7 @@ async def create_quota(
         team_quota=quota_info.team_quota,
         edition_id=edition.id,
     )
-    await competition_cruds.store_quota(quota, db)
+    await competition_cruds.add_quota(quota, db)
 
 
 @module.router.patch("/competition/schools/{school_id}/sports/{sport_id}/quotas")
@@ -480,8 +491,13 @@ async def edit_quota(
             status_code=404,
             detail="Quota not found in the database",
         ) from None
-    stored.model_copy(update=quota_info.model_dump())
-    await competition_cruds.store_quota(stored, db)
+    await competition_cruds.update_quota(
+        school_id,
+        sport_id,
+        edition.id,
+        quota_info,
+        db,
+    )
 
 
 @module.router.delete("/competition/schools/{school_id}/sports/{sport_id}/quotas")
@@ -736,7 +752,7 @@ async def create_team(
         captain_id=team_info.captain_id,
         edition_id=edition.id,
     )
-    await competition_cruds.store_team(team, db)
+    await competition_cruds.add_team(team, db)
 
 
 @module.router.patch("/competition/teams/{team_id}")
@@ -777,8 +793,7 @@ async def edit_team(
                 status_code=400,
                 detail="Team with this name already exists",
             ) from None
-    stored.model_copy(update=team_info.model_dump())
-    await competition_cruds.store_team(stored, db)
+    await competition_cruds.update_team(team_id, team_info, db)
 
 
 @module.router.delete("/competition/teams/{team_id}")
@@ -843,7 +858,7 @@ async def join_team(
         substitute=participant_info.substitute,
         team_id=participant_info.team_id,
     )
-    await competition_cruds.store_participant(
+    await competition_cruds.add_participant(
         participant,
         db,
     )
@@ -988,6 +1003,7 @@ async def validate_participant(
             ) from None
         if (
             participant.substitute
+            and sport.substitute_max is not None
             and len(
                 [user for user in team.participants if user.substitute],
             )
@@ -997,8 +1013,15 @@ async def validate_participant(
                 status_code=400,
                 detail="Maximum number of substitutes in the team reached",
             ) from None
-    participant.validated = True
-    await competition_cruds.store_participant(participant, db)
+    await competition_cruds.update_participant(
+        user_id,
+        sport_id,
+        edition.id,
+        schemas_sport_competition.ParticipantEdit(
+            validated=True,
+        ),
+        db,
+    )
     return participant
 
 
@@ -1104,7 +1127,11 @@ async def create_match(
     sport_id: UUID,
     match_info: competition_schemas.MatchBase,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user()),
+    user: schemas_users.CoreUser = Depends(
+        is_user_a_member_of_extended(
+            group_id=GroupType.competition_admin,
+        ),
+    ),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
 ):
     sport = await competition_cruds.load_sport_by_id(sport_id, db)
@@ -1143,15 +1170,19 @@ async def create_match(
         team1=team1,
         team2=team2,
     )
-    await competition_cruds.store_match(match, db)
+    await competition_cruds.add_match(match, db)
 
 
 @module.router.patch("/competition/matches/{match_id}")
 async def edit_match(
     match_id: UUID,
-    match_info: competition_schemas.MatchBase,
+    match_info: competition_schemas.MatchEdit,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user()),
+    user: schemas_users.CoreUser = Depends(
+        is_user_a_member_of_extended(
+            group_id=GroupType.competition_admin,
+        ),
+    ),
     edition: competition_schemas.CompetitionEdition = Depends(get_current_edition),
 ):
     match = await competition_cruds.load_match_by_id(match_id, db)
@@ -1172,11 +1203,10 @@ async def edit_match(
             status_code=404,
             detail="Team 2 not found in the database",
         ) from None
+    new_match = match.model_copy(update=match_info.model_dump(exclude_unset=True))
+    check_match_consistency(match.sport_id, new_match, team1, team2, edition)
 
-    check_match_consistency(match.sport_id, match_info, team1, team2, edition)
-
-    match.model_copy(update=match_info.model_dump())
-    await competition_cruds.store_match(match, db)
+    await competition_cruds.update_match(match_id, match_info, db)
 
 
 @module.router.delete("/competition/matches/{match_id}")

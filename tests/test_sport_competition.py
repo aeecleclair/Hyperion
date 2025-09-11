@@ -20,6 +20,7 @@ from tests.commons import (
 )
 
 school: models_schools.CoreSchool
+school2: models_schools.CoreSchool
 edition: models_sport_competition.CompetitionEdition
 
 admin_user: models_users.CoreUser
@@ -62,13 +63,19 @@ async def init_objects() -> None:
         )
         await add_object_to_db(group_model)
 
-    global school, edition
+    global school, school2, edition
     school = models_schools.CoreSchool(
         id=uuid.uuid4(),
         name="Emlyon Business School",
         email_regex=r"^[a-zA-Z0-9._%+-]+@edu.emlyon.fr$",
     )
     await add_object_to_db(school)
+    school2 = models_schools.CoreSchool(
+        id=uuid.uuid4(),
+        name="Centrale Supelec",
+        email_regex=r"^[a-zA-Z0-9._%+-]+@edu.centralesupelec.fr$",
+    )
+    await add_object_to_db(school2)
     edition = models_sport_competition.CompetitionEdition(
         id=uuid.uuid4(),
         name="Edition 2024",
@@ -321,3 +328,259 @@ async def test_create_sport_competition_as_random(
         None,
     )
     assert unauthorized_edition is None
+
+
+async def test_get_sports(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        "/competition/sports",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 200, response.json()
+    editions = response.json()
+    assert len(editions) > 0
+
+
+async def test_create_sport_as_random(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        "/competition/sports",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json={
+            "name": "Unauthorized Sport",
+            "team_size": 5,
+            "substitute_max": 2,
+            "activated": True,
+            "sport_category": SportCategory.masculine.value,
+        },
+    )
+    assert response.status_code == 403, response.json()
+
+    sports = client.get(
+        "/competition/sports",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert sports.status_code == 200, sports.json()
+    sports_json = sports.json()
+    unauthorized_sport = next(
+        (s for s in sports_json if s["name"] == "Unauthorized Sport"),
+        None,
+    )
+    assert unauthorized_sport is None
+
+
+async def test_create_sport_as_admin(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        "/competition/sports",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "name": "New Sport",
+            "team_size": 5,
+            "substitute_max": 2,
+            "activated": True,
+            "sport_category": SportCategory.masculine.value,
+        },
+    )
+    assert response.status_code == 201, response.json()
+    sport = response.json()
+
+    sports = client.get(
+        "/competition/sports",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert sports.status_code == 200, sports.json()
+    sports_json = sports.json()
+    new_sport = next(
+        (s for s in sports_json if s["id"] == sport["id"]),
+        None,
+    )
+    assert new_sport is not None
+
+
+async def test_create_sport_with_invalid_data(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        "/competition/sports",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "name": "Invalid Sport",
+            "team_size": -1,  # Invalid team size
+            "substitute_max": 2,
+            "activated": True,
+            "sport_category": SportCategory.masculine.value,
+        },
+    )
+    assert response.status_code == 422, response.json()
+
+
+async def test_create_sport_with_duplicate_name(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        "/competition/sports",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "name": sport_free_quota.name,  # Duplicate name
+            "team_size": 5,
+            "substitute_max": 2,
+            "activated": True,
+            "sport_category": SportCategory.masculine.value,
+        },
+    )
+    assert response.status_code == 400, response.json()
+
+
+async def test_patch_sport_as_random(
+    client: TestClient,
+) -> None:
+    response = client.patch(
+        f"/competition/sports/{sport_free_quota.id}",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json={
+            "name": "Unauthorized Update",
+            "team_size": 6,
+            "substitute_max": 3,
+            "activated": True,
+            "sport_category": SportCategory.feminine.value,
+        },
+    )
+    assert response.status_code == 403, response.json()
+
+    sports = client.get(
+        "/competition/sports",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert sports.status_code == 200, sports.json()
+    sports_json = sports.json()
+    updated_sport_check = next(
+        (s for s in sports_json if s["id"] == str(sport_free_quota.id)),
+        None,
+    )
+    assert updated_sport_check is not None
+    assert updated_sport_check["name"] == sport_free_quota.name
+
+
+async def test_patch_sport_as_admin(
+    client: TestClient,
+) -> None:
+    sport_to_modify = models_sport_competition.Sport(
+        id=uuid.uuid4(),
+        name="Sport to Modify",
+        team_size=5,
+        substitute_max=2,
+        activated=True,
+        sport_category=SportCategory.masculine,
+    )
+    await add_object_to_db(sport_to_modify)
+    response = client.patch(
+        f"/competition/sports/{sport_to_modify.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "name": "Updated Sport",
+            "team_size": 6,
+            "substitute_max": 3,
+            "activated": True,
+            "sport_category": SportCategory.feminine.value,
+        },
+    )
+    assert response.status_code == 200, response.json()
+
+    sports = client.get(
+        "/competition/sports",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert sports.status_code == 200, sports.json()
+    sports_json = sports.json()
+    updated_sport_check = next(
+        (s for s in sports_json if s["id"] == str(sport_to_modify.id)),
+        None,
+    )
+    assert updated_sport_check is not None
+    assert updated_sport_check["name"] == "Updated Sport"
+
+
+async def test_patch_sport_with_duplicate_name(
+    client: TestClient,
+) -> None:
+    response = client.patch(
+        f"/competition/sports/{sport_free_quota.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "name": sport_used_quota.name,  # Duplicate name
+            "team_size": 6,
+            "substitute_max": 3,
+            "activated": True,
+            "sport_category": SportCategory.masculine.value,
+        },
+    )
+    assert response.status_code == 400, response.json()
+
+
+async def test_delete_sport_as_random(
+    client: TestClient,
+) -> None:
+    response = client.delete(
+        f"/competition/sports/{sport_free_quota.id}",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 403, response.json()
+
+    sports = client.get(
+        "/competition/sports",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert sports.status_code == 200, sports.json()
+    sports_json = sports.json()
+    print(sports_json)
+    deleted_sport_check = next(
+        (s for s in sports_json if s["id"] == str(sport_free_quota.id)),
+        None,
+    )
+    assert deleted_sport_check is not None, sports.json()
+
+
+async def test_delete_sport_activated(
+    client: TestClient,
+) -> None:
+    response = client.delete(
+        f"/competition/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 400, response.json()
+
+
+async def test_delete_sport_as_admin(
+    client: TestClient,
+) -> None:
+    sport_to_delete = models_sport_competition.Sport(
+        id=uuid.uuid4(),
+        name="Sport to Delete",
+        team_size=5,
+        substitute_max=2,
+        activated=False,
+        sport_category=SportCategory.masculine,
+    )
+    await add_object_to_db(sport_to_delete)
+
+    response = client.delete(
+        f"/competition/sports/{sport_to_delete.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 204, response.json()
+
+    sports = client.get(
+        "/competition/sports",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert sports.status_code == 200, sports.json()
+    sports_json = sports.json()
+    deleted_sport_check = next(
+        (s for s in sports_json if s["id"] == str(sport_to_delete.id)),
+        None,
+    )
+    assert deleted_sport_check is None
