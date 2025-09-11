@@ -87,7 +87,11 @@ class CompetitionUser(schemas_users.CoreUser):
     This is used to represent a user in the context of a competition.
     """
 
+    edition_id: UUID
     competition_category: SportCategory | None = None
+    created_at: datetime
+    validated: bool = False
+
     competition_groups: list[Group] = []
 
 
@@ -143,8 +147,6 @@ class Participant(BaseModel):
     license: str
     substitute: bool = False
     team_id: UUID | None = None
-    validated: bool = False
-    created_at: datetime
 
 
 class ParticipantEdit(BaseModel):
@@ -157,7 +159,7 @@ class ParticipantEdit(BaseModel):
 
 
 class ParticipantComplete(Participant):
-    user: schemas_users.CoreUser
+    user: CompetitionUser
 
 
 class TeamBase(BaseModel):

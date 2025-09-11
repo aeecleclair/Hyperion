@@ -127,16 +127,25 @@ async def init_objects() -> None:
     competition_user_admin = models_sport_competition.CompetitionUser(
         user_id=admin_user.id,
         sport_category=SportCategory.masculine,
+        edition_id=active_edition.id,
+        validated=True,
+        created_at=datetime.now(UTC),
     )
     await add_object_to_db(competition_user_admin)
     competition_user_school_bds = models_sport_competition.CompetitionUser(
         user_id=school_bds_user.id,
         sport_category=SportCategory.masculine,
+        edition_id=active_edition.id,
+        validated=True,
+        created_at=datetime.now(UTC),
     )
     await add_object_to_db(competition_user_school_bds)
     competition_user_sport_manager = models_sport_competition.CompetitionUser(
         user_id=sport_manager_user.id,
         sport_category=SportCategory.masculine,
+        edition_id=active_edition.id,
+        validated=True,
+        created_at=datetime.now(UTC),
     )
     await add_object_to_db(competition_user_sport_manager)
     user1_bds_membership = models_sport_competition.EditionGroupMembership(
@@ -267,8 +276,6 @@ async def init_objects() -> None:
         team_id=None,
         substitute=False,
         license="1234567890",
-        validated=True,
-        created_at=datetime.now(UTC),
     )
     await add_object_to_db(participant1)
     participant2 = models_sport_competition.CompetitionParticipant(
@@ -279,8 +286,6 @@ async def init_objects() -> None:
         team_id=team1.id,
         substitute=False,
         license="0987654321",
-        validated=True,
-        created_at=datetime.now(UTC),
     )
     await add_object_to_db(participant2)
 

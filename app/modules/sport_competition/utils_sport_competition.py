@@ -1,5 +1,4 @@
 from app.core.schools import schemas_schools
-from app.core.users import schemas_users
 from app.modules.sport_competition import (
     models_sport_competition,
     schemas_sport_competition,
@@ -42,16 +41,17 @@ def participant_complete_model_to_schema(
         school_id=participant.school_id,
         substitute=participant.substitute,
         license=participant.license,
-        validated=participant.validated,
-        created_at=participant.created_at,
-        user=schemas_users.CoreUser(
-            id=participant.user.id,
-            account_type=participant.user.account_type,
-            school_id=participant.user.school_id,
-            email=participant.user.email,
-            name=participant.user.name,
-            firstname=participant.user.firstname,
-            phone=participant.user.phone,
+        user=schemas_sport_competition.CompetitionUser(
+            id=participant.user.user_id,
+            edition_id=participant.user.edition_id,
+            account_type=participant.user.user.account_type,
+            school_id=participant.user.user.school_id,
+            email=participant.user.user.email,
+            name=participant.user.user.name,
+            firstname=participant.user.user.firstname,
+            phone=participant.user.user.phone,
+            validated=participant.user.validated,
+            created_at=participant.user.created_at,
         ),
     )
 
