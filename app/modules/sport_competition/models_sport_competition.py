@@ -377,7 +377,11 @@ class CompetitionProduct(Base):
     __tablename__ = "competition_product"
 
     id: Mapped[PrimaryKey]
+    edition_id: Mapped[UUID] = mapped_column(
+        ForeignKey("competition_edition.id"),
+    )
     name: Mapped[str]
+    description: Mapped[str | None] = mapped_column(default=None)
 
     variants: Mapped[list["CompetitionProductVariant"]] = relationship(
         "CompetitionProductVariant",
@@ -396,6 +400,7 @@ class CompetitionProductVariant(Base):
     name: Mapped[str]
     price: Mapped[int]
     enabled: Mapped[bool]
+    unique: Mapped[bool]
     public_type: Mapped[ProductPublicType | None]
     description: Mapped[str | None] = mapped_column(default=None)
 
@@ -406,16 +411,15 @@ class CompetitionPurchase(Base):
     user_id: Mapped[str] = mapped_column(
         primary_key=True,
     )
-    edition_id: Mapped[UUID] = mapped_column(
-        ForeignKey("competition_edition.id"),
-        primary_key=True,
-    )
     product_variant_id: Mapped[UUID] = mapped_column(
         ForeignKey("competition_product_variant.id"),
         primary_key=True,
     )
+    edition_id: Mapped[UUID] = mapped_column(
+        ForeignKey("competition_edition.id"),
+    )
+    quantity: Mapped[int]
     validated: Mapped[bool]
-    paid: Mapped[bool]
     purchased_on: Mapped[datetime]
 
     product_variant: Mapped["CompetitionProductVariant"] = relationship(
@@ -449,3 +453,15 @@ class CompetitionPayment(Base):
             name="fk_competition_payment_user",
         ),
     )
+
+
+class Checkout(Base):
+    __tablename__ = "competition_checkout"
+    id: Mapped[PrimaryKey]
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("core_user.id"),
+    )
+    edition_id: Mapped[UUID] = mapped_column(
+        ForeignKey("competition_edition.id"),
+    )
+    checkout_id: Mapped[UUID] = mapped_column(ForeignKey("payment_checkout.id"))

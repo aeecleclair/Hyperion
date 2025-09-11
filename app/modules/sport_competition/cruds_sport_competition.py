@@ -405,6 +405,31 @@ async def delete_participant_by_ids(
     await db.flush()
 
 
+async def load_participant_by_user_id(
+    user_id: str,
+    edition_id: UUID,
+    db: AsyncSession,
+) -> schemas_sport_competition.ParticipantComplete | None:
+    participant = (
+        (
+            await db.execute(
+                select(models_sport_competition.CompetitionParticipant)
+                .where(
+                    models_sport_competition.CompetitionParticipant.user_id == user_id,
+                    models_sport_competition.CompetitionParticipant.edition_id
+                    == edition_id,
+                )
+                .options(
+                    selectinload(models_sport_competition.CompetitionUser.user),
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return participant_complete_model_to_schema(participant) if participant else None
+
+
 async def load_participant_by_ids(
     user_id: str,
     sport_id: UUID,
@@ -673,7 +698,7 @@ async def load_sport_quota_by_ids(
 ) -> schemas_sport_competition.Quota | None:
     quota = await db.get(
         models_sport_competition.SchoolSportQuota,
-        (school_id, sport_id, edition_id),
+        (sport_id, school_id, edition_id),
     )
     return (
         schemas_sport_competition.Quota(
@@ -1284,3 +1309,431 @@ async def load_match_by_teams_ids(
         .first()
     )
     return match_model_to_schema(match) if match else None
+
+
+async def get_products(
+    edition_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_sport_competition.ProductComplete]:
+    products = await db.execute(
+        select(models_sport_competition.CompetitionProduct).where(
+            models_sport_competition.CompetitionProduct.edition_id == edition_id,
+        ),
+    )
+    return [
+        schemas_sport_competition.ProductComplete(
+            id=product.id,
+            edition_id=product.edition_id,
+            name=product.name,
+            description=product.description,
+        )
+        for product in products.scalars().all()
+    ]
+
+
+async def load_product_by_id(
+    product_id: UUID,
+    db: AsyncSession,
+) -> schemas_sport_competition.ProductComplete | None:
+    product = await db.get(models_sport_competition.CompetitionProduct, product_id)
+    return (
+        schemas_sport_competition.ProductComplete(
+            id=product.id,
+            edition_id=product.edition_id,
+            name=product.name,
+            description=product.description,
+        )
+        if product
+        else None
+    )
+
+
+async def add_product(
+    product: schemas_sport_competition.ProductComplete,
+    db: AsyncSession,
+):
+    db.add(
+        models_sport_competition.CompetitionProduct(
+            id=product.id,
+            edition_id=product.edition_id,
+            name=product.name,
+            description=product.description,
+        ),
+    )
+    await db.flush()
+
+
+async def update_product(
+    product_id: UUID,
+    product: schemas_sport_competition.ProductEdit,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_sport_competition.CompetitionProduct)
+        .where(models_sport_competition.CompetitionProduct.id == product_id)
+        .values(**product.model_dump(exclude_unset=True)),
+    )
+    await db.flush()
+
+
+async def delete_product_by_id(
+    product_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_sport_competition.CompetitionProduct).where(
+            models_sport_competition.CompetitionProduct.id == product_id,
+        ),
+    )
+    await db.flush()
+
+
+async def load_product_variants(
+    product_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_sport_competition.ProductVariantComplete]:
+    variants = await db.execute(
+        select(models_sport_competition.CompetitionProductVariant).where(
+            models_sport_competition.CompetitionProductVariant.product_id == product_id,
+        ),
+    )
+    return [
+        schemas_sport_competition.ProductVariantComplete(
+            id=variant.id,
+            product_id=variant.product_id,
+            name=variant.name,
+            description=variant.description,
+            price=variant.price,
+            enabled=variant.enabled,
+            unique=variant.unique,
+            public_type=variant.public_type,
+        )
+        for variant in variants.scalars().all()
+    ]
+
+
+async def load_product_variant_by_id(
+    variant_id: UUID,
+    db: AsyncSession,
+) -> schemas_sport_competition.ProductVariantComplete | None:
+    variant = await db.get(
+        models_sport_competition.CompetitionProductVariant,
+        variant_id,
+    )
+    return (
+        schemas_sport_competition.ProductVariantComplete(
+            id=variant.id,
+            product_id=variant.product_id,
+            name=variant.name,
+            description=variant.description,
+            price=variant.price,
+            enabled=variant.enabled,
+            unique=variant.unique,
+            public_type=variant.public_type,
+        )
+        if variant
+        else None
+    )
+
+
+async def add_product_variant(
+    variant: schemas_sport_competition.ProductVariantComplete,
+    db: AsyncSession,
+):
+    db.add(
+        models_sport_competition.CompetitionProductVariant(
+            id=variant.id,
+            product_id=variant.product_id,
+            name=variant.name,
+            description=variant.description,
+            price=variant.price,
+            enabled=variant.enabled,
+            unique=variant.unique,
+            public_type=variant.public_type,
+        ),
+    )
+    await db.flush()
+
+
+async def update_product_variant(
+    variant_id: UUID,
+    variant: schemas_sport_competition.ProductVariantEdit,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_sport_competition.CompetitionProductVariant)
+        .where(models_sport_competition.CompetitionProductVariant.id == variant_id)
+        .values(**variant.model_dump(exclude_unset=True)),
+    )
+    await db.flush()
+
+
+async def delete_product_variant_by_id(
+    variant_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_sport_competition.CompetitionProductVariant).where(
+            models_sport_competition.CompetitionProductVariant.id == variant_id,
+        ),
+    )
+    await db.flush()
+
+
+async def load_purchases_by_user_id(
+    user_id: str,
+    edition_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_sport_competition.PurchaseComplete]:
+    purchases = await db.execute(
+        select(models_sport_competition.CompetitionPurchase)
+        .where(
+            models_sport_competition.CompetitionPurchase.user_id == user_id,
+            models_sport_competition.CompetitionPurchase.edition_id == edition_id,
+        )
+        .options(
+            selectinload(models_sport_competition.CompetitionPurchase.product_variant),
+        ),
+    )
+    return [
+        schemas_sport_competition.PurchaseComplete(
+            user_id=purchase.user_id,
+            product_variant_id=purchase.product_variant_id,
+            edition_id=purchase.edition_id,
+            quantity=purchase.quantity,
+            purchased_on=purchase.purchased_on,
+            validated=purchase.validated,
+            product_variant=schemas_sport_competition.ProductVariantComplete(
+                id=purchase.product_variant.id,
+                product_id=purchase.product_variant.product_id,
+                name=purchase.product_variant.name,
+                description=purchase.product_variant.description,
+                price=purchase.product_variant.price,
+                enabled=purchase.product_variant.enabled,
+                unique=purchase.product_variant.unique,
+                public_type=purchase.product_variant.public_type,
+            ),
+        )
+        for purchase in purchases.scalars().all()
+    ]
+
+
+async def load_purchase_by_ids(
+    user_id: str,
+    product_variant_id: UUID,
+    db: AsyncSession,
+) -> schemas_sport_competition.Purchase | None:
+    purchase = (
+        (
+            await db.execute(
+                select(models_sport_competition.CompetitionPurchase)
+                .where(
+                    models_sport_competition.CompetitionPurchase.user_id == user_id,
+                    models_sport_competition.CompetitionPurchase.product_variant_id
+                    == product_variant_id,
+                )
+                .options(
+                    selectinload(
+                        models_sport_competition.CompetitionPurchase.product_variant,
+                    ),
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return (
+        schemas_sport_competition.Purchase(
+            user_id=purchase.user_id,
+            product_variant_id=purchase.product_variant_id,
+            edition_id=purchase.edition_id,
+            quantity=purchase.quantity,
+            purchased_on=purchase.purchased_on,
+            validated=purchase.validated,
+            product_variant=schemas_sport_competition.ProductVariantComplete(
+                id=purchase.product_variant.id,
+                product_id=purchase.product_variant.product_id,
+                name=purchase.product_variant.name,
+                description=purchase.product_variant.description,
+                price=purchase.product_variant.price,
+                enabled=purchase.product_variant.enabled,
+                unique=purchase.product_variant.unique,
+                public_type=purchase.product_variant.public_type,
+            ),
+        )
+        if purchase
+        else None
+    )
+
+
+async def add_purchase(
+    purchase: schemas_sport_competition.Purchase,
+    db: AsyncSession,
+):
+    db.add(
+        models_sport_competition.CompetitionPurchase(
+            user_id=purchase.user_id,
+            product_variant_id=purchase.product_variant_id,
+            edition_id=purchase.edition_id,
+            quantity=purchase.quantity,
+            purchased_on=purchase.purchased_on,
+            validated=purchase.validated,
+        ),
+    )
+    await db.flush()
+
+
+async def update_purchase(
+    user_id: str,
+    product_variant_id: UUID,
+    purchase: schemas_sport_competition.PurchaseEdit,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_sport_competition.CompetitionPurchase)
+        .where(
+            models_sport_competition.CompetitionPurchase.user_id == user_id,
+            models_sport_competition.CompetitionPurchase.product_variant_id
+            == product_variant_id,
+        )
+        .values(**purchase.model_dump(exclude_unset=True)),
+    )
+    await db.flush()
+
+
+async def mark_purchase_as_validated(
+    user_id: str,
+    product_variant_id: UUID,
+    validated: bool,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_sport_competition.CompetitionPurchase)
+        .where(
+            models_sport_competition.CompetitionPurchase.user_id == user_id,
+            models_sport_competition.CompetitionPurchase.product_variant_id
+            == product_variant_id,
+        )
+        .values(validated=validated),
+    )
+
+
+async def delete_purchase(
+    user_id: str,
+    product_variant_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_sport_competition.CompetitionPurchase).where(
+            models_sport_competition.CompetitionPurchase.user_id == user_id,
+            models_sport_competition.CompetitionPurchase.product_variant_id
+            == product_variant_id,
+        ),
+    )
+    await db.flush()
+
+
+async def load_user_payments(
+    user_id: str,
+    edition_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_sport_competition.PaymentComplete]:
+    payments = await db.execute(
+        select(models_sport_competition.CompetitionPayment).where(
+            models_sport_competition.CompetitionPayment.user_id == user_id,
+            models_sport_competition.CompetitionPayment.edition_id == edition_id,
+        ),
+    )
+    return [
+        schemas_sport_competition.PaymentComplete(
+            id=payment.id,
+            user_id=payment.user_id,
+            edition_id=payment.edition_id,
+            total=payment.total,
+        )
+        for payment in payments.scalars().all()
+    ]
+
+
+async def load_payment_by_id(
+    payment_id: UUID,
+    db: AsyncSession,
+) -> schemas_sport_competition.PaymentComplete | None:
+    payment = await db.get(models_sport_competition.CompetitionPayment, payment_id)
+    return (
+        schemas_sport_competition.PaymentComplete(
+            id=payment.id,
+            user_id=payment.user_id,
+            edition_id=payment.edition_id,
+            total=payment.total,
+        )
+        if payment
+        else None
+    )
+
+
+async def add_payment(
+    payment: schemas_sport_competition.PaymentComplete,
+    db: AsyncSession,
+):
+    db.add(
+        models_sport_competition.CompetitionPayment(
+            id=payment.id,
+            user_id=payment.user_id,
+            edition_id=payment.edition_id,
+            total=payment.total,
+        ),
+    )
+
+
+async def delete_payment(
+    payment_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_sport_competition.CompetitionPayment).where(
+            models_sport_competition.CompetitionPayment.id == payment_id,
+        ),
+    )
+    await db.flush()
+
+
+def create_checkout(
+    db: AsyncSession,
+    checkout: schemas_sport_competition.Checkout,
+):
+    db.add(
+        models_sport_competition.Checkout(
+            id=checkout.id,
+            user_id=checkout.user_id,
+            edition_id=checkout.edition_id,
+            checkout_id=checkout.checkout_id,
+        ),
+    )
+
+
+async def get_checkout_by_checkout_id(
+    checkout_id: UUID,
+    db: AsyncSession,
+) -> schemas_sport_competition.Checkout | None:
+    checkout = (
+        (
+            await db.execute(
+                select(models_sport_competition.Checkout).where(
+                    models_sport_competition.Checkout.checkout_id == checkout_id,
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return (
+        schemas_sport_competition.Checkout(
+            id=checkout.id,
+            user_id=checkout.user_id,
+            edition_id=checkout.edition_id,
+            checkout_id=checkout.checkout_id,
+        )
+        if checkout
+        else None
+    )
