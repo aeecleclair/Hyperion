@@ -628,6 +628,27 @@ async def get_schools(
     return await cruds_sport_competition.load_all_schools(edition.id, db)
 
 
+@module.router.get(
+    "/competition/schools/{school_id}",
+    response_model=schemas_sport_competition.SchoolExtensionComplete,
+)
+async def get_school(
+    school_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+    user: models_users.CoreUser = Depends(is_user()),
+) -> schemas_sport_competition.SchoolExtensionComplete:
+    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    if school is None:
+        raise HTTPException(
+            status_code=404,
+            detail="School not found in the database",
+        ) from None
+    return school
+
+
 @module.router.post(
     "/competition/schools",
     status_code=201,
@@ -715,7 +736,7 @@ async def delete_school(
 
 
 @module.router.post(
-    "/competition/schools/{school_id}/general_quota",
+    "/competition/schools/{school_id}/general-quota",
     status_code=201,
     response_model=schemas_sport_competition.SchoolGeneralQuota,
 )
@@ -758,7 +779,7 @@ async def create_school_general_quota(
 
 
 @module.router.patch(
-    "/competition/schools/{school_id}/general_quota",
+    "/competition/schools/{school_id}/general-quota",
     status_code=204,
 )
 async def edit_school_general_quota(

@@ -47,6 +47,22 @@ def school_extension_model_to_schema(
             name=school_extension.school.name,
             email_regex=school_extension.school.email_regex,
         ),
+    )
+
+
+def school_extension_model_to_schema_complete(
+    school_extension: models_sport_competition.SchoolExtension,
+) -> schemas_sport_competition.SchoolExtensionComplete:
+    return schemas_sport_competition.SchoolExtensionComplete(
+        school_id=school_extension.school_id,
+        from_lyon=school_extension.from_lyon,
+        active=school_extension.active,
+        inscription_enabled=school_extension.inscription_enabled,
+        school=schemas_schools.CoreSchool(
+            id=school_extension.school.id,
+            name=school_extension.school.name,
+            email_regex=school_extension.school.email_regex,
+        ),
         general_quota=schemas_sport_competition.SchoolGeneralQuota(
             school_id=school_extension.school_id,
             edition_id=school_extension.general_quota.edition_id,
@@ -54,7 +70,6 @@ def school_extension_model_to_schema(
             cameraman_quota=school_extension.general_quota.cameraman_quota,
             pompom_quota=school_extension.general_quota.pompom_quota,
             fanfare_quota=school_extension.general_quota.fanfare_quota,
-            non_athlete_quota=school_extension.general_quota.non_athlete_quota,
         )
         if school_extension.general_quota
         else None,

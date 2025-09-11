@@ -5,6 +5,7 @@ from sqlalchemy import and_, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.schools import models_schools
 from app.modules.sport_competition import (
     models_sport_competition,
     schemas_sport_competition,
@@ -17,6 +18,7 @@ from app.modules.sport_competition.utils_sport_competition import (
     match_model_to_schema,
     participant_complete_model_to_schema,
     school_extension_model_to_schema,
+    school_extension_model_to_schema_complete,
     team_model_to_schema,
 )
 
@@ -245,7 +247,7 @@ async def load_school_by_id(
     school_id: UUID,
     edition_id: UUID,
     db: AsyncSession,
-) -> schemas_sport_competition.SchoolExtension | None:
+) -> schemas_sport_competition.SchoolExtensionComplete | None:
     school_extension = (
         (
             await db.execute(
@@ -278,7 +280,9 @@ async def load_school_by_id(
         .first()
     )
     return (
-        school_extension_model_to_schema(school_extension) if school_extension else None
+        school_extension_model_to_schema_complete(school_extension)
+        if school_extension
+        else None
     )
 
 
@@ -286,23 +290,16 @@ async def load_school_by_name(
     name: str,
     edition_id: UUID,
     db: AsyncSession,
-) -> schemas_sport_competition.SchoolExtension | None:
+) -> schemas_sport_competition.SchoolExtensionBase | None:
     school_extension = (
         (
             await db.execute(
                 select(models_sport_competition.SchoolExtension)
+                .join(
+                    models_schools.CoreSchool,
+                )
                 .where(
-                    models_sport_competition.SchoolExtension.school_id == name,
-                )
-                .options(
-                    selectinload(models_sport_competition.SchoolExtension.school),
-                    selectinload(
-                        models_sport_competition.SchoolExtension.general_quota,
-                    ),
-                )
-                .filter(
-                    models_sport_competition.SchoolGeneralQuota.edition_id
-                    == edition_id,
+                    models_schools.CoreSchool.name == name,
                 ),
             )
         )
@@ -310,7 +307,14 @@ async def load_school_by_name(
         .first()
     )
     return (
-        school_extension_model_to_schema(school_extension) if school_extension else None
+        schemas_sport_competition.SchoolExtensionBase(
+            school_id=school_extension.school_id,
+            from_lyon=school_extension.from_lyon,
+            active=school_extension.active,
+            inscription_enabled=school_extension.inscription_enabled,
+        )
+        if school_extension
+        else None
     )
 
 
@@ -319,23 +323,8 @@ async def load_all_schools(
     db: AsyncSession,
 ) -> list[schemas_sport_competition.SchoolExtension]:
     school_extensions = await db.execute(
-        select(models_sport_competition.SchoolExtension)
-        .join(
-            models_sport_competition.SchoolGeneralQuota,
-            and_(
-                models_sport_competition.SchoolExtension.school_id
-                == models_sport_competition.SchoolGeneralQuota.school_id,
-                models_sport_competition.SchoolGeneralQuota.edition_id == edition_id,
-            ),
-            isouter=True,
-        )
-        .options(
-            selectinload(models_sport_competition.SchoolExtension.school),
-            selectinload(models_sport_competition.SchoolExtension.general_quota),
-            selectinload(models_sport_competition.SchoolExtension.product_quotas),
-        ),
+        select(models_sport_competition.SchoolExtension),
     )
-
     return [
         school_extension_model_to_schema(school_extension)
         for school_extension in school_extensions.scalars().all()
@@ -588,7 +577,6 @@ async def get_school_general_quota(
             cameraman_quota=quota.cameraman_quota,
             pompom_quota=quota.pompom_quota,
             fanfare_quota=quota.fanfare_quota,
-            non_athlete_quota=quota.non_athlete_quota,
         )
         if quota
         else None
