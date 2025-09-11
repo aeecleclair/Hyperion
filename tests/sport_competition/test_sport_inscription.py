@@ -429,6 +429,9 @@ async def init_objects() -> None:
     await add_object_to_db(match1)
 
 
+# region: Sports
+
+
 async def test_get_sports(
     client: TestClient,
 ) -> None:
@@ -684,6 +687,10 @@ async def test_delete_sport_as_admin(
     assert deleted_sport_check is None
 
 
+# endregion
+# region: Editions
+
+
 async def test_get_editions(
     client: TestClient,
 ) -> None:
@@ -909,6 +916,10 @@ async def test_patch_edition_as_random(
     assert updated_edition_check["name"] == active_edition.name
 
 
+# endregion
+# region: Competition Users
+
+
 async def test_get_competition_users(
     client: TestClient,
 ) -> None:
@@ -997,6 +1008,10 @@ async def test_patch_competition_user_as_admin(
     assert user["sport_category"] == SportCategory.masculine.value
 
 
+# endregion
+# region: Competition Groups
+
+
 async def test_add_user_to_group_as_random(
     client: TestClient,
 ) -> None:
@@ -1035,6 +1050,30 @@ async def test_add_user_to_group_as_admin(
     assert CompetitionGroupType.schools_bds.value in [
         group["group"] for group in user_json
     ], user_json
+
+
+async def test_remove_user_from_group_as_random(
+    client: TestClient,
+) -> None:
+    response = client.delete(
+        f"/competition/groups/{CompetitionGroupType.schools_bds.value}/users/{competition_user_school_bds.user_id}",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 403, response.json()
+
+    user = client.get(
+        f"/competition/users/{competition_user_school_bds.user_id}/groups",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert user.status_code == 200, user.json()
+    user_json = user.json()
+    assert CompetitionGroupType.schools_bds.value in [
+        group["group"] for group in user_json
+    ], user_json
+
+
+# endregion
+# region: Schools
 
 
 async def test_get_schools(
@@ -1166,6 +1205,10 @@ async def test_patch_school_extension_as_admin(
     assert updated_school["inscription_enabled"] is True
 
 
+# endregion
+# region: School General Quotas
+
+
 async def test_post_school_general_quota_as_random(
     client: TestClient,
 ) -> None:
@@ -1268,6 +1311,10 @@ async def test_patch_school_general_quota_as_admin(
     assert school_quota_json["cameraman_quota"] == 3, school_quota_json
     assert school_quota_json["pompom_quota"] == 2, school_quota_json
     assert school_quota_json["fanfare_quota"] == 1, school_quota_json
+
+
+# endregion
+# region: Sport Quotas
 
 
 async def test_get_school_sport_quota(
@@ -1446,6 +1493,10 @@ async def test_delete_school_sport_quota_as_admin(
         None,
     )
     assert sport_quota is None, quota_json
+
+
+# endregion
+# region: Teams
 
 
 async def test_get_sport_teams(
@@ -1796,6 +1847,10 @@ async def test_delete_team_as_captain(
     assert deleted_team_check is None, teams_json
 
 
+# endregion
+# region: Participants
+
+
 async def test_get_participant_me(
     client: TestClient,
 ) -> None:
@@ -2132,6 +2187,10 @@ async def test_user_participate_with_team(
     assert user_participation["edition_id"] == str(active_edition.id)
 
 
+# endregion
+# region: Locations
+
+
 async def test_get_locations(
     client: TestClient,
 ) -> None:
@@ -2323,6 +2382,10 @@ async def test_delete_location_as_admin(
         None,
     )
     assert deleted_location_check is None, locations_json
+
+
+# endregion
+# region: Matches
 
 
 async def test_gest_sport_matches(
@@ -2530,3 +2593,6 @@ async def test_delete_match_as_admin(
         None,
     )
     assert deleted_match_check is None, matches_json
+
+
+# endregion
