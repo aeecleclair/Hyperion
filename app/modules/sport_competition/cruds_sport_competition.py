@@ -151,7 +151,7 @@ async def load_competition_user_by_id(
                 )
                 .options(
                     joinedload(
-                        models_sport_competition.CompetitionUser.user
+                        models_sport_competition.CompetitionUser.user,
                     ).selectinload(models_users.CoreUser.groups),
                 ),
             )
@@ -462,7 +462,7 @@ async def load_participant_by_user_id(
                 )
                 .options(
                     joinedload(
-                        models_sport_competition.CompetitionParticipant.user
+                        models_sport_competition.CompetitionParticipant.user,
                     ).selectinload(
                         models_sport_competition.CompetitionUser.user,
                     ),
@@ -494,7 +494,7 @@ async def load_participant_by_ids(
                 )
                 .options(
                     joinedload(
-                        models_sport_competition.CompetitionParticipant.user
+                        models_sport_competition.CompetitionParticipant.user,
                     ).selectinload(
                         models_sport_competition.CompetitionUser.user,
                     ),
@@ -518,7 +518,7 @@ async def load_all_participants(
         )
         .options(
             joinedload(
-                models_sport_competition.CompetitionParticipant.user
+                models_sport_competition.CompetitionParticipant.user,
             ).selectinload(
                 models_sport_competition.CompetitionUser.user,
             ),
@@ -547,7 +547,7 @@ async def load_participants_by_school_id(
                 )
                 .options(
                     joinedload(
-                        models_sport_competition.CompetitionParticipant.user
+                        models_sport_competition.CompetitionParticipant.user,
                     ).selectinload(
                         models_sport_competition.CompetitionUser.user,
                     ),
@@ -580,7 +580,7 @@ async def load_participants_by_sport_id(
                 )
                 .options(
                     joinedload(
-                        models_sport_competition.CompetitionParticipant.user
+                        models_sport_competition.CompetitionParticipant.user,
                     ).selectinload(
                         models_sport_competition.CompetitionUser.user,
                     ),
@@ -616,7 +616,7 @@ async def load_participants_by_school_and_sport_ids(
                 )
                 .options(
                     joinedload(
-                        models_sport_competition.CompetitionParticipant.user
+                        models_sport_competition.CompetitionParticipant.user,
                     ).selectinload(
                         models_sport_competition.CompetitionUser.user,
                     ),
@@ -1283,7 +1283,7 @@ async def add_location(
             latitude=location.latitude,
             longitude=location.longitude,
             edition_id=location.edition_id,
-        )
+        ),
     )
     await db.flush()
 

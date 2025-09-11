@@ -180,12 +180,14 @@ def upgrade() -> None:
     op.create_table(
         "competition_location",
         sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("edition_id", sa.Uuid(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("address", sa.String(), nullable=True),
         sa.Column("latitude", sa.Float(), nullable=True),
         sa.Column("longitude", sa.Float(), nullable=True),
         sa.Column("description", sa.String(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
+        sa.ForeignKeyConstraint(["edition_id"], ["competition_edition.id"]),
     )
     op.create_table(
         "competition_match",
