@@ -85,6 +85,7 @@ async def init_objects() -> None:
         start_date=datetime(2023, 1, 1, tzinfo=UTC),
         end_date=datetime(2023, 12, 31, tzinfo=UTC),
         active=False,
+        inscription_enabled=False,
     )
     await add_object_to_db(old_edition)
     active_edition = models_sport_competition.CompetitionEdition(
@@ -94,6 +95,7 @@ async def init_objects() -> None:
         start_date=datetime(2024, 1, 1, tzinfo=UTC),
         end_date=datetime(2024, 12, 31, tzinfo=UTC),
         active=True,
+        inscription_enabled=True,
     )
     await add_object_to_db(active_edition)
 
@@ -155,12 +157,14 @@ async def init_objects() -> None:
         school_id=SchoolType.centrale_lyon.value,
         from_lyon=True,
         active=True,
+        inscription_enabled=True,
     )
     await add_object_to_db(ecl_extension)
     school_extension = models_sport_competition.SchoolExtension(
         school_id=school.id,
         from_lyon=False,
         active=True,
+        inscription_enabled=True,
     )
     await add_object_to_db(school_extension)
 
@@ -250,6 +254,7 @@ async def init_objects() -> None:
         edition_id=active_edition.id,
         name="Team 1",
         captain_id=sport_manager_user.id,
+        created_at=datetime.now(UTC),
     )
     await add_object_to_db(team1)
 
@@ -263,6 +268,7 @@ async def init_objects() -> None:
         substitute=False,
         license="1234567890",
         validated=True,
+        created_at=datetime.now(UTC),
     )
     await add_object_to_db(participant1)
     participant2 = models_sport_competition.CompetitionParticipant(
@@ -274,6 +280,7 @@ async def init_objects() -> None:
         substitute=False,
         license="0987654321",
         validated=True,
+        created_at=datetime.now(UTC),
     )
     await add_object_to_db(participant2)
 
@@ -436,7 +443,7 @@ async def test_patch_sport_as_admin(
             "sport_category": SportCategory.feminine.value,
         },
     )
-    assert response.status_code == 200, response.json()
+    assert response.status_code == 204, response.json()
 
     sports = client.get(
         "/competition/sports",
@@ -537,7 +544,7 @@ async def test_get_editions(
     client: TestClient,
 ) -> None:
     response = client.get(
-        "/competition/editions/",
+        "/competition/editions",
         headers={"Authorization": f"Bearer {user3_token}"},
     )
     assert response.status_code == 200, response.json()
@@ -561,7 +568,7 @@ async def test_create_edition_as_admin(
     client: TestClient,
 ) -> None:
     response = client.post(
-        "/competition/editions/",
+        "/competition/editions",
         headers={"Authorization": f"Bearer {admin_token}"},
         json={
             "name": "New Competition Edition",
@@ -572,7 +579,7 @@ async def test_create_edition_as_admin(
     )
     assert response.status_code == 201, response.json()
     editions = client.get(
-        "/competition/editions/",
+        "/competition/editions",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert editions.status_code == 200
@@ -592,7 +599,7 @@ async def test_create_edition_as_random(
     client: TestClient,
 ) -> None:
     response = client.post(
-        "/competition/editions/",
+        "/competition/editions",
         headers={"Authorization": f"Bearer {school_bds_token}"},
         json={
             "name": "Unauthorized Edition",
@@ -604,7 +611,7 @@ async def test_create_edition_as_random(
     assert response.status_code == 403, response.json()
 
     editions = client.get(
-        "/competition/editions/",
+        "/competition/editions",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert editions.status_code == 200
@@ -630,10 +637,10 @@ async def test_patch_edition_as_admin(
             "name": "Updated Edition",
         },
     )
-    assert response.status_code == 200, response.json()
+    assert response.status_code == 204, response.json()
 
     editions = client.get(
-        "/competition/editions/",
+        "/competition/editions",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert editions.status_code == 200
@@ -646,17 +653,80 @@ async def test_patch_edition_as_admin(
     assert updated_edition["name"] == "Updated Edition"
 
 
-async def test_activate_edition_with_active_edition(
+async def test_activate_edition(
     client: TestClient,
 ) -> None:
-    response = client.patch(
-        f"/competition/editions/{old_edition.id}",
+    response = client.post(
+        f"/competition/editions/{old_edition.id}/activate",
         headers={"Authorization": f"Bearer {admin_token}"},
-        json={
-            "active": True,
-        },
+    )
+    assert response.status_code == 204, response.json()
+    editions = client.get(
+        "/competition/editions",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert editions.status_code == 200
+    editions_json = editions.json()
+    activated_edition = next(
+        (edition for edition in editions_json if edition["id"] == str(old_edition.id)),
+        None,
+    )
+    assert activated_edition is not None
+    assert activated_edition["active"] is True
+    client.post(
+        f"/competition/editions/{active_edition.id}/activate",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+
+
+async def test_enable_inscription_not_active(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        f"/competition/editions/{old_edition.id}/inscription",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json=True,
     )
     assert response.status_code == 400, response.json()
+    editions = client.get(
+        "/competition/editions",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert editions.status_code == 200
+    editions_json = editions.json()
+    enabled_edition = next(
+        (edition for edition in editions_json if edition["id"] == str(old_edition.id)),
+        None,
+    )
+    assert enabled_edition is not None
+    assert enabled_edition["inscription_enabled"] is False
+
+
+async def test_enable_inscription(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        f"/competition/editions/{active_edition.id}/inscription",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json=True,
+    )
+    assert response.status_code == 204, response.json()
+    editions = client.get(
+        "/competition/editions",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert editions.status_code == 200
+    editions_json = editions.json()
+    enabled_edition = next(
+        (
+            edition
+            for edition in editions_json
+            if edition["id"] == str(active_edition.id)
+        ),
+        None,
+    )
+    assert enabled_edition is not None
+    assert enabled_edition["inscription_enabled"] is True, enabled_edition
 
 
 async def test_patch_edition_as_random(
@@ -672,7 +742,7 @@ async def test_patch_edition_as_random(
     assert response.status_code == 403, response.json()
 
     editions = client.get(
-        "/competition/editions/",
+        "/competition/editions",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert editions.status_code == 200

@@ -1,8 +1,34 @@
+from app.core.schools import schemas_schools
 from app.core.users import schemas_users
 from app.modules.sport_competition import (
     models_sport_competition,
     schemas_sport_competition,
 )
+
+
+def school_extension_model_to_schema(
+    school_extension: models_sport_competition.SchoolExtension,
+) -> schemas_sport_competition.SchoolExtension:
+    return schemas_sport_competition.SchoolExtension(
+        school_id=school_extension.school_id,
+        from_lyon=school_extension.from_lyon,
+        active=school_extension.active,
+        inscription_enabled=school_extension.inscription_enabled,
+        school=schemas_schools.CoreSchool(
+            id=school_extension.school.id,
+            name=school_extension.school.name,
+            email_regex=school_extension.school.email_regex,
+        ),
+        general_quota=schemas_sport_competition.SchoolGeneralQuota(
+            school_id=school_extension.school_id,
+            edition_id=school_extension.general_quota.edition_id,
+            athlete_quota=school_extension.general_quota.athlete_quota,
+            cameraman_quota=school_extension.general_quota.cameraman_quota,
+            pompom_quota=school_extension.general_quota.pompom_quota,
+            fanfare_quota=school_extension.general_quota.fanfare_quota,
+            non_athlete_quota=school_extension.general_quota.non_athlete_quota,
+        ),
+    )
 
 
 def participant_complete_model_to_schema(
@@ -17,6 +43,7 @@ def participant_complete_model_to_schema(
         substitute=participant.substitute,
         license=participant.license,
         validated=participant.validated,
+        created_at=participant.created_at,
         user=schemas_users.CoreUser(
             id=participant.user.id,
             account_type=participant.user.account_type,
@@ -39,6 +66,7 @@ def team_model_to_schema(
         school_id=team.school_id,
         sport_id=team.sport_id,
         captain_id=team.captain_id,
+        created_at=team.created_at,
         participants=[
             participant_complete_model_to_schema(participant)
             for participant in team.participants
@@ -68,6 +96,7 @@ def match_model_to_schema(
             edition_id=match.team1.edition_id,
             captain_id=match.team1.captain_id,
             id=match.team1.id,
+            created_at=match.team1.created_at,
         ),
         team2=schemas_sport_competition.Team(
             name=match.team2.name,
@@ -76,5 +105,6 @@ def match_model_to_schema(
             edition_id=match.team2.edition_id,
             captain_id=match.team2.captain_id,
             id=match.team2.id,
+            created_at=match.team2.created_at,
         ),
     )

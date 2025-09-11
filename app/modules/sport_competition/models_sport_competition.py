@@ -19,6 +19,7 @@ class CompetitionEdition(Base):
     start_date: Mapped[datetime]
     end_date: Mapped[datetime]
     active: Mapped[bool]
+    inscription_enabled: Mapped[bool]
 
 
 class CompetitionGroup(Base):
@@ -94,6 +95,7 @@ class SchoolExtension(Base):
     )
     from_lyon: Mapped[bool]
     active: Mapped[bool]
+    inscription_enabled: Mapped[bool]
 
     school: Mapped[CoreSchool] = relationship(
         "CoreSchool",
@@ -104,6 +106,11 @@ class SchoolExtension(Base):
         "SchoolGeneralQuota",
         lazy="selectin",
         init=False,
+    )
+    product_quotas: Mapped[list["SchoolProductQuota"]] = relationship(
+        "SchoolProductQuota",
+        lazy="selectin",
+        default_factory=list,
     )
 
 
@@ -144,6 +151,24 @@ class SchoolSportQuota(Base):
     team_quota: Mapped[int | None]
 
 
+class SchoolProductQuota(Base):
+    __tablename__ = "competition_school_product_quota"
+
+    product_id: Mapped[UUID] = mapped_column(
+        ForeignKey("competition_product.id"),
+        primary_key=True,
+    )
+    school_id: Mapped[UUID] = mapped_column(
+        ForeignKey("competition_school_extension.school_id"),
+        primary_key=True,
+    )
+    edition_id: Mapped[UUID] = mapped_column(
+        ForeignKey("competition_edition.id"),
+        primary_key=True,
+    )
+    quota: Mapped[int | None]
+
+
 class CompetitionTeam(Base):
     __tablename__ = "competition_team"
 
@@ -157,6 +182,7 @@ class CompetitionTeam(Base):
     )
     name: Mapped[str]
     captain_id: Mapped[str] = mapped_column(ForeignKey("competition_user.user_id"))
+    created_at: Mapped[datetime]
 
     participants: Mapped[list["CompetitionParticipant"]] = relationship(
         "CompetitionParticipant",
@@ -189,11 +215,30 @@ class CompetitionParticipant(Base):
     substitute: Mapped[bool]
     license: Mapped[str | None]
     validated: Mapped[bool]
+    created_at: Mapped[datetime]
 
     user: Mapped[CoreUser] = relationship(
         "CompetitionUser",
         lazy="joined",
         init=False,
+    )
+
+
+class CompetitionLocation(Base):
+    __tablename__ = "competition_location"
+
+    id: Mapped[PrimaryKey]
+    name: Mapped[str]
+    address: Mapped[str | None]
+    latitude: Mapped[float | None]
+    longitude: Mapped[float | None]
+    description: Mapped[str | None]
+
+    matches: Mapped[list["Match"]] = relationship(
+        "Match",
+        lazy="selectin",
+        default_factory=list,
+        back_populates="location",
     )
 
 
@@ -209,7 +254,7 @@ class Match(Base):
     team1_id: Mapped[UUID] = mapped_column(ForeignKey("competition_team.id"))
     team2_id: Mapped[UUID] = mapped_column(ForeignKey("competition_team.id"))
     date: Mapped[datetime | None]
-    location: Mapped[str | None]
+    location_id: Mapped[UUID] = mapped_column(ForeignKey("competition_location.id"))
     score_team1: Mapped[int | None]
     score_team2: Mapped[int | None]
     winner_id: Mapped[UUID | None] = mapped_column(ForeignKey("competition_team.id"))
@@ -226,3 +271,146 @@ class Match(Base):
         lazy="selectin",
         init=False,
     )
+    location: Mapped[CompetitionLocation] = relationship(
+        "CompetitionLocation",
+        lazy="selectin",
+        init=False,
+    )
+
+
+class SportPodium(Base):
+    __tablename__ = "competition_sport_podium"
+
+    sport_id: Mapped[UUID] = mapped_column(
+        ForeignKey("competition_sport.id"),
+        primary_key=True,
+    )
+    edition_id: Mapped[UUID] = mapped_column(
+        ForeignKey("competition_edition.id"),
+        primary_key=True,
+    )
+    first_place_points: Mapped[int]
+    second_place_points: Mapped[int]
+    third_place_points: Mapped[int]
+    team1_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("competition_team.id"),
+        nullable=True,
+    )
+    team2_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("competition_team.id"),
+        nullable=True,
+    )
+    team3_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("competition_team.id"),
+        nullable=True,
+    )
+    user1_id: Mapped[str | None] = mapped_column(
+        ForeignKey("competition_user.user_id"),
+        nullable=True,
+    )
+    user2_id: Mapped[str | None] = mapped_column(
+        ForeignKey("competition_user.user_id"),
+        nullable=True,
+    )
+    user3_id: Mapped[str | None] = mapped_column(
+        ForeignKey("competition_user.user_id"),
+        nullable=True,
+    )
+
+    team1: Mapped[CompetitionTeam] = relationship(
+        "CompetitionTeam",
+        foreign_keys=[team1_id],
+        lazy="selectin",
+        init=False,
+    )
+    team2: Mapped[CompetitionTeam] = relationship(
+        "CompetitionTeam",
+        foreign_keys=[team2_id],
+        lazy="selectin",
+        init=False,
+    )
+    team3: Mapped[CompetitionTeam] = relationship(
+        "CompetitionTeam",
+        foreign_keys=[team3_id],
+        lazy="selectin",
+        init=False,
+    )
+    user1: Mapped[CompetitionUser] = relationship(
+        "CompetitionUser",
+        foreign_keys=[user1_id],
+        lazy="selectin",
+        init=False,
+    )
+    user2: Mapped[CompetitionUser] = relationship(
+        "CompetitionUser",
+        foreign_keys=[user2_id],
+        lazy="selectin",
+        init=False,
+    )
+    user3: Mapped[CompetitionUser] = relationship(
+        "CompetitionUser",
+        foreign_keys=[user3_id],
+        lazy="selectin",
+        init=False,
+    )
+
+
+class CompetitionProduct(Base):
+    __tablename__ = "competition_product"
+
+    id: Mapped[PrimaryKey]
+    name: Mapped[str]
+
+    variants: Mapped[list["CompetitionProductVariant"]] = relationship(
+        "CompetitionProductVariant",
+        lazy="selectin",
+        default_factory=list,
+    )
+
+
+class CompetitionProductVariant(Base):
+    __tablename__ = "competition_product_variant"
+
+    id: Mapped[PrimaryKey]
+    product_id: Mapped[UUID] = mapped_column(
+        ForeignKey("competition_product.id"),
+    )
+    name: Mapped[str]
+    price: Mapped[int]
+    enabled: Mapped[bool]
+    competition_group_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("competition_group.id"),
+        nullable=True,
+    )
+    description: Mapped[str | None] = mapped_column(default=None)
+
+
+class CompetitionPurchase(Base):
+    __tablename__ = "competition_purchase"
+
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("core_user.id"),
+        primary_key=True,
+    )
+    product_variant_id: Mapped[UUID] = mapped_column(
+        ForeignKey("competition_product_variant.id"),
+        primary_key=True,
+    )
+    validated: Mapped[bool]
+    paid: Mapped[bool]
+    purchased_on: Mapped[datetime]
+
+    product_variant: Mapped["CompetitionProductVariant"] = relationship(
+        "CompetitionProductVariant",
+        init=False,
+    )
+
+
+class CompetitionPayment(Base):
+    __tablename__ = "competition_payment"
+
+    id: Mapped[PrimaryKey]
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("core_user.id"),
+    )
+    total: Mapped[int]
