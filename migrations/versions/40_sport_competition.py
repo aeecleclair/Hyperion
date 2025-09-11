@@ -231,6 +231,7 @@ def upgrade() -> None:
         sa.Column("team_id", sa.Uuid(), nullable=False),
         sa.Column("substitute", sa.Boolean(), nullable=False),
         sa.Column("license", sa.String(), nullable=True),
+        sa.Column("certificate_file_id", sa.Uuid(), nullable=True),
         sa.Column("is_license_valid", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(["edition_id"], ["competition_edition.id"]),
         sa.ForeignKeyConstraint(["sport_id"], ["competition_sport.id"]),
