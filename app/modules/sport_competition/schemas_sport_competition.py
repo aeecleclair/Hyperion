@@ -166,6 +166,7 @@ class SportQuotaInfo(BaseModel):
 class SchoolSportQuota(SportQuotaInfo):
     school_id: UUID
     sport_id: UUID
+    edition_id: UUID
 
 
 class SchoolSportQuotaEdit(BaseModel):
@@ -258,13 +259,11 @@ class LocationEdit(BaseModel):
 
 
 class MatchBase(BaseModel):
-    edition_id: UUID
     name: str
-    sport_id: UUID
     team1_id: UUID
     team2_id: UUID
-    date: datetime | None = None
-    location_id: UUID | None = None
+    location_id: UUID
+    date: datetime
     score_team1: int | None = None
     score_team2: int | None = None
     winner_id: UUID | None = None
@@ -272,9 +271,14 @@ class MatchBase(BaseModel):
 
 class Match(MatchBase):
     id: UUID
+    sport_id: UUID
+    edition_id: UUID
+
+
+class MatchComplete(Match):
     team1: Team
     team2: Team
-    location: Location | None = None
+    location: Location
 
 
 class MatchEdit(BaseModel):

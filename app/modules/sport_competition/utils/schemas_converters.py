@@ -92,8 +92,8 @@ def team_model_to_schema(
 
 def match_model_to_schema(
     match: models_sport_competition.Match,
-) -> schemas_sport_competition.Match:
-    return schemas_sport_competition.Match(
+) -> schemas_sport_competition.MatchComplete:
+    return schemas_sport_competition.MatchComplete(
         id=match.id,
         sport_id=match.sport_id,
         edition_id=match.edition_id,

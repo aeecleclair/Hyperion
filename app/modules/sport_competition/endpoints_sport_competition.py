@@ -841,6 +841,41 @@ async def delete_school_extension(
 # region: School General Quota
 
 
+@module.router.get(
+    "/competition/schools/{school_id}/general-quota",
+    response_model=schemas_sport_competition.SchoolGeneralQuota,
+)
+async def get_school_general_quota(
+    school_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_competition_user(
+            competition_group=CompetitionGroupType.schools_bds,
+        ),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> schemas_sport_competition.SchoolGeneralQuota:
+    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    if school is None:
+        raise HTTPException(
+            status_code=404,
+            detail="School not found in the database",
+        )
+    quota = await cruds_sport_competition.get_school_general_quota(
+        school_id,
+        edition.id,
+        db,
+    )
+    if quota is None:
+        raise HTTPException(
+            status_code=404,
+            detail="General quota not found for this school",
+        )
+    return quota
+
+
 @module.router.post(
     "/competition/schools/{school_id}/general-quota",
     status_code=201,
@@ -953,7 +988,7 @@ async def get_quotas_for_sport(
 
 
 @module.router.get(
-    "/competition/schools/{school_id}/quotas",
+    "/competition/schools/{school_id}/sports-quotas",
     response_model=list[schemas_sport_competition.SchoolSportQuota],
 )
 async def get_quotas_for_school(
@@ -1822,8 +1857,8 @@ async def delete_location(
 
 
 @module.router.get(
-    "/competition/sports/{sport_id}/matches",
-    response_model=list[schemas_sport_competition.Match],
+    "/competition/matches/sports/{sport_id}",
+    response_model=list[schemas_sport_competition.MatchComplete],
 )
 async def get_matches_for_sport_and_edition(
     sport_id: UUID,
@@ -1832,7 +1867,7 @@ async def get_matches_for_sport_and_edition(
     ),
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
-) -> list[schemas_sport_competition.Match]:
+) -> list[schemas_sport_competition.MatchComplete]:
     sport = await cruds_sport_competition.load_sport_by_id(sport_id, db)
     if sport is None:
         raise HTTPException(
@@ -1847,29 +1882,22 @@ async def get_matches_for_sport_and_edition(
 
 
 @module.router.get(
-    "/competition/schools/{school_id}/matches",
-    response_model=list[schemas_sport_competition.Match],
+    "/competition/matches/schools/{school_id}",
+    response_model=list[schemas_sport_competition.MatchComplete],
 )
 async def get_matches_for_school_sport_and_edition(
     school_id: UUID,
-    sport_id: UUID,
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
-) -> list[schemas_sport_competition.Match]:
+) -> list[schemas_sport_competition.MatchComplete]:
     school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
     if school is None:
         raise HTTPException(
             status_code=404,
             detail="School not found in the database",
-        )
-    sport = await cruds_sport_competition.load_sport_by_id(sport_id, db)
-    if sport is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Sport not found in the database",
         )
     return await cruds_sport_competition.load_all_matches_by_school_id(
         school_id,
@@ -1885,11 +1913,6 @@ def check_match_consistency(
     team2: schemas_sport_competition.TeamComplete,
     edition: schemas_sport_competition.CompetitionEdition,
 ) -> None:
-    if match_info.edition_id != edition.id:
-        raise HTTPException(
-            status_code=400,
-            detail="Match edition does not match the current edition",
-        )
     if team1.sport_id != sport_id or team2.sport_id != sport_id:
         raise HTTPException(
             status_code=403,
@@ -1919,7 +1942,7 @@ def check_match_consistency(
 
 
 @module.router.post(
-    "/competition/sports/{sport_id}/matches",
+    "/competition/matches/sports/{sport_id}",
     status_code=201,
     response_model=schemas_sport_competition.Match,
 )
@@ -1952,13 +1975,22 @@ async def create_match(
             status_code=404,
             detail="Team 2 not found in the database",
         )
+    location = await cruds_sport_competition.load_location_by_id(
+        match_info.location_id,
+        db,
+    )
+    if location is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Location not found in the database",
+        )
 
     check_match_consistency(sport_id, match_info, team1, team2, edition)
 
     match = schemas_sport_competition.Match(
         id=uuid4(),
         sport_id=sport_id,
-        edition_id=match_info.edition_id,
+        edition_id=edition.id,
         date=match_info.date,
         location_id=match_info.location_id,
         name=match_info.name,
@@ -1967,8 +1999,6 @@ async def create_match(
         winner_id=None,
         score_team1=None,
         score_team2=None,
-        team1=team1,
-        team2=team2,
     )
     await cruds_sport_competition.add_match(match, db)
     return match
@@ -1995,19 +2025,20 @@ async def edit_match(
             status_code=404,
             detail="Match not found in the database",
         )
-    team1 = await cruds_sport_competition.load_team_by_id(match_info.team1_id, db)
+    new_match = match.model_copy(update=match_info.model_dump(exclude_unset=True))
+
+    team1 = await cruds_sport_competition.load_team_by_id(new_match.team1_id, db)
     if team1 is None:
         raise HTTPException(
             status_code=404,
             detail="Team 1 not found in the database",
         )
-    team2 = await cruds_sport_competition.load_team_by_id(match_info.team2_id, db)
+    team2 = await cruds_sport_competition.load_team_by_id(new_match.team2_id, db)
     if team2 is None:
         raise HTTPException(
             status_code=404,
             detail="Team 2 not found in the database",
         )
-    new_match = match.model_copy(update=match_info.model_dump(exclude_unset=True))
     check_match_consistency(match.sport_id, new_match, team1, team2, edition)
 
     await cruds_sport_competition.update_match(match_id, match_info, db)
@@ -2017,7 +2048,11 @@ async def edit_match(
 async def delete_match(
     match_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user()),
+    user: schemas_users.CoreUser = Depends(
+        is_competition_user(
+            competition_group=CompetitionGroupType.sport_manager,
+        ),
+    ),
 ) -> None:
     match = await cruds_sport_competition.load_match_by_id(match_id, db)
     if match is None:

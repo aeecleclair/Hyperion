@@ -1601,7 +1601,7 @@ async def load_all_matches_by_sport_id(
     sport_id: UUID,
     edition_id: UUID,
     db: AsyncSession,
-) -> list[schemas_sport_competition.Match]:
+) -> list[schemas_sport_competition.MatchComplete]:
     matches = await db.execute(
         select(models_sport_competition.Match)
         .where(
@@ -1621,7 +1621,7 @@ async def load_all_matches_by_school_id(
     school_id: UUID,
     edition_id: UUID,
     db: AsyncSession,
-) -> list[schemas_sport_competition.Match]:
+) -> list[schemas_sport_competition.MatchComplete]:
     matches = await db.execute(
         select(models_sport_competition.Match)
         .where(
@@ -1644,7 +1644,6 @@ async def load_all_matches_by_school_id(
             selectinload(models_sport_competition.Match.team2),
         ),
     )
-
     return [match_model_to_schema(match) for match in matches.scalars().all()]
 
 

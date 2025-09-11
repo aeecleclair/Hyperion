@@ -12,6 +12,8 @@ from app.core.schools.schools_type import SchoolType
 from app.core.users import models_users
 from app.modules.sport_competition import models_sport_competition
 from app.modules.sport_competition.schemas_sport_competition import (
+    LocationBase,
+    MatchBase,
     ParticipantInfo,
     TeamInfo,
 )
@@ -397,6 +399,34 @@ async def init_objects() -> None:
         is_license_valid=True,
     )
     await add_object_to_db(participant3)
+
+    global location
+    location = models_sport_competition.MatchLocation(
+        id=uuid4(),
+        edition_id=active_edition.id,
+        name="Main Stadium",
+        address="123 Main St, City, Country",
+        latitude=45.764043,
+        longitude=4.835659,
+        description="Main stadium for the competition",
+    )
+    await add_object_to_db(location)
+
+    global match1
+    match1 = models_sport_competition.Match(
+        id=uuid4(),
+        edition_id=active_edition.id,
+        sport_id=sport_with_team.id,
+        name="Match 1",
+        team1_id=team1.id,
+        team2_id=team2.id,
+        location_id=location.id,
+        date=datetime(2024, 6, 15, 15, 0, tzinfo=UTC),
+        score_team1=None,
+        score_team2=None,
+        winner_id=None,
+    )
+    await add_object_to_db(match1)
 
 
 async def test_get_sports(
@@ -1151,13 +1181,11 @@ async def test_post_school_general_quota_as_random(
     )
     assert response.status_code == 403, response.json()
 
-    school = client.get(
-        f"/competition/schools/{school2.id}",
+    school_quota = client.get(
+        f"/competition/schools/{school2.id}/general-quota",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
-    assert school.status_code == 200, school.json()
-    school_json = school.json()
-    assert school_json["general_quota"] is None, school_json
+    assert school_quota.status_code == 404, school_quota.json()
 
 
 async def test_post_school_general_quota_as_admin(
@@ -1175,18 +1203,17 @@ async def test_post_school_general_quota_as_admin(
     )
     assert response.status_code == 201, response.json()
 
-    school = client.get(
-        f"/competition/schools/{school2.id}",
+    school_quota = client.get(
+        f"/competition/schools/{school2.id}/general-quota",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
-    assert school.status_code == 200, school.json()
-    school_json = school.json()
-    assert school is not None, school_json
-    assert school_json["general_quota"] is not None, school_json
-    assert school_json["general_quota"]["athlete_quota"] == 10, school_json
-    assert school_json["general_quota"]["cameraman_quota"] == 5, school_json
-    assert school_json["general_quota"]["pompom_quota"] == 3, school_json
-    assert school_json["general_quota"]["fanfare_quota"] == 2, school_json
+    assert school_quota.status_code == 200, school_quota.json()
+    school_quota_json = school_quota.json()
+    assert school_quota is not None, school_quota_json
+    assert school_quota_json["athlete_quota"] == 10, school_quota_json
+    assert school_quota_json["cameraman_quota"] == 5, school_quota_json
+    assert school_quota_json["pompom_quota"] == 3, school_quota_json
+    assert school_quota_json["fanfare_quota"] == 2, school_quota_json
 
 
 async def test_patch_school_general_quota_as_random(
@@ -1204,17 +1231,16 @@ async def test_patch_school_general_quota_as_random(
     )
     assert response.status_code == 403, response.json()
 
-    school = client.get(
-        f"/competition/schools/{school1.id}",
+    school_quota = client.get(
+        f"/competition/schools/{school1.id}/general-quota",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
-    assert school.status_code == 200, school.json()
-    school_json = school.json()
-    assert school_json["general_quota"] is not None, school_json
-    assert school_json["general_quota"]["athlete_quota"] == 1, school_json
-    assert school_json["general_quota"]["cameraman_quota"] == 1, school_json
-    assert school_json["general_quota"]["pompom_quota"] == 1, school_json
-    assert school_json["general_quota"]["fanfare_quota"] == 1, school_json
+    assert school_quota.status_code == 200, school_quota.json()
+    school_quota_json = school_quota.json()
+    assert school_quota_json["athlete_quota"] == 1, school_quota_json
+    assert school_quota_json["cameraman_quota"] == 1, school_quota_json
+    assert school_quota_json["pompom_quota"] == 1, school_quota_json
+    assert school_quota_json["fanfare_quota"] == 1, school_quota_json
 
 
 async def test_patch_school_general_quota_as_admin(
@@ -1232,24 +1258,23 @@ async def test_patch_school_general_quota_as_admin(
     )
     assert response.status_code == 204, response.json()
 
-    school = client.get(
-        f"/competition/schools/{school1.id}",
+    school_quota = client.get(
+        f"/competition/schools/{school1.id}/general-quota",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
-    assert school.status_code == 200, school.json()
-    school_json = school.json()
-    assert school_json["general_quota"] is not None, school_json
-    assert school_json["general_quota"]["athlete_quota"] == 5, school_json
-    assert school_json["general_quota"]["cameraman_quota"] == 3, school_json
-    assert school_json["general_quota"]["pompom_quota"] == 2, school_json
-    assert school_json["general_quota"]["fanfare_quota"] == 1, school_json
+    assert school_quota.status_code == 200, school_quota.json()
+    school_quota_json = school_quota.json()
+    assert school_quota_json["athlete_quota"] == 5, school_quota_json
+    assert school_quota_json["cameraman_quota"] == 3, school_quota_json
+    assert school_quota_json["pompom_quota"] == 2, school_quota_json
+    assert school_quota_json["fanfare_quota"] == 1, school_quota_json
 
 
 async def test_get_school_sport_quota(
     client: TestClient,
 ) -> None:
     response = client.get(
-        f"/competition/schools/{school1.id}/quotas",
+        f"/competition/schools/{school1.id}/sports-quotas",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 200, response.json()
@@ -1283,7 +1308,7 @@ async def test_post_school_sport_quota_as_random(
     assert response.status_code == 403, response.json()
 
     quota = client.get(
-        f"/competition/schools/{school2.id}/quotas",
+        f"/competition/schools/{school2.id}/sports-quotas",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert quota.status_code == 200, quota.json()
@@ -1309,7 +1334,7 @@ async def test_post_school_sport_quota_as_admin(
     assert response.status_code == 204, response.text
 
     quota = client.get(
-        f"/competition/schools/{school2.id}/quotas",
+        f"/competition/schools/{school2.id}/sports-quotas",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert quota.status_code == 200, quota.json()
@@ -1337,7 +1362,7 @@ async def test_patch_school_sport_quota_as_random(
     assert response.status_code == 403, response.json()
 
     quota = client.get(
-        f"/competition/schools/{school1.id}/quotas",
+        f"/competition/schools/{school1.id}/sports-quotas",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert quota.status_code == 200, quota.json()
@@ -1365,7 +1390,7 @@ async def test_patch_school_sport_quota_as_admin(
     assert response.status_code == 204, response.json()
 
     quota = client.get(
-        f"/competition/schools/{school2.id}/quotas",
+        f"/competition/schools/{school2.id}/sports-quotas",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert quota.status_code == 200, quota.json()
@@ -1389,7 +1414,7 @@ async def test_delete_school_sport_quota_as_random(
     assert response.status_code == 403, response.json()
 
     quota = client.get(
-        f"/competition/schools/{school1.id}/quotas",
+        f"/competition/schools/{school1.id}/sports-quotas",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert quota.status_code == 200, quota.json()
@@ -1411,7 +1436,7 @@ async def test_delete_school_sport_quota_as_admin(
     assert response.status_code == 204, response.json()
 
     quota = client.get(
-        f"/competition/schools/{school2.id}/quotas",
+        f"/competition/schools/{school2.id}/sports-quotas",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert quota.status_code == 200, quota.json()
@@ -2105,3 +2130,403 @@ async def test_user_participate_with_team(
     )
     assert user_participation is not None, participants_json
     assert user_participation["edition_id"] == str(active_edition.id)
+
+
+async def test_get_locations(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        "/competition/locations",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 200, response.json()
+    locations = response.json()
+    assert len(locations) == 1
+    assert locations[0]["name"] == "Main Stadium"
+
+
+async def test_get_location_by_id(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        f"/competition/locations/{location.id}",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 200, response.json()
+    location_json = response.json()
+    assert location_json["name"] == "Main Stadium"
+    assert len(location_json["matches"]) == 1
+
+
+async def test_post_location_as_random(
+    client: TestClient,
+) -> None:
+    location_info = LocationBase(
+        name="New Location",
+        description="A new location for testing",
+        address="123 Main St",
+        latitude=45.0,
+        longitude=4.0,
+    )
+    response = client.post(
+        "/competition/locations",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json=location_info.model_dump(exclude_none=True, mode="json"),
+    )
+    assert response.status_code == 403, response.json()
+
+    locations = client.get(
+        "/competition/locations",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert locations.status_code == 200, locations.json()
+    locations_json = locations.json()
+    new_location_check = next(
+        (location for location in locations_json if location["name"] == "New Location"),
+        None,
+    )
+    assert new_location_check is None, locations_json
+
+
+async def test_post_location_as_admin(
+    client: TestClient,
+) -> None:
+    location_info = LocationBase(
+        name="New Location",
+        description="A new location for testing",
+        address="123 Main St",
+        latitude=45.0,
+        longitude=4.0,
+    )
+    response = client.post(
+        "/competition/locations",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json=location_info.model_dump(exclude_none=True, mode="json"),
+    )
+    assert response.status_code == 201, response.json()
+    location = response.json()
+
+    locations = client.get(
+        "/competition/locations",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert locations.status_code == 200, locations.json()
+    locations_json = locations.json()
+    new_location_check = next(
+        (loc for loc in locations_json if loc["id"] == location["id"]),
+        None,
+    )
+    assert new_location_check is not None, locations_json
+
+
+async def test_patch_location_as_random(
+    client: TestClient,
+) -> None:
+    response = client.patch(
+        f"/competition/locations/{location.id}",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json={
+            "name": "Unauthorized Location Update",
+        },
+    )
+    assert response.status_code == 403, response.json()
+
+    locations = client.get(
+        "/competition/locations",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert locations.status_code == 200, locations.json()
+    locations_json = locations.json()
+    updated_location_check = next(
+        (loc for loc in locations_json if loc["id"] == str(location.id)),
+        None,
+    )
+    assert updated_location_check is not None
+    assert updated_location_check["name"] == location.name
+
+
+async def test_patch_location_as_admin(
+    client: TestClient,
+) -> None:
+    response = client.patch(
+        f"/competition/locations/{location.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "name": "Updated Location Name",
+        },
+    )
+    assert response.status_code == 204, response.json()
+
+    locations = client.get(
+        "/competition/locations",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert locations.status_code == 200, locations.json()
+    locations_json = locations.json()
+    updated_location_check = next(
+        (loc for loc in locations_json if loc["id"] == str(location.id)),
+        None,
+    )
+    assert updated_location_check is not None
+    assert updated_location_check["name"] == "Updated Location Name"
+
+
+async def delete_location_as_random(
+    client: TestClient,
+) -> None:
+    response = client.delete(
+        f"/competition/locations/{location.id}",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 403, response.json()
+
+    locations = client.get(
+        "/competition/locations",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert locations.status_code == 200, locations.json()
+    locations_json = locations.json()
+    deleted_location_check = next(
+        (loc for loc in locations_json if loc["id"] == str(location.id)),
+        None,
+    )
+    assert deleted_location_check is not None, locations_json
+
+
+async def test_delete_location_as_admin(
+    client: TestClient,
+) -> None:
+    new_location = models_sport_competition.MatchLocation(
+        id=uuid4(),
+        name="Location to Delete",
+        description="A location to delete",
+        address="456 Secondary St",
+        edition_id=active_edition.id,
+        latitude=46.0,
+        longitude=5.0,
+    )
+    await add_object_to_db(new_location)
+    response = client.delete(
+        f"/competition/locations/{new_location.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 204, response.json()
+
+    locations = client.get(
+        "/competition/locations",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert locations.status_code == 200, locations.json()
+    locations_json = locations.json()
+    deleted_location_check = next(
+        (loc for loc in locations_json if loc["id"] == str(new_location.id)),
+        None,
+    )
+    assert deleted_location_check is None, locations_json
+
+
+async def test_gest_sport_matches(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        f"/competition/matches/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 200, response.json()
+    matches = response.json()
+    assert len(matches) == 1
+    assert matches[0]["name"] == "Match 1"
+
+
+async def test_gest_school_matches(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        f"/competition/matches/schools/{school1.id}",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 200, response.json()
+    matches = response.json()
+    assert len(matches) == 1
+    assert matches[0]["name"] == "Match 1"
+
+
+async def test_create_match_as_random(
+    client: TestClient,
+) -> None:
+    match_info = MatchBase(
+        name="New Match",
+        team1_id=team1.id,
+        team2_id=team2.id,
+        description="A new match for testing",
+        sport_id=sport_with_team.id,
+        location_id=location.id,
+        date=datetime.now(UTC),
+    )
+    response = client.post(
+        f"/competition/matches/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json=match_info.model_dump(exclude_none=True, mode="json"),
+    )
+    assert response.status_code == 403, response.json()
+
+    matches = client.get(
+        f"/competition/matches/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert matches.status_code == 200, matches.json()
+    matches_json = matches.json()
+    new_match_check = next(
+        (match for match in matches_json if match["name"] == "New Match"),
+        None,
+    )
+    assert new_match_check is None, matches_json
+
+
+async def test_create_match_as_admin(
+    client: TestClient,
+) -> None:
+    match_info = MatchBase(
+        name="New Match",
+        team1_id=team1.id,
+        team2_id=team2.id,
+        description="A new match for testing",
+        sport_id=sport_with_team.id,
+        location_id=location.id,
+        date=datetime(2024, 6, 15, 15, 0, 0, tzinfo=UTC),
+    )
+    response = client.post(
+        f"/competition/matches/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json=match_info.model_dump(exclude_none=True, mode="json"),
+    )
+    assert response.status_code == 201, response.json()
+    match = response.json()
+
+    matches = client.get(
+        f"/competition/matches/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert matches.status_code == 200, matches.json()
+    matches_json = matches.json()
+    new_match_check = next(
+        (m for m in matches_json if m["id"] == match["id"]),
+        None,
+    )
+    assert new_match_check is not None, matches_json
+
+
+async def test_patch_match_as_random(
+    client: TestClient,
+) -> None:
+    response = client.patch(
+        f"/competition/matches/{match1.id}",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json={
+            "name": "Unauthorized Match Update",
+        },
+    )
+    assert response.status_code == 403, response.json()
+
+    matches = client.get(
+        f"/competition/matches/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert matches.status_code == 200, matches.json()
+    matches_json = matches.json()
+    updated_match_check = next(
+        (m for m in matches_json if m["id"] == str(match1.id)),
+        None,
+    )
+    assert updated_match_check is not None
+    assert updated_match_check["name"] == match1.name
+
+
+async def test_patch_match_as_admin(
+    client: TestClient,
+) -> None:
+    response = client.patch(
+        f"/competition/matches/{match1.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "name": "Updated Match Name",
+            "score_team1": 3,
+            "score_team2": 2,
+            "winner_id": str(team1.id),
+        },
+    )
+    assert response.status_code == 204, response.json()
+
+    matches = client.get(
+        f"/competition/matches/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert matches.status_code == 200, matches.json()
+    matches_json = matches.json()
+    updated_match_check = next(
+        (m for m in matches_json if m["id"] == str(match1.id)),
+        None,
+    )
+    assert updated_match_check is not None
+    assert updated_match_check["name"] == "Updated Match Name"
+    assert updated_match_check["score_team1"] == 3
+    assert updated_match_check["score_team2"] == 2
+    assert updated_match_check["winner_id"] == str(team1.id)
+
+
+async def test_delete_match_as_random(
+    client: TestClient,
+) -> None:
+    response = client.delete(
+        f"/competition/matches/{match1.id}",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 403, response.text
+
+    matches = client.get(
+        f"/competition/matches/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert matches.status_code == 200, matches.json()
+    matches_json = matches.json()
+    deleted_match_check = next(
+        (m for m in matches_json if m["id"] == str(match1.id)),
+        None,
+    )
+    assert deleted_match_check is not None, matches_json
+
+
+async def test_delete_match_as_admin(
+    client: TestClient,
+) -> None:
+    new_match = models_sport_competition.Match(
+        id=uuid4(),
+        name="Match to Delete",
+        team1_id=team1.id,
+        team2_id=team2.id,
+        sport_id=sport_with_team.id,
+        location_id=location.id,
+        edition_id=active_edition.id,
+        date=datetime.now(UTC),
+        score_team1=None,
+        score_team2=None,
+        winner_id=None,
+    )
+    await add_object_to_db(new_match)
+    response = client.delete(
+        f"/competition/matches/{new_match.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 204, response.text
+
+    matches = client.get(
+        f"/competition/matches/sports/{sport_with_team.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert matches.status_code == 200, matches.json()
+    matches_json = matches.json()
+    deleted_match_check = next(
+        (m for m in matches_json if m["id"] == str(new_match.id)),
+        None,
+    )
+    assert deleted_match_check is None, matches_json
