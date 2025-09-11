@@ -12,7 +12,11 @@ from pytest_mock import MockerFixture
 from app.core.groups.groups_type import GroupType
 from app.core.users import models_users
 from app.modules.raid import coredata_raid, models_raid
-from app.modules.raid.models_raid import Participant, SecurityFile, Team
+from app.modules.raid.models_raid import (
+    RaidParticipant,
+    RaidTeam,
+    SecurityFile,
+)
 from app.modules.raid.raid_type import (
     Difficulty,
     DocumentType,
@@ -27,10 +31,10 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-participant: models_raid.Participant
+participant: models_raid.RaidParticipant
 
-team: models_raid.Team
-validated_team: models_raid.Team
+team: models_raid.RaidTeam
+validated_team: models_raid.RaidTeam
 
 validated_document: models_raid.Document
 
@@ -103,7 +107,7 @@ async def init_objects() -> None:
     await add_object_to_db(validated_document)
 
     global participant
-    participant = models_raid.Participant(
+    participant = models_raid.RaidParticipant(
         id=simple_user.id,
         firstname="TestFirstname",
         name="TestName",
@@ -116,7 +120,7 @@ async def init_objects() -> None:
     await add_object_to_db(participant)
 
     global team
-    team = models_raid.Team(
+    team = models_raid.RaidTeam(
         id=str(uuid.uuid4()),
         name="TestTeam",
         captain_id=simple_user.id,
@@ -124,7 +128,7 @@ async def init_objects() -> None:
     )
     await add_object_to_db(team)
 
-    no_team_participant = models_raid.Participant(
+    no_team_participant = models_raid.RaidParticipant(
         id=simple_user_without_team.id,
         firstname="NoTeam",
         name="NoTeam",
@@ -134,7 +138,7 @@ async def init_objects() -> None:
     )
     await add_object_to_db(no_team_participant)
 
-    validated_team_participant_captain = models_raid.Participant(
+    validated_team_participant_captain = models_raid.RaidParticipant(
         id=validated_team_captain.id,
         firstname="Validated",
         name="Captain",
@@ -156,7 +160,7 @@ async def init_objects() -> None:
 
     await add_object_to_db(validated_team_participant_captain)
 
-    validated_team_participant_second = models_raid.Participant(
+    validated_team_participant_second = models_raid.RaidParticipant(
         id=validated_team_second.id,
         firstname="Validated",
         name="Second",
@@ -179,7 +183,7 @@ async def init_objects() -> None:
     await add_object_to_db(validated_team_participant_second)
 
     global validated_team
-    validated_team = models_raid.Team(
+    validated_team = models_raid.RaidTeam(
         id=str(uuid.uuid4()),
         name="ValidatedTeam",
         difficulty=Difficulty.sports,
@@ -224,7 +228,7 @@ def test_get_participant_by_id(client: TestClient):
 def test_create_participant(client: TestClient):
     participant_data = {
         "firstname": "New",
-        "name": "Participant",
+        "name": "RaidParticipant",
         "birthday": "2000-01-01",
         "phone": "0123456789",
         "email": "new@participant.com",
@@ -337,14 +341,14 @@ def test_update_participant_invalid_security_file_id(client: TestClient):
 
 
 def test_create_team(client: TestClient):
-    team_data = {"name": "New Team"}
+    team_data = {"name": "New RaidTeam"}
     response = client.post(
         "/raid/teams",
         json=team_data,
         headers={"Authorization": f"Bearer {token_simple_without_team}"},
     )
     assert response.status_code == 201
-    assert response.json()["name"] == "New Team"
+    assert response.json()["name"] == "New RaidTeam"
 
 
 def test_generate_teams_pdf(client: TestClient):
@@ -383,7 +387,7 @@ def test_get_team_by_id(client: TestClient):
 
 
 def test_update_team(client: TestClient):
-    update_data = {"name": "Updated Team"}
+    update_data = {"name": "Updated RaidTeam"}
     response = client.patch(
         f"/raid/teams/{team.id}",
         json=update_data,
@@ -393,7 +397,7 @@ def test_update_team(client: TestClient):
 
 
 def test_set_team_number(client: TestClient):
-    update_data = {"name": "Updated Validated Team"}
+    update_data = {"name": "Updated Validated RaidTeam"}
     response = client.patch(
         f"/raid/teams/{validated_team.id}",
         json=update_data,
@@ -445,7 +449,7 @@ def test_read_document_participant_not_found(client: TestClient):
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 404
-    assert response.json()["detail"] == "Participant owning the document not found."
+    assert response.json()["detail"] == "RaidParticipant owning the document not found."
 
 
 # requires a document to be added
@@ -582,7 +586,7 @@ def test_merge_teams(client: TestClient):
 
     team2_response = client.post(
         "/raid/teams",
-        json={"name": "Team 2"},
+        json={"name": "RaidTeam 2"},
         headers={"Authorization": f"Bearer {token_simple_without_participant}"},
     )
     assert team2_response.status_code == 201
@@ -801,11 +805,11 @@ async def test_get_payment_url_participant_already_paid(
 @pytest.fixture
 def mock_team():
     return Mock(
-        spec=Team,
-        name="Test Team",
+        spec=RaidTeam,
+        name="Test RaidTeam",
         number=1,
         captain=Mock(
-            spec=Participant,
+            spec=RaidParticipant,
             name="Doe",
             firstname="John",
             birthday=datetime.datetime(1990, 1, 1, tzinfo=datetime.UTC),
@@ -845,7 +849,7 @@ def mock_security_file():
 @pytest.fixture
 def mock_participant():
     return Mock(
-        spec=Participant,
+        spec=RaidParticipant,
         name="Doe",
         firstname="John",
         birthday=datetime.datetime(1990, 1, 1, tzinfo=datetime.UTC),
@@ -897,7 +901,7 @@ async def test_set_team_number_utility_empty_database(
     # Create mock objects
     mock_db = mocker.AsyncMock()
     mock_team = mocker.Mock(
-        spec=Team,
+        spec=RaidTeam,
         id=str(uuid.uuid4()),
         difficulty=Difficulty.sports,
     )
@@ -930,7 +934,7 @@ async def test_set_team_number_utility_existing_teams(
     # Create mock objects
     mock_db = mocker.AsyncMock()
     mock_team = mocker.Mock(
-        spec=Team,
+        spec=RaidTeam,
         id=str(uuid.uuid4()),
         difficulty=Difficulty.expert,
     )
@@ -963,7 +967,7 @@ async def test_set_team_number_utility_no_difficulty(
     # Create mock objects
     mock_db = mocker.AsyncMock()
     mock_team = mocker.Mock(
-        spec=Team,
+        spec=RaidTeam,
         id=str(uuid.uuid4()),
         difficulty=None,
     )
@@ -987,7 +991,7 @@ async def test_set_team_number_utility_discovery_difficulty(
     # Create mock objects
     mock_db = mocker.AsyncMock()
     mock_team = mocker.Mock(
-        spec=Team,
+        spec=RaidTeam,
         id=str(uuid.uuid4()),
         difficulty=Difficulty.discovery,
     )

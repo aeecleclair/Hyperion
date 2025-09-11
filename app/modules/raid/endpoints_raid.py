@@ -61,7 +61,7 @@ module = Module(
 
 @module.router.get(
     "/raid/participants/{participant_id}",
-    response_model=schemas_raid.Participant,
+    response_model=schemas_raid.RaidParticipant,
     status_code=200,
 )
 async def get_participant_by_id(
@@ -86,11 +86,11 @@ async def get_participant_by_id(
 
 @module.router.post(
     "/raid/participants",
-    response_model=schemas_raid.Participant,
+    response_model=schemas_raid.RaidParticipant,
     status_code=201,
 )
 async def create_participant(
-    participant: schemas_raid.ParticipantBase,
+    participant: schemas_raid.RaidParticipantBase,
     user: models_users.CoreUser = Depends(is_user()),
     db: AsyncSession = Depends(get_db),
 ):
@@ -110,7 +110,7 @@ async def create_participant(
         raid_start_date=raid_information.raid_start_date,
     )
 
-    db_participant = models_raid.Participant(
+    db_participant = models_raid.RaidParticipant(
         **participant.__dict__,
         id=user.id,
         is_minor=is_minor,
@@ -124,7 +124,7 @@ async def create_participant(
 )
 async def update_participant(
     participant_id: str,
-    participant: schemas_raid.ParticipantUpdate,
+    participant: schemas_raid.RaidParticipantUpdate,
     user: models_users.CoreUser = Depends(is_user()),
     db: AsyncSession = Depends(get_db),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
@@ -232,11 +232,11 @@ async def update_participant(
 
 @module.router.post(
     "/raid/teams",
-    response_model=schemas_raid.Team,
+    response_model=schemas_raid.RaidTeam,
     status_code=201,
 )
 async def create_team(
-    team: schemas_raid.TeamBase,
+    team: schemas_raid.RaidTeamBase,
     user: models_users.CoreUser = Depends(is_user()),
     db: AsyncSession = Depends(get_db),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
@@ -253,7 +253,7 @@ async def create_team(
     if await cruds_raid.get_team_by_participant_id(user.id, db):
         raise HTTPException(status_code=403, detail="You already have a team.")
 
-    db_team = models_raid.Team(
+    db_team = models_raid.RaidTeam(
         id=str(uuid.uuid4()),
         name=team.name,
         number=None,
@@ -299,7 +299,7 @@ async def generate_teams_pdf(
 
 @module.router.get(
     "/raid/participants/{participant_id}/team",
-    response_model=schemas_raid.Team,
+    response_model=schemas_raid.RaidTeam,
     status_code=200,
 )
 async def get_team_by_participant_id(
@@ -326,7 +326,7 @@ async def get_team_by_participant_id(
 
 @module.router.get(
     "/raid/teams",
-    response_model=list[schemas_raid.TeamPreview],
+    response_model=list[schemas_raid.RaidTeamPreview],
     status_code=200,
 )
 async def get_all_teams(
@@ -341,7 +341,7 @@ async def get_all_teams(
 
 @module.router.get(
     "/raid/teams/{team_id}",
-    response_model=schemas_raid.Team,
+    response_model=schemas_raid.RaidTeam,
     status_code=200,
 )
 async def get_team_by_id(
@@ -361,7 +361,7 @@ async def get_team_by_id(
 )
 async def update_team(
     team_id: str,
-    team: schemas_raid.TeamUpdate,
+    team: schemas_raid.RaidTeamUpdate,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
     drive_file_manager: DriveFileManager = Depends(get_drive_file_manager),
@@ -372,7 +372,7 @@ async def update_team(
     """
     existing_team = await cruds_raid.get_team_by_participant_id(user.id, db)
     if existing_team is None:
-        raise HTTPException(status_code=404, detail="Team not found.")
+        raise HTTPException(status_code=404, detail="RaidTeam not found.")
     if existing_team.id != team_id:
         raise HTTPException(status_code=403, detail="You can only edit your own team.")
     await cruds_raid.update_team(team_id, team, db)
@@ -557,7 +557,7 @@ async def read_document(
             )
         raise HTTPException(
             status_code=404,
-            detail="Participant owning the document not found.",
+            detail="RaidParticipant owning the document not found.",
         )
 
     if not await cruds_raid.are_user_in_the_same_team(
@@ -781,7 +781,7 @@ async def create_invite_token(
     team = await cruds_raid.get_team_by_participant_id(user.id, db)
 
     if not team:
-        raise HTTPException(status_code=404, detail="Team not found.")
+        raise HTTPException(status_code=404, detail="RaidTeam not found.")
 
     if team.id != team_id:
         raise HTTPException(status_code=403, detail="You are not in the team.")
@@ -835,10 +835,10 @@ async def join_team(
     team = await cruds_raid.get_team_by_id(invite_token.team_id, db)
 
     if not team:
-        raise HTTPException(status_code=404, detail="Team not found.")
+        raise HTTPException(status_code=404, detail="RaidTeam not found.")
 
     if team.second_id:
-        raise HTTPException(status_code=403, detail="Team is already full.")
+        raise HTTPException(status_code=403, detail="RaidTeam is already full.")
 
     if team.captain_id == user.id:
         raise HTTPException(
@@ -858,7 +858,7 @@ async def join_team(
 
 @module.router.post(
     "/raid/teams/{team_id}/kick/{participant_id}",
-    response_model=schemas_raid.Team,
+    response_model=schemas_raid.RaidTeam,
     status_code=201,
 )
 async def kick_team_member(
@@ -874,7 +874,7 @@ async def kick_team_member(
     """
     team = await cruds_raid.get_team_by_id(team_id, db)
     if not team:
-        raise HTTPException(status_code=404, detail="Team not found.")
+        raise HTTPException(status_code=404, detail="RaidTeam not found.")
     if team.captain_id == participant_id:
         if not team.second_id:
             raise HTTPException(
@@ -887,7 +887,7 @@ async def kick_team_member(
             db,
         )
     elif team.second_id != participant_id:
-        raise HTTPException(status_code=404, detail="Participant not found.")
+        raise HTTPException(status_code=404, detail="RaidParticipant not found.")
     await cruds_raid.update_team_second_id(team_id, None, db)
     await post_update_actions(
         team,
@@ -900,7 +900,7 @@ async def kick_team_member(
 
 @module.router.post(
     "/raid/teams/merge",
-    response_model=schemas_raid.Team,
+    response_model=schemas_raid.RaidTeam,
     status_code=201,
 )
 async def merge_teams(
@@ -917,11 +917,11 @@ async def merge_teams(
     team1 = await cruds_raid.get_team_by_id(team1_id, db)
     team2 = await cruds_raid.get_team_by_id(team2_id, db)
     if not team1 or not team2:
-        raise HTTPException(status_code=404, detail="Team not found.")
+        raise HTTPException(status_code=404, detail="RaidTeam not found.")
     if team1.second_id or team2.second_id:
         raise HTTPException(status_code=403, detail="One of the team is full.")
     if team1.captain_id == team2.captain_id:
-        raise HTTPException(status_code=403, detail="Teams are the same.")
+        raise HTTPException(status_code=403, detail="RaidTeams are the same.")
     new_name = f"{team1.name} & {team2.name}"
     new_difficulty = team1.difficulty if team1.difficulty == team2.difficulty else None
     new_meeting_place = (
@@ -930,7 +930,7 @@ async def merge_teams(
     new_number = (
         min(team1.number, team2.number) if team1.number and team2.number else None
     )
-    team_update: schemas_raid.TeamUpdate = schemas_raid.TeamUpdate(
+    team_update: schemas_raid.RaidTeamUpdate = schemas_raid.RaidTeamUpdate(
         name=new_name,
         difficulty=new_difficulty,
         meeting_place=new_meeting_place,
@@ -1161,7 +1161,7 @@ async def get_payment_url(
     )
     hyperion_error_logger.info(f"RAID: Logging Checkout id {checkout.id}")
     await cruds_raid.create_participant_checkout(
-        models_raid.ParticipantCheckout(
+        models_raid.RaidParticipantCheckout(
             id=str(uuid.uuid4()),
             participant_id=user.id,
             # TODO: use UUID
