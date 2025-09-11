@@ -1,3 +1,5 @@
+import logging
+
 import requests
 from bs4 import BeautifulSoup
 from pydantic import BaseModel
@@ -5,6 +7,8 @@ from pydantic import BaseModel
 from app.modules.sport_competition import (
     schemas_sport_competition,
 )
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 class FFSUData(BaseModel):
@@ -66,9 +70,15 @@ def validate_participant_ffsu_license(
     user: schemas_sport_competition.CompetitionUser,
     ffsu_license: str,
 ):
-    ffsu_data = scrap_ffsu_licenses(
-        school.ffsu_id or "",
-        user.user.firstname,
-        user.user.name,
-    )
+    try:
+        ffsu_data = scrap_ffsu_licenses(
+            school.ffsu_id or "",
+            user.user.firstname,
+            user.user.name,
+        )
+    except Exception:
+        hyperion_error_logger.exception(
+            f"Error while scraping FFSU data for user {user.user.id}",
+        )
+        return False
     return any(ffsu_license in data.licenses for data in ffsu_data)

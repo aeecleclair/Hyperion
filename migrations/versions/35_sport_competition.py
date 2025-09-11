@@ -304,6 +304,10 @@ def upgrade() -> None:
             ["product_id"],
             ["competition_product.id"],
         ),
+        sa.ForeignKeyConstraint(
+            ["edition_id"],
+            ["competition_edition.id"],
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
