@@ -390,7 +390,7 @@ class PurchaseEdit(BaseModel):
 
 
 class PaymentBase(BaseModel):
-    total: int
+    total: NonNegativeInt
 
 
 class PaymentComplete(PaymentBase):

@@ -197,7 +197,7 @@ async def delete_participant(
 async def delete_all_participant(
     db: AsyncSession,
 ) -> None:
-    await db.execute(delete(models_raid.Participant))
+    await db.execute(delete(models_raid.RaidParticipant))
     await db.flush()
 
 
