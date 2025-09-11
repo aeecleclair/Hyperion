@@ -57,7 +57,7 @@ def get_competition_user_from_token_with_scopes(
     return get_user_from_user_id
 
 
-def is_user_a_member_of_extended(
+def is_competition_user(
     group_id: GroupType | None = None,
     comptition_group_id: CompetitionGroupType | None = None,
     exclude_external: bool = False,

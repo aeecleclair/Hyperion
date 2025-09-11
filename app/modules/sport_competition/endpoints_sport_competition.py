@@ -19,10 +19,13 @@ from app.modules.sport_competition import (
 )
 from app.modules.sport_competition.dependencies_sport_competition import (
     get_current_edition,
-    is_user_a_member_of_extended,
+    is_competition_user,
 )
 from app.modules.sport_competition.types_sport_competition import (
     CompetitionGroupType,
+)
+from app.modules.sport_competition.utils_sport_competition import (
+    checksport_category_compatibility,
 )
 from app.types.module import Module
 from app.utils.tools import is_user_member_of_any_group
@@ -68,7 +71,7 @@ async def create_sport(
         raise HTTPException(
             status_code=400,
             detail="A sport with this name already exists",
-        ) from None
+        )
     sport = schemas_sport_competition.Sport(**sport.model_dump(), id=str(uuid4()))
     await cruds_sport_competition.add_sport(sport, db)
     return sport
@@ -93,7 +96,7 @@ async def edit_sport(
         raise HTTPException(
             status_code=404,
             detail="Sport not found in the database",
-        ) from None
+        )
     if sport.name is not None:
         existing_sport = await cruds_sport_competition.load_sport_by_name(
             sport.name,
@@ -103,7 +106,7 @@ async def edit_sport(
             raise HTTPException(
                 status_code=400,
                 detail="A sport with this name already exists",
-            ) from None
+            )
     await cruds_sport_competition.update_sport(
         sport_id,
         sport,
@@ -126,12 +129,12 @@ async def delete_sport(
         raise HTTPException(
             status_code=404,
             detail="Sport not found in the database",
-        ) from None
+        )
     if stored.active:
         raise HTTPException(
             status_code=400,
             detail="Sport is activated and cannot be deleted",
-        ) from None
+        )
     await cruds_sport_competition.delete_sport_by_id(sport_id, db)
 
 
@@ -184,7 +187,7 @@ async def create_edition(
         raise HTTPException(
             status_code=400,
             detail="An edition with this name already exists",
-        ) from None
+        )
     edition = schemas_sport_competition.CompetitionEdition(
         **edition.model_dump(),
         id=uuid4(),
@@ -215,7 +218,7 @@ async def activate_edition(
         raise HTTPException(
             status_code=404,
             detail="Edition not found in the database",
-        ) from None
+        )
     await cruds_sport_competition.set_active_edition(edition_id, db)
 
 
@@ -242,15 +245,12 @@ async def enable_inscription(
         raise HTTPException(
             status_code=404,
             detail="Edition not found in the database",
-        ) from None
+        )
     if not stored.active:
         raise HTTPException(
             status_code=400,
             detail="Edition is not active, cannot patch inscription",
-        ) from None
-    hyperion_error_logger.debug(
-        f"Setting inscription enabled to {enable} for edition {edition_id}",
-    )
+        )
     await cruds_sport_competition.patch_edition_inscription(edition_id, enable, db)
 
 
@@ -273,7 +273,7 @@ async def edit_edition(
         raise HTTPException(
             status_code=404,
             detail="Edition not found in the database",
-        ) from None
+        )
     await cruds_sport_competition.update_edition(edition_id, edition_edit, db)
 
 
@@ -380,7 +380,7 @@ async def create_competition_user(
         raise HTTPException(
             status_code=400,
             detail="Competition user already exists",
-        ) from None
+        )
     user_simple = schemas_sport_competition.CompetitionUserSimple(
         user_id=current_user.id,
         edition_id=edition.id,
@@ -422,12 +422,12 @@ async def edit_current_user_competition(
         raise HTTPException(
             status_code=404,
             detail="Competition user not found",
-        ) from None
+        )
     if stored.validated:
         raise HTTPException(
             status_code=400,
             detail="Cannot edit a validated competition user",
-        ) from None
+        )
     await cruds_sport_competition.update_competition_user(
         current_user.id,
         edition.id,
@@ -466,7 +466,7 @@ async def edit_competition_user(
         raise HTTPException(
             status_code=404,
             detail="Competition user not found",
-        ) from None
+        )
     await cruds_sport_competition.update_competition_user(user_id, edition.id, user, db)
 
 
@@ -548,7 +548,7 @@ async def get_user_groups(
         raise HTTPException(
             status_code=404,
             detail="User not found in the database",
-        ) from None
+        )
     return await cruds_sport_competition.load_user_competition_groups_memberships(
         user_id,
         edition.id,
@@ -579,7 +579,7 @@ async def add_user_to_group(
         raise HTTPException(
             status_code=404,
             detail="User not found in the database",
-        ) from None
+        )
     membership = await cruds_sport_competition.load_user_competition_groups_memberships(
         user_id,
         edition.id,
@@ -589,7 +589,7 @@ async def add_user_to_group(
         raise HTTPException(
             status_code=400,
             detail="User is already a member of this group",
-        ) from None
+        )
     await cruds_sport_competition.add_user_to_group(user_id, group, edition.id, db)
     return schemas_sport_competition.UserGroupMembership(
         user_id=user_to_add.id,
@@ -624,7 +624,7 @@ async def remove_user_from_group(
         raise HTTPException(
             status_code=404,
             detail="User is not a member of this group",
-        ) from None
+        )
     await cruds_sport_competition.remove_user_from_group(
         user_id,
         group,
@@ -668,7 +668,7 @@ async def get_school(
         raise HTTPException(
             status_code=404,
             detail="School not found in the database",
-        ) from None
+        )
     return school
 
 
@@ -691,13 +691,13 @@ async def create_school(
         raise HTTPException(
             status_code=404,
             detail="School not found in the database",
-        ) from None
+        )
     stored = await cruds_sport_competition.load_school_base_by_id(school.school_id, db)
     if stored is not None:
         raise HTTPException(
             status_code=400,
             detail="School extension already exists",
-        ) from None
+        )
     await cruds_sport_competition.add_school(school, db)
     return school
 
@@ -724,7 +724,7 @@ async def edit_school(
         raise HTTPException(
             status_code=404,
             detail="School not found in the database",
-        ) from None
+        )
     await cruds_sport_competition.update_school(school_id, school, db)
 
 
@@ -749,12 +749,12 @@ async def delete_school(
         raise HTTPException(
             status_code=404,
             detail="School not found in the database",
-        ) from None
+        )
     if stored.active:
         raise HTTPException(
             status_code=400,
             detail="School is activated and cannot be deleted",
-        ) from None
+        )
     await cruds_sport_competition.delete_school_by_id(school_id, db)
 
 
@@ -785,7 +785,7 @@ async def create_school_general_quota(
         raise HTTPException(
             status_code=404,
             detail="School not found in the database",
-        ) from None
+        )
     stored = await cruds_sport_competition.get_school_general_quota(
         school_id,
         edition.id,
@@ -795,7 +795,7 @@ async def create_school_general_quota(
         raise HTTPException(
             status_code=400,
             detail="General quota already exists for this school",
-        ) from None
+        )
     quota = schemas_sport_competition.SchoolGeneralQuota(
         school_id=school_id,
         edition_id=edition.id,
@@ -827,7 +827,7 @@ async def edit_school_general_quota(
         raise HTTPException(
             status_code=404,
             detail="School not found in the database",
-        ) from None
+        )
     stored = await cruds_sport_competition.get_school_general_quota(
         school_id,
         edition.id,
@@ -837,7 +837,7 @@ async def edit_school_general_quota(
         raise HTTPException(
             status_code=404,
             detail="General quota not found for this school",
-        ) from None
+        )
     await cruds_sport_competition.update_school_general_quota(
         school_id,
         edition.id,
@@ -871,7 +871,7 @@ async def get_quotas_for_sport(
         raise HTTPException(
             status_code=404,
             detail="Sport not found in the database",
-        ) from None
+        )
     return await cruds_sport_competition.load_all_sport_quotas_by_sport_id(
         sport_id,
         edition.id,
@@ -896,7 +896,7 @@ async def get_quotas_for_school(
         raise HTTPException(
             status_code=404,
             detail="School not found in the database",
-        ) from None
+        )
     return await cruds_sport_competition.load_all_sport_quotas_by_school_id(
         school_id,
         edition.id,
@@ -927,13 +927,13 @@ async def create_sport_quota(
         raise HTTPException(
             status_code=404,
             detail="School not found in the database",
-        ) from None
+        )
     sport = await cruds_sport_competition.load_sport_by_id(sport_id, db)
     if sport is None:
         raise HTTPException(
             status_code=404,
             detail="Sport not found in the database",
-        ) from None
+        )
     stored = await cruds_sport_competition.load_sport_quota_by_ids(
         school_id,
         sport_id,
@@ -941,7 +941,7 @@ async def create_sport_quota(
         db,
     )
     if stored is not None:
-        raise HTTPException(status_code=400, detail="Quota already exists") from None
+        raise HTTPException(status_code=400, detail="Quota already exists")
     quota = schemas_sport_competition.Quota(
         school_id=school_id,
         sport_id=sport_id,
@@ -980,7 +980,7 @@ async def edit_sport_quota(
         raise HTTPException(
             status_code=404,
             detail="Quota not found in the database",
-        ) from None
+        )
     await cruds_sport_competition.update_sport_quota(
         school_id,
         sport_id,
@@ -1017,7 +1017,7 @@ async def delete_sport_quota(
         raise HTTPException(
             status_code=404,
             detail="Quota not found in the database",
-        ) from None
+        )
     await cruds_sport_competition.delete_sport_quota_by_ids(
         school_id,
         sport_id,
@@ -1028,41 +1028,6 @@ async def delete_sport_quota(
 
 # endregion: Sport Quotas
 # region: Teams
-
-
-async def check_team_consistency(
-    school_id: UUID,
-    sport_id: UUID,
-    team_id: UUID,
-    db: AsyncSession,
-    edition: schemas_sport_competition.CompetitionEdition = Depends(
-        get_current_edition,
-    ),
-) -> schemas_sport_competition.TeamComplete:
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
-    if school is None:
-        raise HTTPException(
-            status_code=404,
-            detail="School not found in the database",
-        ) from None
-    sport = await cruds_sport_competition.load_sport_by_id(sport_id, db)
-    if sport is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Sport not found in the database",
-        ) from None
-    team = await cruds_sport_competition.load_team_by_id(team_id, db)
-    if team is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Team not found in the database",
-        ) from None
-    if team.school_id != school_id or team.sport_id != sport_id:
-        raise HTTPException(
-            status_code=403,
-            detail="Team given does not belong to school and sport",
-        ) from None
-    return team
 
 
 @module.router.get(
@@ -1084,7 +1049,7 @@ async def get_teams_for_sport(
         raise HTTPException(
             status_code=404,
             detail="Sport not found in the database",
-        ) from None
+        )
     return await cruds_sport_competition.load_all_teams_by_sport_id(
         sport_id,
         edition.id,
@@ -1110,13 +1075,13 @@ async def get_sport_teams_for_school_and_sport(
         raise HTTPException(
             status_code=404,
             detail="School not found in the database",
-        ) from None
+        )
     sport = await cruds_sport_competition.load_sport_by_id(sport_id, db)
     if sport is None:
         raise HTTPException(
             status_code=404,
             detail="Sport not found in the database",
-        ) from None
+        )
     return await cruds_sport_competition.load_all_teams_by_school_and_sport_ids(
         school_id,
         sport_id,
@@ -1138,17 +1103,48 @@ async def create_team(
     ),
     user: schemas_users.CoreUser = Depends(is_user()),
 ) -> schemas_sport_competition.Team:
-    if user.id != team_info.captain_id and GroupType.competition_admin.value not in [
+    if GroupType.competition_admin.value not in [
         group.id for group in user.groups
-    ]:
-        raise HTTPException(status_code=403, detail="Unauthorized action") from None
+    ] and (user.id != team_info.captain_id or user.school_id != team_info.school_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Unauthorized action",
+        )
+    sport = await cruds_sport_competition.load_sport_by_id(team_info.sport_id, db)
+    if sport is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Sport not found in the database",
+        )
+    if sport.team_size == 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Sport does not support teams, only individual participants",
+        )
     global_team = await cruds_sport_competition.load_team_by_name(
         team_info.name,
         edition.id,
         db,
     )
     if global_team is not None:
-        raise HTTPException(status_code=400, detail="Team already exists") from None
+        raise HTTPException(status_code=400, detail="Team name already taken")
+    captain = await cruds_sport_competition.load_competition_user_by_id(
+        team_info.captain_id,
+        edition.id,
+        db,
+    )
+    if (
+        captain is None
+        or captain.user.school_id != team_info.school_id
+        or not checksport_category_compatibility(
+            captain.sport_category,
+            sport.sport_category,
+        )
+    ):
+        raise HTTPException(
+            status_code=404,
+            detail="Captain user not found",
+        )
     nb_teams = await cruds_sport_competition.count_teams_by_school_and_sport_ids(
         team_info.school_id,
         team_info.sport_id,
@@ -1163,7 +1159,7 @@ async def create_team(
     )
     if quotas is not None and quotas.team_quota is not None:
         if nb_teams >= quotas.team_quota:
-            raise HTTPException(status_code=400, detail="Team quota reached") from None
+            raise HTTPException(status_code=400, detail="Team quota reached")
     team = schemas_sport_competition.Team(
         id=uuid4(),
         school_id=team_info.school_id,
@@ -1192,21 +1188,38 @@ async def edit_team(
         raise HTTPException(
             status_code=404,
             detail="Team not found in the database",
-        ) from None
+        )
     if user.id != stored.captain_id and GroupType.competition_admin.value not in [
         group.id for group in user.groups
     ]:
-        raise HTTPException(status_code=403, detail="Unauthorized action") from None
+        raise HTTPException(status_code=403, detail="Unauthorized action")
     if team_info.captain_id is not None and team_info.captain_id != stored.captain_id:
-        captain = await cruds_users.get_user_by_id(
+        sport = await cruds_sport_competition.load_sport_by_id(
+            stored.sport_id,
             db,
-            team_info.captain_id,
         )
-        if captain is None:
+        if sport is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Sport not found in the database",
+            )
+        captain = await cruds_sport_competition.load_competition_user_by_id(
+            team_info.captain_id,
+            stored.edition_id,
+            db,
+        )
+        if (
+            captain is None
+            or captain.user.school_id != stored.school_id
+            or not checksport_category_compatibility(
+                captain.sport_category,
+                sport.sport_category,
+            )
+        ):
             raise HTTPException(
                 status_code=404,
                 detail="Captain user not found",
-            ) from None
+            )
     if team_info.name is not None and team_info.name != stored.name:
         global_team = await cruds_sport_competition.load_team_by_name(
             team_info.name,
@@ -1217,7 +1230,7 @@ async def edit_team(
             raise HTTPException(
                 status_code=400,
                 detail="Team with this name already exists",
-            ) from None
+            )
     await cruds_sport_competition.update_team(team_id, team_info, db)
 
 
@@ -1235,11 +1248,11 @@ async def delete_team(
         raise HTTPException(
             status_code=404,
             detail="Team not found in the database",
-        ) from None
+        )
     if user.id != stored.captain_id and GroupType.competition_admin.value not in [
         group.id for group in user.groups
     ]:
-        raise HTTPException(status_code=403, detail="Unauthorized action") from None
+        raise HTTPException(status_code=403, detail="Unauthorized action")
     await cruds_sport_competition.delete_team_by_id(stored.id, db)
 
 
@@ -1267,61 +1280,7 @@ async def get_current_user_participant(
         raise HTTPException(
             status_code=404,
             detail="Participant not found in the database",
-        ) from None
-    return participant
-
-
-@module.router.post(
-    "/competition/sports/{sport_id}/participate",
-    status_code=201,
-    response_model=schemas_sport_competition.Participant,
-)
-async def join_sport(
-    sport_id: UUID,
-    participant_info: schemas_sport_competition.ParticipantInfo,
-    db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user()),
-    edition: schemas_sport_competition.CompetitionEdition = Depends(
-        get_current_edition,
-    ),
-) -> schemas_sport_competition.Participant:
-    sport = await cruds_sport_competition.load_sport_by_id(sport_id, db)
-    if sport is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Sport not found in the database",
-        ) from None
-    if sport.team_size > 1:
-        if participant_info.team_id is None:
-            raise HTTPException(
-                status_code=400,
-                detail="Sport declared needs to be played in a team",
-            ) from None
-        await check_team_consistency(
-            user.school_id,
-            sport_id,
-            participant_info.team_id,
-            db,
         )
-    elif participant_info.team_id is not None:
-        raise HTTPException(
-            status_code=400,
-            detail="Sport declared needs to be played individually",
-        ) from None
-    participant = schemas_sport_competition.Participant(
-        user_id=user.id,
-        sport_id=sport_id,
-        edition_id=edition.id,
-        school_id=user.school_id,
-        license=participant_info.license,
-        substitute=participant_info.substitute,
-        team_id=participant_info.team_id,
-        created_at=datetime.now(UTC),
-    )
-    await cruds_sport_competition.add_participant(
-        participant,
-        db,
-    )
     return participant
 
 
@@ -1346,7 +1305,7 @@ async def get_participants_for_sport(
         raise HTTPException(
             status_code=404,
             detail="Sport not found in the database",
-        ) from None
+        )
     return await cruds_sport_competition.load_participants_by_sport_id(
         sport_id,
         edition.id,
@@ -1362,7 +1321,7 @@ async def get_participants_for_school(
     school_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_a_member_of_extended(
+        is_competition_user(
             comptition_group_id=CompetitionGroupType.schools_bds,
         ),
     ),
@@ -1378,12 +1337,111 @@ async def get_participants_for_school(
         raise HTTPException(
             status_code=403,
             detail="Unauthorized action",
-        ) from None
+        )
     return await cruds_sport_competition.load_participants_by_school_id(
         school_id,
         edition.id,
         db,
     )
+
+
+@module.router.post(
+    "/competition/sports/{sport_id}/participate",
+    status_code=201,
+    response_model=schemas_sport_competition.Participant,
+)
+async def join_sport(
+    sport_id: UUID,
+    participant_info: schemas_sport_competition.ParticipantInfo,
+    db: AsyncSession = Depends(get_db),
+    user: schemas_sport_competition.CompetitionUser = Depends(is_competition_user()),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> schemas_sport_competition.Participant:
+    sport = await cruds_sport_competition.load_sport_by_id(sport_id, db)
+    if sport is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Sport not found in the database",
+        )
+    if not checksport_category_compatibility(
+        user.sport_category,
+        sport.sport_category,
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Sport category does not match user sport category",
+        )
+    if sport.team_size > 1:
+        if participant_info.team_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Sport declared needs to be played in a team",
+            )
+        team = await cruds_sport_competition.load_team_by_id(
+            participant_info.team_id,
+            db,
+        )
+        if team is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Team not found in the database",
+            )
+        if team.sport_id != sport_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Team does not belong to the sport",
+            )
+        if team.school_id != user.user.school_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Unauthorized action, team does not belong to your school",
+            )
+        if (
+            not participant_info.substitute
+            and len(
+                [user for user in team.participants if not user.substitute],
+            )
+            >= sport.team_size
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Maximum number of players in the team reached",
+            )
+        if (
+            participant_info.substitute
+            and sport.substitute_max is not None
+            and len(
+                [user for user in team.participants if user.substitute],
+            )
+            >= sport.substitute_max
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Maximum number of substitutes in the team reached",
+            )
+
+    elif participant_info.team_id is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Sport declared needs to be played individually",
+        )
+    participant = schemas_sport_competition.Participant(
+        user_id=user.user_id,
+        sport_id=sport_id,
+        edition_id=edition.id,
+        school_id=user.user.school_id,
+        license=participant_info.license,
+        substitute=participant_info.substitute,
+        team_id=participant_info.team_id,
+        created_at=datetime.now(UTC),
+    )
+    await cruds_sport_competition.add_participant(
+        participant,
+        db,
+    )
+    return participant
 
 
 # TODO: change logic to validate CompetitionUser and not CompetitionParticipant
@@ -1396,7 +1454,7 @@ async def validate_participant(
     sport_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_a_member_of_extended(
+        is_competition_user(
             comptition_group_id=CompetitionGroupType.schools_bds,
         ),
     ),
@@ -1414,7 +1472,7 @@ async def validate_participant(
         raise HTTPException(
             status_code=404,
             detail="Participant not found in the database",
-        ) from None
+        )
     if (
         GroupType.competition_admin.value
         not in [group.id for group in user.user.groups]
@@ -1423,13 +1481,13 @@ async def validate_participant(
         raise HTTPException(
             status_code=403,
             detail="Unauthorized action",
-        ) from None
+        )
     sport = await cruds_sport_competition.load_sport_by_id(sport_id, db)
     if sport is None:
         raise HTTPException(
             status_code=404,
             detail="Sport not found in the database",
-        ) from None
+        )
     school_quota = await cruds_sport_competition.load_sport_quota_by_ids(
         user.user.school_id,
         sport_id,
@@ -1447,42 +1505,113 @@ async def validate_participant(
             raise HTTPException(
                 status_code=400,
                 detail="Participant quota reached",
-            ) from None
-    if sport.team_size > 1:
-        team = await cruds_sport_competition.load_team_by_id(
-            participant.team_id,
-            db,
-        )
-        if team is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Team not found in the database",
-            ) from None
-        if (
-            not participant.substitute
-            and len(
-                [user for user in team.participants if not user.substitute],
             )
-            >= sport.team_size
-        ):
-            raise HTTPException(
-                status_code=400,
-                detail="Maximum number of players in the team reached",
-            ) from None
-        if (
-            participant.substitute
-            and sport.substitute_max is not None
-            and len(
-                [user for user in team.participants if user.substitute],
-            )
-            >= sport.substitute_max
-        ):
-            raise HTTPException(
-                status_code=400,
-                detail="Maximum number of substitutes in the team reached",
-            ) from None
     await cruds_sport_competition.validate_participant(
         user_id,
+        edition.id,
+        db,
+    )
+
+
+@module.router.patch(
+    "/competition/participants/{user_id}/sports/{sport_id}/invalidate",
+    status_code=204,
+)
+async def invalidate_participant(
+    user_id: str,
+    sport_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: schemas_sport_competition.CompetitionUser = Depends(
+        is_competition_user(
+            comptition_group_id=CompetitionGroupType.schools_bds,
+        ),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> None:
+    participant = await cruds_sport_competition.load_participant_by_ids(
+        user_id,
+        sport_id,
+        edition.id,
+        db,
+    )
+    if participant is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Participant not found in the database",
+        )
+    if (
+        GroupType.competition_admin.value
+        not in [group.id for group in user.user.groups]
+        and user.user.school_id != participant.school_id
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Unauthorized action",
+        )
+    payments = await cruds_sport_competition.load_user_payments(
+        user_id,
+        edition.id,
+        db,
+    )
+    if len(payments) > 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot invalidate participant with payments",
+        )
+    await cruds_sport_competition.invalidate_participant(
+        user_id,
+        edition.id,
+        db,
+    )
+
+
+@module.router.delete(
+    "/competition/participants/{user_id}/sports/{sport_id}",
+    status_code=204,
+)
+async def delete_participant(
+    user_id: str,
+    sport_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: schemas_sport_competition.CompetitionUser = Depends(
+        is_competition_user(
+            comptition_group_id=CompetitionGroupType.schools_bds,
+        ),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> None:
+    participant = await cruds_sport_competition.load_participant_by_ids(
+        user_id,
+        sport_id,
+        edition.id,
+        db,
+    )
+    if participant is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Participant not found in the database",
+        )
+    if participant.user.validated:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete a validated participant",
+        )
+    if (
+        GroupType.competition_admin.value
+        not in [group.id for group in user.user.groups]
+        and user.user.school_id != participant.school_id
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Unauthorized action",
+        )
+    await cruds_sport_competition.delete_participant_by_ids(
+        user_id,
+        sport_id,
         edition.id,
         db,
     )
@@ -1509,7 +1638,7 @@ async def get_matches_for_sport_and_edition(
         raise HTTPException(
             status_code=404,
             detail="Sport not found in the database",
-        ) from None
+        )
     return await cruds_sport_competition.load_all_matches_by_sport_id(
         sport_id,
         edition.id,
@@ -1535,13 +1664,13 @@ async def get_matches_for_school_sport_and_edition(
         raise HTTPException(
             status_code=404,
             detail="School not found in the database",
-        ) from None
+        )
     sport = await cruds_sport_competition.load_sport_by_id(sport_id, db)
     if sport is None:
         raise HTTPException(
             status_code=404,
             detail="Sport not found in the database",
-        ) from None
+        )
     return await cruds_sport_competition.load_all_matches_by_school_id(
         school_id,
         edition.id,
@@ -1560,33 +1689,33 @@ def check_match_consistency(
         raise HTTPException(
             status_code=400,
             detail="Match edition does not match the current edition",
-        ) from None
+        )
     if team1.sport_id != sport_id or team2.sport_id != sport_id:
         raise HTTPException(
             status_code=403,
             detail="Teams do not belong to the sport",
-        ) from None
+        )
     if team1.edition_id != edition.id or team2.edition_id != edition.id:
         raise HTTPException(
             status_code=403,
             detail="Teams do not belong to the current edition",
-        ) from None
+        )
     if match_info.team1_id == match_info.team2_id:
         raise HTTPException(
             status_code=400,
             detail="Teams cannot play against themselves",
-        ) from None
+        )
     if match_info.date is not None:
         if match_info.date < edition.start_date:
             raise HTTPException(
                 status_code=400,
                 detail="Match date is before the edition start date",
-            ) from None
+            )
         if match_info.date > edition.end_date:
             raise HTTPException(
                 status_code=400,
                 detail="Match date is after the edition end date",
-            ) from None
+            )
 
 
 @module.router.post(
@@ -1612,19 +1741,19 @@ async def create_match(
         raise HTTPException(
             status_code=404,
             detail="Sport not found in the database",
-        ) from None
+        )
     team1 = await cruds_sport_competition.load_team_by_id(match_info.team1_id, db)
     if team1 is None:
         raise HTTPException(
             status_code=404,
             detail="Team 1 not found in the database",
-        ) from None
+        )
     team2 = await cruds_sport_competition.load_team_by_id(match_info.team2_id, db)
     if team2 is None:
         raise HTTPException(
             status_code=404,
             detail="Team 2 not found in the database",
-        ) from None
+        )
 
     check_match_consistency(sport_id, match_info, team1, team2, edition)
 
@@ -1669,19 +1798,19 @@ async def edit_match(
         raise HTTPException(
             status_code=404,
             detail="Match not found in the database",
-        ) from None
+        )
     team1 = await cruds_sport_competition.load_team_by_id(match_info.team1_id, db)
     if team1 is None:
         raise HTTPException(
             status_code=404,
             detail="Team 1 not found in the database",
-        ) from None
+        )
     team2 = await cruds_sport_competition.load_team_by_id(match_info.team2_id, db)
     if team2 is None:
         raise HTTPException(
             status_code=404,
             detail="Team 2 not found in the database",
-        ) from None
+        )
     new_match = match.model_copy(update=match_info.model_dump(exclude_unset=True))
     check_match_consistency(match.sport_id, new_match, team1, team2, edition)
 
@@ -1699,7 +1828,7 @@ async def delete_match(
         raise HTTPException(
             status_code=404,
             detail="Match not found in the database",
-        ) from None
+        )
     await cruds_sport_competition.delete_match_by_id(match_id, db)
 
 
@@ -2360,7 +2489,7 @@ async def get_payment_url(
         payer_user=user_schema,
         db=db,
     )
-    hyperion_error_logger.info(f"CDR: Logging Checkout id {checkout.id}")
+    hyperion_error_logger.info(f"Competition: Logging Checkout id {checkout.id}")
     cruds_sport_competition.create_checkout(
         db=db,
         checkout=schemas_sport_competition.Checkout(
@@ -2389,7 +2518,7 @@ async def validate_payment(
     )
     if not checkout:
         hyperion_error_logger.error(
-            f"CDR payment callback: user checkout {checkout_id} not found.",
+            f"Competition payment callback: user checkout {checkout_id} not found.",
         )
         raise ValueError(f"User checkout {checkout_id} not found.")  # noqa: TRY003
 

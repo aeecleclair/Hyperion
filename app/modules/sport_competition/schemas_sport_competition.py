@@ -205,14 +205,14 @@ class TeamBase(BaseModel):
     edition_id: UUID
     school_id: UUID
     sport_id: UUID
-    captain_id: UUID
+    captain_id: str
 
 
 class TeamInfo(BaseModel):
     name: str
     school_id: UUID
     sport_id: UUID
-    captain_id: UUID
+    captain_id: str
 
 
 class Team(TeamBase):

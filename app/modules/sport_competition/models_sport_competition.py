@@ -167,9 +167,7 @@ class CompetitionTeam(Base):
     school_id: Mapped[UUID] = mapped_column(
         ForeignKey("competition_school_extension.school_id"),
     )
-    edition_id: Mapped[UUID] = mapped_column(
-        ForeignKey("competition_edition.id"),
-    )
+    edition_id: Mapped[UUID] = mapped_column(ForeignKey("competition_edition.id"))
     name: Mapped[str]
     captain_id: Mapped[str]
     created_at: Mapped[datetime]

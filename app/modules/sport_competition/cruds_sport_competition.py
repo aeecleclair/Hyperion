@@ -22,7 +22,7 @@ from app.modules.sport_competition.utils_sport_competition import (
     team_model_to_schema,
 )
 
-logger = logging.getLogger("hyperion.error")
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 async def load_memberships_by_competition_group(
@@ -385,6 +385,24 @@ async def validate_participant(
             ),
         )
         .values(validated=True),
+    )
+    await db.flush()
+
+
+async def invalidate_participant(
+    user_id: str,
+    edition_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_sport_competition.CompetitionUser)
+        .where(
+            and_(
+                models_sport_competition.CompetitionUser.user_id == user_id,
+                models_sport_competition.CompetitionUser.edition_id == edition_id,
+            ),
+        )
+        .values(validated=False),
     )
     await db.flush()
 
@@ -901,7 +919,6 @@ async def load_team_by_id(
                 .where(models_sport_competition.CompetitionTeam.id == team_id)
                 .options(
                     selectinload(models_sport_competition.CompetitionTeam.participants),
-                    selectinload(models_sport_competition.CompetitionParticipant.user),
                 ),
             )
         )
@@ -955,9 +972,7 @@ async def load_all_teams_by_sport_id(
             models_sport_competition.CompetitionTeam.sport_id == sport_id,
             models_sport_competition.CompetitionTeam.edition_id == edition_id,
         )
-        .options(
-            selectinload(models_sport_competition.CompetitionTeam.participants),
-        ),
+        .options(selectinload(models_sport_competition.CompetitionTeam.participants)),
     )
     return [team_model_to_schema(team) for team in db_teams.scalars().all()]
 
@@ -1010,13 +1025,11 @@ async def count_teams_by_school_and_sport_ids(
     Count the number of teams for a given school and sport in a specific edition.
     """
     result = await db.execute(
-        select(func.count())
-        .where(
+        select(func.count()).where(
             models_sport_competition.CompetitionTeam.school_id == school_id,
             models_sport_competition.CompetitionTeam.sport_id == sport_id,
             models_sport_competition.CompetitionTeam.edition_id == edition_id,
-        )
-        .with_for_update(),
+        ),
     )
     return result.scalar() or 0
 
