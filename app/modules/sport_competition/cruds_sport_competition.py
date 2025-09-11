@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.core.schools import models_schools
-from app.core.users import models_users
+from app.core.users import models_users, schemas_users
 from app.modules.sport_competition import (
     models_sport_competition,
     schemas_sport_competition,
@@ -206,7 +206,7 @@ async def load_memberships_by_competition_group(
     group: CompetitionGroupType,
     edition_id: UUID,
     db: AsyncSession,
-) -> list[schemas_sport_competition.UserGroupMembership]:
+) -> list[schemas_sport_competition.UserGroupMembershipComplete]:
     membership = (
         (
             await db.execute(
@@ -221,10 +221,19 @@ async def load_memberships_by_competition_group(
         .all()
     )
     return [
-        schemas_sport_competition.UserGroupMembership(
+        schemas_sport_competition.UserGroupMembershipComplete(
             user_id=membership.user_id,
             group=membership.group,
             edition_id=membership.edition_id,
+            user=schemas_users.CoreUser(
+                id=membership.user.id,
+                account_type=membership.user.account_type,
+                school_id=membership.user.school_id,
+                email=membership.user.email,
+                name=membership.user.name,
+                firstname=membership.user.firstname,
+                groups=[],
+            ),
         )
         for membership in membership
     ]

@@ -626,7 +626,7 @@ async def invalidate_competition_user(
 
 @module.router.get(
     "/competition/groups/{group}",
-    response_model=list[schemas_sport_competition.UserGroupMembership],
+    response_model=list[schemas_sport_competition.UserGroupMembershipComplete],
 )
 async def get_group_members(
     group: CompetitionGroupType,
@@ -637,7 +637,7 @@ async def get_group_members(
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
-) -> list[schemas_sport_competition.UserGroupMembership]:
+) -> list[schemas_sport_competition.UserGroupMembershipComplete]:
     """
     Get all users in a specific competition group for the current edition.
     """

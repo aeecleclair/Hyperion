@@ -41,6 +41,11 @@ class CompetitionGroupMembership(Base):
         ForeignKey("competition_edition.id"),
         primary_key=True,
     )
+    user: Mapped[CoreUser] = relationship(
+        "CoreUser",
+        lazy="joined",
+        init=False,
+    )
 
 
 class CompetitionUser(Base):

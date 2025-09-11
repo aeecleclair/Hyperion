@@ -77,6 +77,10 @@ class UserGroupMembership(BaseModel):
     edition_id: UUID
 
 
+class UserGroupMembershipComplete(UserGroupMembership):
+    user: schemas_users.CoreUser
+
+
 class CompetitionUserBase(BaseModel):
     sport_category: SportCategory
     is_pompom: bool = False
