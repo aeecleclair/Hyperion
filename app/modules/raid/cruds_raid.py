@@ -304,7 +304,7 @@ async def create_document(
 
 async def assign_document(
     participant_id: str,
-    document_id: str,
+    document_id: str | None,
     document_key: str,
     db: AsyncSession,
 ) -> None:

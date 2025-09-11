@@ -1,6 +1,7 @@
 import logging
 import uuid
 from datetime import UTC, date, datetime
+from pathlib import Path
 
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -1130,12 +1131,6 @@ async def get_payment_url(
     if not participant:
         raise HTTPException(status_code=404, detail="Participant not found.")
 
-    if participant.validation_progress != 100:
-        raise HTTPException(
-            status_code=400,
-            detail="You must complete your registration before paying.",
-        )
-
     if not participant.payment:
         if (
             participant.student_card is not None
@@ -1176,4 +1171,64 @@ async def get_payment_url(
     )
     return schemas_raid.PaymentUrl(
         url=checkout.payment_url,
+    )
+
+
+@module.router.post(
+    "/raid/clear_documents",
+    status_code=204,
+)
+async def clear_documents(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
+):
+    """
+    For each participant, for all their document, check if this document exists, if not, clear the document from the participant
+    """
+
+    raid_data_path = Path("data/raid")
+    existing_file_ids = set()
+
+    if raid_data_path.exists():
+        for file_path in raid_data_path.glob("*.*"):
+            if file_path.is_file():
+                existing_file_ids.add(file_path.stem)
+
+    hyperion_error_logger.info(
+        f"RAID: Found {len(existing_file_ids)} existing files",
+    )
+
+    participants = await cruds_raid.get_all_participants(db)
+    cleared_documents_count = 0
+    checked_documents_count = 0
+
+    for participant in participants:
+        if not participant:
+            continue
+        documents = {
+            "id_card_id": participant.id_card_id,
+            "medical_certificate_id": participant.medical_certificate_id,
+            "student_card_id": participant.student_card_id,
+            "raid_rules_id": participant.raid_rules_id,
+            "parent_authorization_id": participant.parent_authorization_id,
+        }
+        for document_key, document_id in documents.items():
+            if document_id:
+                checked_documents_count += 1
+
+                file_exists = document_id in existing_file_ids
+
+                if not file_exists:
+                    await cruds_raid.assign_document(
+                        participant.id,
+                        None,
+                        document_key,
+                        db,
+                    )
+                    cleared_documents_count += 1
+
+    hyperion_error_logger.info(
+        f"RAID: Document cleanup completed. "
+        f"Checked {checked_documents_count} document references, "
+        f"cleared {cleared_documents_count} invalid ones.",
     )
