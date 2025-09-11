@@ -16,7 +16,10 @@ from app.modules.sport_competition.dependencies_sport_competition import (
     get_current_edition,
     is_user_a_member_of_extended,
 )
-from app.modules.sport_competition.types_sport_competition import CompetitionGroupType
+from app.modules.sport_competition.types_sport_competition import (
+    CompetitionGroupType,
+    MultipleEditions,
+)
 from app.types.module import Module
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -108,6 +111,90 @@ async def delete_sport(
             detail="Sport is activated and cannot be deleted",
         ) from None
     await competition_cruds.delete_sport_by_id(sport_id, db)
+
+
+@module.router.get(
+    "/competition/editions",
+    response_model=list[competition_schemas.CompetitionEdition],
+)
+async def get_editions(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_a_member_of_extended(
+            comptition_group_id=CompetitionGroupType.competition_admin,
+        ),
+    ),
+):
+    return await competition_cruds.load_all_editions(db)
+
+
+@module.router.get(
+    "/competition/editions/active",
+    response_model=competition_schemas.CompetitionEdition | None,
+)
+async def get_active_edition(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user),
+):
+    """
+    Get the currently active competition edition.
+    Returns None if no edition is active.
+    """
+    return await competition_cruds.load_active_edition(db)
+
+
+@module.router.post(
+    "/competition/editions",
+    status_code=201,
+    response_model=competition_schemas.CompetitionEdition,
+)
+async def create_edition(
+    edition: competition_schemas.CompetitionEditionBase,
+    db: AsyncSession = Depends(get_db),
+    user: competition_schemas.CompetitionUser = Depends(
+        is_user_a_member_of_extended(
+            comptition_group_id=CompetitionGroupType.competition_admin,
+        ),
+    ),
+):
+    stored = await competition_cruds.load_edition_by_name(edition.name, db)
+    if stored is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="An edition with this name already exists",
+        ) from None
+    edition = competition_schemas.CompetitionEdition(
+        **edition.model_dump(),
+        id=str(uuid4()),
+    )
+    await competition_cruds.store_edition(edition, db)
+    return edition
+
+
+@module.router.patch("/competition/editions/{edition_id}")
+async def edit_edition(
+    edition_id: UUID,
+    edition: competition_schemas.CompetitionEditionEdit,
+    db: AsyncSession = Depends(get_db),
+    user: competition_schemas.CompetitionUser = Depends(
+        is_user_a_member_of_extended(
+            comptition_group_id=CompetitionGroupType.competition_admin,
+        ),
+    ),
+):
+    stored = await competition_cruds.load_edition_by_id(edition_id, db)
+    if stored is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Edition not found in the database",
+        ) from None
+    if edition.activated is None:
+        active = await competition_cruds.load_active_edition(db)
+        if active and active.id != edition_id and edition.activated:
+            raise MultipleEditions
+    stored.model_copy(update=edition.model_dump())
+    await competition_cruds.store_edition(stored, db)
+    return stored
 
 
 @module.router.get(
