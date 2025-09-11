@@ -83,6 +83,7 @@ class SchoolExtension(Base):
     school_id: Mapped[PrimaryKey] = mapped_column(
         ForeignKey("core_school.id"),
     )
+    ffsu_id: Mapped[str | None]
     from_lyon: Mapped[bool]
     active: Mapped[bool]
     inscription_enabled: Mapped[bool]
@@ -209,6 +210,7 @@ class CompetitionParticipant(Base):
     team_id: Mapped[UUID | None] = mapped_column(ForeignKey("competition_team.id"))
     substitute: Mapped[bool]
     license: Mapped[str | None]
+    is_licence_valid: Mapped[bool]
 
     user: Mapped[CompetitionUser] = relationship(
         "CompetitionUser",

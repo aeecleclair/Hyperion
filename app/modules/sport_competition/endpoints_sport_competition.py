@@ -24,6 +24,9 @@ from app.modules.sport_competition.dependencies_sport_competition import (
 from app.modules.sport_competition.types_sport_competition import (
     CompetitionGroupType,
 )
+from app.modules.sport_competition.utils.ffsu_scrapper import (
+    validate_participant_ffsu_licence,
+)
 from app.modules.sport_competition.utils_sport_competition import (
     checksport_category_compatibility,
 )
@@ -677,7 +680,7 @@ async def get_school(
     status_code=201,
     response_model=schemas_sport_competition.SchoolExtensionBase,
 )
-async def create_school(
+async def create_school_extension(
     school: schemas_sport_competition.SchoolExtensionBase,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
@@ -706,7 +709,7 @@ async def create_school(
     "/competition/schools/{school_id}",
     status_code=204,
 )
-async def edit_school(
+async def edit_school_extension(
     school_id: UUID,
     school: schemas_sport_competition.SchoolExtensionEdit,
     db: AsyncSession = Depends(get_db),
@@ -732,7 +735,7 @@ async def edit_school(
     "/competition/schools/{school_id}",
     status_code=204,
 )
-async def delete_school(
+async def delete_school_extension(
     school_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
@@ -1365,6 +1368,16 @@ async def join_sport(
             status_code=404,
             detail="Sport not found in the database",
         )
+    school = await cruds_sport_competition.load_school_by_id(
+        user.user.school_id,
+        edition.id,
+        db,
+    )
+    if school is None:
+        raise HTTPException(
+            status_code=500,
+            detail="School not found in the database",
+        )
     if not checksport_category_compatibility(
         user.sport_category,
         sport.sport_category,
@@ -1427,6 +1440,13 @@ async def join_sport(
             status_code=400,
             detail="Sport declared needs to be played individually",
         )
+    is_licence_valid = False
+    if participant_info.license:
+        is_licence_valid = validate_participant_ffsu_licence(
+            school,
+            user,
+            participant_info.license,
+        )
     participant = schemas_sport_competition.Participant(
         user_id=user.user_id,
         sport_id=sport_id,
@@ -1434,6 +1454,7 @@ async def join_sport(
         school_id=user.user.school_id,
         license=participant_info.license,
         substitute=participant_info.substitute,
+        is_licence_valid=is_licence_valid,
         team_id=participant_info.team_id,
         created_at=datetime.now(UTC),
     )
@@ -1472,6 +1493,11 @@ async def validate_participant(
         raise HTTPException(
             status_code=404,
             detail="Participant not found in the database",
+        )
+    if participant.is_licence_valid is False:
+        raise HTTPException(
+            status_code=400,
+            detail="Participant licence is not valid",
         )
     if (
         GroupType.competition_admin.value

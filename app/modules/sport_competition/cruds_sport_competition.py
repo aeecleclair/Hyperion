@@ -195,6 +195,7 @@ async def add_school(
         models_sport_competition.SchoolExtension(
             school_id=school.school_id,
             from_lyon=school.from_lyon,
+            ffsu_id=school.ffsu_id,
             active=school.active,
             inscription_enabled=school.inscription_enabled,
         ),
