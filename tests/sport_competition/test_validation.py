@@ -435,6 +435,7 @@ async def init_objects() -> None:
         team_id=team_sport_quota_school.id,
         substitute=False,
         license=None,
+        certificate_file_id=None,
         is_license_valid=True,
     )
     await add_object_to_db(participant_athlete_user)
@@ -447,6 +448,7 @@ async def init_objects() -> None:
             team_id=team_sport_quota_school.id,
             substitute=False,
             license=None,
+            certificate_file_id=None,
             is_license_valid=True,
         )
     )
@@ -459,6 +461,7 @@ async def init_objects() -> None:
         team_id=team_sport_quota_school.id,
         substitute=False,
         license=None,
+        certificate_file_id=None,
         is_license_valid=True,
     )
     await add_object_to_db(participant_athlete_pompom_user)
@@ -470,6 +473,7 @@ async def init_objects() -> None:
         team_id=team_sport_quota_school.id,
         substitute=False,
         license=None,
+        certificate_file_id=None,
         is_license_valid=True,
     )
     await add_object_to_db(participant_athlete_fanfare_user)
