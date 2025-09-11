@@ -457,18 +457,15 @@ async def update_participant(
 
 async def validate_participant(
     user_id: str,
-    sport_id: UUID,
     edition_id: UUID,
     db: AsyncSession,
 ):
     await db.execute(
-        update(models_sport_competition.CompetitionParticipant)
+        update(models_sport_competition.CompetitionUser)
         .where(
             and_(
-                models_sport_competition.CompetitionParticipant.user_id == user_id,
-                models_sport_competition.CompetitionParticipant.sport_id == sport_id,
-                models_sport_competition.CompetitionParticipant.edition_id
-                == edition_id,
+                models_sport_competition.CompetitionUser.user_id == user_id,
+                models_sport_competition.CompetitionUser.edition_id == edition_id,
             ),
         )
         .values(validated=True),

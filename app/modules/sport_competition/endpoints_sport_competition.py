@@ -1136,6 +1136,7 @@ async def get_participants_for_school(
     )
 
 
+# TODO: change logic to validate CompetitionUser and not CompetitionParticipant
 @module.router.patch(
     "/competition/participants/{user_id}/sports/{sport_id}/validate",
     status_code=204,
@@ -1232,7 +1233,6 @@ async def validate_participant(
             ) from None
     await cruds_sport_competition.validate_participant(
         user_id,
-        sport_id,
         edition.id,
         db,
     )
