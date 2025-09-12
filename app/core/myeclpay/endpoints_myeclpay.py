@@ -1250,9 +1250,14 @@ async def delete_revoked_devices_of_user(
     **The user must be an admin to use this endpoint**
     """
     user_payment = await cruds_myeclpay.get_user_payment(
-        user_id=user_id,
+        user_id=str(user_id),
         db=db,
     )
+    if user_payment is None:
+        raise HTTPException(
+            status_code=400,
+            detail="User is not registered for MyECL Pay",
+        )
     wallet_id = user_payment.wallet_id
     await cruds_myeclpay.delete_revoked_wallet_devices_by_wallet_id(
         wallet_id=wallet_id,
