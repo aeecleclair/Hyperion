@@ -439,6 +439,18 @@ async def get_wallet_devices_by_wallet_id(
     return result.scalars().all()
 
 
+async def delete_revoked_wallet_devices_by_wallet_id(
+    wallet_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_myeclpay.WalletDevice).where(
+            models_myeclpay.WalletDevice.id == wallet_id,
+            models_myeclpay.WalletDevice.status == WalletDeviceStatus.REVOKED,
+        ),
+    )
+
+
 async def get_wallet_device_by_activation_token(
     activation_token: str,
     db: AsyncSession,
