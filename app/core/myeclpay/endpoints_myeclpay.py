@@ -1235,6 +1235,31 @@ async def get_user_devices(
     )
 
 
+@router.delete(
+    "/myeclpay/users/{user_id}/wallet/devices",
+)
+async def delete_revoked_devices_of_user(
+    user_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user_in(GroupType.admin)),
+):
+    """
+    Delete the revoked devices of a user.
+    This is a convenience method, that should only be used at the user's request.
+
+    **The user must be an admin to use this endpoint**
+    """
+    user_payment = await cruds_myeclpay.get_user_payment(
+        user_id=user_id,
+        db=db,
+    )
+    wallet_id = user_payment.wallet_id
+    await cruds_myeclpay.delete_revoked_wallet_devices_by_wallet_id(
+        wallet_id=wallet_id,
+        db=db,
+    )
+
+
 @router.get(
     "/myeclpay/users/me/wallet/devices/{wallet_device_id}",
     status_code=200,
