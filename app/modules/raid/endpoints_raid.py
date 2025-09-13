@@ -1132,10 +1132,7 @@ async def get_payment_url(
         raise HTTPException(status_code=404, detail="Participant not found.")
 
     if not participant.payment:
-        if (
-            participant.student_card is not None
-            and participant.student_card.validation == DocumentValidation.accepted
-        ):
+        if participant.student_card is not None:
             price += raid_prices.student_price
             checkout_name = "Inscription Raid - Tarif étudiant"
         else:
