@@ -70,6 +70,7 @@ class DeliveryProductsUpdate(BaseModel):
 class OrderBase(BaseModel):
     user_id: str
     delivery_id: str
+    delivery_name: str
     products_ids: list[str]
     collection_slot: AmapSlotType
     products_quantity: list[int]
@@ -86,6 +87,7 @@ class OrderComplete(OrderBase):
 class OrderReturn(BaseModel):
     user: CoreUserSimple
     delivery_id: str
+    delivery_name: str
     productsdetail: Sequence[ProductQuantity]
     collection_slot: AmapSlotType
     order_id: str
