@@ -93,6 +93,7 @@ school:
       - "T3"
       - "Adoma"
       - "Exté"
+    promotion_offset: 2
 
   primary_color: "#F97315"
 

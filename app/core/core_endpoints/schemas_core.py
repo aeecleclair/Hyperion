@@ -45,6 +45,7 @@ class MainActivationForm(BaseModel):
         description="List of choices for the floor field if it is asked",
         default_factory=list,
     )
+    promotion_offset: int | None = None
 
 
 class CoreVariables(BaseModel):
