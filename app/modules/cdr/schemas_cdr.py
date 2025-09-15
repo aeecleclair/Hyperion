@@ -320,3 +320,15 @@ class CustomDataComplete(CustomDataBase):
 
 class ResultRequest(BaseModel):
     emails: list[str]
+
+
+class BatchPurchase(BaseModel):
+    user_emails: list[str]
+    product_variant_id: UUID
+    quantity: int
+
+
+class BatchValidation(BaseModel):
+    user_emails: list[str]
+    product_variant_id: UUID
+    validated: bool
