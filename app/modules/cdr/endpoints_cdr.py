@@ -1592,7 +1592,6 @@ async def create_purchase_batch(
     for email in batch.user_emails:
         user_db = await cruds_users.get_user_by_email(db=db, email=email)
 
-        # We only want to add existing users to the group
         if user_db is not None:
             existing_db_purchase = await cruds_cdr.get_purchase_by_id(
                 db=db,
@@ -1628,8 +1627,8 @@ async def create_purchase_batch(
 
             cruds_cdr.create_purchase(db, db_purchase)
             cruds_cdr.create_action(db, db_action)
-            await db.flush()
         # If the user does not exist, we will pass silently
+    await db.flush()
 
 
 async def remove_existing_membership(
