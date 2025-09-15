@@ -175,10 +175,7 @@ class PiwigoAuthClient(BaseAuthClient):
         # A modified Piwigo oidc plugin allows managing groups from the oidc provider
         promo = user.promo
         if promo is not None:
-            if promo >= 2014:
-                promo = str(promo)
-            else:
-                promo = None
+            promo = str(promo) if promo >= 2014 else None
         return {
             "sub": user.id,
             "name": user.full_name,
