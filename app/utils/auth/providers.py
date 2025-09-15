@@ -174,14 +174,12 @@ class PiwigoAuthClient(BaseAuthClient):
         # For Piwigo, providing the username is sufficient. The name of the claim (here `"name"`) needs to be set in Piwigo oidc plugin configuration page.
         # A modified Piwigo oidc plugin allows managing groups from the oidc provider
         promo = user.promo
-        if promo is not None:
-            promo = str(promo) if promo >= 2014 else None
         return {
             "sub": user.id,
             "name": user.full_name,
             "groups": [group.name for group in user.groups]
             + [user.account_type.value]
-            + [promo],
+            + [str(promo) if promo is not None and promo >= 2014 else None],
             "email": user.email,
         }
 
