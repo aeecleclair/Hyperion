@@ -252,7 +252,7 @@ class Location(LocationBase):
 
 
 class LocationComplete(Location):
-    matches: list["Match"] = []
+    matches: list["MatchComplete"] = []
 
 
 class LocationEdit(BaseModel):

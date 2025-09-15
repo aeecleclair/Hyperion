@@ -2176,8 +2176,8 @@ async def create_match(
     sport_id: UUID,
     match_info: schemas_sport_competition.MatchBase,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: schemas_sport_competition.CompetitionUser = Depends(
+        is_competition_user(competition_group=CompetitionGroupType.sport_manager),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -2238,8 +2238,8 @@ async def edit_match(
     match_id: UUID,
     match_info: schemas_sport_competition.MatchEdit,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: schemas_sport_competition.CompetitionUser = Depends(
+        is_competition_user(competition_group=CompetitionGroupType.sport_manager),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
