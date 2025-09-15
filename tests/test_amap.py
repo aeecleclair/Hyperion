@@ -46,14 +46,14 @@ async def init_objects() -> None:
     product = models_amap.Product(
         id=str(uuid.uuid4()),
         name="Tomato",
-        price=1.5,
+        price=150,
         category="Test",
     )
     await add_object_to_db(product)
     deletable_product = models_amap.Product(
         id=str(uuid.uuid4()),
         name="Deletable Tomato",
-        price=1.5,
+        price=150,
         category="Test",
     )
     await add_object_to_db(deletable_product)
@@ -83,7 +83,7 @@ async def init_objects() -> None:
         order_id=str(uuid.uuid4()),
         user_id=student_user.id,
         delivery_id=delivery.id,
-        amount=0.0,
+        amount=0,
         collection_slot=AmapSlotType.midi,
         ordering_date=datetime(2022, 8, 10, 12, 16, 26, tzinfo=UTC),
         delivery_date=delivery.delivery_date,
@@ -94,7 +94,7 @@ async def init_objects() -> None:
         order_id=str(uuid.uuid4()),
         user_id=student_user.id,
         delivery_id=locked_delivery.id,
-        amount=0.0,
+        amount=0,
         collection_slot=AmapSlotType.midi,
         ordering_date=datetime(2022, 8, 18, 12, 16, 26, tzinfo=UTC),
         delivery_date=locked_delivery.delivery_date,
@@ -120,7 +120,7 @@ def test_create_product(client: TestClient) -> None:
 
     response = client.post(
         "/amap/products",
-        json={"name": "test", "price": 0.1, "category": "test"},
+        json={"name": "test", "price": 10, "category": "test"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 201
@@ -142,7 +142,7 @@ def test_edit_product(client: TestClient) -> None:
 
     response = client.patch(
         f"/amap/products/{product.id}",
-        json={"name": "testupdate", "price": 0.1, "category": "test"},
+        json={"name": "testupdate", "price": 10, "category": "test"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
