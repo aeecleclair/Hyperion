@@ -1486,6 +1486,26 @@ async def load_all_teams_by_school_and_sport_ids(
     return [team_model_to_schema(team) for team in teams.scalars().all()]
 
 
+async def load_team_by_captain_id(
+    captain_id: str,
+    edition_id: UUID,
+    db: AsyncSession,
+) -> schemas_sport_competition.TeamComplete | None:
+    team = (
+        (
+            await db.execute(
+                select(models_sport_competition.CompetitionTeam).where(
+                    models_sport_competition.CompetitionTeam.captain_id == captain_id,
+                    models_sport_competition.CompetitionTeam.edition_id == edition_id,
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return team_model_to_schema(team) if team else None
+
+
 async def count_teams_by_school_and_sport_ids(
     school_id: UUID,
     sport_id: UUID,

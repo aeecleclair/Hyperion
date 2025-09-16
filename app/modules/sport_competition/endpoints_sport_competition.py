@@ -1377,6 +1377,30 @@ async def delete_product_quota(
 
 
 @module.router.get(
+    "/competition/teams/me",
+    response_model=schemas_sport_competition.TeamComplete,
+)
+async def get_current_user_team_as_captain(
+    db: AsyncSession = Depends(get_db),
+    user: schemas_users.CoreUser = Depends(is_user()),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> schemas_sport_competition.TeamComplete:
+    team = await cruds_sport_competition.load_team_by_captain_id(
+        user.id,
+        edition.id,
+        db,
+    )
+    if team is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Team not found for the current user",
+        )
+    return team
+
+
+@module.router.get(
     "/competition/teams/sports/{sport_id}",
     response_model=list[schemas_sport_competition.TeamComplete],
 )
