@@ -77,7 +77,7 @@ class NotificationManager:
             hyperion_error_logger.error(
                 f"""
                     Firebase: SenderId mismatch for users:
-                    {"\n".join(u for u in await cruds_notification.get_user_ids_by_firebase_tokens(tokens=mismatching_tokens, db=db))}
+                    {chr(10).join(u for u in await cruds_notification.get_user_ids_by_firebase_tokens(tokens=mismatching_tokens, db=db))}
                 """,
             )
             # TODO: ask to register the device again and retry sending, using the message_content arg
