@@ -252,3 +252,15 @@ async def get_firebase_tokens_by_user_ids(
         ),
     )
     return list(result.scalars().all())
+
+
+async def get_user_ids_by_firebase_tokens(
+    tokens: list[str],
+    db: AsyncSession,
+) -> list[str]:
+    result = await db.execute(
+        select(models_notification.FirebaseDevice.user_id).where(
+            models_notification.FirebaseDevice.firebase_device_token.in_(tokens),
+        ),
+    )
+    return list(result.scalars().all())
