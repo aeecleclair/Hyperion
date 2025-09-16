@@ -68,6 +68,8 @@ product1: models_sport_competition.CompetitionProduct
 product2: models_sport_competition.CompetitionProduct
 product_old_edition: models_sport_competition.CompetitionProduct
 
+school_product1_quota: models_sport_competition.SchoolProductQuota
+
 variant_for_athlete: models_sport_competition.CompetitionProductVariant
 variant_for_cameraman: models_sport_competition.CompetitionProductVariant
 variant_for_pompom: models_sport_competition.CompetitionProductVariant
@@ -369,6 +371,15 @@ async def setup():
         edition_id=old_edition.id,
     )
     await add_object_to_db(product_old_edition)
+
+    global school_product1_quota
+    school_product1_quota = models_sport_competition.SchoolProductQuota(
+        school_id=school_from_lyon.id,
+        product_id=product1.id,
+        edition_id=active_edition.id,
+        quota=5,
+    )
+    await add_object_to_db(school_product1_quota)
 
     global \
         variant_for_athlete, \
@@ -685,6 +696,119 @@ async def test_delete_product_with_variants(
     assert products.status_code == 200
     products_data = products.json()
     assert any(item["id"] == str(product1.id) for item in products_data)
+
+
+async def test_get_school_product_quotas(
+    client: TestClient,
+):
+    response = client.get(
+        f"/competition/schools/{school_from_lyon.id}/product-quotas",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert any(
+        item["product_id"] == str(school_product1_quota.product_id)
+        and item["quota"] == school_product1_quota.quota
+        for item in data
+    ), data
+
+
+async def test_get_product_schools_quota(
+    client: TestClient,
+):
+    response = client.get(
+        f"/competition/products/{product1.id}/schools-quotas",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert any(
+        item["school_id"] == str(school_product1_quota.school_id)
+        and item["quota"] == school_product1_quota.quota
+        for item in data
+    ), data
+
+
+async def test_create_school_product_quota(
+    client: TestClient,
+):
+    new_quota = {
+        "product_id": str(product1.id),
+        "quota": 10,
+    }
+    response = client.post(
+        f"/competition/schools/{school_others.id}/product-quotas",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json=new_quota,
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["school_id"] == str(school_others.id)
+    assert data["product_id"] == str(new_quota["product_id"])
+    assert data["quota"] == new_quota["quota"]
+
+    quotas = client.get(
+        f"/competition/schools/{school_others.id}/product-quotas",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert quotas.status_code == 200
+    quotas_data = quotas.json()
+    assert any(
+        item["product_id"] == str(new_quota["product_id"])
+        and item["quota"] == new_quota["quota"]
+        for item in quotas_data
+    )
+
+
+async def test_edit_school_product_quota(
+    client: TestClient,
+):
+    updated_quota = {
+        "quota": 15,
+    }
+    response = client.patch(
+        f"/competition/schools/{school_from_lyon.id}/product-quotas/{product1.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json=updated_quota,
+    )
+    assert response.status_code == 204
+
+    quotas = client.get(
+        f"/competition/schools/{school_from_lyon.id}/product-quotas",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert quotas.status_code == 200
+    quotas_data = quotas.json()
+    quota = next(
+        (item for item in quotas_data if item["product_id"] == str(product1.id)),
+        None,
+    )
+    assert quota is not None
+    assert quota["quota"] == updated_quota["quota"]
+
+
+async def test_delete_school_product_quota(
+    client: TestClient,
+):
+    response = client.delete(
+        f"/competition/schools/{school_from_lyon.id}/product-quotas/{product1.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 204
+
+    quotas = client.get(
+        f"/competition/schools/{school_from_lyon.id}/product-quotas",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert quotas.status_code == 200
+    quotas_data = quotas.json()
+    assert not any(
+        item["product_id"] == str(school_product1_quota.product_id)
+        for item in quotas_data
+    )
 
 
 @pytest.mark.parametrize(

@@ -252,7 +252,7 @@ class Location(LocationBase):
 
 
 class LocationComplete(Location):
-    matches: list["Match"] = []
+    matches: list["MatchComplete"] = []
 
 
 class LocationEdit(BaseModel):
@@ -376,11 +376,11 @@ class ProductEdit(BaseModel):
 
 class SchoolProductQuotaBase(BaseModel):
     product_id: UUID
-    school_id: UUID
     quota: NonNegativeInt
 
 
 class SchoolProductQuota(SchoolProductQuotaBase):
+    school_id: UUID
     edition_id: UUID
 
 
