@@ -1756,7 +1756,7 @@ async def load_match_by_teams_ids(
 async def load_all_matches_by_location_id(
     location_id: UUID,
     db: AsyncSession,
-) -> list[schemas_sport_competition.Match]:
+) -> list[schemas_sport_competition.MatchComplete]:
     matches = await db.execute(
         select(models_sport_competition.Match)
         .where(
@@ -1765,6 +1765,7 @@ async def load_all_matches_by_location_id(
         .options(
             selectinload(models_sport_competition.Match.team1),
             selectinload(models_sport_competition.Match.team2),
+            selectinload(models_sport_competition.Match.location),
         ),
     )
 
