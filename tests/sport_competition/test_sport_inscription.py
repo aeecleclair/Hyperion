@@ -1502,6 +1502,18 @@ async def test_delete_school_sport_quota_as_admin(
 # region: Teams
 
 
+async def test_get_user_team_as_captain(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        "/competition/teams/me",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200, response.json()
+    team = response.json()
+    assert team["id"] == str(team_admin_user.id)
+
+
 async def test_get_sport_teams(
     client: TestClient,
 ) -> None:
