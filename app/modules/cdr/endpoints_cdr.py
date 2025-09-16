@@ -1542,6 +1542,95 @@ async def create_purchase(
     return db_purchase
 
 
+@module.router.post(
+    "/cdr/batch-purchases/",
+    status_code=201,
+)
+async def create_purchase_batch(
+    batch: schemas_cdr.BatchPurchase,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
+):
+    """
+    Create a purchase for a list of user.
+
+    **User must be part of the seller's group to use this endpoint**
+    """
+    status = await get_core_data(coredata_cdr.Status, db)
+    if status.status in [CdrStatus.pending, CdrStatus.closed]:
+        raise HTTPException(
+            status_code=403,
+            detail="CDR is closed.",
+        )
+    product_variant = await cruds_cdr.get_product_variant_by_id(
+        db=db,
+        variant_id=batch.product_variant_id,
+    )
+    if not product_variant:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid product_variant_id",
+        )
+    product = await cruds_cdr.get_product_by_id(
+        db=db,
+        product_id=product_variant.product_id,
+    )
+    if not product:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid product.",
+        )
+    if product_variant.year != cdr_year.year:
+        raise HTTPException(
+            status_code=404,
+            detail="Product unavailable.",
+        )
+
+    await is_user_in_a_seller_group(product.seller_id, user=user, db=db)
+
+    for email in batch.user_emails:
+        user_db = await cruds_users.get_user_by_email(db=db, email=email)
+
+        if user_db is not None:
+            existing_db_purchase = await cruds_cdr.get_purchase_by_id(
+                db=db,
+                user_id=user_db.id,
+                product_variant_id=batch.product_variant_id,
+            )
+
+            db_purchase = models_cdr.Purchase(
+                user_id=user_db.id,
+                product_variant_id=batch.product_variant_id,
+                validated=False,
+                quantity=batch.quantity,
+                purchased_on=datetime.now(UTC),
+            )
+            db_action = models_cdr.CdrAction(
+                id=uuid4(),
+                user_id=user.id,
+                subject_id=db_purchase.user_id,
+                action_type=CdrLogActionType.purchase_add,
+                action=str(db_purchase.__dict__),
+                timestamp=datetime.now(UTC),
+            )
+            if existing_db_purchase:
+                await cruds_cdr.update_purchase(
+                    db=db,
+                    user_id=user_db.id,
+                    product_variant_id=batch.product_variant_id,
+                    purchase=schemas_cdr.PurchaseBase(quantity=batch.quantity),
+                )
+                cruds_cdr.create_action(db, db_action)
+                await db.flush()
+                continue
+
+            cruds_cdr.create_purchase(db, db_purchase)
+            cruds_cdr.create_action(db, db_action)
+        # If the user does not exist, we will pass silently
+    await db.flush()
+
+
 async def remove_existing_membership(
     existing_membership: schemas_memberships.UserMembershipComplete,
     product_variant: models_cdr.ProductVariant,
@@ -1748,6 +1837,36 @@ async def mark_purchase_as_validated(
     )
     await db.flush()
     return db_purchase
+
+
+@module.router.post(
+    "/cdr/batch-validation/",
+    status_code=201,
+)
+async def validate_purchase_batch(
+    batch: schemas_cdr.BatchValidation,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+):
+    for email in batch.user_emails:
+        user_db = await cruds_users.get_user_by_email(db=db, email=email)
+
+        # We only want to add existing users to the group
+        if user_db is not None:
+            try:
+                await mark_purchase_as_validated(
+                    user_db.id,
+                    batch.product_variant_id,
+                    batch.validated,
+                    db,
+                    user,
+                )
+            except HTTPException as e:
+                hyperion_error_logger.info(
+                    f"Batch validation failed for user {email} with {e}",
+                )
+                continue
+        # If the user does not exist, we will pass silently
 
 
 @module.router.delete(
