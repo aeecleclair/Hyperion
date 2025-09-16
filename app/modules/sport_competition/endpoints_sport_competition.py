@@ -533,15 +533,17 @@ async def validate_competition_user(
         if participant
         else None
     )
-    school_general_quota = await cruds_sport_competition.get_school_general_quota(
+    school_general_quota = await cruds_sport_competition.load_school_general_quota(
         user_to_validate.user.school_id,
         edition.id,
         db,
     )
-    school_products_quota = await cruds_sport_competition.get_school_products_quota(
-        user_to_validate.user.school_id,
-        edition.id,
-        db,
+    school_products_quota = (
+        await cruds_sport_competition.load_all_school_product_quotas(
+            user_to_validate.user.school_id,
+            edition.id,
+            db,
+        )
     )
     purchases = await cruds_sport_competition.load_purchases_by_user_id(
         user_id,
@@ -927,7 +929,7 @@ async def get_school_general_quota(
             status_code=404,
             detail="School not found in the database",
         )
-    quota = await cruds_sport_competition.get_school_general_quota(
+    quota = await cruds_sport_competition.load_school_general_quota(
         school_id,
         edition.id,
         db,
@@ -962,7 +964,7 @@ async def create_school_general_quota(
             status_code=404,
             detail="School not found in the database",
         )
-    stored = await cruds_sport_competition.get_school_general_quota(
+    stored = await cruds_sport_competition.load_school_general_quota(
         school_id,
         edition.id,
         db,
@@ -1011,7 +1013,7 @@ async def edit_school_general_quota(
             status_code=404,
             detail="School not found in the database",
         )
-    stored = await cruds_sport_competition.get_school_general_quota(
+    stored = await cruds_sport_competition.load_school_general_quota(
         school_id,
         edition.id,
         db,
@@ -1202,6 +1204,175 @@ async def delete_sport_quota(
 
 
 # endregion: Sport Quotas
+# region: Product Quotas
+
+
+@module.router.get(
+    "/competition/schools/{school_id}/product-quotas",
+    response_model=list[schemas_sport_competition.SchoolProductQuota],
+)
+async def get_product_quotas_for_school(
+    school_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+    user: models_users.CoreUser = Depends(is_user()),
+) -> list[schemas_sport_competition.SchoolProductQuota]:
+    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    if school is None:
+        raise HTTPException(
+            status_code=404,
+            detail="School not found in the database",
+        )
+    return await cruds_sport_competition.load_all_school_product_quotas(
+        school_id,
+        edition.id,
+        db,
+    )
+
+
+@module.router.get(
+    "/competition/products/{product_id}/schools-quotas",
+    response_model=list[schemas_sport_competition.SchoolProductQuota],
+)
+async def get_product_quotas_for_product(
+    product_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: schemas_sport_competition.CompetitionUser = Depends(
+        is_user_in(group_id=GroupType.competition_admin),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> list[schemas_sport_competition.SchoolProductQuota]:
+    product = await cruds_sport_competition.load_product_by_id(product_id, db)
+    if product is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found in the database",
+        )
+    return await cruds_sport_competition.load_all_product_quotas_by_product_id(
+        product_id,
+        db,
+    )
+
+
+@module.router.post(
+    "/competition/schools/{school_id}/product-quotas",
+    status_code=201,
+    response_model=schemas_sport_competition.SchoolProductQuota,
+)
+async def create_product_quota(
+    school_id: UUID,
+    quota_info: schemas_sport_competition.SchoolProductQuotaBase,
+    db: AsyncSession = Depends(get_db),
+    user: schemas_sport_competition.CompetitionUser = Depends(
+        is_user_in(group_id=GroupType.competition_admin),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> schemas_sport_competition.SchoolProductQuota:
+    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    if school is None:
+        raise HTTPException(
+            status_code=404,
+            detail="School not found in the database",
+        )
+    product = await cruds_sport_competition.load_product_by_id(
+        quota_info.product_id,
+        db,
+    )
+    if product is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found in the database",
+        )
+    stored = await cruds_sport_competition.load_school_product_quota_by_ids(
+        school_id,
+        quota_info.product_id,
+        db,
+    )
+    if stored is not None:
+        raise HTTPException(status_code=400, detail="Quota already exists")
+    quota = schemas_sport_competition.SchoolProductQuota(
+        school_id=school_id,
+        product_id=quota_info.product_id,
+        quota=quota_info.quota,
+        edition_id=edition.id,
+    )
+    await cruds_sport_competition.add_school_product_quota(quota, db)
+    return quota
+
+
+@module.router.patch(
+    "/competition/schools/{school_id}/product-quotas/{product_id}",
+    status_code=204,
+)
+async def edit_product_quota(
+    school_id: UUID,
+    product_id: UUID,
+    quota_info: schemas_sport_competition.SchoolProductQuotaEdit,
+    db: AsyncSession = Depends(get_db),
+    user: schemas_sport_competition.CompetitionUser = Depends(
+        is_user_in(group_id=GroupType.competition_admin),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> None:
+    stored = await cruds_sport_competition.load_school_product_quota_by_ids(
+        school_id,
+        product_id,
+        db,
+    )
+    if stored is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Quota not found in the database",
+        )
+    await cruds_sport_competition.update_school_product_quota(
+        school_id,
+        product_id,
+        quota_info,
+        db,
+    )
+
+
+@module.router.delete(
+    "/competition/schools/{school_id}/product-quotas/{product_id}",
+    status_code=204,
+)
+async def delete_product_quota(
+    school_id: UUID,
+    product_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: schemas_sport_competition.CompetitionUser = Depends(
+        is_user_in(group_id=GroupType.competition_admin),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> None:
+    stored = await cruds_sport_competition.load_school_product_quota_by_ids(
+        school_id,
+        product_id,
+        db,
+    )
+    if stored is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Quota not found in the database",
+        )
+    await cruds_sport_competition.delete_school_product_quota_by_ids(
+        school_id,
+        product_id,
+        db,
+    )
+
+
+# endregion: Product Quotas
 # region: Teams
 
 
@@ -2333,7 +2504,7 @@ async def get_sport_podiums(
             status_code=404,
             detail="Sport not found.",
         )
-    return await cruds_sport_competition.get_sport_podiums(sport_id, edition.id, db)
+    return await cruds_sport_competition.load_sport_podiums(sport_id, edition.id, db)
 
 
 @module.router.get(
@@ -2358,7 +2529,7 @@ async def get_school_podiums(
             status_code=404,
             detail="School not found.",
         )
-    return await cruds_sport_competition.get_school_podiums(school_id, edition.id, db)
+    return await cruds_sport_competition.load_school_podiums(school_id, edition.id, db)
 
 
 @module.router.post(
@@ -2462,7 +2633,7 @@ async def get_all_products(
     """
     Get all products.
     """
-    return await cruds_sport_competition.get_products(edition.id, db)
+    return await cruds_sport_competition.load_products(edition.id, db)
 
 
 @module.router.post(
@@ -2584,7 +2755,7 @@ async def delete_product(
 
 @module.router.get(
     "/competition/products/available",
-    response_model=list[schemas_sport_competition.ProductVariant],
+    response_model=list[schemas_sport_competition.ProductVariantComplete],
     status_code=200,
 )
 async def get_available_product_variants(
@@ -2593,7 +2764,7 @@ async def get_available_product_variants(
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
-):
+) -> list[schemas_sport_competition.ProductVariantComplete]:
     """
     Get all available product variants of the current edition for this user.
     """

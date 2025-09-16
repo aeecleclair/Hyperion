@@ -922,7 +922,7 @@ async def update_participant_license_validity(
 # region: Quotas
 
 
-async def get_school_general_quota(
+async def load_school_general_quota(
     school_id: UUID,
     edition_id: UUID,
     db: AsyncSession,
@@ -1125,11 +1125,11 @@ async def load_all_sport_quotas_by_sport_id(
     ]
 
 
-async def get_school_products_quota(
+async def load_all_school_product_quotas(
     school_id: UUID,
     edition_id: UUID,
     db: AsyncSession,
-):
+) -> list[schemas_sport_competition.SchoolProductQuota]:
     products = await db.execute(
         select(models_sport_competition.SchoolProductQuota).where(
             models_sport_competition.SchoolProductQuota.school_id == school_id,
@@ -1147,15 +1147,23 @@ async def get_school_products_quota(
     ]
 
 
-async def get_school_product_quota(
+async def load_school_product_quota_by_ids(
     school_id: UUID,
-    edition_id: UUID,
     product_id: UUID,
     db: AsyncSession,
 ) -> schemas_sport_competition.SchoolProductQuota | None:
-    product = await db.get(
-        models_sport_competition.SchoolProductQuota,
-        (school_id, edition_id, product_id),
+    product = (
+        (
+            await db.execute(
+                select(models_sport_competition.SchoolProductQuota).where(
+                    models_sport_competition.SchoolProductQuota.school_id == school_id,
+                    models_sport_competition.SchoolProductQuota.product_id
+                    == product_id,
+                ),
+            )
+        )
+        .scalars()
+        .first()
     )
     return (
         schemas_sport_competition.SchoolProductQuota(
@@ -1169,14 +1177,12 @@ async def get_school_product_quota(
     )
 
 
-async def get_product_quotas(
-    edition_id: UUID,
+async def load_all_product_quotas_by_product_id(
     product_id: UUID,
     db: AsyncSession,
 ) -> list[schemas_sport_competition.SchoolProductQuota]:
     products = await db.execute(
         select(models_sport_competition.SchoolProductQuota).where(
-            models_sport_competition.SchoolProductQuota.edition_id == edition_id,
             models_sport_competition.SchoolProductQuota.product_id == product_id,
         ),
     )
@@ -1207,7 +1213,6 @@ async def add_school_product_quota(
 
 async def update_school_product_quota(
     school_id: UUID,
-    edition_id: UUID,
     product_id: UUID,
     product_quota: schemas_sport_competition.SchoolProductQuotaEdit,
     db: AsyncSession,
@@ -1216,23 +1221,20 @@ async def update_school_product_quota(
         update(models_sport_competition.SchoolProductQuota)
         .where(
             models_sport_competition.SchoolProductQuota.school_id == school_id,
-            models_sport_competition.SchoolProductQuota.edition_id == edition_id,
             models_sport_competition.SchoolProductQuota.product_id == product_id,
         )
-        .values(**product_quota.model_dump(exclude_unset=True)),
+        .values(quota=product_quota.quota),
     )
 
 
 async def delete_school_product_quota_by_ids(
     school_id: UUID,
-    edition_id: UUID,
     product_id: UUID,
     db: AsyncSession,
 ):
     await db.execute(
         delete(models_sport_competition.SchoolProductQuota).where(
             models_sport_competition.SchoolProductQuota.school_id == school_id,
-            models_sport_competition.SchoolProductQuota.edition_id == edition_id,
             models_sport_competition.SchoolProductQuota.product_id == product_id,
         ),
     )
@@ -1799,7 +1801,7 @@ async def get_global_podiums(
     ]
 
 
-async def get_sport_podiums(
+async def load_sport_podiums(
     sport_id: UUID,
     edition_id: UUID,
     db: AsyncSession,
@@ -1830,7 +1832,7 @@ async def get_sport_podiums(
     ]
 
 
-async def get_school_podiums(
+async def load_school_podiums(
     school_id: UUID,
     edition_id: UUID,
     db: AsyncSession,
@@ -1897,7 +1899,7 @@ async def delete_sport_ranking(
 # region: Products
 
 
-async def get_products(
+async def load_products(
     edition_id: UUID,
     db: AsyncSession,
 ) -> list[schemas_sport_competition.ProductComplete]:
@@ -2052,7 +2054,7 @@ async def load_available_product_variants(
     school_type: ProductSchoolType,
     public_type: list[ProductPublicType],
     db: AsyncSession,
-):
+) -> list[schemas_sport_competition.ProductVariantComplete]:
     variants = await db.execute(
         select(models_sport_competition.CompetitionProductVariant).where(
             models_sport_competition.CompetitionProductVariant.edition_id == edition_id,
