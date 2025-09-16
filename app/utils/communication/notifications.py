@@ -75,9 +75,10 @@ class NotificationManager:
                     # The order of responses corresponds to the order of the registration tokens.
                     failed_tokens.append(tokens[idx])
             hyperion_error_logger.error(
+                # chr(10) == "\n"
                 f"""
                     Firebase: SenderId mismatch for users:
-                    {chr(10).join(u for u in await cruds_notification.get_user_ids_by_firebase_tokens(tokens=mismatching_tokens, db=db))}
+                    {chr(10).join(await cruds_notification.get_user_ids_by_firebase_tokens(tokens=mismatching_tokens, db=db))}
                 """,
             )
             # TODO: ask to register the device again and retry sending, using the message_content arg
