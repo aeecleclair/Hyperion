@@ -6,6 +6,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.notification import models_notification
+from app.core.users import models_users
 
 
 async def get_notification_topic(
@@ -254,13 +255,16 @@ async def get_firebase_tokens_by_user_ids(
     return list(result.scalars().all())
 
 
-async def get_user_ids_by_firebase_tokens(
+async def get_usernames_by_firebase_tokens(
     tokens: list[str],
     db: AsyncSession,
 ) -> list[str]:
     result = await db.execute(
-        select(models_notification.FirebaseDevice.user_id).where(
-            models_notification.FirebaseDevice.firebase_device_token.in_(tokens),
-        ),
+        select(models_users.CoreUser)
+        .join(
+            models_notification.FirebaseDevice,
+            models_users.CoreUser.id == models_notification.FirebaseDevice.user_id,
+        )
+        .where(models_notification.FirebaseDevice.firebase_device_token.in_(tokens)),
     )
-    return list(result.scalars().all())
+    return [f"{u.firstname} {u.name}" for u in list(result.scalars().all())]
