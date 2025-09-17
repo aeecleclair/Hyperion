@@ -77,7 +77,7 @@ class NotificationManager:
             hyperion_error_logger.error(
                 # chr(10) == "\n"
                 f"""
-                    Firebase: SenderId mismatch for users:
+                    Firebase: SenderId mismatch for notification '{message_content.title}' ({message_content.action_module} module) for {len(mismatching_tokens)} users:
                     {chr(10).join(await cruds_notification.get_user_ids_by_firebase_tokens(tokens=mismatching_tokens, db=db))}
                 """,
             )
