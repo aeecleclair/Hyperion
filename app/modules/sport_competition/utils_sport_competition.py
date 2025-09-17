@@ -192,35 +192,59 @@ async def validate_payment(
 
 async def check_validation_consistency(
     user: schemas_sport_competition.CompetitionUser,
-    participant: schemas_sport_competition.Participant | None,
-    purchases: list[schemas_sport_competition.PurchaseComplete],
-    school_sport_quota: schemas_sport_competition.SchoolSportQuota | None,
-    school_general_quota: schemas_sport_competition.SchoolGeneralQuota | None,
-    school_product_quotas: list[schemas_sport_competition.SchoolProductQuota],
-    required_products: list[schemas_sport_competition.Product],
     edition: schemas_sport_competition.CompetitionEdition,
     db: AsyncSession,
 ):
-    hyperion_error_logger.debug(
-        f"Checking validation consistency for user {user}",
+    participant = await cruds_sport_competition.load_participant_by_user_id(
+        user.user.id,
+        edition.id,
+        db,
     )
-    hyperion_error_logger.debug(
-        f" - participant: {participant}",
+    if participant and not participant.is_license_valid:
+        raise HTTPException(
+            status_code=400,
+            detail="Participant license is not valid",
+        )
+    sport = (
+        await cruds_sport_competition.load_sport_by_id(participant.sport_id, db)
+        if participant
+        else None
     )
-    hyperion_error_logger.debug(
-        f" - purchases: {purchases}",
+    if participant and sport is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Sport not found in the database",
+        )
+    school_sport_quota = (
+        await cruds_sport_competition.load_sport_quota_by_ids(
+            participant.school_id,
+            participant.sport_id,
+            edition.id,
+            db,
+        )
+        if participant
+        else None
     )
-    hyperion_error_logger.debug(
-        f" - school_sport_quota: {school_sport_quota}",
+    school_general_quota = await cruds_sport_competition.load_school_general_quota(
+        user.user.school_id,
+        edition.id,
+        db,
     )
-    hyperion_error_logger.debug(
-        f" - school_general_quota: {school_general_quota}",
+    school_product_quotas = (
+        await cruds_sport_competition.load_all_school_product_quotas(
+            user.user.school_id,
+            edition.id,
+            db,
+        )
     )
-    hyperion_error_logger.debug(
-        f" - school_product_quotas: {school_product_quotas}",
+    purchases = await cruds_sport_competition.load_purchases_by_user_id(
+        user.user.id,
+        edition.id,
+        db,
     )
-    hyperion_error_logger.debug(
-        f" - required_products: {required_products}",
+    required_products = await cruds_sport_competition.load_required_products(
+        edition.id,
+        db,
     )
     if participant and not user.is_athlete:
         raise HTTPException(
@@ -365,13 +389,7 @@ async def check_athlete_quotas(
     edition: schemas_sport_competition.CompetitionEdition,
     db: AsyncSession,
 ):
-    hyperion_error_logger.warning(
-        f"Checking athlete quotas for user {user.user.id}",
-    )
     if user.is_cameraman and school_general_quota.athlete_cameraman_quota is not None:
-        hyperion_error_logger.warning(
-            f" - Checking cameraman quota: {school_general_quota.athlete_cameraman_quota}",
-        )
         nb_cameraman = await cruds_sport_competition.count_validated_competition_users_by_school_id(
             user.user.school_id,
             edition.id,
@@ -379,18 +397,12 @@ async def check_athlete_quotas(
             is_athlete=True,
             is_cameraman=True,
         )
-        hyperion_error_logger.warning(
-            f" - Current number of athlete cameramen: {nb_cameraman}",
-        )
         if nb_cameraman >= school_general_quota.athlete_cameraman_quota:
             raise HTTPException(
                 status_code=400,
                 detail="Athlete cameraman quota reached",
             )
     if user.is_pompom and school_general_quota.athlete_pompom_quota is not None:
-        hyperion_error_logger.warning(
-            f" - Checking pompom quota: {school_general_quota.athlete_pompom_quota}",
-        )
         nb_pompom = await cruds_sport_competition.count_validated_competition_users_by_school_id(
             user.user.school_id,
             edition.id,
@@ -398,27 +410,18 @@ async def check_athlete_quotas(
             is_athlete=True,
             is_pompom=True,
         )
-        hyperion_error_logger.warning(
-            f" - Current number of athlete pompoms: {nb_pompom}",
-        )
         if nb_pompom >= school_general_quota.athlete_pompom_quota:
             raise HTTPException(
                 status_code=400,
                 detail="Athlete pompom quota reached",
             )
     if user.is_fanfare and school_general_quota.athlete_fanfare_quota is not None:
-        hyperion_error_logger.warning(
-            f" - Checking fanfare quota: {school_general_quota.athlete_fanfare_quota}",
-        )
         nb_fanfare = await cruds_sport_competition.count_validated_competition_users_by_school_id(
             user.user.school_id,
             edition.id,
             db,
             is_athlete=True,
             is_fanfare=True,
-        )
-        hyperion_error_logger.warning(
-            f" - Current number of athlete fanfares: {nb_fanfare}",
         )
         if nb_fanfare >= school_general_quota.athlete_fanfare_quota:
             raise HTTPException(

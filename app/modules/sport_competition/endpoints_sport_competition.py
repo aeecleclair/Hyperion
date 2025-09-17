@@ -428,6 +428,46 @@ async def edit_current_user_competition(
             status_code=400,
             detail="Cannot edit a validated competition user",
         )
+    user.is_athlete = (
+        user.is_athlete if user.is_athlete is not None else stored.is_athlete
+    )
+    user.is_cameraman = (
+        user.is_cameraman if user.is_cameraman is not None else stored.is_cameraman
+    )
+    user.is_pompom = user.is_pompom if user.is_pompom is not None else stored.is_pompom
+    user.is_fanfare = (
+        user.is_fanfare if user.is_fanfare is not None else stored.is_fanfare
+    )
+    user.is_volunteer = (
+        user.is_volunteer if user.is_volunteer is not None else stored.is_volunteer
+    )
+    if (
+        sum(
+            [
+                user.is_pompom,
+                user.is_fanfare,
+                user.is_cameraman,
+            ],
+        )
+        > 1
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="A user cannot be in more than one of the following categories: pompoms, fanfares, cameramen",
+        )
+    if not any(
+        [
+            user.is_pompom,
+            user.is_fanfare,
+            user.is_cameraman,
+            user.is_athlete,
+            user.is_volunteer,
+        ],
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="A user must be at least in one of the following categories: pompoms, fanfares, cameramen, athletes, volunteers",
+        )
     await cruds_sport_competition.update_competition_user(
         current_user.id,
         edition.id,
@@ -465,6 +505,46 @@ async def edit_competition_user(
             status_code=404,
             detail="Competition user not found",
         )
+    user.is_athlete = (
+        user.is_athlete if user.is_athlete is not None else stored.is_athlete
+    )
+    user.is_cameraman = (
+        user.is_cameraman if user.is_cameraman is not None else stored.is_cameraman
+    )
+    user.is_pompom = user.is_pompom if user.is_pompom is not None else stored.is_pompom
+    user.is_fanfare = (
+        user.is_fanfare if user.is_fanfare is not None else stored.is_fanfare
+    )
+    user.is_volunteer = (
+        user.is_volunteer if user.is_volunteer is not None else stored.is_volunteer
+    )
+    if (
+        sum(
+            [
+                user.is_pompom,
+                user.is_fanfare,
+                user.is_cameraman,
+            ],
+        )
+        > 1
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="A user cannot be in more than one of the following categories: pompoms, fanfares, cameramen",
+        )
+    if not any(
+        [
+            user.is_pompom,
+            user.is_fanfare,
+            user.is_cameraman,
+            user.is_athlete,
+            user.is_volunteer,
+        ],
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="A user must be at least in one of the following categories: pompoms, fanfares, cameramen, athletes, volunteers",
+        )
     await cruds_sport_competition.update_competition_user(user_id, edition.id, user, db)
 
 
@@ -494,16 +574,7 @@ async def validate_competition_user(
             status_code=404,
             detail="User not found in the database",
         )
-    participant = await cruds_sport_competition.load_participant_by_user_id(
-        user_id,
-        edition.id,
-        db,
-    )
-    if participant and not participant.is_license_valid:
-        raise HTTPException(
-            status_code=400,
-            detail="Participant license is not valid",
-        )
+
     if (
         GroupType.competition_admin.value
         not in [group.id for group in user.user.groups]
@@ -513,55 +584,9 @@ async def validate_competition_user(
             status_code=403,
             detail="Unauthorized action",
         )
-    sport = (
-        await cruds_sport_competition.load_sport_by_id(participant.sport_id, db)
-        if participant
-        else None
-    )
-    if participant and sport is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Sport not found in the database",
-        )
-    school_sport_quota = (
-        await cruds_sport_competition.load_sport_quota_by_ids(
-            participant.school_id,
-            participant.sport_id,
-            edition.id,
-            db,
-        )
-        if participant
-        else None
-    )
-    school_general_quota = await cruds_sport_competition.load_school_general_quota(
-        user_to_validate.user.school_id,
-        edition.id,
-        db,
-    )
-    school_products_quota = (
-        await cruds_sport_competition.load_all_school_product_quotas(
-            user_to_validate.user.school_id,
-            edition.id,
-            db,
-        )
-    )
-    purchases = await cruds_sport_competition.load_purchases_by_user_id(
-        user_id,
-        edition.id,
-        db,
-    )
-    required_products = await cruds_sport_competition.load_required_products(
-        edition.id,
-        db,
-    )
+
     await check_validation_consistency(
         user_to_validate,
-        participant,
-        purchases,
-        school_sport_quota,
-        school_general_quota,
-        school_products_quota,
-        required_products,
         edition,
         db,
     )
