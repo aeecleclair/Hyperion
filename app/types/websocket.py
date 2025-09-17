@@ -267,6 +267,9 @@ class WebsocketConnectionManager:
             )
             if not user:
                 raise ValueError  # noqa: TRY301
+        except WebSocketDisconnect:
+            # we cannot send data over a websocket if it has already been closed
+            return
         except Exception:
             await websocket.send_text(
                 ConnectionWSMessageModel(
@@ -276,7 +279,7 @@ class WebsocketConnectionManager:
                 ).model_dump_json(),
             )
             await websocket.close()
-            return
+            raise
         finally:
             await db.close()
 
