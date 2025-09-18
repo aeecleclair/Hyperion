@@ -369,6 +369,20 @@ async def create_competition_user(
     Create a competition user for the current edition.
     The user must exist in the core users database.
     """
+    if not edition.inscription_enabled:
+        raise HTTPException(
+            status_code=400,
+            detail="Inscriptions are not enabled for this edition",
+        )
+    school_extension = await cruds_sport_competition.load_school_base_by_id(
+        current_user.school_id,
+        db,
+    )
+    if school_extension is None or not school_extension.active:
+        raise HTTPException(
+            status_code=400,
+            detail="Your school is not authorized to participate in the competition",
+        )
     existing_competition_user = (
         await cruds_sport_competition.load_competition_user_by_id(
             db=db,
@@ -424,10 +438,7 @@ async def edit_current_user_competition(
             detail="Competition user not found",
         )
     if stored.validated:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot edit a validated competition user",
-        )
+        user.validated = False
     user.is_athlete = (
         user.is_athlete if user.is_athlete is not None else stored.is_athlete
     )
@@ -505,6 +516,8 @@ async def edit_competition_user(
             status_code=404,
             detail="Competition user not found",
         )
+    if stored.validated:
+        user.validated = False
     user.is_athlete = (
         user.is_athlete if user.is_athlete is not None else stored.is_athlete
     )
@@ -590,7 +603,7 @@ async def validate_competition_user(
         edition,
         db,
     )
-    await cruds_sport_competition.validate_participant(
+    await cruds_sport_competition.validate_competition_user(
         user_id,
         edition.id,
         db,
@@ -647,7 +660,7 @@ async def invalidate_competition_user(
             status_code=400,
             detail="Cannot invalidate participant with payments",
         )
-    await cruds_sport_competition.invalidate_participant(
+    await cruds_sport_competition.invalidate_competition_user(
         user_id,
         edition.id,
         db,
@@ -2017,9 +2030,10 @@ async def withdraw_from_sport(
             detail="Participant not found in the database",
         )
     if participant.user.validated:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot withdraw a validated participant",
+        await cruds_sport_competition.invalidate_competition_user(
+            user.user_id,
+            edition.id,
+            db,
         )
     await cruds_sport_competition.delete_participant_by_ids(
         user.user_id,
@@ -3097,6 +3111,13 @@ async def create_purchase(
         quantity=purchase.quantity,
         purchased_on=datetime.now(UTC),
     )
+    if competition_user.validated:
+        await cruds_sport_competition.invalidate_competition_user(
+            competition_user.user_id,
+            edition.id,
+            db,
+        )
+
     if existing_db_purchase:
         await cruds_sport_competition.update_purchase(
             db=db,
@@ -3113,7 +3134,6 @@ async def create_purchase(
         db_purchase,
         db,
     )
-    await db.flush()
     return db_purchase
 
 
@@ -3149,6 +3169,17 @@ async def delete_purchase(
         raise HTTPException(
             status_code=403,
             detail="You can't remove a validated purchase",
+        )
+    competition_user = await cruds_sport_competition.load_competition_user_by_id(
+        user.id,
+        edition.id,
+        db,
+    )
+    if competition_user and competition_user.validated:
+        await cruds_sport_competition.invalidate_competition_user(
+            competition_user.user_id,
+            edition.id,
+            db,
         )
 
     await cruds_sport_competition.delete_purchase(

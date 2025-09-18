@@ -1239,7 +1239,7 @@ async def test_create_payment(
     client: TestClient,
 ):
     async with get_TestingSessionLocal()() as db:
-        await cruds_sport_competition.validate_participant(
+        await cruds_sport_competition.validate_competition_user(
             admin_user.id,
             active_edition.id,
             db,

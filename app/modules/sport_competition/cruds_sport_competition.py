@@ -611,7 +611,7 @@ async def update_participant(
     await db.flush()
 
 
-async def validate_participant(
+async def validate_competition_user(
     user_id: str,
     edition_id: UUID,
     db: AsyncSession,
@@ -629,7 +629,7 @@ async def validate_participant(
     await db.flush()
 
 
-async def invalidate_participant(
+async def invalidate_competition_user(
     user_id: str,
     edition_id: UUID,
     db: AsyncSession,
