@@ -505,5 +505,5 @@ async def check_product_quotas(
             if nb_purchased >= product_quota.quota:
                 raise HTTPException(
                     status_code=400,
-                    detail="Product quota reached",
+                    detail=f"Product '{purchase.product_variant.name}' quota reached",
                 )

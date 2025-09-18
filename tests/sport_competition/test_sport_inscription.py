@@ -101,13 +101,13 @@ async def init_objects() -> None:
     school1 = models_schools.CoreSchool(
         id=uuid4(),
         name="Emlyon Business School",
-        email_regex=r"^[a-zA-Z0-9._%+-]+@edu.emlyon.fr$",
+        email_regex=r"^[\w.-]+@edu.emlyon.fr$",
     )
     await add_object_to_db(school1)
     school2 = models_schools.CoreSchool(
         id=uuid4(),
         name="Centrale Supelec",
-        email_regex=r"^[a-zA-Z0-9._%+-]+@edu.centralesupelec.fr$",
+        email_regex=r"^[\w.-]+@edu.centralesupelec.fr$",
     )
     await add_object_to_db(school2)
     old_edition = models_sport_competition.CompetitionEdition(
@@ -217,7 +217,7 @@ async def init_objects() -> None:
         school_id=school1.id,
         ffsu_id="EM1E",
         from_lyon=False,
-        active=True,
+        active=False,
         inscription_enabled=False,
     )
     await add_object_to_db(school1_extension)
@@ -882,12 +882,6 @@ async def test_enable_inscription(
     assert enabled_edition is not None
     assert enabled_edition["inscription_enabled"] is True, enabled_edition
 
-    client.post(
-        f"/competition/editions/{active_edition.id}/inscription",
-        headers={"Authorization": f"Bearer {admin_token}"},
-        json=False,
-    )
-
 
 async def test_patch_edition_as_random(
     client: TestClient,
@@ -917,6 +911,139 @@ async def test_patch_edition_as_random(
     )
     assert updated_edition_check is not None
     assert updated_edition_check["name"] == active_edition.name
+
+
+# endregion
+# region: Schools
+
+
+async def test_get_schools(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        "/competition/schools",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 200, response.json()
+    schools = response.json()
+    assert len(schools) > 0
+    assert any(school["school_id"] == str(school1.id) for school in schools)
+
+
+async def test_post_school_extension_as_random(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        "/competition/schools",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json={
+            "school_id": str(school2.id),
+            "from_lyon": False,
+            "active": True,
+            "inscription_enabled": False,
+        },
+    )
+    assert response.status_code == 403, response.json()
+
+    schools = client.get(
+        "/competition/schools",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert schools.status_code == 200, schools.json()
+    schools_json = schools.json()
+    unauthorized_school = next(
+        (s for s in schools_json if s["school_id"] == str(school2.id)),
+        None,
+    )
+    assert unauthorized_school is None, schools_json
+
+
+async def test_post_school_extension_as_admin(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        "/competition/schools",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "school_id": str(school2.id),
+            "from_lyon": False,
+            "active": True,
+            "inscription_enabled": True,
+        },
+    )
+    assert response.status_code == 201, response.json()
+
+    schools = client.get(
+        "/competition/schools",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert schools.status_code == 200, schools.json()
+    schools_json = schools.json()
+    new_school_extension = next(
+        (s for s in schools_json if s["school_id"] == str(school2.id)),
+        None,
+    )
+    assert new_school_extension is not None, schools_json
+
+
+async def test_patch_school_extension_as_random(
+    client: TestClient,
+) -> None:
+    response = client.patch(
+        f"/competition/schools/{school1.id}",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json={
+            "from_lyon": False,
+            "active": True,
+            "inscription_enabled": True,
+        },
+    )
+    assert response.status_code == 403, response.json()
+
+    schools = client.get(
+        "/competition/schools",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert schools.status_code == 200, schools.json()
+    schools_json = schools.json()
+    updated_school = next(
+        (s for s in schools_json if s["school_id"] == str(school1.id)),
+        None,
+    )
+    assert updated_school is not None
+    assert updated_school["from_lyon"] is False
+    assert updated_school["active"] is False
+    assert updated_school["inscription_enabled"] is False
+
+
+async def test_patch_school_extension_as_admin(
+    client: TestClient,
+) -> None:
+    response = client.patch(
+        f"/competition/schools/{school1.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "from_lyon": True,
+            "active": True,
+            "inscription_enabled": True,
+        },
+    )
+    assert response.status_code == 204, response.json()
+
+    schools = client.get(
+        "/competition/schools",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert schools.status_code == 200, schools.json()
+    schools_json = schools.json()
+    updated_school = next(
+        (s for s in schools_json if s["school_id"] == str(school1.id)),
+        None,
+    )
+    assert updated_school is not None
+    assert updated_school["from_lyon"] is True
+    assert updated_school["active"] is True
+    assert updated_school["inscription_enabled"] is True
 
 
 # endregion
@@ -1076,140 +1203,47 @@ async def test_remove_user_from_group_as_random(
 
 
 # endregion
-# region: Schools
+# region: School General Quotas
 
 
-async def test_get_schools(
+async def test_get_school_general_quota_as_random(
     client: TestClient,
 ) -> None:
     response = client.get(
-        "/competition/schools",
+        f"/competition/schools/{school1.id}/general-quota",
         headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 403, response.json()
+
+
+async def test_get_school_general_quota(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        f"/competition/schools/{school1.id}/general-quota",
+        headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 200, response.json()
-    schools = response.json()
-    assert len(schools) > 0
-    assert any(school["school_id"] == str(school1.id) for school in schools)
+    school_quota_json = response.json()
+    assert school_quota_json["athlete_quota"] == 1, school_quota_json
+    assert school_quota_json["cameraman_quota"] == 1, school_quota_json
+    assert school_quota_json["pompom_quota"] == 1, school_quota_json
+    assert school_quota_json["fanfare_quota"] == 1, school_quota_json
 
 
-async def test_post_school_extension_as_random(
+async def test_get_school_general_quota_as_bds(
     client: TestClient,
 ) -> None:
-    response = client.post(
-        "/competition/schools",
-        headers={"Authorization": f"Bearer {user3_token}"},
-        json={
-            "school_id": str(school2.id),
-            "from_lyon": False,
-            "active": True,
-            "inscription_enabled": False,
-        },
+    response = client.get(
+        f"/competition/schools/{school1.id}/general-quota",
+        headers={"Authorization": f"Bearer {school_bds_token}"},
     )
-    assert response.status_code == 403, response.json()
-
-    schools = client.get(
-        "/competition/schools",
-        headers={"Authorization": f"Bearer {admin_token}"},
-    )
-    assert schools.status_code == 200, schools.json()
-    schools_json = schools.json()
-    unauthorized_school = next(
-        (s for s in schools_json if s["school_id"] == str(school2.id)),
-        None,
-    )
-    assert unauthorized_school is None, schools_json
-
-
-async def test_post_school_extension_as_admin(
-    client: TestClient,
-) -> None:
-    response = client.post(
-        "/competition/schools",
-        headers={"Authorization": f"Bearer {admin_token}"},
-        json={
-            "school_id": str(school2.id),
-            "from_lyon": False,
-            "active": True,
-            "inscription_enabled": False,
-        },
-    )
-    assert response.status_code == 201, response.json()
-
-    schools = client.get(
-        "/competition/schools",
-        headers={"Authorization": f"Bearer {admin_token}"},
-    )
-    assert schools.status_code == 200, schools.json()
-    schools_json = schools.json()
-    new_school_extension = next(
-        (s for s in schools_json if s["school_id"] == str(school2.id)),
-        None,
-    )
-    assert new_school_extension is not None, schools_json
-
-
-async def test_patch_school_extension_as_random(
-    client: TestClient,
-) -> None:
-    response = client.patch(
-        f"/competition/schools/{school1.id}",
-        headers={"Authorization": f"Bearer {user3_token}"},
-        json={
-            "from_lyon": False,
-            "active": True,
-            "inscription_enabled": True,
-        },
-    )
-    assert response.status_code == 403, response.json()
-
-    schools = client.get(
-        "/competition/schools",
-        headers={"Authorization": f"Bearer {admin_token}"},
-    )
-    assert schools.status_code == 200, schools.json()
-    schools_json = schools.json()
-    updated_school = next(
-        (s for s in schools_json if s["school_id"] == str(school1.id)),
-        None,
-    )
-    assert updated_school is not None
-    assert updated_school["from_lyon"] is False
-    assert updated_school["active"] is True
-    assert updated_school["inscription_enabled"] is False
-
-
-async def test_patch_school_extension_as_admin(
-    client: TestClient,
-) -> None:
-    response = client.patch(
-        f"/competition/schools/{school1.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
-        json={
-            "from_lyon": True,
-            "active": False,
-            "inscription_enabled": True,
-        },
-    )
-    assert response.status_code == 204, response.json()
-
-    schools = client.get(
-        "/competition/schools",
-        headers={"Authorization": f"Bearer {admin_token}"},
-    )
-    assert schools.status_code == 200, schools.json()
-    schools_json = schools.json()
-    updated_school = next(
-        (s for s in schools_json if s["school_id"] == str(school1.id)),
-        None,
-    )
-    assert updated_school is not None
-    assert updated_school["from_lyon"] is True
-    assert updated_school["active"] is False
-    assert updated_school["inscription_enabled"] is True
-
-
-# endregion
-# region: School General Quotas
+    assert response.status_code == 200, response.json()
+    school_quota_json = response.json()
+    assert school_quota_json["athlete_quota"] == 1, school_quota_json
+    assert school_quota_json["cameraman_quota"] == 1, school_quota_json
+    assert school_quota_json["pompom_quota"] == 1, school_quota_json
+    assert school_quota_json["fanfare_quota"] == 1, school_quota_json
 
 
 async def test_post_school_general_quota_as_random(

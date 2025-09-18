@@ -2099,6 +2099,7 @@ async def load_available_product_variants(
                 edition_id=variant.product.edition_id,
                 name=variant.product.name,
                 description=variant.product.description,
+                required=variant.product.required,
             ),
         )
         for variant in variants.scalars().all()
@@ -2130,6 +2131,7 @@ async def load_product_variant_by_id(
                 edition_id=variant.product.edition_id,
                 name=variant.product.name,
                 description=variant.product.description,
+                required=variant.product.required,
             ),
         )
         if variant
