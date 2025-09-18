@@ -656,7 +656,7 @@ async def init_objects() -> None:
             "athlete",
             "school_product_quota",
             400,
-            "Product quota reached",
+            "Product 'Athlete Variant' quota reached",
         ),
         (
             "athlete",

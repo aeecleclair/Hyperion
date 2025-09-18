@@ -1063,6 +1063,20 @@ async def test_get_competition_users(
     assert all(user["edition_id"] == str(active_edition.id) for user in users)
 
 
+async def test_get_competition_users_by_school(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        f"/competition/users/schools/{school1.id}",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 200, response.json()
+    users = response.json()
+    assert len(users) > 0
+    assert all(user["edition_id"] == str(active_edition.id) for user in users)
+    assert all(user["user"]["school_id"] == str(school1.id) for user in users)
+
+
 async def test_get_competition_user_by_id(
     client: TestClient,
 ) -> None:

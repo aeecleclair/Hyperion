@@ -301,6 +301,28 @@ async def get_competition_users(
 
 
 @module.router.get(
+    "/competition/users/schools/{school_id}",
+    response_model=list[schemas_sport_competition.CompetitionUser],
+)
+async def get_competition_users_by_school(
+    school_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+    user: models_users.CoreUser = Depends(is_user()),
+) -> list[schemas_sport_competition.CompetitionUser]:
+    """
+    Get all competition users for the current edition by school.
+    """
+    return await cruds_sport_competition.load_all_competition_users_by_school(
+        school_id,
+        edition.id,
+        db,
+    )
+
+
+@module.router.get(
     "/competition/users/me",
     response_model=schemas_sport_competition.CompetitionUser,
 )

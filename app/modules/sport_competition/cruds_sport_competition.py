@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.core.schools import models_schools
+from app.core.schools.schemas_schools import CoreSchool
 from app.core.users import models_users, schemas_users
 from app.modules.sport_competition import (
     models_sport_competition,
@@ -233,6 +234,11 @@ async def load_memberships_by_competition_group(
                 name=membership.user.name,
                 firstname=membership.user.firstname,
                 groups=[],
+                school=CoreSchool(
+                    id=membership.user.school.id,
+                    name=membership.user.school.name,
+                    email_regex=membership.user.school.email_regex,
+                ),
             ),
         )
         for membership in membership
@@ -311,6 +317,29 @@ async def load_all_competition_users(
     competition_users = await db.execute(
         select(models_sport_competition.CompetitionUser).where(
             models_sport_competition.CompetitionUser.edition_id == edition_id,
+        ),
+    )
+    return [
+        competition_user_model_to_schema(competition_user)
+        for competition_user in competition_users.scalars().all()
+    ]
+
+
+async def load_all_competition_users_by_school(
+    school_id: UUID,
+    edition_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_sport_competition.CompetitionUser]:
+    competition_users = await db.execute(
+        select(models_sport_competition.CompetitionUser)
+        .join(
+            models_users.CoreUser,
+            models_sport_competition.CompetitionUser.user_id
+            == models_users.CoreUser.id,
+        )
+        .where(
+            models_sport_competition.CompetitionUser.edition_id == edition_id,
+            models_users.CoreUser.school_id == school_id,
         ),
     )
     return [
