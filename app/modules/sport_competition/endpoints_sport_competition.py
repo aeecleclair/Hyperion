@@ -383,6 +383,11 @@ async def create_competition_user(
             status_code=400,
             detail="Your school is not authorized to participate in the competition",
         )
+    if not school_extension.inscription_enabled:
+        raise HTTPException(
+            status_code=400,
+            detail="Inscriptions are not enabled for your school",
+        )
     existing_competition_user = (
         await cruds_sport_competition.load_competition_user_by_id(
             db=db,
@@ -577,6 +582,11 @@ async def validate_competition_user(
         get_current_edition,
     ),
 ) -> None:
+    if not edition.inscription_enabled:
+        raise HTTPException(
+            status_code=400,
+            detail="Inscriptions are not enabled for this edition",
+        )
     user_to_validate = await cruds_sport_competition.load_competition_user_by_id(
         user_id,
         edition.id,
@@ -596,6 +606,20 @@ async def validate_competition_user(
         raise HTTPException(
             status_code=403,
             detail="Unauthorized action",
+        )
+    school_extension = await cruds_sport_competition.load_school_base_by_id(
+        user_to_validate.user.school_id,
+        db,
+    )
+    if school_extension is None or not school_extension.active:
+        raise HTTPException(
+            status_code=400,
+            detail="The school of this user is not authorized to participate in the competition",
+        )
+    if not school_extension.inscription_enabled:
+        raise HTTPException(
+            status_code=400,
+            detail="Inscriptions are not enabled for the school of this user",
         )
 
     await check_validation_consistency(
@@ -852,7 +876,7 @@ async def get_school(
     ),
     user: models_users.CoreUser = Depends(is_user()),
 ) -> schemas_sport_competition.SchoolExtension:
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
         raise HTTPException(
             status_code=404,
@@ -904,7 +928,7 @@ async def edit_school_extension(
         get_current_edition,
     ),
 ) -> None:
-    stored = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    stored = await cruds_sport_competition.load_school_by_id(school_id, db)
     if stored is None:
         raise HTTPException(
             status_code=404,
@@ -927,7 +951,7 @@ async def delete_school_extension(
         get_current_edition,
     ),
 ) -> None:
-    stored = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    stored = await cruds_sport_competition.load_school_by_id(school_id, db)
     if stored is None:
         raise HTTPException(
             status_code=404,
@@ -961,7 +985,7 @@ async def get_school_general_quota(
         get_current_edition,
     ),
 ) -> schemas_sport_competition.SchoolGeneralQuota:
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
         raise HTTPException(
             status_code=404,
@@ -996,7 +1020,7 @@ async def create_school_general_quota(
         get_current_edition,
     ),
 ) -> schemas_sport_competition.SchoolGeneralQuota:
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
         raise HTTPException(
             status_code=404,
@@ -1045,7 +1069,7 @@ async def edit_school_general_quota(
         get_current_edition,
     ),
 ) -> None:
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
         raise HTTPException(
             status_code=404,
@@ -1112,7 +1136,7 @@ async def get_quotas_for_school(
     ),
     user: models_users.CoreUser = Depends(is_user()),
 ) -> list[schemas_sport_competition.SchoolSportQuota]:
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
         raise HTTPException(
             status_code=404,
@@ -1141,7 +1165,7 @@ async def create_sport_quota(
         get_current_edition,
     ),
 ) -> None:
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
         raise HTTPException(
             status_code=404,
@@ -1257,7 +1281,7 @@ async def get_product_quotas_for_school(
     ),
     user: models_users.CoreUser = Depends(is_user()),
 ) -> list[schemas_sport_competition.SchoolProductQuota]:
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
         raise HTTPException(
             status_code=404,
@@ -1312,7 +1336,7 @@ async def create_product_quota(
         get_current_edition,
     ),
 ) -> schemas_sport_competition.SchoolProductQuota:
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
         raise HTTPException(
             status_code=404,
@@ -1478,7 +1502,7 @@ async def get_sport_teams_for_school_and_sport(
     ),
     user: models_users.CoreUser = Depends(is_user()),
 ) -> list[schemas_sport_competition.TeamComplete]:
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
         raise HTTPException(
             status_code=404,
@@ -1799,6 +1823,25 @@ async def join_sport(
         get_current_edition,
     ),
 ) -> schemas_sport_competition.Participant:
+    if not edition.inscription_enabled:
+        raise HTTPException(
+            status_code=400,
+            detail="Inscriptions are not enabled for this edition",
+        )
+    school_extension = await cruds_sport_competition.load_school_base_by_id(
+        user.user.school_id,
+        db,
+    )
+    if school_extension is None or not school_extension.active:
+        raise HTTPException(
+            status_code=403,
+            detail="User school is not registered for the competition",
+        )
+    if not school_extension.inscription_enabled:
+        raise HTTPException(
+            status_code=403,
+            detail="Inscriptions are not enabled for user school",
+        )
     sport = await cruds_sport_competition.load_sport_by_id(sport_id, db)
     if sport is None:
         raise HTTPException(
@@ -1807,7 +1850,6 @@ async def join_sport(
         )
     school = await cruds_sport_competition.load_school_by_id(
         user.user.school_id,
-        edition.id,
         db,
     )
     if school is None:
@@ -2353,7 +2395,7 @@ async def get_matches_for_school_sport_and_edition(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
 ) -> list[schemas_sport_competition.MatchComplete]:
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
         raise HTTPException(
             status_code=404,
@@ -2586,7 +2628,7 @@ async def get_school_podiums(
     """
     Get the podiums for a specific school in the current edition.
     """
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
         raise HTTPException(
             status_code=404,
@@ -2835,7 +2877,6 @@ async def get_available_product_variants(
     if user.user.school_id != SchoolType.centrale_lyon.value:
         school = await cruds_sport_competition.load_school_by_id(
             user.user.school_id,
-            edition.id,
             db,
         )
         if school is None:
@@ -3073,7 +3114,6 @@ async def create_purchase(
         )
     school_extension = await cruds_sport_competition.load_school_by_id(
         user.school_id,
-        edition.id,
         db,
     )
     if not school_extension:
