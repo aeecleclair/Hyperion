@@ -248,9 +248,11 @@ async def get_products_of_order(
 async def add_order_to_delivery(
     db: AsyncSession,
     order: schemas_amap.OrderComplete,
+    delivery: models_amap.Delivery,
 ):
     db.add(
         models_amap.Order(
+            delivery=delivery,
             **order.model_dump(exclude={"products_ids", "products_quantity"}),
         ),
     )
