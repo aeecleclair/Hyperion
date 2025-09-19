@@ -76,11 +76,9 @@ class NotificationManager:
                     # The order of responses corresponds to the order of the registration tokens.
                     failed_tokens.append(tokens[idx])
             if len(mismatching_tokens) > 0:
-                usernames = (
-                    await cruds_notification.get_usernames_by_firebase_tokens(
-                        tokens=mismatching_tokens,
-                        db=db,
-                    ),
+                usernames = await cruds_notification.get_usernames_by_firebase_tokens(
+                    tokens=mismatching_tokens,
+                    db=db,
                 )
                 hyperion_error_logger.error(
                     """
