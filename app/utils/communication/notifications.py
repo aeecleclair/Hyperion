@@ -42,6 +42,7 @@ class NotificationManager:
 
     async def _manage_firebase_batch_response(
         self,
+        message_content: Message,
         response: messaging.BatchResponse,
         tokens: list[str],
         db: AsyncSession,
@@ -50,22 +51,47 @@ class NotificationManager:
         Manage the response of a firebase notification. We need to assume that tokens that failed to be send are not valid anymore and delete them from the database.
         """
         if response.failure_count > 0:
-            responses = response.responses
-            failed_tokens = []
+            responses: list[messaging.SendResponse] = response.responses
+            failed_tokens: list[str] = []
+            mismatching_tokens: list[str] = []
             for idx, resp in enumerate(responses):
                 if not resp.success:
                     # Firebase may return different errors: https://firebase.google.com/docs/reference/admin/python/firebase_admin.messaging#exceptions
                     # UnregisteredError happens when the token is not valid anymore, and should thus be removed from the database
-                    # Other errors may happen, we want to log them as they may indicate a problem with the firebase configuration
+                    # Other errors may happen, we want to log them as they may indicate a problem with the firebase configuration.
+                    # We cannot do more from the back-end to have the user eventually receive the notification.
                     if not isinstance(
                         resp.exception,
-                        firebase_admin.messaging.UnregisteredError,
+                        messaging.UnregisteredError,
                     ):
-                        hyperion_error_logger.error(
-                            f"Firebase: Failed to send firebase notification to token {tokens[idx]}: {resp.exception}",
-                        )
+                        if isinstance(
+                            resp.exception,
+                            messaging.SenderIdMismatchError,
+                        ):
+                            mismatching_tokens.append(tokens[idx])
+                        else:
+                            hyperion_error_logger.error(
+                                f"Firebase: Failed to send firebase notification to token {tokens[idx]}: {resp.exception}",
+                            )
                     # The order of responses corresponds to the order of the registration tokens.
                     failed_tokens.append(tokens[idx])
+            if len(mismatching_tokens) > 0:
+                usernames = await cruds_notification.get_usernames_by_firebase_tokens(
+                    tokens=mismatching_tokens,
+                    db=db,
+                )
+                hyperion_error_logger.error(
+                    """
+                        Firebase: SenderId mismatch for notification '%s' (%s module) for %s/%s tokens (%s users) :
+                        %s
+                    """,
+                    message_content.title,
+                    message_content.action_module,
+                    len(mismatching_tokens),
+                    response.success_count + response.failure_count,
+                    len(usernames),
+                    "\n".join(usernames),
+                )
             hyperion_error_logger.info(
                 f"{response.failure_count} messages failed to be send, removing their tokens from the database.",
             )
@@ -121,6 +147,7 @@ class NotificationManager:
             )
             raise
         await self._manage_firebase_batch_response(
+            message_content,
             response=result,
             tokens=tokens,
             db=db,
