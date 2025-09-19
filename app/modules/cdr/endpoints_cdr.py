@@ -145,7 +145,7 @@ async def get_cdr_users_pending_validation(
     }
 
     return [
-        schemas_cdr.CdrUser(
+        schemas_cdr.CdrUserPreview(
             account_type=user.account_type,
             school_id=user.school_id,
             curriculum=schemas_cdr.CurriculumComplete(
@@ -155,10 +155,6 @@ async def get_cdr_users_pending_validation(
             if user.id in curriculum_memberships_mapping
             else None,
             promo=user.promo,
-            email=user.email,
-            birthday=user.birthday,
-            phone=user.phone,
-            floor=user.floor,
             id=user.id,
             name=user.name,
             firstname=user.firstname,
