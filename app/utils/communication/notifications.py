@@ -58,7 +58,8 @@ class NotificationManager:
                 if not resp.success:
                     # Firebase may return different errors: https://firebase.google.com/docs/reference/admin/python/firebase_admin.messaging#exceptions
                     # UnregisteredError happens when the token is not valid anymore, and should thus be removed from the database
-                    # Other errors may happen, we want to log them as they may indicate a problem with the firebase configuration
+                    # Other errors may happen, we want to log them as they may indicate a problem with the firebase configuration.
+                    # We cannot do more from the back-end to have the user eventually receive the notification.
                     if not isinstance(
                         resp.exception,
                         messaging.UnregisteredError,
@@ -74,23 +75,25 @@ class NotificationManager:
                             )
                     # The order of responses corresponds to the order of the registration tokens.
                     failed_tokens.append(tokens[idx])
-            hyperion_error_logger.error(
-                """
-                    Firebase: SenderId mismatch for notification '%s' (%s module) for %s/%s users:
-                    %s
-                """,
-                message_content.title,
-                message_content.action_module,
-                len(mismatching_tokens),
-                response.success_count + response.failure_count,
-                "\n".join(
+            if len(mismatching_tokens) > 0:
+                usernames = (
                     await cruds_notification.get_usernames_by_firebase_tokens(
                         tokens=mismatching_tokens,
                         db=db,
                     ),
-                ),
-            )
-            # TODO: ask to register the device again and retry sending, using the message_content arg
+                )
+                hyperion_error_logger.error(
+                    """
+                        Firebase: SenderId mismatch for notification '%s' (%s module) for %s/%s tokens (%s users) :
+                        %s
+                    """,
+                    message_content.title,
+                    message_content.action_module,
+                    len(mismatching_tokens),
+                    response.success_count + response.failure_count,
+                    len(usernames),
+                    "\n".join(usernames),
+                )
             hyperion_error_logger.info(
                 f"{response.failure_count} messages failed to be send, removing their tokens from the database.",
             )
