@@ -301,6 +301,28 @@ async def get_competition_users(
 
 
 @module.router.get(
+    "/competition/users/schools/{school_id}",
+    response_model=list[schemas_sport_competition.CompetitionUser],
+)
+async def get_competition_users_by_school(
+    school_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+    user: models_users.CoreUser = Depends(is_user()),
+) -> list[schemas_sport_competition.CompetitionUser]:
+    """
+    Get all competition users for the current edition by school.
+    """
+    return await cruds_sport_competition.load_all_competition_users_by_school(
+        school_id,
+        edition.id,
+        db,
+    )
+
+
+@module.router.get(
     "/competition/users/me",
     response_model=schemas_sport_competition.CompetitionUser,
 )
@@ -369,6 +391,25 @@ async def create_competition_user(
     Create a competition user for the current edition.
     The user must exist in the core users database.
     """
+    if not edition.inscription_enabled:
+        raise HTTPException(
+            status_code=400,
+            detail="Inscriptions are not enabled for this edition",
+        )
+    school_extension = await cruds_sport_competition.load_school_base_by_id(
+        current_user.school_id,
+        db,
+    )
+    if school_extension is None or not school_extension.active:
+        raise HTTPException(
+            status_code=400,
+            detail="Your school is not authorized to participate in the competition",
+        )
+    if not school_extension.inscription_enabled:
+        raise HTTPException(
+            status_code=400,
+            detail="Inscriptions are not enabled for your school",
+        )
     existing_competition_user = (
         await cruds_sport_competition.load_competition_user_by_id(
             db=db,
@@ -424,9 +465,46 @@ async def edit_current_user_competition(
             detail="Competition user not found",
         )
     if stored.validated:
+        user.validated = False
+    user.is_athlete = (
+        user.is_athlete if user.is_athlete is not None else stored.is_athlete
+    )
+    user.is_cameraman = (
+        user.is_cameraman if user.is_cameraman is not None else stored.is_cameraman
+    )
+    user.is_pompom = user.is_pompom if user.is_pompom is not None else stored.is_pompom
+    user.is_fanfare = (
+        user.is_fanfare if user.is_fanfare is not None else stored.is_fanfare
+    )
+    user.is_volunteer = (
+        user.is_volunteer if user.is_volunteer is not None else stored.is_volunteer
+    )
+    if (
+        sum(
+            [
+                user.is_pompom,
+                user.is_fanfare,
+                user.is_cameraman,
+            ],
+        )
+        > 1
+    ):
         raise HTTPException(
             status_code=400,
-            detail="Cannot edit a validated competition user",
+            detail="A user cannot be in more than one of the following categories: pompoms, fanfares, cameramen",
+        )
+    if not any(
+        [
+            user.is_pompom,
+            user.is_fanfare,
+            user.is_cameraman,
+            user.is_athlete,
+            user.is_volunteer,
+        ],
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="A user must be at least in one of the following categories: pompoms, fanfares, cameramen, athletes, volunteers",
         )
     await cruds_sport_competition.update_competition_user(
         current_user.id,
@@ -465,6 +543,48 @@ async def edit_competition_user(
             status_code=404,
             detail="Competition user not found",
         )
+    if stored.validated:
+        user.validated = False
+    user.is_athlete = (
+        user.is_athlete if user.is_athlete is not None else stored.is_athlete
+    )
+    user.is_cameraman = (
+        user.is_cameraman if user.is_cameraman is not None else stored.is_cameraman
+    )
+    user.is_pompom = user.is_pompom if user.is_pompom is not None else stored.is_pompom
+    user.is_fanfare = (
+        user.is_fanfare if user.is_fanfare is not None else stored.is_fanfare
+    )
+    user.is_volunteer = (
+        user.is_volunteer if user.is_volunteer is not None else stored.is_volunteer
+    )
+    if (
+        sum(
+            [
+                user.is_pompom,
+                user.is_fanfare,
+                user.is_cameraman,
+            ],
+        )
+        > 1
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="A user cannot be in more than one of the following categories: pompoms, fanfares, cameramen",
+        )
+    if not any(
+        [
+            user.is_pompom,
+            user.is_fanfare,
+            user.is_cameraman,
+            user.is_athlete,
+            user.is_volunteer,
+        ],
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="A user must be at least in one of the following categories: pompoms, fanfares, cameramen, athletes, volunteers",
+        )
     await cruds_sport_competition.update_competition_user(user_id, edition.id, user, db)
 
 
@@ -484,6 +604,11 @@ async def validate_competition_user(
         get_current_edition,
     ),
 ) -> None:
+    if not edition.inscription_enabled:
+        raise HTTPException(
+            status_code=400,
+            detail="Inscriptions are not enabled for this edition",
+        )
     user_to_validate = await cruds_sport_competition.load_competition_user_by_id(
         user_id,
         edition.id,
@@ -494,16 +619,7 @@ async def validate_competition_user(
             status_code=404,
             detail="User not found in the database",
         )
-    participant = await cruds_sport_competition.load_participant_by_user_id(
-        user_id,
-        edition.id,
-        db,
-    )
-    if participant and not participant.is_license_valid:
-        raise HTTPException(
-            status_code=400,
-            detail="Participant license is not valid",
-        )
+
     if (
         GroupType.competition_admin.value
         not in [group.id for group in user.user.groups]
@@ -513,59 +629,27 @@ async def validate_competition_user(
             status_code=403,
             detail="Unauthorized action",
         )
-    sport = (
-        await cruds_sport_competition.load_sport_by_id(participant.sport_id, db)
-        if participant
-        else None
-    )
-    if participant and sport is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Sport not found in the database",
-        )
-    school_sport_quota = (
-        await cruds_sport_competition.load_sport_quota_by_ids(
-            participant.school_id,
-            participant.sport_id,
-            edition.id,
-            db,
-        )
-        if participant
-        else None
-    )
-    school_general_quota = await cruds_sport_competition.load_school_general_quota(
+    school_extension = await cruds_sport_competition.load_school_base_by_id(
         user_to_validate.user.school_id,
-        edition.id,
         db,
     )
-    school_products_quota = (
-        await cruds_sport_competition.load_all_school_product_quotas(
-            user_to_validate.user.school_id,
-            edition.id,
-            db,
+    if school_extension is None or not school_extension.active:
+        raise HTTPException(
+            status_code=400,
+            detail="The school of this user is not authorized to participate in the competition",
         )
-    )
-    purchases = await cruds_sport_competition.load_purchases_by_user_id(
-        user_id,
-        edition.id,
-        db,
-    )
-    required_products = await cruds_sport_competition.load_required_products(
-        edition.id,
-        db,
-    )
+    if not school_extension.inscription_enabled:
+        raise HTTPException(
+            status_code=400,
+            detail="Inscriptions are not enabled for the school of this user",
+        )
+
     await check_validation_consistency(
         user_to_validate,
-        participant,
-        purchases,
-        school_sport_quota,
-        school_general_quota,
-        school_products_quota,
-        required_products,
         edition,
         db,
     )
-    await cruds_sport_competition.validate_participant(
+    await cruds_sport_competition.validate_competition_user(
         user_id,
         edition.id,
         db,
@@ -622,7 +706,7 @@ async def invalidate_competition_user(
             status_code=400,
             detail="Cannot invalidate participant with payments",
         )
-    await cruds_sport_competition.invalidate_participant(
+    await cruds_sport_competition.invalidate_competition_user(
         user_id,
         edition.id,
         db,
@@ -814,7 +898,7 @@ async def get_school(
     ),
     user: models_users.CoreUser = Depends(is_user()),
 ) -> schemas_sport_competition.SchoolExtension:
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
         raise HTTPException(
             status_code=404,
@@ -866,7 +950,7 @@ async def edit_school_extension(
         get_current_edition,
     ),
 ) -> None:
-    stored = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    stored = await cruds_sport_competition.load_school_by_id(school_id, db)
     if stored is None:
         raise HTTPException(
             status_code=404,
@@ -889,7 +973,7 @@ async def delete_school_extension(
         get_current_edition,
     ),
 ) -> None:
-    stored = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    stored = await cruds_sport_competition.load_school_by_id(school_id, db)
     if stored is None:
         raise HTTPException(
             status_code=404,
@@ -923,7 +1007,7 @@ async def get_school_general_quota(
         get_current_edition,
     ),
 ) -> schemas_sport_competition.SchoolGeneralQuota:
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
         raise HTTPException(
             status_code=404,
@@ -958,7 +1042,7 @@ async def create_school_general_quota(
         get_current_edition,
     ),
 ) -> schemas_sport_competition.SchoolGeneralQuota:
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
         raise HTTPException(
             status_code=404,
@@ -1007,7 +1091,7 @@ async def edit_school_general_quota(
         get_current_edition,
     ),
 ) -> None:
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
         raise HTTPException(
             status_code=404,
@@ -1074,7 +1158,7 @@ async def get_quotas_for_school(
     ),
     user: models_users.CoreUser = Depends(is_user()),
 ) -> list[schemas_sport_competition.SchoolSportQuota]:
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
         raise HTTPException(
             status_code=404,
@@ -1103,7 +1187,7 @@ async def create_sport_quota(
         get_current_edition,
     ),
 ) -> None:
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
         raise HTTPException(
             status_code=404,
@@ -1219,7 +1303,7 @@ async def get_product_quotas_for_school(
     ),
     user: models_users.CoreUser = Depends(is_user()),
 ) -> list[schemas_sport_competition.SchoolProductQuota]:
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
         raise HTTPException(
             status_code=404,
@@ -1274,7 +1358,7 @@ async def create_product_quota(
         get_current_edition,
     ),
 ) -> schemas_sport_competition.SchoolProductQuota:
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
         raise HTTPException(
             status_code=404,
@@ -1440,7 +1524,7 @@ async def get_sport_teams_for_school_and_sport(
     ),
     user: models_users.CoreUser = Depends(is_user()),
 ) -> list[schemas_sport_competition.TeamComplete]:
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
         raise HTTPException(
             status_code=404,
@@ -1761,6 +1845,25 @@ async def join_sport(
         get_current_edition,
     ),
 ) -> schemas_sport_competition.Participant:
+    if not edition.inscription_enabled:
+        raise HTTPException(
+            status_code=400,
+            detail="Inscriptions are not enabled for this edition",
+        )
+    school_extension = await cruds_sport_competition.load_school_base_by_id(
+        user.user.school_id,
+        db,
+    )
+    if school_extension is None or not school_extension.active:
+        raise HTTPException(
+            status_code=403,
+            detail="User school is not registered for the competition",
+        )
+    if not school_extension.inscription_enabled:
+        raise HTTPException(
+            status_code=403,
+            detail="Inscriptions are not enabled for user school",
+        )
     sport = await cruds_sport_competition.load_sport_by_id(sport_id, db)
     if sport is None:
         raise HTTPException(
@@ -1769,7 +1872,6 @@ async def join_sport(
         )
     school = await cruds_sport_competition.load_school_by_id(
         user.user.school_id,
-        edition.id,
         db,
     )
     if school is None:
@@ -1992,9 +2094,10 @@ async def withdraw_from_sport(
             detail="Participant not found in the database",
         )
     if participant.user.validated:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot withdraw a validated participant",
+        await cruds_sport_competition.invalidate_competition_user(
+            user.user_id,
+            edition.id,
+            db,
         )
     await cruds_sport_competition.delete_participant_by_ids(
         user.user_id,
@@ -2314,7 +2417,7 @@ async def get_matches_for_school_sport_and_edition(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
 ) -> list[schemas_sport_competition.MatchComplete]:
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
         raise HTTPException(
             status_code=404,
@@ -2547,7 +2650,7 @@ async def get_school_podiums(
     """
     Get the podiums for a specific school in the current edition.
     """
-    school = await cruds_sport_competition.load_school_by_id(school_id, edition.id, db)
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
         raise HTTPException(
             status_code=404,
@@ -2796,7 +2899,6 @@ async def get_available_product_variants(
     if user.user.school_id != SchoolType.centrale_lyon.value:
         school = await cruds_sport_competition.load_school_by_id(
             user.user.school_id,
-            edition.id,
             db,
         )
         if school is None:
@@ -3034,7 +3136,6 @@ async def create_purchase(
         )
     school_extension = await cruds_sport_competition.load_school_by_id(
         user.school_id,
-        edition.id,
         db,
     )
     if not school_extension:
@@ -3072,6 +3173,13 @@ async def create_purchase(
         quantity=purchase.quantity,
         purchased_on=datetime.now(UTC),
     )
+    if competition_user.validated:
+        await cruds_sport_competition.invalidate_competition_user(
+            competition_user.user_id,
+            edition.id,
+            db,
+        )
+
     if existing_db_purchase:
         await cruds_sport_competition.update_purchase(
             db=db,
@@ -3088,7 +3196,6 @@ async def create_purchase(
         db_purchase,
         db,
     )
-    await db.flush()
     return db_purchase
 
 
@@ -3124,6 +3231,17 @@ async def delete_purchase(
         raise HTTPException(
             status_code=403,
             detail="You can't remove a validated purchase",
+        )
+    competition_user = await cruds_sport_competition.load_competition_user_by_id(
+        user.id,
+        edition.id,
+        db,
+    )
+    if competition_user and competition_user.validated:
+        await cruds_sport_competition.invalidate_competition_user(
+            competition_user.user_id,
+            edition.id,
+            db,
         )
 
     await cruds_sport_competition.delete_purchase(

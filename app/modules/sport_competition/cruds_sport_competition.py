@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.core.schools import models_schools
+from app.core.schools.schemas_schools import CoreSchool
 from app.core.users import models_users, schemas_users
 from app.modules.sport_competition import (
     models_sport_competition,
@@ -233,6 +234,11 @@ async def load_memberships_by_competition_group(
                 name=membership.user.name,
                 firstname=membership.user.firstname,
                 groups=[],
+                school=CoreSchool(
+                    id=membership.user.school.id,
+                    name=membership.user.school.name,
+                    email_regex=membership.user.school.email_regex,
+                ),
             ),
         )
         for membership in membership
@@ -311,6 +317,29 @@ async def load_all_competition_users(
     competition_users = await db.execute(
         select(models_sport_competition.CompetitionUser).where(
             models_sport_competition.CompetitionUser.edition_id == edition_id,
+        ),
+    )
+    return [
+        competition_user_model_to_schema(competition_user)
+        for competition_user in competition_users.scalars().all()
+    ]
+
+
+async def load_all_competition_users_by_school(
+    school_id: UUID,
+    edition_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_sport_competition.CompetitionUser]:
+    competition_users = await db.execute(
+        select(models_sport_competition.CompetitionUser)
+        .join(
+            models_users.CoreUser,
+            models_sport_competition.CompetitionUser.user_id
+            == models_users.CoreUser.id,
+        )
+        .where(
+            models_sport_competition.CompetitionUser.edition_id == edition_id,
+            models_users.CoreUser.school_id == school_id,
         ),
     )
     return [
@@ -479,6 +508,8 @@ async def load_school_base_by_id(
             school_id=school.school_id,
             from_lyon=school.from_lyon,
             active=school.active,
+            inscription_enabled=school.inscription_enabled,
+            ffsu_id=school.ffsu_id,
         )
         if school
         else None
@@ -487,23 +518,12 @@ async def load_school_base_by_id(
 
 async def load_school_by_id(
     school_id: UUID,
-    edition_id: UUID,
     db: AsyncSession,
 ) -> schemas_sport_competition.SchoolExtension | None:
     school_extension = (
         (
             await db.execute(
                 select(models_sport_competition.SchoolExtension)
-                .join(
-                    models_sport_competition.SchoolGeneralQuota,
-                    and_(
-                        models_sport_competition.SchoolExtension.school_id
-                        == models_sport_competition.SchoolGeneralQuota.school_id,
-                        models_sport_competition.SchoolGeneralQuota.edition_id
-                        == edition_id,
-                    ),
-                    isouter=True,
-                )
                 .where(
                     models_sport_competition.SchoolExtension.school_id == school_id,
                 )
@@ -611,7 +631,7 @@ async def update_participant(
     await db.flush()
 
 
-async def validate_participant(
+async def validate_competition_user(
     user_id: str,
     edition_id: UUID,
     db: AsyncSession,
@@ -629,7 +649,7 @@ async def validate_participant(
     await db.flush()
 
 
-async def invalidate_participant(
+async def invalidate_competition_user(
     user_id: str,
     edition_id: UUID,
     db: AsyncSession,
@@ -2108,6 +2128,7 @@ async def load_available_product_variants(
                 edition_id=variant.product.edition_id,
                 name=variant.product.name,
                 description=variant.product.description,
+                required=variant.product.required,
             ),
         )
         for variant in variants.scalars().all()
@@ -2139,6 +2160,7 @@ async def load_product_variant_by_id(
                 edition_id=variant.product.edition_id,
                 name=variant.product.name,
                 description=variant.product.description,
+                required=variant.product.required,
             ),
         )
         if variant

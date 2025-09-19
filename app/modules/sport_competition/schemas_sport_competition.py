@@ -202,7 +202,6 @@ class ParticipantEdit(BaseModel):
     sport_id: UUID | None = None
     user_id: str | None = None
     substitute: bool | None = None
-    validated: bool | None = None
 
 
 class ParticipantComplete(Participant):

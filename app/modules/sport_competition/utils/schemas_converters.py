@@ -48,6 +48,7 @@ def school_extension_model_to_schema(
         from_lyon=school_extension.from_lyon,
         active=school_extension.active,
         inscription_enabled=school_extension.inscription_enabled,
+        ffsu_id=school_extension.ffsu_id,
         school=schemas_schools.CoreSchool(
             id=school_extension.school.id,
             name=school_extension.school.name,
