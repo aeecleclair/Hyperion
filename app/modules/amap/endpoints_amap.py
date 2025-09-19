@@ -196,14 +196,6 @@ async def create_delivery(
         status=DeliveryStatusType.creation,
         **delivery.model_dump(),
     )
-    if await cruds_amap.is_there_a_delivery_on(
-        db=db,
-        delivery_date=db_delivery.delivery_date,
-    ):
-        raise HTTPException(
-            status_code=400,
-            detail="There is already a delivery planned that day.",
-        )
 
     return await cruds_amap.create_delivery(delivery=db_delivery, db=db)
 
