@@ -22,7 +22,7 @@ pydantic-settings==2.3.4
 pydantic==2.7.4
 pyjwt[crypto]==2.8.0                # generate and verify the JWT tokens, imported as `jwt`
 PyMuPDF==1.24.9                     # PDF processing, imported as `fitz`
-pypdf==4.3.1
+pypdf==6.0.0
 python-dotenv==1.0.1                # load environment variables from .env file
 python-multipart==0.0.18             # a form data parser, as oauth flow requires form-data parameters
 redis==5.0.8
