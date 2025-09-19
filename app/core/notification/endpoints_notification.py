@@ -256,6 +256,7 @@ async def send_notification(
     status_code=201,
 )
 async def send_test_notification(
+    user_id: str | None = None,
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
@@ -270,7 +271,7 @@ async def send_test_notification(
         action_module="test",
     )
     await notification_tool.send_notification_to_user(
-        user_id=user.id,
+        user_id=user_id or user.id,
         message=message,
     )
 
@@ -280,6 +281,7 @@ async def send_test_notification(
     status_code=204,
 )
 async def send_test_future_notification(
+    user_id: str | None = None,
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     scheduler: Scheduler = Depends(get_scheduler),
@@ -295,7 +297,7 @@ async def send_test_future_notification(
         action_module="test",
     )
     await notification_tool.send_notification_to_users(
-        user_ids=[user.id],
+        user_ids=[user_id or user.id],
         message=message,
         defer_date=datetime.now(UTC) + timedelta(seconds=10),
         scheduler=scheduler,
@@ -361,6 +363,7 @@ async def send_test_future_notification_topic(
     response_model=list[schemas_notification.FirebaseDevice],
 )
 async def get_devices(
+    user_id: str | None = None,
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
     db: AsyncSession = Depends(get_db),
 ):
@@ -371,6 +374,6 @@ async def get_devices(
     **Only admins can use this endpoint**
     """
     return await cruds_notification.get_firebase_devices_by_user_id(
-        user_id=user.id,
+        user_id=user_id or user.id,
         db=db,
     )
