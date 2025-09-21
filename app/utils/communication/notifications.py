@@ -150,7 +150,7 @@ class NotificationManager:
             db=db,
         )
 
-    def _send_firebase_push_notification_by_topic(
+    async def _send_firebase_push_notification_by_topic(
         self,
         topic_id: UUID,
         message_content: Message,
@@ -163,21 +163,34 @@ class NotificationManager:
         if not self.use_firebase:
             return
 
-        topic = str(topic_id)
-        message = messaging.Message(
-            topic=topic,
-            notification=messaging.Notification(
-                title=message_content.title,
-                body=message_content.content,
-            ),
-        )
         try:
-            messaging.send(message)
-        except messaging.FirebaseError:
+            topic = str(topic_id)
+            message = messaging.Message(
+                topic=topic,
+                data={"action_module": message_content.action_module},
+                notification=messaging.Notification(
+                    title=message_content.title,
+                    body=message_content.content,
+                ),
+            )
+
+            result: messaging.BatchResponse = messaging.send_each([message])
+        except Exception:
             hyperion_error_logger.exception(
                 f"Notification: Unable to send firebase notification for topic {topic}",
             )
             raise
+
+        if result.failure_count > 0:
+            hyperion_error_logger.exception
+            hyperion_error_logger.error(
+                "Firebase: Failed to send notification '%s' for topic %s (%s module) for %s/%s tokens",
+                message_content.title,
+                topic,
+                message_content.action_module,
+                result.failure_count,
+                result.success_count + result.failure_count,
+            )
 
     async def subscribe_tokens_to_topic(
         self,
@@ -271,7 +284,7 @@ class NotificationManager:
             return
 
         try:
-            self._send_firebase_push_notification_by_topic(
+            await self._send_firebase_push_notification_by_topic(
                 topic_id=topic_id,
                 message_content=message,
             )
