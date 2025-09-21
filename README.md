@@ -193,6 +193,43 @@ services:
     volumes:
       - ./hyperion-db:/var/lib/postgresql/data
 ```
+
+## Complete the dotenv (`.env`) and the `config.yaml`
+
+Copy the `.env.template` file in a new `.env` file, same for `config.template.yaml` in a new `config.yaml`.
+These template files were carefully crafted to work for you with minimal changes to bring, and some preconfigured services.
+
+For later reference, these settings are documented in [app/core/config.py](./app/core/config.py).
+Check this file to know what can and should be set using these two files.
+
+### `.env`
+
+The `.env` contains environment variables which need to be accessed by the OS or by other services, such as the database.
+
+#### With SQLite
+
+Again there's nothing to do.
+
+#### With PostgreSQL
+
+Set your user, password, host and db.
+
+For instance, with the installer you should have something like:
+
+```sh
+POSTGRES_USER="postgres"
+POSTGRES_PASSWORD=""
+POSTGRES_HOST="localhost"
+POSTGRES_DB="hyperion"
+```
+
+While with Docker you should have rather something like:
+
+```sh
+POSTGRES_USER="hyperion"
+POSTGRES_PASSWORD=""
+POSTGRES_HOST="hyperion-db"
+POSTGRES_DB="hyperion"
 ```
 
 ## Launch the API
