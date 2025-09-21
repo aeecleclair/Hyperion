@@ -17,7 +17,6 @@ from fastapi import (
 )
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import cruds_auth, models_auth, schemas_auth
@@ -52,8 +51,6 @@ core_module = CoreModule(
     router=router,
     factory=None,
 )
-
-templates = Jinja2Templates(directory="assets/templates")
 
 # We could maybe use hyperion.security
 hyperion_access_logger = logging.getLogger("hyperion.access")
