@@ -265,6 +265,7 @@ async def get_usernames_by_firebase_tokens(
             models_notification.FirebaseDevice,
             models_users.CoreUser.id == models_notification.FirebaseDevice.user_id,
         )
-        .where(models_notification.FirebaseDevice.firebase_device_token.in_(tokens)),
+        .where(models_notification.FirebaseDevice.firebase_device_token.in_(tokens))
+        .distinct(),
     )
     return [f"{u.firstname} {u.name}" for u in list(result.scalars().all())]

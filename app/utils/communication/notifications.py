@@ -81,16 +81,13 @@ class NotificationManager:
                     db=db,
                 )
                 hyperion_error_logger.error(
-                    """
-                        Firebase: SenderId mismatch for notification '%s' (%s module) for %s/%s tokens (%s users) :
-                        %s
-                    """,
+                    "Firebase: SenderId mismatch for notification '%s' (%s module) for %s/%s tokens (%s users) : %s",
                     message_content.title,
                     message_content.action_module,
                     len(mismatching_tokens),
                     response.success_count + response.failure_count,
                     len(usernames),
-                    "\n".join(usernames),
+                    ", ".join(usernames),
                 )
             hyperion_error_logger.info(
                 f"{response.failure_count} messages failed to be send, removing their tokens from the database.",
@@ -140,7 +137,7 @@ class NotificationManager:
                 ),
             )
 
-            result = messaging.send_each_for_multicast(message)
+            result: messaging.BatchResponse = messaging.send_each_for_multicast(message)
         except Exception:
             hyperion_error_logger.exception(
                 "Notification: Unable to send firebase notification to tokens",
