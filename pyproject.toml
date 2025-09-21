@@ -7,7 +7,6 @@ authors = [{ name = "AEECL ECLAIR" }]
 # Hyperion follows Semantic Versioning
 # https://semver.org/
 version = "4.9.5"
-minimal-titan-version-code = 139
 requires-python = ">= 3.11, < 3.13"
 
 license = "MIT"
@@ -18,6 +17,8 @@ license-files = [
     "assets/myeclpay-terms-of-service.txt",
 ]
 
+[tool.titan]
+minimal-titan-version-code = 139
 
 [tool.ruff]
 # By default ruff also respect gitignore files
@@ -26,7 +27,7 @@ line-length = 88
 indent-width = 4
 target-version = "py311"
 
-[tool.ruff.lint]
+[tool.lint]
 select = [
     "FAST",
     "YTT",
@@ -97,7 +98,7 @@ ignore = [
 fixable = ["ALL"]
 unfixable = []
 
-[tool.ruff.lint.per-file-ignores]
+[tool.ruff.per-file-ignores]
 # Allow `assert` and hardcoded passwords for tests.
 # Ignore PLW0603 to be able to define global models from init fixture 
 "tests/*" = ["S101", "S105", "S106", "ASYNC230", "PLW0603"]
@@ -114,7 +115,7 @@ unfixable = []
 # Allow complexe methods for auth endpoints
 "app/core/auth/endpoints_auth.py" = ["C901"]
 
-[tool.ruff.lint.mccabe]
+[tool.ruff.mccabe]
 # Flag errors (`C901`) whenever the complexity level exceeds 18.
 max-complexity = 18
 
@@ -201,3 +202,4 @@ exclude_also = []
 
 skip_covered = true
 show_missing = true
+
