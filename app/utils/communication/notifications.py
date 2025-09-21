@@ -182,7 +182,6 @@ class NotificationManager:
             raise
 
         if result.failure_count > 0:
-            hyperion_error_logger.exception
             hyperion_error_logger.error(
                 "Firebase: Failed to send notification '%s' for topic %s (%s module) for %s/%s tokens",
                 message_content.title,
