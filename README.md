@@ -357,7 +357,11 @@ If there is exactly one user in the database, you can make it admin using the fo
 curl -X POST http://localhost:8000/users/make-admin
 ```
 
-## Install docker or an equivalent
+---
+
+# Beyond initial configuration
+
+## Install Docker or an equivalent
 
 Install docker and the compose plugin (https://docs.docker.com/compose/install/)
 
@@ -365,7 +369,24 @@ Install docker and the compose plugin (https://docs.docker.com/compose/install/)
 
 > During dev, `docker-compose-dev.yaml` can be used to run the database, the redis server etc... If you really want to run the project without docker, you can do it but you will have to install the database, redis, etc ... yourself or disable corresponding features in the .env file (which is not recommended).
 
----
+## Linting and formating
+
+To lint and format, we currently use `Ruff`. We also use `Mypy` for the type checking.
+
+Before each PR or git push you will need to run `ruff check --fix && ruff format` in order to format/lint your code and `mypy .` in order to verify that there is no type mismatch.
+
+## Use Alembic migrations
+
+See [migrations README](./migrations/README)
+
+> [!WARNING]
+> On SQLite databases, you have to drop the database and recreate it to apply the new DDL.
+
+## OpenAPI specification
+
+API endpoints are parsed following the OpenAPI specifications at `http://127.0.0.1:8000/openapi.json`.
+
+A Swagger UI is available at `http://127.0.0.1:8000/docs`. For authentication to work, a valid `AUTH_CLIENT` must be defined in the `.env`, with `http://127.0.0.1:8000/docs/oauth2-redirect` as the redirect URI, and `scope=API` must be added to the authentication request.
 
 ## Configure Firebase notifications
 
