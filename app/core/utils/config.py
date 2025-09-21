@@ -309,7 +309,7 @@ class Settings(BaseSettings):
     def MINIMAL_TITAN_VERSION_CODE(cls) -> str:
         with Path("pyproject.toml").open("rb") as pyproject_binary:
             pyproject = tomllib.load(pyproject_binary)
-        return str(pyproject["project"]["minimal-titan-version-code"])
+        return str(pyproject["tool"]["titan"]["minimal-titan-version-code"])
 
     ######################################
     # Automatically generated parameters #
