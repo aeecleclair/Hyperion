@@ -11,15 +11,12 @@ hyperion-db
 # Persistent data as files
 data/
 
-# Dotenv file
+# Configuration and secrets files
 .env
 config.yaml
-
-
-# Firebase secrets
 firebase.json
 
-# macOS
+# MacOS
 .DS_Store
 
 # Virtual environment
@@ -31,10 +28,9 @@ logs/
 # Pytest-cov
 .coverage
 
-# Jinja templates test output
+# Jinja output templates and test output
 tests/jinja_test_outputs/
+node_modules
 
 # Local testing
 scripts/
-
-node_modules

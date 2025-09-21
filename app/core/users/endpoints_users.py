@@ -16,7 +16,6 @@ from fastapi import (
     UploadFile,
 )
 from fastapi.responses import FileResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import cruds_auth
@@ -65,7 +64,6 @@ core_module = CoreModule(
 hyperion_error_logger = logging.getLogger("hyperion.error")
 hyperion_security_logger = logging.getLogger("hyperion.security")
 hyperion_s3_logger = logging.getLogger("hyperion.s3")
-templates = Jinja2Templates(directory="assets/templates")
 
 S3_USER_SUBFOLDER = "users"
 
