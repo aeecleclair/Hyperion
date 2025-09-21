@@ -20,6 +20,18 @@ Create the virtual environment
 py -3.12 -m venv .venv
 ```
 
+If you get an error saying roughly:
+
+```
+because the execution of scripts is disabled on this system. Please see "get-help about_signing" for more details.
+```
+
+Then in a Powershell, run this to allow scripts executions for your user:
+
+```ps1
+Set-ExecutionPolicy Unrestricted -Scope CurrentUser
+```
+
 Activate it
 
 ```bash
@@ -56,21 +68,35 @@ pyenv activate hyperion
 
 ## Install dependencies
 
-### Development requirements
+### About Jellyfish and Rust
+
+If you don't have Rust installed or don't want to install it, decrase the version of `jellyfish` to `0.10.0` in the `requirements-common.txt` file:
+
+```
+jellyfish==0.10.0                    # String Matching
+```
+
+### About Weasyprint and Pango
+
+Follow the installation steps at https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation.
+
+For Windows, the best way is through MSYS2, Mac users can simply install using Homebrew.
+
+### Install dependencies (for real)
+
+Install the dependencies you'll need using `pip` (the common requirements are included in the development requirements):
 
 ```bash
 pip install -r requirements-dev.txt
 ```
 
-> If you need to remove all modules from your virtual environnement, you may use the following command with caution
->
-> ```bash
-> pip freeze | xargs pip uninstall -y
-> ```
+If you changed the version of Jellyfish, don't forget to set it back:
 
-## Linting and formating
+```
+jellyfish==1.0.4                    # String Matching
+```
 
-To lint and format, we currently use `Ruff`. We also use `Mypy` for the type checking.
+> If you need to remove all modules from your virtual environnement, delete your `.venv` folder.
 
 Before each PR or git push you will need to run `ruff check --fix && ruff format` in order to format/lint your code and `mypy .` in order to verify that there is no type mismatch.
 
