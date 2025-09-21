@@ -98,44 +98,101 @@ jellyfish==1.0.4                    # String Matching
 
 > If you need to remove all modules from your virtual environnement, delete your `.venv` folder.
 
-Before each PR or git push you will need to run `ruff check --fix && ruff format` in order to format/lint your code and `mypy .` in order to verify that there is no type mismatch.
+## Install and configure a database
 
-## Complete the dotenv (`.env`)
+Choose either SQLite or PostgreSQL.
 
-> Hyperion settings are documented in [app/core/config.py](./app/core/config.py).
-> Check this file to know what can and should be set using the dotenv.
+### SQLite
 
-`SQLITE_DB` is None by default. If you want to use SQLite (if you don't use docker or don't have a postgres running), set it with the name of the db file (`app.db` for example).
+#### Advantages
 
-`ACCESS_TOKEN_SECRET_KEY` should be a strong random key, which will be used to sign JWT tokens
+It is a binary.
+This means:
 
-`RSA_PRIVATE_PEM_STRING` will be used to sign JWS tokens
+- SQLite is lightweight
+- It is directly understood by your machine, no special configuration is needed.
+
+#### Disadvantages
+
+Being so light, it does not support some features nowadays common for relational databases:
+
+- Drop your database on every migration: Alembic uses features incompatible with SQLite
+
+#### Installation and configuration
+
+There is nothing to do, it works out of the box.
+
+### PostgreSQL
+
+#### Advantages
+
+Its advantages are many:
+
+- Very powerful database: it supports all the features you'll ever need.
+- Used in production for Hyperion.
+- Widely used in production in enterprise-grade services: useful competence on your résumé.
+- Supports migrations with Alembic.
+- A powerful CLI tool.
+
+#### Disadvantages
+
+None (not so heavy, configuration not so hard).
+
+#### Configuration
+
+##### Without Docker: native binaries
+
+1. Download the installer: https://www.enterprisedb.com/downloads/postgres-postgresql-downloads
+2. Launch it and trust the wizard
+   - Keep the default folders and ports, install it all, etc...
+   - ...but put a concise password you'd remember, choose your language
+   - Don't use the "Stack Builder" (not needed)
+3. On Windows: in your path, add `C:\Program Files\PostgreSQL\17\bin` and `C:\Program Files\PostgreSQL\17\lib` (if you installed Postgres 17 in that location)
+4. Create a database named `hyperion`
+
+```sh
+psql -U postgres -c "CREATE DATABASE hyperion;"
+```
+
+Now your Hyperion database can be explored by hand (as the `postgres` user, using your password you chose) with:
 
 ```bash
-# Generate a 2048 bits long PEM certificate and replace newlines by `\n`
-openssl req -newkey rsa:2048 -nodes -x509 -days 365 | sed 's/$/\\n/g' | tr -d '\n'
-# If you only want to generate a PEM certificate and save it in a file, th following command may be used
-# openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out certificate.pem
+psql -U postgres -d hyperion
 ```
 
-`REDIS` may be left blank to disable Redis during development
-Numerical values are example, change it to your needs
+then running SQL or Postgres commands in this shell, or
 
-```python
-REDIS_HOST = "localhost" #May be left at "" during dev if you don't have a redis server running
-REDIS_PORT = 6379
-#REDIS_PASSWORD = "pass" Should be commented during development to work with docker-compose-dev, and set in production
-REDIS_LIMIT = 1000
-REDIS_WINDOW = 60
+```bash
+psql -U postgres -d hyperion -c "select firstname from core_user;"
 ```
 
-`POSTGRES`: This section will be ignored if `SQLITE_DB` is set to True.
+##### With Docker
 
-```python
-POSTGRES_HOST = "localhost"
-POSTGRES_USER = "hyperion"
-POSTGRES_PASSWORD = "pass"
-POSTGRES_DB = "hyperion"
+> [!WARNING]
+> Work in progress
+
+```
+services:
+  hyperion-db:
+    image: postgres:15.1
+    container_name: hyperion-db
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PGTZ: ${POSTGRES_TZ}
+    ports:
+      - 5432:5432
+    volumes:
+      - ./hyperion-db:/var/lib/postgresql/data
+```
 ```
 
 ## Launch the API
