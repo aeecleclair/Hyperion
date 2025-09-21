@@ -118,10 +118,9 @@ class Settings(BaseSettings):
     ###############################################
     # Authorization using OAuth or Openid connect #
     ###############################################
-
-    # ACCESS_TOKEN_SECRET_KEY should contain a random string with enough entropy (at least 32 bytes long) to securely sign all access_tokens for OAuth and Openid connect
+    # ACCESS_TOKEN_SECRET_KEY should contain a strong random string with enough entropy (at least 32 bytes long) to securely sign all JWT access_tokens for OAuth2 and OpenID Connect
     ACCESS_TOKEN_SECRET_KEY: str
-    # RSA_PRIVATE_PEM_STRING should be a string containing the PEM certificate of a private RSA key. It will be used to sign id_tokens for Openid connect authentication
+    # RSA_PRIVATE_PEM_STRING should be a string containing the PEM certificate of a private RSA key. It will be used to sign JWS id_tokens for OpenID Connect authentication
     # In the pem certificates newlines can be replaced by `\n`
     RSA_PRIVATE_PEM_STRING: bytes
 

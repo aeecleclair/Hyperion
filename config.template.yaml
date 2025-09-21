@@ -1,8 +1,12 @@
 ###############################################
 # Authorization using OAuth or Openid connect #
 ###############################################
+
 # ACCESS_TOKEN_SECRET_KEY should contain a random string with enough entropy (at least 32 bytes long) to securely sign all access_tokens for OAuth and Openid connect
-ACCESS_TOKEN_SECRET_KEY: ""
+# If you want to generate a 2048-bit long PEM certificate and save it in a file, the following command may be used:
+# openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out certificate.pem
+ACCESS_TOKEN_SECRET_KEY: #"YWZOHliiI53lJMJc5BI_WbGbA4GF2T7Wbt1airIhOXEa3c021c4-1c55-4182-b141-7778bcc8fac4"
+
 # RSA_PRIVATE_PEM_STRING should be a string containing the PEM certificate of a private RSA key. It will be used to sign id_tokens for Openid connect authentication
 # The example below was generated using a 2048-bit RSA key generator
 RSA_PRIVATE_PEM_STRING: |
@@ -80,17 +84,16 @@ AUTH_CLIENTS:
 # Hyperion settings #
 #####################
 
-LOG_DEBUG_MESSAGES: True
-
 # Origins for the CORS middleware. `["http://localhost"]` can be used for development.
 # See https://fastapi.tiangolo.com/tutorial/cors/
 # It should begin with 'http://' or 'https:// and should never end with a '/'
 CORS_ORIGINS:
   - http://localhost:3000
   - http://127.0.0.1:3000
-#  - *
+#  - "*"
 
-# If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (if possible Postgresql should be used instead)
+LOG_DEBUG_MESSAGES: True
+# If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (if possible PostgreSQL should be used instead)
 SQLITE_DB: app.db
 # If True, will print all SQL queries in the console
 DATABASE_DEBUG: False
@@ -107,14 +110,14 @@ SMTP_SERVER: ""
 SMTP_USERNAME: ""
 SMTP_PASSWORD: ""
 SMTP_EMAIL: ""
-
 ##########################
 # Firebase Configuration #
 ##########################
 
 # To enable Firebase push notification capabilities, a JSON key file named `firebase.json` should be placed at Hyperion root.
 # This file can be created and downloaded from [Google cloud, IAM and administration, Service account](https://console.cloud.google.com/iam-admin/serviceaccounts) page.
-USE_FIREBASE: false
+#USE_FIREBASE: False
+
 ########################
 # Matrix configuration #
 ########################
