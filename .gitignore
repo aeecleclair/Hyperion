@@ -22,7 +22,6 @@ firebase.json
 
 # Virtual environment
 .venv
-.python-version
 
 # Logs
 logs/
