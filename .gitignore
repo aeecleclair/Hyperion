@@ -4,9 +4,11 @@ __pycache__
 .pytest_cache
 .ruff_cache
 
-# Databases and data
-sql_app.db
-test.db
+# Databases
+*.db
+hyperion-db
+
+# Persistent data as files
 data/
 
 # Dotenv file
