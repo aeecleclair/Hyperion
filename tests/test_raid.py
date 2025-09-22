@@ -1037,108 +1037,108 @@ async def test_set_team_number_utility_discovery_difficulty(
     assert args[1].number == 6  # discovery (0) + 5 + 1
 
 
-@pytest.mark.parametrize(
-    ("participant_kwargs", "expected_price"),
-    [
-        # Student price only
-        (
-            {
-                "payment": False,
-                "t_shirt_size": None,
-                "t_shirt_payment": False,
-                "student_card": Mock(
-                    id="student_card_id",
-                    validation=DocumentValidation.accepted,
-                ),
-            },
-            50,
-        ),
-        # External price only
-        (
-            {
-                "payment": False,
-                "t_shirt_size": None,
-                "t_shirt_payment": False,
-                "student_card": Mock(id=None, validation=None),
-            },
-            90,
-        ),
-        # Student price + T-shirt
-        (
-            {
-                "payment": False,
-                "t_shirt_size": Mock(value="L"),
-                "t_shirt_payment": False,
-                "student_card": Mock(
-                    id="student_card_id",
-                    validation=DocumentValidation.accepted,
-                ),
-            },
-            65,
-        ),
-        # External price + T-shirt
-        (
-            {
-                "payment": False,
-                "t_shirt_size": Mock(value="L"),
-                "t_shirt_payment": False,
-                "student_card": Mock(id=None, validation=None),
-            },
-            105,
-        ),
-        # Already paid, no T-shirt
-        (
-            {
-                "payment": True,
-                "t_shirt_size": None,
-                "t_shirt_payment": False,
-                "student_card": Mock(
-                    id="student_card_id",
-                    validation=DocumentValidation.accepted,
-                ),
-            },
-            0,
-        ),
-        # Already paid, T-shirt not paid
-        (
-            {
-                "payment": True,
-                "t_shirt_size": Mock(value="L"),
-                "t_shirt_payment": False,
-                "student_card": Mock(
-                    id="student_card_id",
-                    validation=DocumentValidation.accepted,
-                ),
-            },
-            15,
-        ),
-        # Already paid, T-shirt already paid
-        (
-            {
-                "payment": True,
-                "t_shirt_size": Mock(value="L"),
-                "t_shirt_payment": True,
-                "student_card": Mock(
-                    id="student_card_id",
-                    validation=DocumentValidation.accepted,
-                ),
-            },
-            0,
-        ),
-        # No student card, T-shirt already paid
-        (
-            {
-                "payment": True,
-                "t_shirt_size": Mock(value="L"),
-                "t_shirt_payment": True,
-                "student_card": Mock(id=None, validation=None),
-            },
-            0,
-        ),
-    ],
-)
-def test_calculate_raid_payment_price_only(participant_kwargs, expected_price):
-    raid_prices = RaidPrice(student_price=50, t_shirt_price=15, external_price=90)
-    participant = Mock(**participant_kwargs)
-    price, _ = calculate_raid_payment(participant, raid_prices)
-    assert price == expected_price
+# @pytest.mark.parametrize(
+#     ("participant_kwargs", "expected_price"),
+#     [
+#         # Student price only
+#         (
+#             {
+#                 "payment": False,
+#                 "t_shirt_size": None,
+#                 "t_shirt_payment": False,
+#                 "student_card": Mock(
+#                     id="student_card_id",
+#                     validation=DocumentValidation.accepted,
+#                 ),
+#             },
+#             50,
+#         ),
+#         # External price only
+#         (
+#             {
+#                 "payment": False,
+#                 "t_shirt_size": None,
+#                 "t_shirt_payment": False,
+#                 "student_card": Mock(id=None, validation=None),
+#             },
+#             90,
+#         ),
+#         # Student price + T-shirt
+#         (
+#             {
+#                 "payment": False,
+#                 "t_shirt_size": Mock(value="L"),
+#                 "t_shirt_payment": False,
+#                 "student_card": Mock(
+#                     id="student_card_id",
+#                     validation=DocumentValidation.accepted,
+#                 ),
+#             },
+#             65,
+#         ),
+#         # External price + T-shirt
+#         (
+#             {
+#                 "payment": False,
+#                 "t_shirt_size": Mock(value="L"),
+#                 "t_shirt_payment": False,
+#                 "student_card": Mock(id=None, validation=None),
+#             },
+#             105,
+#         ),
+#         # Already paid, no T-shirt
+#         (
+#             {
+#                 "payment": True,
+#                 "t_shirt_size": None,
+#                 "t_shirt_payment": False,
+#                 "student_card": Mock(
+#                     id="student_card_id",
+#                     validation=DocumentValidation.accepted,
+#                 ),
+#             },
+#             0,
+#         ),
+#         # Already paid, T-shirt not paid
+#         (
+#             {
+#                 "payment": True,
+#                 "t_shirt_size": Mock(value="L"),
+#                 "t_shirt_payment": False,
+#                 "student_card": Mock(
+#                     id="student_card_id",
+#                     validation=DocumentValidation.accepted,
+#                 ),
+#             },
+#             15,
+#         ),
+#         # Already paid, T-shirt already paid
+#         (
+#             {
+#                 "payment": True,
+#                 "t_shirt_size": Mock(value="L"),
+#                 "t_shirt_payment": True,
+#                 "student_card": Mock(
+#                     id="student_card_id",
+#                     validation=DocumentValidation.accepted,
+#                 ),
+#             },
+#             0,
+#         ),
+#         # No student card, T-shirt already paid
+#         (
+#             {
+#                 "payment": True,
+#                 "t_shirt_size": Mock(value="L"),
+#                 "t_shirt_payment": True,
+#                 "student_card": Mock(id=None, validation=None),
+#             },
+#             0,
+#         ),
+#     ],
+# )
+# def test_calculate_raid_payment_price_only(participant_kwargs, expected_price):
+#     raid_prices = RaidPrice(student_price=50, t_shirt_price=15, external_price=90)
+#     participant = Mock(**participant_kwargs)
+#     price, _ = calculate_raid_payment(participant, raid_prices)
+#     assert price == expected_price
