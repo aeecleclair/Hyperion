@@ -16,7 +16,6 @@ from fastapi import (
     Query,
 )
 from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.core_endpoints import cruds_core
@@ -81,8 +80,6 @@ core_module = CoreModule(
     payment_callback=validate_transfer_callback,
     factory=None,
 )
-
-templates = Jinja2Templates(directory="assets/templates")
 
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
