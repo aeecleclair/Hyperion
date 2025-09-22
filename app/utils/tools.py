@@ -21,7 +21,7 @@ from jellyfish import jaro_winkler_similarity
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
-from weasyprint import CSS, HTML
+# from weasyprint import CSS, HTML
 
 from app.core.core_endpoints import cruds_core, models_core
 from app.core.groups import cruds_groups
@@ -367,19 +367,19 @@ async def generate_pdf_from_template(
     )
     rendered_html = templates.get_template(template_name).render(context)
 
-    html = HTML(string=rendered_html)
-    css = CSS("assets/templates/output.css")
+    # html = HTML(string=rendered_html)
+    # css = CSS("assets/templates/output.css")
 
-    pdf = html.write_pdf(
-        stylesheets=[css],
-    )
+    # pdf = html.write_pdf(
+    #     stylesheets=[css],
+    # )
 
-    await save_bytes_as_data(
-        file_bytes=pdf,
-        directory=directory,
-        filename=filename,
-        extension="pdf",
-    )
+    # await save_bytes_as_data(
+    #     file_bytes=pdf,
+    #     directory=directory,
+    #     filename=filename,
+    #     extension="pdf",
+    # )
 
 
 def concat_pdf(
