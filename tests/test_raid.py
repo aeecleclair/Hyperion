@@ -12,7 +12,8 @@ from pytest_mock import MockerFixture
 from app.core.groups.groups_type import GroupType
 from app.core.users import models_users
 from app.modules.raid import coredata_raid, models_raid
-from app.modules.raid.coredata_raid import RaidPrice
+
+# from app.modules.raid.coredata_raid import RaidPrice
 from app.modules.raid.models_raid import (
     RaidParticipant,
     RaidTeam,
@@ -25,7 +26,8 @@ from app.modules.raid.raid_type import (
     MeetingPlace,
     Size,
 )
-from app.modules.raid.utils.utils_raid import calculate_raid_payment
+
+# from app.modules.raid.utils.utils_raid import calculate_raid_payment
 from tests.commons import (
     add_coredata_to_db,
     add_object_to_db,
