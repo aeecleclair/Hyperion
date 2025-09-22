@@ -25,6 +25,7 @@ from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_rai
 from app.modules.raid.raid_type import DocumentType, DocumentValidation, Size
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.utils_raid import (
+    calculate_raid_payment,
     generate_teams_pdf_util,
     get_participant,
     post_update_actions,
@@ -1127,28 +1128,8 @@ async def get_payment_url(
     ):
         raise HTTPException(status_code=404, detail="Prices not set.")
 
-    price = 0
-    checkout_name = ""
     participant = await cruds_raid.get_participant_by_id(user.id, db)
-    if not participant:
-        raise HTTPException(status_code=404, detail="Participant not found.")
-
-    if not participant.payment:
-        if participant.student_card is not None:
-            price += raid_prices.student_price
-            checkout_name = "Inscription Raid - Tarif étudiant"
-        else:
-            price += raid_prices.external_price
-            checkout_name = "Inscription Raid - Tarif externe"
-    if (
-        participant.t_shirt_size
-        and participant.t_shirt_size != Size.None_
-        and not participant.t_shirt_payment
-    ):
-        price += raid_prices.t_shirt_price
-        if not participant.payment:
-            checkout_name += " + "
-        checkout_name += "T Shirt taille" + participant.t_shirt_size.value
+    price, checkout_name = calculate_raid_payment(participant, raid_prices)
     user_dict = user.__dict__
     user_dict.pop("school", None)
     checkout = await payment_tool.init_checkout(

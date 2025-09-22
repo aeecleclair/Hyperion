@@ -13,7 +13,7 @@ from app.core.google_api.google_api import DriveGoogleAPI
 from app.core.payment import schemas_payment
 from app.core.utils.config import Settings
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
-from app.modules.raid.raid_type import Difficulty
+from app.modules.raid.raid_type import Difficulty, Size
 from app.modules.raid.schemas_raid import (
     RaidParticipantBase,
     RaidParticipantUpdate,
@@ -574,3 +574,35 @@ async def generate_teams_pdf_util(
     hyperion_error_logger.warning(
         f"RAID: Successfully generated PDF for {len(teams)} teams",
     )
+
+
+def calculate_raid_payment(
+    participant: models_raid.RaidParticipant, raid_prices: coredata_raid.RaidPrice
+):
+    price = 0
+    checkout_name = ""
+    if not participant:
+        raise HTTPException(status_code=404, detail="Participant not found.")
+
+    if not participant.payment:
+        if (
+            participant.situation
+            and participant.situation.split(" : ")[0] in ["centrale", "otherschool"]
+            and participant.student_card is not None
+            and participant.student_card.id is not None
+        ):
+            price += raid_prices.student_price
+            checkout_name = "Inscription Raid - Tarif étudiant"
+        else:
+            price += raid_prices.external_price
+            checkout_name = "Inscription Raid - Tarif externe"
+    if (
+        participant.t_shirt_size
+        and participant.t_shirt_size != Size.None_
+        and not participant.t_shirt_payment
+    ):
+        price += raid_prices.t_shirt_price
+        if not participant.payment:
+            checkout_name += " + "
+        checkout_name += "T Shirt taille" + participant.t_shirt_size.value
+    return price, checkout_name
