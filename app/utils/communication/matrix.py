@@ -54,7 +54,7 @@ class Matrix:
 
         return response.json()
 
-    def send_message(self, room_id: str, formatted_body: str) -> None:
+    async def send_message(self, room_id: str, formatted_body: str) -> None:
         """
         Send a message to the room `room_id`.
         `formatted_body` can contain html formatted text
@@ -74,6 +74,6 @@ class Matrix:
         }
 
         try:
-            self.post(url, json=data, headers=None)
+            await self.post(url, json=data, headers=None)
         except MatrixRequestError as error:
             raise MatrixSendMessageError(room_id=room_id) from error
