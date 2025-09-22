@@ -577,7 +577,8 @@ async def generate_teams_pdf_util(
 
 
 def calculate_raid_payment(
-    participant: models_raid.RaidParticipant, raid_prices: coredata_raid.RaidPrice
+    participant: models_raid.RaidParticipant,
+    raid_prices: coredata_raid.RaidPrice,
 ):
     price = 0
     checkout_name = ""

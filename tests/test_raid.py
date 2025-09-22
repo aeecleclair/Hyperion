@@ -678,7 +678,9 @@ def test_get_payment_url_student_price(client: TestClient, mocker):
     mocker.patch(
         "app.modules.raid.endpoints_raid.get_core_data",
         return_value=coredata_raid.RaidPrice(
-            student_price=50, t_shirt_price=15, external_price=90
+            student_price=50,
+            t_shirt_price=15,
+            external_price=90,
         ),
     )
     mock_participant = Mock(
@@ -695,7 +697,8 @@ def test_get_payment_url_student_price(client: TestClient, mocker):
     mocker.patch(
         "app.core.payment.payment_tool.PaymentTool.init_checkout",
         return_value=Mock(
-            id=str(uuid.uuid4()), payment_url="https://student.url/checkout"
+            id=str(uuid.uuid4()),
+            payment_url="https://student.url/checkout",
         ),
     )
     mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
@@ -711,7 +714,9 @@ def test_get_payment_url_external_price(client: TestClient, mocker):
     mocker.patch(
         "app.modules.raid.endpoints_raid.get_core_data",
         return_value=coredata_raid.RaidPrice(
-            student_price=50, t_shirt_price=15, external_price=90
+            student_price=50,
+            t_shirt_price=15,
+            external_price=90,
         ),
     )
     mock_participant = Mock(
@@ -728,7 +733,8 @@ def test_get_payment_url_external_price(client: TestClient, mocker):
     mocker.patch(
         "app.core.payment.payment_tool.PaymentTool.init_checkout",
         return_value=Mock(
-            id=str(uuid.uuid4()), payment_url="https://external.url/checkout"
+            id=str(uuid.uuid4()),
+            payment_url="https://external.url/checkout",
         ),
     )
     mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
@@ -744,7 +750,9 @@ def test_get_payment_url_with_tshirt(client: TestClient, mocker):
     mocker.patch(
         "app.modules.raid.endpoints_raid.get_core_data",
         return_value=coredata_raid.RaidPrice(
-            student_price=50, t_shirt_price=15, external_price=90
+            student_price=50,
+            t_shirt_price=15,
+            external_price=90,
         ),
     )
     mock_participant = Mock(
@@ -761,7 +769,8 @@ def test_get_payment_url_with_tshirt(client: TestClient, mocker):
     mocker.patch(
         "app.core.payment.payment_tool.PaymentTool.init_checkout",
         return_value=Mock(
-            id=str(uuid.uuid4()), payment_url="https://tshirt.url/checkout"
+            id=str(uuid.uuid4()),
+            payment_url="https://tshirt.url/checkout",
         ),
     )
     mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
@@ -777,7 +786,9 @@ def test_get_payment_url_prices_not_set(client: TestClient, mocker):
     mocker.patch(
         "app.modules.raid.endpoints_raid.get_core_data",
         return_value=coredata_raid.RaidPrice(
-            student_price=None, t_shirt_price=None, external_price=None
+            student_price=None,
+            t_shirt_price=None,
+            external_price=None,
         ),
     )
     response = client.get(
@@ -792,7 +803,9 @@ def test_get_payment_url_participant_not_found(client: TestClient, mocker):
     mocker.patch(
         "app.modules.raid.endpoints_raid.get_core_data",
         return_value=coredata_raid.RaidPrice(
-            student_price=50, t_shirt_price=15, external_price=90
+            student_price=50,
+            t_shirt_price=15,
+            external_price=90,
         ),
     )
     mocker.patch(
@@ -1025,7 +1038,7 @@ async def test_set_team_number_utility_discovery_difficulty(
 
 
 @pytest.mark.parametrize(
-    "participant_kwargs,expected_price",
+    ("participant_kwargs", "expected_price"),
     [
         # Student price only
         (
@@ -1034,7 +1047,8 @@ async def test_set_team_number_utility_discovery_difficulty(
                 "t_shirt_size": None,
                 "t_shirt_payment": False,
                 "student_card": Mock(
-                    id="student_card_id", validation=DocumentValidation.accepted
+                    id="student_card_id",
+                    validation=DocumentValidation.accepted,
                 ),
             },
             50,
@@ -1056,7 +1070,8 @@ async def test_set_team_number_utility_discovery_difficulty(
                 "t_shirt_size": Mock(value="L"),
                 "t_shirt_payment": False,
                 "student_card": Mock(
-                    id="student_card_id", validation=DocumentValidation.accepted
+                    id="student_card_id",
+                    validation=DocumentValidation.accepted,
                 ),
             },
             65,
@@ -1078,7 +1093,8 @@ async def test_set_team_number_utility_discovery_difficulty(
                 "t_shirt_size": None,
                 "t_shirt_payment": False,
                 "student_card": Mock(
-                    id="student_card_id", validation=DocumentValidation.accepted
+                    id="student_card_id",
+                    validation=DocumentValidation.accepted,
                 ),
             },
             0,
@@ -1090,7 +1106,8 @@ async def test_set_team_number_utility_discovery_difficulty(
                 "t_shirt_size": Mock(value="L"),
                 "t_shirt_payment": False,
                 "student_card": Mock(
-                    id="student_card_id", validation=DocumentValidation.accepted
+                    id="student_card_id",
+                    validation=DocumentValidation.accepted,
                 ),
             },
             15,
@@ -1102,7 +1119,8 @@ async def test_set_team_number_utility_discovery_difficulty(
                 "t_shirt_size": Mock(value="L"),
                 "t_shirt_payment": True,
                 "student_card": Mock(
-                    id="student_card_id", validation=DocumentValidation.accepted
+                    id="student_card_id",
+                    validation=DocumentValidation.accepted,
                 ),
             },
             0,
