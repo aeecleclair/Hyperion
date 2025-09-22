@@ -1,6 +1,6 @@
 from typing import Any
 
-import requests
+import httpx
 
 from app.types.exceptions import MatrixRequestError, MatrixSendMessageError
 
@@ -24,7 +24,7 @@ class Matrix:
 
         self.access_token = token
 
-    def post(
+    async def post(
         self,
         url: str,
         json: dict[str, Any],
@@ -43,10 +43,13 @@ class Matrix:
         if "Authorization" not in headers:
             headers["Authorization"] = "Bearer " + self.access_token
 
-        response = requests.post(url, json=json, headers=headers, timeout=10)
         try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    url, json=json, headers=headers, timeout=10
+                )
             response.raise_for_status()
-        except requests.exceptions.HTTPError as err:
+        except httpx.RequestError as err:
             raise MatrixRequestError() from err
 
         return response.json()
