@@ -1,7 +1,7 @@
-import asyncio
 import logging
 from logging import StreamHandler
 
+from fastapi import BackgroundTasks
 from typing_extensions import override
 
 from app.utils.communication.matrix import Matrix
@@ -22,6 +22,7 @@ class MatrixHandler(StreamHandler):
 
     def __init__(
         self,
+        background_tasks: BackgroundTasks,
         room_id: str,
         token: str,
         server_base_url: str | None,
@@ -31,9 +32,9 @@ class MatrixHandler(StreamHandler):
         super().__init__()
         self.setLevel(level)
 
+        self.background_tasks = background_tasks
         self.room_id = room_id
         self.enabled = enabled
-        self.loop = asyncio.new_event_loop()
         if self.enabled:
             self.matrix = Matrix(
                 token=token,
@@ -44,19 +45,13 @@ class MatrixHandler(StreamHandler):
     def emit(self, record):
         if self.enabled:
             msg = self.format(record)
-            self.loop.create_task(self._emit(msg))
-
-    async def _emit(self, msg):
-        try:
-            await self.matrix.send_message(self.room_id, msg)
-        # We should catch and log any error, as Python may discarded them in production
-        except Exception as err:
-            # We use warning level so that the message is not sent to matrix again
-            hyperion_error_logger.warning(
-                f"MatrixHandler: Unable to send message to Matrix server: {err}",
-            )
-
-    @override
-    def close(self):
-        self.loop.run_until_complete(asyncio.gather(*asyncio.all_tasks(self.loop)))
-        self.loop.close()
+            try:
+                self.background_tasks.add_task(
+                    self.matrix.send_message, room_id=self.room_id, formatted_body=msg
+                )
+            # We should catch and log any error, as Python may discarded them in production
+            except Exception as err:
+                # We use warning level so that the message is not sent to matrix again
+                hyperion_error_logger.warning(
+                    f"MatrixHandler: Unable to send message to Matrix server: {err}",
+                )

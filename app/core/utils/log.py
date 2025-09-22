@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import uvicorn
+from fastapi import BackgroundTasks
 
 from app.core.utils.config import Settings
 
@@ -121,6 +122,7 @@ class LogConfig:
                     # Send error to a Matrix server. If credentials are not set in settings, the handler will be disabled
                     "formatter": "matrix",
                     "class": "app.utils.loggers_tools.matrix_handler.MatrixHandler",
+                    "background_tasks": BackgroundTasks,
                     "room_id": settings.MATRIX_LOG_ERROR_ROOM_ID,
                     "token": settings.MATRIX_TOKEN,
                     "server_base_url": settings.MATRIX_SERVER_BASE_URL,
@@ -133,6 +135,7 @@ class LogConfig:
                     # Send error to a Matrix server. If credentials are not set in settings, the handler will be disabled
                     "formatter": "matrix",
                     "class": "app.utils.loggers_tools.matrix_handler.MatrixHandler",
+                    "background_tasks": BackgroundTasks,
                     "room_id": settings.MATRIX_LOG_AMAP_ROOM_ID,
                     "token": settings.MATRIX_TOKEN,
                     "server_base_url": settings.MATRIX_SERVER_BASE_URL,
