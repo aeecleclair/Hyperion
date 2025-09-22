@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from logging import StreamHandler
 
@@ -37,17 +38,25 @@ class MatrixHandler(StreamHandler):
                 token=token,
                 server_base_url=server_base_url,
             )
+        self.loop = asyncio.new_event_loop()
 
     @override
-    async def emit(self, record):
+    def emit(self, record):
         if self.enabled:
             msg = self.format(record)
+            self.loop.create_task(self._emit(msg))
 
-            try:
-                await self.matrix.send_message(self.room_id, msg)
-            # We should catch and log any error, as Python may discarded them in production
-            except Exception as err:
-                # We use warning level so that the message is not sent to matrix again
-                hyperion_error_logger.warning(
-                    f"MatrixHandler: Unable to send message to Matrix server: {err}",
-                )
+    async def _emit(self, msg):
+        try:
+            await self.matrix.send_message(self.room_id, msg)
+        # We should catch and log any error, as Python may discarded them in production
+        except Exception as err:
+            # We use warning level so that the message is not sent to matrix again
+            hyperion_error_logger.warning(
+                f"MatrixHandler: Unable to send message to Matrix server: {err}",
+            )
+
+    @override
+    def close(self) -> None:
+        self.loop.run_until_complete(asyncio.gather(*asyncio.all_tasks(self.loop)))
+        self.loop.close()
