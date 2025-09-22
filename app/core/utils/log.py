@@ -78,7 +78,7 @@ class LogConfig:
 
     # Logging config
     # See https://docs.python.org/3/library/logging.config.html#logging-config-dictschema
-    def get_config_dict(self, settings: Settings):
+    def _get_config_dict(self, settings: Settings):
         # We can't use a dependency to access settings as this function is not an endpoint. The object must thus be passed as a parameter.
 
         # /!\ WARNING /!\
@@ -398,7 +398,7 @@ class LogConfig:
         # If logs/ folder does not exist, the logging module won't be able to create file handlers
         Path("logs/").mkdir(parents=True, exist_ok=True)
 
-        config_dict = self.get_config_dict(settings=settings)
+        config_dict = self._get_config_dict(settings=settings)
         logging.config.dictConfig(config_dict)
 
         loggers = [logging.getLogger(name) for name in config_dict["loggers"]]
