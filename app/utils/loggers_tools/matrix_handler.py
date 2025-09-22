@@ -33,12 +33,12 @@ class MatrixHandler(StreamHandler):
 
         self.room_id = room_id
         self.enabled = enabled
+        self.loop = asyncio.new_event_loop()
         if self.enabled:
             self.matrix = Matrix(
                 token=token,
                 server_base_url=server_base_url,
             )
-        self.loop = asyncio.new_event_loop()
 
     @override
     def emit(self, record):
@@ -57,6 +57,6 @@ class MatrixHandler(StreamHandler):
             )
 
     @override
-    def close(self) -> None:
+    def close(self):
         self.loop.run_until_complete(asyncio.gather(*asyncio.all_tasks(self.loop)))
         self.loop.close()
