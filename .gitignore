@@ -1,12 +1,12 @@
 # Cache folders
-__pycache__
-.mypy_cache
-.pytest_cache
-.ruff_cache
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
 
-# Databases
+# Databases (PostgreSQL and SQLite)
+hyperion-db/
 *.db
-hyperion-db
 
 # Persistent data as files
 data/
@@ -16,11 +16,11 @@ data/
 config.yaml
 firebase.json
 
-# MacOS
+# macOS
 .DS_Store
 
 # Virtual environment
-.venv
+.venv/
 
 # Logs
 logs/
@@ -30,7 +30,7 @@ logs/
 
 # Jinja output templates and test output
 tests/jinja_test_outputs/
-node_modules
+node_modules/
 
 # Local testing
 scripts/
