@@ -67,13 +67,13 @@ async def scrap_ffsu_licenses(
     return result
 
 
-def validate_participant_ffsu_license(
+async def validate_participant_ffsu_license(
     school: schemas_sport_competition.SchoolExtension,
     user: schemas_sport_competition.CompetitionUser,
     ffsu_license: str,
 ):
     try:
-        ffsu_data = scrap_ffsu_licenses(
+        ffsu_data = await scrap_ffsu_licenses(
             school.ffsu_id or "",
             user.user.firstname,
             user.user.name,
