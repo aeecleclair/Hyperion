@@ -846,6 +846,7 @@ async def join_team(
             detail="You are already the captain of this team.",
         )
 
+    await cruds_raid.delete_invite_token(invite_token.id, db)
     await cruds_raid.update_team_second_id(team.id, user.id, db)
     await post_update_actions(
         team,
@@ -853,7 +854,6 @@ async def join_team(
         drive_file_manager,
         settings=settings,
     )
-    await cruds_raid.delete_invite_token(invite_token.id, db)
 
 
 @module.router.post(
@@ -936,6 +936,8 @@ async def merge_teams(
         meeting_place=new_meeting_place,
         number=new_number,
     )
+    await cruds_raid.delete_team_invite_tokens(team1_id, db)
+    await cruds_raid.delete_team_invite_tokens(team2_id, db)
     await cruds_raid.update_team(
         team1_id,
         team_update,
