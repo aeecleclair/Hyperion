@@ -1129,6 +1129,8 @@ async def get_payment_url(
         raise HTTPException(status_code=404, detail="Prices not set.")
 
     participant = await cruds_raid.get_participant_by_id(user.id, db)
+    if not participant:
+        raise HTTPException(status_code=403, detail="You are not a participant.")
     price, checkout_name = calculate_raid_payment(participant, raid_prices)
     user_dict = user.__dict__
     user_dict.pop("school", None)
