@@ -2,7 +2,6 @@
 
 import logging
 from collections.abc import Sequence
-from datetime import date
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -116,16 +115,6 @@ async def get_delivery_by_id(
         ),
     )
     return result.scalars().first()
-
-
-async def is_there_a_delivery_on(db: AsyncSession, delivery_date: date) -> bool:
-    result = await db.execute(
-        select(models_amap.Delivery).where(
-            models_amap.Delivery.delivery_date == delivery_date,
-            models_amap.Delivery.status != DeliveryStatusType.archived,
-        ),
-    )
-    return result.scalars().all() != []
 
 
 async def create_delivery(
@@ -248,9 +237,11 @@ async def get_products_of_order(
 async def add_order_to_delivery(
     db: AsyncSession,
     order: schemas_amap.OrderComplete,
+    delivery: models_amap.Delivery,
 ):
     db.add(
         models_amap.Order(
+            delivery=delivery,
             **order.model_dump(exclude={"products_ids", "products_quantity"}),
         ),
     )
