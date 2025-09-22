@@ -1964,7 +1964,7 @@ async def join_sport(
         await cruds_sport_competition.add_team(new_team, db)
     is_license_valid = False
     if participant_info.license:
-        is_license_valid = validate_participant_ffsu_license(
+        is_license_valid = await validate_participant_ffsu_license(
             school,
             user,
             participant_info.license,

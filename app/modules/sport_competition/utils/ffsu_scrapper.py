@@ -1,6 +1,6 @@
 import logging
 
-import requests
+import httpx
 from bs4 import BeautifulSoup
 from pydantic import BaseModel
 
@@ -19,7 +19,7 @@ class FFSUData(BaseModel):
     sport_with_constraints: str
 
 
-def scrap_ffsu_licenses(
+async def scrap_ffsu_licenses(
     school_ffsu_id: str,
     user_name: str,
     user_firstname: str,
@@ -38,7 +38,9 @@ def scrap_ffsu_licenses(
         "SUBMIT": "Valider",
     }
 
-    response = requests.post(url, data=data, timeout=10)
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, data=data, timeout=10)
+        response.raise_for_status()
     soup = BeautifulSoup(response.content, "html.parser")
 
     # Récupération dynamique des données présentes aux emplacements ciblés
@@ -65,13 +67,13 @@ def scrap_ffsu_licenses(
     return result
 
 
-def validate_participant_ffsu_license(
+async def validate_participant_ffsu_license(
     school: schemas_sport_competition.SchoolExtension,
     user: schemas_sport_competition.CompetitionUser,
     ffsu_license: str,
 ):
     try:
-        ffsu_data = scrap_ffsu_licenses(
+        ffsu_data = await scrap_ffsu_licenses(
             school.ffsu_id or "",
             user.user.firstname,
             user.user.name,

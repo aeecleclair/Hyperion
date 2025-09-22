@@ -8,7 +8,7 @@ Hyperion is the API of an open-source project launched by ÉCLAIR, the computer 
 
 The structure of this project is modular. Hyperion has a core that performs vital functions (authentication, database migration, authorization, etc). The other functions of Hyperion are realized in what we call modules. You can contribute to the project by adding modules if you wish.
 
-## Creating a virtual environment for Python 3.11.x
+## Creating a virtual environment for Python 3.12
 
 ### Windows
 
@@ -17,7 +17,19 @@ Create the virtual environment
 > You need to be in Hyperion main folder
 
 ```bash
-py -3.11 -m venv .venv
+py -3.12 -m venv .venv
+```
+
+If you get an error saying roughly:
+
+```
+because the execution of scripts is disabled on this system. Please see "get-help about_signing" for more details.
+```
+
+Then in a Powershell, run this to allow scripts executions for your user:
+
+```ps1
+Set-ExecutionPolicy Unrestricted -Scope CurrentUser
 ```
 
 Activate it
@@ -45,7 +57,7 @@ eval "$(pyenv virtualenv-init -)"
 Create the virtual environment
 
 ```bash
-pyenv virtualenv 3.11.0 hyperion
+pyenv virtualenv 3.12.0 hyperion
 ```
 
 Activate it
@@ -56,111 +68,272 @@ pyenv activate hyperion
 
 ## Install dependencies
 
-### Development requirements
+### About Jellyfish and Rust
+
+If you don't have Rust installed or don't want to install it, decrase the version of `jellyfish` to `0.10.0` in the `requirements-common.txt` file:
+
+```
+jellyfish==0.10.0                    # String Matching
+```
+
+### About Weasyprint and Pango
+
+Follow the installation steps at https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation.
+
+For Windows, the best way is through MSYS2, Mac users can simply install using Homebrew.
+
+### Install dependencies (for real)
+
+Install the dependencies you'll need using `pip` (the common requirements are included in the development requirements):
 
 ```bash
 pip install -r requirements-dev.txt
 ```
 
-> If you need to remove all modules from your virtual environnement, you may use the following command with caution
->
-> ```bash
-> pip freeze | xargs pip uninstall -y
-> ```
+If you changed the version of Jellyfish, don't forget to set it back:
 
-## Linting and formating
+```
+jellyfish==1.0.4                    # String Matching
+```
 
-To lint and format, we currently use `Ruff`. We also use `Mypy` for the type checking.
+> If you need to remove all modules from your virtual environnement, delete your `.venv` folder.
 
-Before each PR or git push you will need to run `ruff check --fix && ruff format` in order to format/lint your code and `mypy .` in order to verify that there is no type mismatch.
+## Install and configure a database
 
-## Complete the dotenv (`.env`)
+Choose either SQLite or PostgreSQL.
 
-> Hyperion settings are documented in [app/core/config.py](./app/core/config.py).
-> Check this file to know what can and should be set using the dotenv.
+### SQLite
 
-`SQLITE_DB` is None by default. If you want to use SQLite (if you don't use docker or don't have a postgres running), set it with the name of the db file (`app.db` for example).
+#### Advantages
 
-`ACCESS_TOKEN_SECRET_KEY` should be a strong random key, which will be used to sign JWT tokens
+It is a binary.
+This means:
 
-`RSA_PRIVATE_PEM_STRING` will be used to sign JWS tokens
+- SQLite is lightweight
+- It is directly understood by your machine, no special configuration is needed.
+
+#### Disadvantages
+
+Being so light, it does not support some features nowadays common for relational databases:
+
+- Drop your database on every migration: Alembic uses features incompatible with SQLite
+
+#### Installation and configuration
+
+There is nothing to do, it works out of the box.
+
+### PostgreSQL
+
+#### Advantages
+
+Its advantages are many:
+
+- Very powerful database: it supports all the features you'll ever need.
+- Used in production for Hyperion.
+- Widely used in production in enterprise-grade services: useful competence on your résumé.
+- Supports migrations with Alembic.
+- A powerful CLI tool.
+
+#### Disadvantages
+
+None (not so heavy, configuration not so hard).
+
+#### Configuration
+
+##### Without Docker: native binaries
+
+1. Download the installer: https://www.enterprisedb.com/downloads/postgres-postgresql-downloads
+2. Launch it and trust the wizard
+   - Keep the default folders and ports, install it all, etc...
+   - ...but put a concise password you'd remember, choose your language
+   - Don't use the "Stack Builder" (not needed)
+3. On Windows: in your path, add `C:\Program Files\PostgreSQL\17\bin` and `C:\Program Files\PostgreSQL\17\lib` (if you installed Postgres 17 in that location)
+4. Create a database named `hyperion`
+
+```sh
+psql -U postgres -c "CREATE DATABASE hyperion;"
+```
+
+Now your Hyperion database can be explored by hand (as the `postgres` user, using your password you chose) with:
 
 ```bash
-# Generate a 2048 bits long PEM certificate and replace newlines by `\n`
-openssl req -newkey rsa:2048 -nodes -x509 -days 365 | sed 's/$/\\n/g' | tr -d '\n'
-# If you only want to generate a PEM certificate and save it in a file, th following command may be used
-# openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out certificate.pem
+psql -U postgres -d hyperion
 ```
 
-`REDIS` may be left blank to disable Redis during development
-Numerical values are example, change it to your needs
+then running SQL or Postgres commands in this shell, or
 
-```python
-REDIS_HOST = "localhost" #May be left at "" during dev if you don't have a redis server running
-REDIS_PORT = 6379
-#REDIS_PASSWORD = "pass" Should be commented during development to work with docker-compose-dev, and set in production
-REDIS_LIMIT = 1000
-REDIS_WINDOW = 60
+```bash
+psql -U postgres -d hyperion -c "select firstname from core_user;"
 ```
 
-`POSTGRES`: This section will be ignored if `SQLITE_DB` is set to True.
+##### With Docker
 
-```python
-POSTGRES_HOST = "localhost"
-POSTGRES_USER = "hyperion"
-POSTGRES_PASSWORD = "pass"
-POSTGRES_DB = "hyperion"
+> [!WARNING]
+> Work in progress
+
 ```
+services:
+  hyperion-db:
+    image: postgres:15.1
+    container_name: hyperion-db
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PGTZ: ${POSTGRES_TZ}
+    ports:
+      - 5432:5432
+    volumes:
+      - ./hyperion-db:/var/lib/postgresql/data
+```
+
+## Complete the dotenv (`.env`) and the `config.yaml`
+
+Copy the `.env.template` file in a new `.env` file, same for `config.template.yaml` in a new `config.yaml`.
+These template files were carefully crafted to work for you with minimal changes to bring, and some preconfigured services.
+
+For later reference, these settings are documented in [app/core/config.py](./app/core/config.py).
+Check this file to know what can and should be set using these two files.
+
+### `.env`
+
+The `.env` contains environment variables which need to be accessed by the OS or by other services, such as the database.
+
+#### With SQLite
+
+Again there's nothing to do.
+
+#### With PostgreSQL
+
+Set your user, password, host and db.
+
+For instance, with the installer you should have something like:
+
+```sh
+POSTGRES_USER="postgres"
+POSTGRES_PASSWORD="nmrojvbvgb!"
+POSTGRES_HOST="localhost"
+POSTGRES_DB="hyperion"
+```
+
+While with Docker you should have rather something like:
+
+```sh
+POSTGRES_USER="hyperion"
+POSTGRES_PASSWORD="nmrojvbvgb!"
+POSTGRES_HOST="hyperion-db"
+POSTGRES_DB="hyperion"
+```
+
+### `config.yaml`
+
+The `config.yaml` contains environment variables that are internal to the Python runtime _because_ they are only used in the Python code.
+
+1. `ACCESS_TOKEN_SECRET_KEY`: **Uncomment it**.
+   You can generate your own if you want, or just change a couple characters, or leave it as it is.
+2. `RSA_PRIVATE_PEM_STRING`: **Uncomment it**.
+   You can generate your own if you want, or just change a couple characters, or leave it as it is.
+3. `AUTH_CLIENTS`: we already provide you some configuration to run Titan and authenticate to the swagger to use it at its full potential.
+   The auth clients allow other service to manage accounts and authenticate users using Hyperion ("Login with MyECL") as a SSO (Single-Sign On).
+4. `CORS_ORIGINS`: List of URLs that are authorized to contact Hyperion.
+   _In case you have CORS issues_ with your local Hyperion, we remind you in the comment that you can use `- "*"` to allow all origins.
+5. `SQLITE_DB`: **tells Hyperion whether to use SQLite or PostgreSQL**.
+   - If you use **SQLite**: this field should be a (relative) filename, by default we named it `app.db`, you can change this name.
+     Hyperion will create this file for you and use it as the database.
+     Any PostgreSQL-related configuration will be ignored.
+   - If you use **PostgreSQL**: empty this field.
+     Hyperion will fallback to PostgreSQL settings.
+6. `USE_FACTORIES`: `True` by default, factories seed your database, if empty, with mocked data.
+   This is useful on SQLite to repopulate your new database after dropping the previous one.
 
 ## Launch the API
+
+> [!WARNING]
+> Beforehand, check that your venv is activated.
+
+### Using VS Code
+
+1. In the activity bar (the leftmost part), click the _Run and Debug_ icon (the play button).
+2. Click the green play button.
+
+Check that your Hyperion instance is up and running by navigating to http://localhost:8000/information.
+
+### Using the command-line interface
 
 ```bash
 fastapi dev app/main.py
 ```
 
-## Use Alembic migrations
+Check that your Hyperion instance is up and running by navigating to http://localhost:8000/information.
 
-See [migrations README](./migrations/README)
+## Create your own user
 
-Warning : on SQLite databases, you have to drop the database and recreate it to apply the new DDL.
+There are many ways to do so, ranked here from easiest (GUI only) to hardest (CLI only).
+Note that registration and activation are distinct steps, so for fun you may register one way and activate your account another way.
 
-## OpenAPI specification
+### With CalypSSO
 
-API endpoints are parsed following the OpenAPI specifications at `http://127.0.0.1:8000/openapi.json`.
+#### Registering your account
 
-A Swagger UI is available at `http://127.0.0.1:8000/docs`. For authentication to work, a valid `AUTH_CLIENT` must be defined in the `.env`, with `http://127.0.0.1:8000/docs/oauth2-redirect` as the redirect URI, and `scope=API` must be added to the authentication request.
+Go to http://localhost:8000/calypsso/register and type a valid email address to register (start the creation of) your account.
 
-## Create the first user
+#### Activating your account
 
-You can create the first user either using Titan or calling the API directly.
-
-> You need to use an email with the format `...@etu.ec-lyon.fr` or `...@ec-lyon.fr`
-
-To activate your account you will need an activation token which will be printed in the console.
+Go back to the shell running your Hyperion instance, in the logs look for a link looking like http://localhost:3000/calypsso/activate?activation_token=12345.
+Open it and activate (end the creation of) your account.
 
 ### With Titan
 
-Press "Créer un compte" on the first page and follow the process.
+1. Click "_Se connecter_" on the login page: you land CalypSSO's login page.
+2. Click "_Créer un compte_" and create your account using CalypSSO as above.
 
-### Using the API directly
+### Using the API through the swagger
 
-Create the account:
+#### Registering your account
+
+1. Go to http://localhost:8000/docs: this is called the _swagger_, a web interface to interact with the API, it is a layer on top of the "automatic documentation" (the _OpenAPI specification_) generated by FastAPI at http://localhost:8000/openapi.json.
+2. Search `/users/create`.
+3. Open it, click "Try it out".
+4. Fill in your email address, and click "Execute".
+
+#### Activating your account
+
+1. Go back to the shell running your Hyperion instance, in the logs look for a link looking like http://localhost:3000/calypsso/activate?activation_token=12345.
+2. Copy this activation token.
+3. Go again on the swagger and search `/users/activate`.
+4. Open it, click "Try it out".
+5. Fill in your information, using the `activation_token` you copied (click "Schema" next to "Edit Value" so see what fields are optional), and click "Execute".
+
+### Using the API in command line
+
+> [!TIP]
+> On Windows, `curl` is different.
+> To get the same results as on Linux and MacOS:
+>
+> - either replace `curl` with `curl.exe`
+> - or run the `curl` commands below in a bash (using WSL or using Git Bash)
+
+#### Registering your account
 
 ```bash
-curl --location 'http://127.0.0.1:8000/users/create' \
---header 'Content-Type: application/json' \
---data-raw '{
-    "email": "<...>@etu.ec-lyon.fr",
-    "account_type": "39691052-2ae5-4e12-99d0-7a9f5f2b0136"
-}'
+curl --json '{"email": "prenom.nom@etu.ec-lyon.fr"}' http://localhost:8000/users/create
 ```
 
-Activate the account:
+#### Activating your account
+
+1. Go back to the shell running your Hyperion instance, in the logs look for a link looking like http://localhost:3000/calypsso/activate?activation_token=12345.
+2. Copy this activation token.
+3. Use this `activation_token` in:
 
 ```bash
-curl --location 'http://127.0.0.1:8000/users/activate' \
---header 'Content-Type: application/json' \
---data '{
+curl --json '{
     "name": "<Name>",
     "firstname": "<Firstname>",
     "nickname": "<Nickname>",
@@ -170,18 +343,25 @@ curl --location 'http://127.0.0.1:8000/users/activate' \
     "phone": "<Phone>",
     "promo": 0,
     "floor": ""
-}'
+}' http://localhost:8000/users/activate
 ```
 
 ## Make the first user admin
 
+> [!WARNING]
+> This may not work if you ran the factories
+
 If there is exactly one user in the database, you can make it admin using the following command:
 
 ```bash
-curl --location --request POST 'http://127.0.0.1:8000/users/make-admin'
+curl -X POST http://localhost:8000/users/make-admin
 ```
 
-## Install docker or an equivalent
+---
+
+# Beyond initial configuration
+
+## Install Docker or an equivalent
 
 Install docker and the compose plugin (https://docs.docker.com/compose/install/)
 
@@ -189,7 +369,24 @@ Install docker and the compose plugin (https://docs.docker.com/compose/install/)
 
 > During dev, `docker-compose-dev.yaml` can be used to run the database, the redis server etc... If you really want to run the project without docker, you can do it but you will have to install the database, redis, etc ... yourself or disable corresponding features in the .env file (which is not recommended).
 
----
+## Linting and formating
+
+To lint and format, we currently use `Ruff`. We also use `Mypy` for the type checking.
+
+Before each PR or git push you will need to run `ruff check --fix && ruff format` in order to format/lint your code and `mypy .` in order to verify that there is no type mismatch.
+
+## Use Alembic migrations
+
+See [migrations README](./migrations/README)
+
+> [!WARNING]
+> On SQLite databases, you have to drop the database and recreate it to apply the new DDL.
+
+## OpenAPI specification
+
+API endpoints are parsed following the OpenAPI specifications at `http://127.0.0.1:8000/openapi.json`.
+
+A Swagger UI is available at `http://127.0.0.1:8000/docs`. For authentication to work, a valid `AUTH_CLIENT` must be defined in the `.env`, with `http://127.0.0.1:8000/docs/oauth2-redirect` as the redirect URI, and `scope=API` must be added to the authentication request.
 
 ## Configure Firebase notifications
 
