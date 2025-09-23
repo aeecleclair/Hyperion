@@ -644,8 +644,7 @@ def calculate_raid_payment(
         if (
             participant.situation
             and participant.situation.split(" : ")[0] in ["centrale", "otherschool"]
-            and participant.student_card is not None
-            and participant.student_card.id is not None
+            and participant.student_card_id is not None
         ):
             price += raid_prices.student_price
             checkout_name = "Inscription Raid - Tarif étudiant"
@@ -658,7 +657,7 @@ def calculate_raid_payment(
         and not participant.t_shirt_payment
     ):
         price += raid_prices.t_shirt_price
-        if not participant.payment:
+        if not checkout_name:
             checkout_name += " + "
         checkout_name += "T Shirt taille" + participant.t_shirt_size.value
     return price, checkout_name
