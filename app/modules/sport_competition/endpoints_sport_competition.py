@@ -238,7 +238,7 @@ async def enable_inscription(
     user: schemas_sport_competition.CompetitionUser = Depends(
         is_user_in(group_id=GroupType.competition_admin),
     ),
-    enable: bool = Body(),
+    enable: bool = Body(embed=True),
 ) -> None:
     """
     Enable inscription for a competition edition.
