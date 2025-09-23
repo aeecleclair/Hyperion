@@ -12,8 +12,6 @@ from pytest_mock import MockerFixture
 from app.core.groups.groups_type import GroupType
 from app.core.users import models_users
 from app.modules.raid import coredata_raid, models_raid
-
-# from app.modules.raid.coredata_raid import RaidPrice
 from app.modules.raid.models_raid import (
     RaidParticipant,
     RaidTeam,
@@ -26,8 +24,6 @@ from app.modules.raid.raid_type import (
     MeetingPlace,
     Size,
 )
-
-# from app.modules.raid.utils.utils_raid import calculate_raid_payment
 from app.modules.raid.utils.utils_raid import calculate_raid_payment
 from tests.commons import (
     add_coredata_to_db,
@@ -503,33 +499,33 @@ def test_set_security_file_participant_not_exist(client: TestClient):
     assert response.json()["detail"] == "You are not the participant."
 
 
-# def test_set_security_file_update_existing(client: TestClient):
-#     # First, create an initial security file
-#     initial_data = {
-#         "asthma": False,
-#         "emergency_contact_name": "Initial Contact",
-#         "emergency_contact_phone": "1111111111",
-#     }
-#     initial_response = client.post(
-#         f"/raid/security_file/?participant_id={simple_user.id}",
-#         json=initial_data,
-#         headers={"Authorization": f"Bearer {token_simple}"},
-#     )
-#     assert initial_response.status_code == 201
+def test_set_security_file_update_existing(client: TestClient):
+    # First, create an initial security file
+    initial_data = {
+        "asthma": False,
+        "emergency_contact_name": "Initial Contact",
+        "emergency_contact_phone": "1111111111",
+    }
+    initial_response = client.post(
+        f"/raid/security_file/?participant_id={simple_user.id}",
+        json=initial_data,
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    assert initial_response.status_code == 201
 
-#     # Now, update the security file
-#     updated_data = {
-#         "asthma": True,
-#         "emergency_contact_name": "Updated Contact",
-#         "emergency_contact_phone": "2222222222",
-#     }
-#     update_response = client.post(
-#         f"/raid/security_file/?participant_id={simple_user.id}",
-#         json=updated_data,
-#         headers={"Authorization": f"Bearer {token_simple}"},
-#     )
-#     assert update_response.status_code == 201
-#     assert update_response.json()["id"] != initial_response.json()["id"]
+    # Now, update the security file
+    updated_data = {
+        "asthma": True,
+        "emergency_contact_name": "Updated Contact",
+        "emergency_contact_phone": "2222222222",
+    }
+    update_response = client.post(
+        f"/raid/security_file/?participant_id={simple_user.id}",
+        json=updated_data,
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    assert update_response.status_code == 201
+    assert update_response.json()["id"] != initial_response.json()["id"]
 
 
 def test_validate_attestation_on_honour(client: TestClient):
@@ -615,25 +611,6 @@ def test_update_raid_information(client: TestClient):
     assert response.status_code == 204
 
 
-# def test_update_drive_folders(client: TestClient):
-#     folder_data = {"parent_folder_id": "some_folder_id"}
-#     response = client.patch(
-#         "/raid/drive",
-#         json=folder_data,
-#         headers={"Authorization": f"Bearer {token_raid_admin}"},
-#     )
-#     assert response.status_code == 204
-
-
-# Requires to initalize the driver manager
-# def test_get_drive_folders(client: TestClient):
-#     response = client.get(
-#         "/raid/drive",
-#         headers={"Authorization": f"Bearer {token_raid_admin}"},
-#     )
-#     assert response.status_code == 200
-
-
 def test_get_raid_price(client: TestClient):
     response = client.get(
         "/raid/price",
@@ -652,167 +629,12 @@ def test_update_raid_price(client: TestClient):
     assert response.status_code == 204
 
 
-# def test_get_payment_url(client: TestClient):
-#     response = client.get(
-#         "/raid/pay",
-#         headers={"Authorization": f"Bearer {token_simple}"},
-#     )
-#     assert response.status_code == 201
-#     assert "url" in response.json()
-
-
 def test_delete_team(client: TestClient):
     response = client.delete(
         f"/raid/teams/{team.id}",
         headers={"Authorization": f"Bearer {token_raid_admin}"},
     )
     assert response.status_code == 204
-
-
-# def test_get_payment_url_student_price(client: TestClient, mocker):
-#     mocker.patch(
-#         "app.modules.raid.endpoints_raid.get_core_data",
-#         return_value=coredata_raid.RaidPrice(
-#             student_price=50,
-#             t_shirt_price=15,
-#             external_price=90,
-#         ),
-#     )
-#     mock_participant = Mock(
-#         payment=False,
-#         t_shirt_size=None,
-#         t_shirt_payment=False,
-#         id=str(uuid.uuid4()),
-#         student_card=Mock(id="student_card_id", validation=DocumentValidation.accepted),
-#     )
-#     mocker.patch(
-#         "app.modules.raid.cruds_raid.get_participant_by_id",
-#         return_value=mock_participant,
-#     )
-#     mocker.patch(
-#         "app.core.payment.payment_tool.PaymentTool.init_checkout",
-#         return_value=Mock(
-#             id=str(uuid.uuid4()),
-#             payment_url="https://student.url/checkout",
-#         ),
-#     )
-#     mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
-#     response = client.get(
-#         "/raid/pay",
-#         headers={"Authorization": f"Bearer {token_simple}"},
-#     )
-#     assert response.status_code == 201
-#     assert response.json()["url"] == "https://some.url.fr/checkout"
-
-
-# def test_get_payment_url_external_price(client: TestClient, mocker):
-#     mocker.patch(
-#         "app.modules.raid.endpoints_raid.get_core_data",
-#         return_value=coredata_raid.RaidPrice(
-#             student_price=50,
-#             t_shirt_price=15,
-#             external_price=90,
-#         ),
-#     )
-#     mock_participant = Mock(
-#         payment=False,
-#         t_shirt_size=None,
-#         t_shirt_payment=False,
-#         id=str(uuid.uuid4()),
-#         student_card=Mock(id=None, validation=None),
-#     )
-#     mocker.patch(
-#         "app.modules.raid.cruds_raid.get_participant_by_id",
-#         return_value=mock_participant,
-#     )
-#     mocker.patch(
-#         "app.core.payment.payment_tool.PaymentTool.init_checkout",
-#         return_value=Mock(
-#             id=str(uuid.uuid4()),
-#             payment_url="https://external.url/checkout",
-#         ),
-#     )
-#     mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
-#     response = client.get(
-#         "/raid/pay",
-#         headers={"Authorization": f"Bearer {token_simple}"},
-#     )
-#     assert response.status_code == 201
-#     assert response.json()["url"] == "https://some.url.fr/checkout"
-
-
-# def test_get_payment_url_with_tshirt(client: TestClient, mocker):
-#     mocker.patch(
-#         "app.modules.raid.endpoints_raid.get_core_data",
-#         return_value=coredata_raid.RaidPrice(
-#             student_price=50,
-#             t_shirt_price=15,
-#             external_price=90,
-#         ),
-#     )
-#     mock_participant = Mock(
-#         payment=False,
-#         t_shirt_size=Size.L,
-#         t_shirt_payment=False,
-#         id=str(uuid.uuid4()),
-#         student_card=Mock(id="student_card_id", validation=DocumentValidation.accepted),
-#     )
-#     mocker.patch(
-#         "app.modules.raid.cruds_raid.get_participant_by_id",
-#         return_value=mock_participant,
-#     )
-#     mocker.patch(
-#         "app.core.payment.payment_tool.PaymentTool.init_checkout",
-#         return_value=Mock(
-#             id=str(uuid.uuid4()),
-#             payment_url="https://tshirt.url/checkout",
-#         ),
-#     )
-#     mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
-#     response = client.get(
-#         "/raid/pay",
-#         headers={"Authorization": f"Bearer {token_simple}"},
-#     )
-#     assert response.status_code == 201
-#     assert response.json()["url"] == "https://some.url.fr/checkout"
-
-
-# def test_get_payment_url_prices_not_set(client: TestClient, mocker):
-#     mocker.patch(
-#         "app.modules.raid.endpoints_raid.get_core_data",
-#         return_value=coredata_raid.RaidPrice(
-#             student_price=None,
-#             t_shirt_price=None,
-#             external_price=None,
-#         ),
-#     )
-#     response = client.get(
-#         "/raid/pay",
-#         headers={"Authorization": f"Bearer {token_simple}"},
-#     )
-#     assert response.status_code == 404
-#     assert response.json()["detail"] == "Prices not set."
-
-
-# def test_get_payment_url_participant_not_found(client: TestClient, mocker):
-#     mocker.patch(
-#         "app.modules.raid.endpoints_raid.get_core_data",
-#         return_value=coredata_raid.RaidPrice(
-#             student_price=50,
-#             t_shirt_price=15,
-#             external_price=90,
-#         ),
-#     )
-#     mocker.patch(
-#         "app.modules.raid.cruds_raid.get_participant_by_id",
-#         return_value=None,
-#     )
-#     response = client.get(
-#         "/raid/pay",
-#         headers={"Authorization": f"Bearer {token_simple}"},
-#     )
-#     assert response.status_code == 404
-#     assert response.json()["detail"] == "Participant not found."
 
 
 ## Test for pdf writer
