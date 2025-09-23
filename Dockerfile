@@ -1,4 +1,4 @@
-FROM python:3.11-slim-bookworm
+FROM python:3.12-slim-trixie
 
 # Default number of workers; can be overridden at runtime
 ENV WORKERS=1
@@ -29,6 +29,18 @@ COPY alembic.ini .
 COPY migrations migrations/
 COPY assets assets/
 COPY app app/
+
+# For security, create a non-root user and group to run the application
+
+# Create a non-root user and group before using chown
+RUN groupadd --gid 1000 hyperion && \
+    useradd --uid 1000 --gid hyperion --shell /bin/bash --create-home hyperion
+
+# Change ownership of the application directory to the hyperion user
+RUN chown -R hyperion:hyperion /hyperion
+
+# Switch to non-root user
+USER hyperion
 
 # Expose port 8000
 EXPOSE 8000
