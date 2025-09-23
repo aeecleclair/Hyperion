@@ -1,5 +1,5 @@
 import logging
-import shutil
+import zipfile
 
 # import uuid
 from collections.abc import Sequence
@@ -33,6 +33,7 @@ from app.utils.tools import (
     # delete_file_from_data,
     generate_pdf_from_template,
     get_core_data,
+    get_file_path_from_data,
     # get_file_path_from_data,
     # save_bytes_as_data,
 )
@@ -528,49 +529,43 @@ def scale_rect_to_fit(container, content_width, content_height):
 #         hyperion_error_logger.exception("Error while creating pdf")
 #         return
 
+
 async def get_all_security_files_zip(
     db: AsyncSession,
     information: coredata_raid.RaidInformation,
 ) -> str:
     teams = await cruds_raid.get_all_teams(db)
-    hyperion_error_logger.warning(
+    hyperion_error_logger.info(
         f"RAID: Generating ZIP for {len(teams)} security files",
     )
 
-    temp_dir = Path("data/raid/security_file_zip_temp")
-    temp_dir.mkdir(parents=True, exist_ok=True)
-    files_to_zip = []
+    if len(teams) == 0:
+        raise HTTPException(status_code=400, detail="No team found.")
 
-    for team in teams:
-        for participant in [team.captain] + ([team.second] if team.second else []):
-            file_id = await generate_security_file_pdf(
-                participant,
-                information,
-                team.number,
-            )
-            src_pdf = Path("data/raid/security_file") / f"{file_id}.pdf"
-            safe_team = str(team.name).replace(" ", "_")
-            safe_participant = f"{participant.firstname}_{participant.name}".replace(
-                " ",
-                "_",
-            )
-            dest_pdf = temp_dir / f"{safe_team}_{safe_participant}.pdf"
-            if src_pdf.exists():
-                shutil.copy(src_pdf, dest_pdf)
-                files_to_zip.append(str(dest_pdf))
+    # TODO: delete the previous zip?
+    # TODO: iotemp file?
+    Path("data/raid/").mkdir(parents=True, exist_ok=True)
+    zip_file_path = f"data/raid/Fiches_Sécurité_{datetime.now(UTC).strftime('%Y-%m-%d_%H_%M_%S')}.zip"
+    with zipfile.ZipFile(
+        zip_file_path,
+        mode="w",
+    ) as archive:
+        for team in teams:
+            for participant in [team.captain] + ([team.second] if team.second else []):
+                file_id = await generate_security_file_pdf(
+                    participant,
+                    information,
+                    team.number,
+                )
+                src_pdf = get_file_path_from_data(
+                    directory="raid/security_file",
+                    filename=file_id,
+                )
 
-    zip_file_id = (
-        "Fiches_Sécurité_" + datetime.now(UTC).strftime("%Y-%m-%d_%H_%M_%S") + ".zip"
-    )
-    zip_file_path = f"data/raid/{zip_file_id}"
-
-    if files_to_zip:
-        files_str = " ".join(files_to_zip)
-        await aiofiles.os.system(f"zip -j {zip_file_path} {files_str}")
-
-    for f in temp_dir.iterdir():
-        f.unlink()
-    temp_dir.rmdir()
+                archive.write(
+                    str(src_pdf),
+                    arcname=f"{team.name}_{participant.firstname}_{participant.name}.pdf",
+                )
 
     return zip_file_path
 

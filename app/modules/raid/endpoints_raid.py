@@ -29,7 +29,6 @@ from app.modules.raid.utils.utils_raid import (
     generate_teams_pdf_util,
     get_all_security_files_zip,
     get_participant,
-    save_security_file,
     validate_payment,
     will_participant_be_minor_on,
 )
@@ -402,7 +401,7 @@ async def delete_team(
     """
     team = await cruds_raid.get_team_by_id(team_id, db)
     if not team:
-        raise HTTPException(status_code=403, detail="This team does not exists")
+        raise HTTPException(status_code=400, detail="This team does not exists")
     await cruds_raid.delete_team_invite_tokens(team_id, db)
     await cruds_raid.delete_team(team_id, db)
     # We will try to delete PDF associated with the team from the Google Drive
@@ -1231,7 +1230,7 @@ async def download_security_files_zip(
     Only accessible to raid admins.
     """
     information = await get_core_data(coredata_raid.RaidInformation, db)
-    zip_file_path = await get_all_security_files_zip(db, information, settings)
+    zip_file_path = await get_all_security_files_zip(db, information)
     return FileResponse(
         zip_file_path,
         media_type="application/zip",
