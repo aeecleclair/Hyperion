@@ -1144,3 +1144,32 @@ async def test_set_team_number_utility_discovery_difficulty(
 #     participant = Mock(**participant_kwargs)
 #     price, _ = calculate_raid_payment(participant, raid_prices)
 #     assert price == expected_price
+def test_download_security_files_zip(client: TestClient):
+    response = client.get(
+        "/raid/security_files_zip",
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
+    )
+    assert response.status_code == 200
+
+
+def test_delete_all_teams(client: TestClient):
+    response = client.delete(
+        "/raid/teams",
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
+    )
+    assert response.status_code == 204
+
+    response = client.get(
+        "/raid/teams",
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 0
+
+
+def test_download_security_files_zip_with_no_teams(client: TestClient):
+    response = client.get(
+        "/raid/security_files_zip",
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
+    )
+    assert response.status_code == 400
