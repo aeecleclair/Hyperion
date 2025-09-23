@@ -356,14 +356,6 @@ def test_create_team(client: TestClient):
     assert response.json()["name"] == "New Team"
 
 
-def test_generate_teams_pdf(client: TestClient):
-    response = client.post(
-        "/raid/teams/generate-pdf",
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
-    )
-    assert response.status_code == 200
-
-
 def test_get_team_by_participant_id(client: TestClient):
     response = client.get(
         f"/raid/participants/{simple_user.id}/team",
@@ -1182,6 +1174,14 @@ def test_download_security_files_zip(client: TestClient):
     assert response.status_code == 200
 
 
+def test_download_team_files_zip(client: TestClient):
+    response = client.get(
+        "/raid/team_files_zip",
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
+    )
+    assert response.status_code == 200
+
+
 def test_delete_all_teams(client: TestClient):
     response = client.delete(
         "/raid/teams",
@@ -1200,6 +1200,14 @@ def test_delete_all_teams(client: TestClient):
 def test_download_security_files_zip_with_no_teams(client: TestClient):
     response = client.get(
         "/raid/security_files_zip",
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
+    )
+    assert response.status_code == 400
+
+
+def test_download_team_files_zip_with_no_teams(client: TestClient):
+    response = client.get(
+        "/raid/team_files_zip",
         headers={"Authorization": f"Bearer {token_raid_admin}"},
     )
     assert response.status_code == 400

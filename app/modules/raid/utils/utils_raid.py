@@ -246,6 +246,45 @@ async def get_all_security_files_zip(
     return zip_file_path
 
 
+async def get_all_team_files_zip(
+    db: AsyncSession,
+    information: coredata_raid.RaidInformation,
+) -> str:
+    teams = await cruds_raid.get_all_teams(db)
+    hyperion_error_logger.info(
+        f"RAID: Generating ZIP for {len(teams)} security files",
+    )
+
+    if len(teams) == 0:
+        raise HTTPException(status_code=400, detail="No team found.")
+
+    # TODO: delete the previous zip?
+    # TODO: iotemp file?
+    Path("data/raid/").mkdir(parents=True, exist_ok=True)
+    zip_file_path = (
+        f"data/raid/Teams_{datetime.now(UTC).strftime('%Y-%m-%d_%H_%M_%S')}.zip"
+    )
+    with zipfile.ZipFile(
+        zip_file_path,
+        mode="w",
+    ) as archive:
+        for team in teams:
+            file_id = await generate_recap_file_pdf(
+                team,
+            )
+            src_pdf = get_file_path_from_data(
+                directory="raid/recap",
+                filename=file_id,
+            )
+
+            archive.write(
+                str(src_pdf),
+                arcname=f"{team.name}.pdf",
+            )
+
+    return zip_file_path
+
+
 async def get_participant(
     participant_id: str,
     db: AsyncSession,

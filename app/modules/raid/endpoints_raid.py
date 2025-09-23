@@ -22,6 +22,7 @@ from app.modules.raid.raid_type import DocumentType, DocumentValidation, Size
 from app.modules.raid.utils.utils_raid import (
     calculate_raid_payment,
     get_all_security_files_zip,
+    get_all_team_files_zip,
     get_participant,
     validate_payment,
     will_participant_be_minor_on,
@@ -938,6 +939,28 @@ async def download_security_files_zip(
     """
     information = await get_core_data(coredata_raid.RaidInformation, db)
     zip_file_path = await get_all_security_files_zip(db, information)
+    return FileResponse(
+        zip_file_path,
+        media_type="application/zip",
+        filename=Path(zip_file_path).name,
+    )
+
+
+@module.router.get(
+    "/raid/team_files_zip",
+    response_class=FileResponse,
+    status_code=200,
+)
+async def download_team_files_zip(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
+):
+    """
+    Generate and serve a ZIP file containing all team files.
+    Only accessible to raid admins.
+    """
+    information = await get_core_data(coredata_raid.RaidInformation, db)
+    zip_file_path = await get_all_team_files_zip(db, information)
     return FileResponse(
         zip_file_path,
         media_type="application/zip",
