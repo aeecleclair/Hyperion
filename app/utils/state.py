@@ -14,7 +14,6 @@ from sqlalchemy.ext.asyncio import (
 from app.core.payment.payment_tool import PaymentTool
 from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.utils.config import Settings
-from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.types.scheduler import OfflineScheduler, Scheduler
 from app.types.sqlalchemy import SessionLocalType
 from app.types.websocket import WebsocketConnectionManager
@@ -35,7 +34,6 @@ class GlobalState(TypedDict):
     scheduler: Scheduler
     ws_manager: WebsocketConnectionManager
     notification_manager: NotificationManager
-    drive_file_manager: DriveFileManager
     payment_tools: dict[HelloAssoConfigName, PaymentTool]
     mail_templates: calypsso.MailTemplates
 

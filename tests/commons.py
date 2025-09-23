@@ -23,7 +23,6 @@ from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users, models_users, schemas_users
 from app.core.utils import security
 from app.core.utils.config import Settings
-from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.types import core_data
 from app.types.floors_type import FloorsType
 from app.types.scheduler import OfflineScheduler
@@ -74,8 +73,6 @@ async def override_init_state(
 
     notification_manager = NotificationManager(settings=settings)
 
-    drive_file_manager = DriveFileManager()
-
     payment_tools = init_test_payment_tools()
 
     mail_templates = init_mail_templates(settings=settings)
@@ -87,7 +84,6 @@ async def override_init_state(
         scheduler=scheduler,
         ws_manager=ws_manager,
         notification_manager=notification_manager,
-        drive_file_manager=drive_file_manager,
         payment_tools=payment_tools,
         mail_templates=mail_templates,
     )
