@@ -1040,22 +1040,23 @@ async def add_or_update_time(
 
 
 @module.router.get(
-    "/chrono_raid/csv_temps",
+    "/chrono_raid/csv_temps/{parcours}",
     response_class=FileResponse,
     status_code=200,
 )
 async def get_csv_temps(
+    parcours: str,
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Return a csv with all times
+    Return a csv with all times of a given parcours
     """
-    CSV_FILE_PATH = "data/raid/results_chrono_raid.csv"
+    CSV_FILE_PATH = f"data/raid/results_chrono_raid_{parcours}.csv"
 
     grouped_temps: dict[
         int,
         list[models_raid.Temps],
-    ] = await cruds_raid.get_active_temps_grouped_by_dossard(db)
+    ] = await cruds_raid.get_active_temps_grouped_by_dossard(parcours, db)
 
     with Path.open(CSV_FILE_PATH, "w", encoding="utf-8") as f:
         for dossard, temps_list in grouped_temps.items():
@@ -1067,5 +1068,67 @@ async def get_csv_temps(
     return FileResponse(
         CSV_FILE_PATH,
         media_type="text/csv",
-        filename="results_chrono_raid.csv",
+        filename=f"results_chrono_raid_{parcours}.csv",
     )
+
+
+@module.router.delete(
+    "/chrono_raid/temps",
+    status_code=204,
+)
+async def delete_all_times(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+):
+    """
+    Delete all times.
+    """
+    await cruds_raid.delete_all_times(db)
+
+
+@module.router.get(
+    "/chrono_raid/remarks",
+    response_model=list[schemas_raid.Remark],
+    status_code=200,
+)
+async def get_remarks(
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Return all remarks
+    """
+    result = await cruds_raid.get_remarks(
+        db=db,
+    )
+    return result
+
+
+@module.router.post(
+    "/chrono_raid/remarks",
+    status_code=200,
+)
+async def add_remarks(
+    remark_list=list[schemas_raid.Remark],
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Add a list of remarks to the db
+    """
+    await cruds_raid.add_remarks(
+        list_remarks=remark_list,
+        db=db,
+    )
+
+
+@module.router.delete(
+    "/chrono_raid/remarks",
+    status_code=204,
+)
+async def delete_all_remarks(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+):
+    """
+    Delete all remarks.
+    """
+    await cruds_raid.delete_all_remarks(db)

@@ -606,11 +606,12 @@ async def get_temps(
 
 
 async def get_active_temps_grouped_by_dossard(
+    parcours: str,
     db: AsyncSession,
 ) -> dict[int, list[models_raid.Temps]]:
     result = await db.execute(
         select(models_raid.Temps)
-        .where(models_raid.Temps.status)
+        .where(models_raid.Temps.status and models_raid.Temps.parcours == parcours)
         .order_by(models_raid.Temps.dossard, models_raid.Temps.date),
     )
     temps_list = result.scalars().all()
@@ -668,3 +669,38 @@ async def update_temps(
     )
     await db.commit()
     return temps
+
+
+async def delete_all_times(
+    db: AsyncSession,
+):
+    await db.execute(delete(models_raid.Temps))
+    await db.commit()
+
+
+async def get_remarks(
+    db: AsyncSession,
+) -> Sequence[models_raid.Remark]:
+    remarks = await db.execute(select(models_raid.Remark))
+    return remarks.scalars().all()
+
+
+async def add_remarks(
+    list_remarks: list[schemas_raid.Remark],
+    db: AsyncSession,
+):
+    for remark in list_remarks:
+        remark_db = models_raid.Remark(**remark.model_dump())
+        db.add(remark_db)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise
+
+
+async def delete_all_remarks(
+    db: AsyncSession,
+):
+    await db.execute(delete(models_raid.Remark))
+    await db.commit()
