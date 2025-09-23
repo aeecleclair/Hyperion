@@ -177,3 +177,10 @@ class Temps(BaseModel):
     ravito: str
     status: bool
     last_modification_date: str
+
+
+class Remark(BaseModel):
+    id: str
+    date: str
+    ravito: str
+    text: str

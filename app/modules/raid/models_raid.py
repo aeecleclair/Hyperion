@@ -324,3 +324,14 @@ class Temps(Base):
     ravito: Mapped[str]
     status: Mapped[bool]
     last_modification_date: Mapped[str]
+
+
+class Remark(Base):
+    __tablename__ = "chrono_raid_remaks"
+    id: Mapped[str] = mapped_column(
+        primary_key=True,
+        index=True,
+    )
+    date: Mapped[str]
+    ravito: Mapped[str]
+    text: Mapped[str]
