@@ -206,6 +206,7 @@ class ParticipantEdit(BaseModel):
 
 class ParticipantComplete(Participant):
     user: CompetitionUser
+    team: "Team"
 
 
 class TeamBase(BaseModel):
@@ -428,7 +429,46 @@ class Checkout(BaseModel):
     checkout_id: UUID
 
 
-# Importing here to avoid circular imports
-from app.core.groups.schemas_groups import CoreGroupSimple  # noqa: E402, F401
+class VolunteerShiftBase(BaseModel):
+    name: str
+    description: str | None = None
+    value: PositiveInt
+    start_time: datetime
+    end_time: datetime
+    location: str | None = None
+    max_volunteers: PositiveInt
 
-CompetitionUser.model_rebuild()
+
+class VolunteerShift(VolunteerShiftBase):
+    id: UUID
+    edition_id: UUID
+
+
+class VolunteerShiftComplete(VolunteerShift):
+    registrations: list["VolunteerRegistrationWithUser"] = []
+
+
+class VolunteerShiftEdit(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    value: PositiveInt | None = None
+    start_time: datetime | None = None
+    end_time: datetime | None = None
+    location: str | None = None
+    max_volunteers: PositiveInt | None = None
+
+
+class VolunteerRegistration(BaseModel):
+    user_id: str
+    edition_id: UUID
+    shift_id: UUID
+    registered_at: datetime
+    validated: bool
+
+
+class VolunteerRegistrationWithUser(VolunteerRegistration):
+    user: CompetitionUser
+
+
+class VolunteerRegistrationComplete(VolunteerRegistration):
+    shift: VolunteerShift
