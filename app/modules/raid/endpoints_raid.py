@@ -27,8 +27,8 @@ from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.utils_raid import (
     calculate_raid_payment,
     generate_teams_pdf_util,
+    get_all_security_files_zip,
     get_participant,
-    post_update_actions,
     save_security_file,
     validate_payment,
     will_participant_be_minor_on,
@@ -221,14 +221,14 @@ async def update_participant(
             )
 
     await cruds_raid.update_participant(participant_id, participant, is_minor, db)
-    team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    if team:
-        await post_update_actions(
-            team,
-            db,
-            drive_file_manager,
-            settings=settings,
-        )
+    # team = await cruds_raid.get_team_by_participant_id(participant_id, db)
+    # if team:
+    #     await post_update_actions(
+    #         team,
+    #         db,
+    #         drive_file_manager,
+    #         settings=settings,
+    #     )
 
 
 @module.router.post(
@@ -264,15 +264,15 @@ async def create_team(
     )
     await cruds_raid.create_team(db_team, db)
     # We need to get the team from the db to have access to relationships
-    created_team = await cruds_raid.get_team_by_id(team_id=db_team.id, db=db)
-    if created_team:
-        await post_update_actions(
-            created_team,
-            db,
-            drive_file_manager,
-            settings=settings,
-        )
-    return created_team
+    return await cruds_raid.get_team_by_id(team_id=db_team.id, db=db)
+    # if created_team:
+    #     await post_update_actions(
+    #         created_team,
+    #         db,
+    #         drive_file_manager,
+    #         settings=settings,
+    #     )
+    # return created_team
 
 
 @module.router.post(
@@ -377,14 +377,14 @@ async def update_team(
     if existing_team.id != team_id:
         raise HTTPException(status_code=403, detail="You can only edit your own team.")
     await cruds_raid.update_team(team_id, team, db)
-    updated_team = await cruds_raid.get_team_by_id(team_id, db)
-    if updated_team:
-        await post_update_actions(
-            updated_team,
-            db,
-            drive_file_manager,
-            settings=settings,
-        )
+    # updated_team = await cruds_raid.get_team_by_id(team_id, db)
+    # if updated_team:
+    #     await post_update_actions(
+    #         updated_team,
+    #         db,
+    #         drive_file_manager,
+    #         settings=settings,
+    #     )
 
 
 @module.router.delete(
@@ -594,14 +594,14 @@ async def validate_document(
     Validate a document
     """
     await cruds_raid.update_document_validation(document_id, validation, db)
-    team = await cruds_raid.get_team_by_participant_id(user.id, db)
-    if team:
-        await post_update_actions(
-            team,
-            db,
-            drive_file_manager,
-            settings=settings,
-        )
+    # team = await cruds_raid.get_team_by_participant_id(user.id, db)
+    # if team:
+    #     await post_update_actions(
+    #         team,
+    #         db,
+    #         drive_file_manager,
+    #         settings=settings,
+    #     )
 
 
 @module.router.post(
@@ -670,12 +670,12 @@ async def set_security_file(
         drive_file_manager,
         settings,
     )
-    await post_update_actions(
-        team,
-        db,
-        drive_file_manager,
-        settings=settings,
-    )
+    # await post_update_actions(
+    #     team,
+    #     db,
+    #     drive_file_manager,
+    #     settings=settings,
+    # )
     return created_security_file
 
 
@@ -694,17 +694,17 @@ async def confirm_payment(
     Confirm payment manually
     """
     await cruds_raid.confirm_payment(participant_id, db)
-    team = await cruds_raid.get_team_by_participant_id(
-        participant_id,
-        db,
-    )
-    if team:
-        await post_update_actions(
-            team,
-            db,
-            drive_file_manager,
-            settings=settings,
-        )
+    # team = await cruds_raid.get_team_by_participant_id(
+    #     participant_id,
+    #     db,
+    # )
+    # if team:
+    #     await post_update_actions(
+    #         team,
+    #         db,
+    #         drive_file_manager,
+    #         settings=settings,
+    #     )
 
 
 @module.router.post(
@@ -729,14 +729,14 @@ async def confirm_t_shirt_payment(
     ):
         raise HTTPException(status_code=400, detail="T shirt size not set.")
     await cruds_raid.confirm_t_shirt_payment(participant_id, db)
-    team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    if team:
-        await post_update_actions(
-            team,
-            db,
-            drive_file_manager,
-            settings=settings,
-        )
+    # team = await cruds_raid.get_team_by_participant_id(participant_id, db)
+    # if team:
+    #     await post_update_actions(
+    #         team,
+    #         db,
+    #         drive_file_manager,
+    #         settings=settings,
+    #     )
 
 
 @module.router.post(
@@ -756,14 +756,14 @@ async def validate_attestation_on_honour(
     if participant_id != user.id:
         raise HTTPException(status_code=403, detail="You are not the participant")
     await cruds_raid.validate_attestation_on_honour(participant_id, db)
-    team = await cruds_raid.get_team_by_participant_id(participant_id, db)
-    if team:
-        await post_update_actions(
-            team,
-            db,
-            drive_file_manager,
-            settings=settings,
-        )
+    # team = await cruds_raid.get_team_by_participant_id(participant_id, db)
+    # if team:
+    #     await post_update_actions(
+    #         team,
+    #         db,
+    #         drive_file_manager,
+    #         settings=settings,
+    #     )
 
 
 @module.router.post(
@@ -849,12 +849,12 @@ async def join_team(
 
     await cruds_raid.delete_invite_token(invite_token.id, db)
     await cruds_raid.update_team_second_id(team.id, user.id, db)
-    await post_update_actions(
-        team,
-        db,
-        drive_file_manager,
-        settings=settings,
-    )
+    # await post_update_actions(
+    #     team,
+    #     db,
+    #     drive_file_manager,
+    #     settings=settings,
+    # )
 
 
 @module.router.post(
@@ -890,12 +890,12 @@ async def kick_team_member(
     elif team.second_id != participant_id:
         raise HTTPException(status_code=404, detail="Participant not found.")
     await cruds_raid.update_team_second_id(team_id, None, db)
-    await post_update_actions(
-        team,
-        db,
-        drive_file_manager,
-        settings=settings,
-    )
+    # await post_update_actions(
+    #     team,
+    #     db,
+    #     drive_file_manager,
+    #     settings=settings,
+    # )
     return await cruds_raid.get_team_by_id(team_id, db)
 
 
@@ -949,12 +949,12 @@ async def merge_teams(
     if team2.file_id:
         async with DriveGoogleAPI(db, settings) as google_api:
             google_api.delete_file(team2.file_id)
-    await post_update_actions(
-        team1,
-        db,
-        drive_file_manager,
-        settings=settings,
-    )
+    # await post_update_actions(
+    #     team1,
+    #     db,
+    #     drive_file_manager,
+    #     settings=settings,
+    # )
     return await cruds_raid.get_team_by_id(team1_id, db)
 
 
@@ -1001,39 +1001,39 @@ async def update_raid_information(
                 raid_start_date=raid_information.raid_start_date,
             )
             await cruds_raid.update_participant_minority(participant.id, is_minor, db)
-    if (
-        (
-            raid_information.president
-            and raid_information.president != last_information.president
-        )
-        or (
-            raid_information.rescue
-            and raid_information.rescue != last_information.rescue
-        )
-        or (
-            raid_information.security_responsible
-            and raid_information.security_responsible
-            != last_information.security_responsible
-        )
-        or (
-            raid_information.volunteer_responsible
-            and raid_information.volunteer_responsible
-            != last_information.volunteer_responsible
-        )
-    ):
-        participants = await cruds_raid.get_all_participants(db)
-        information = await get_core_data(coredata_raid.RaidInformation, db)
-        for participant in participants:
-            team = await cruds_raid.get_team_by_participant_id(participant.id, db)
-            if team:
-                await save_security_file(
-                    participant,
-                    information,
-                    team.number,
-                    db,
-                    drive_file_manager,
-                    settings,
-                )
+    # if (
+    #     (
+    #         raid_information.president
+    #         and raid_information.president != last_information.president
+    #     )
+    #     or (
+    #         raid_information.rescue
+    #         and raid_information.rescue != last_information.rescue
+    #     )
+    #     or (
+    #         raid_information.security_responsible
+    #         and raid_information.security_responsible
+    #         != last_information.security_responsible
+    #     )
+    #     or (
+    #         raid_information.volunteer_responsible
+    #         and raid_information.volunteer_responsible
+    #         != last_information.volunteer_responsible
+    #     )
+    # ):
+    #     participants = await cruds_raid.get_all_participants(db)
+    #     information = await get_core_data(coredata_raid.RaidInformation, db)
+    #     for participant in participants:
+    #         team = await cruds_raid.get_team_by_participant_id(participant.id, db)
+    #         if team:
+    #             await save_security_file(
+    #                 participant,
+    #                 information,
+    #                 team.number,
+    #                 db,
+    #                 drive_file_manager,
+    #                 settings,
+    #             )
 
 
 @module.router.patch(
@@ -1213,4 +1213,27 @@ async def clear_documents(
         f"RAID: Document cleanup completed. "
         f"Checked {checked_documents_count} document references, "
         f"cleared {cleared_documents_count} invalid ones.",
+    )
+
+
+@module.router.get(
+    "/raid/security_files_zip",
+    response_class=FileResponse,
+    status_code=200,
+)
+async def download_security_files_zip(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
+    settings: Settings = Depends(get_settings),
+):
+    """
+    Generate and serve a ZIP file containing all security files.
+    Only accessible to raid admins.
+    """
+    information = await get_core_data(coredata_raid.RaidInformation, db)
+    zip_file_path = await get_all_security_files_zip(db, information, settings)
+    return FileResponse(
+        zip_file_path,
+        media_type="application/zip",
+        filename=Path(zip_file_path).name,
     )

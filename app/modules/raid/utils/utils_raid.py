@@ -1,5 +1,8 @@
+import asyncio
 import logging
-import uuid
+import shutil
+
+# import uuid
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -9,7 +12,7 @@ import fitz
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.google_api.google_api import DriveGoogleAPI
+# from app.core.google_api.google_api import DriveGoogleAPI
 from app.core.payment import schemas_payment
 from app.core.utils.config import Settings
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
@@ -20,19 +23,19 @@ from app.modules.raid.schemas_raid import (
 )
 from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.modules.raid.utils.pdf.conversion_utils import (
-    date_to_string,
+    # date_to_string,
     get_difficulty_label,
-    get_document_validation_label,
+    # get_document_validation_label,
     get_meeting_place_label,
     nullable_number_to_string,
 )
 from app.utils.tools import (
-    concat_pdf,
-    delete_file_from_data,
+    # concat_pdf,
+    # delete_file_from_data,
     generate_pdf_from_template,
     get_core_data,
-    get_file_path_from_data,
-    save_bytes_as_data,
+    # get_file_path_from_data,
+    # save_bytes_as_data,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -180,91 +183,91 @@ async def set_team_number(team: models_raid.RaidTeam, db: AsyncSession) -> None:
     await cruds_raid.update_team(team.id, updated_team, db)
 
 
-async def save_team_info(
-    team: models_raid.RaidTeam,
-    information: coredata_raid.RaidInformation,
-    db: AsyncSession,
-    drive_file_manager: DriveFileManager,
-    settings: Settings,
-):
-    try:
-        physical_file_uuid = await prepare_complete_team_file(
-            team=team,
-            information=information,
-        )
+# async def save_team_info(
+#     team: models_raid.RaidTeam,
+#     information: coredata_raid.RaidInformation,
+#     db: AsyncSession,
+#     drive_file_manager: DriveFileManager,
+#     settings: Settings,
+# ):
+#     try:
+#         physical_file_uuid = await prepare_complete_team_file(
+#             team=team,
+#             information=information,
+#         )
 
-        file_path = str(
-            get_file_path_from_data(
-                directory="raid/team",
-                filename=physical_file_uuid,
-            ),
-        )
+#         file_path = str(
+#             get_file_path_from_data(
+#                 directory="raid/team",
+#                 filename=physical_file_uuid,
+#             ),
+#         )
 
-        file_name = (
-            str(team.number) + "_" if team.number else ""
-        ) + f"{team.name}_{team.captain.name}_{team.captain.firstname}.pdf"
+#         file_name = (
+#             str(team.number) + "_" if team.number else ""
+#         ) + f"{team.name}_{team.captain.name}_{team.captain.firstname}.pdf"
 
-        if team.file_id:
-            try:
-                async with DriveGoogleAPI(db, settings) as google_api:
-                    file_id = google_api.replace_file(file_path, team.file_id)
-            except Exception:
-                hyperion_error_logger.exception(
-                    "RAID: could not replace file",
-                )
-                file_id = await drive_file_manager.upload_team_file(
-                    file_path,
-                    file_name,
-                    db,
-                    settings=settings,
-                )
-        else:
-            file_id = await drive_file_manager.upload_team_file(
-                file_path,
-                file_name,
-                db,
-                settings=settings,
-            )
-        await cruds_raid.update_team_file_id(team.id, file_id, db)
-    except Exception:
-        hyperion_error_logger.exception("Error while creating pdf")
-        return
+#         if team.file_id:
+#             try:
+#                 async with DriveGoogleAPI(db, settings) as google_api:
+#                     file_id = google_api.replace_file(file_path, team.file_id)
+#             except Exception:
+#                 hyperion_error_logger.exception(
+#                     "RAID: could not replace file",
+#                 )
+#                 file_id = await drive_file_manager.upload_team_file(
+#                     file_path,
+#                     file_name,
+#                     db,
+#                     settings=settings,
+#                 )
+#         else:
+#             file_id = await drive_file_manager.upload_team_file(
+#                 file_path,
+#                 file_name,
+#                 db,
+#                 settings=settings,
+#             )
+#         await cruds_raid.update_team_file_id(team.id, file_id, db)
+#     except Exception:
+#         hyperion_error_logger.exception("Error while creating pdf")
+#         return
 
 
-async def post_update_actions(
-    team: models_raid.RaidTeam,
-    db: AsyncSession,
-    drive_file_manager: DriveFileManager,
-    settings: Settings,
-    should_generate_all_teams_csv: bool = True,
-) -> None:
-    try:
-        if team.validation_progress == 100 and (
-            team.number is None or team.number == -1
-        ):
-            await set_team_number(team, db)
+# async def post_update_actions(
+#     team: models_raid.RaidTeam,
+#     db: AsyncSession,
+#     drive_file_manager: DriveFileManager,
+#     settings: Settings,
+#     should_generate_all_teams_csv: bool = True,
+# ) -> None:
+#     try:
+#         if team.validation_progress == 100 and (
+#             team.number is None or team.number == -1
+#         ):
+#             await set_team_number(team, db)
 
-            # Usually we want to update the csv file each team a team is updated
-            # but when we batch update teams we only want to update the csv file once, at the end
-            if should_generate_all_teams_csv:
-                all_teams = await cruds_raid.get_all_validated_teams(db)
-                await write_teams_csv(
-                    all_teams,
-                    db,
-                    drive_file_manager,
-                    settings=settings,
-                )
-        information = await get_core_data(coredata_raid.RaidInformation, db)
-        await save_team_info(
-            team,
-            information,
-            db,
-            drive_file_manager,
-            settings=settings,
-        )
-    except Exception:
-        hyperion_error_logger.exception(f"Error while creating pdf for team {team.id}")
-        return
+#             # Usually we want to update the csv file each team a team is updated
+#             # but when we batch update teams we only want to update the csv file once, at the end
+#             if should_generate_all_teams_csv:
+#                 all_teams = await cruds_raid.get_all_validated_teams(db)
+#                 await write_teams_csv(
+#                     all_teams,
+#                     db,
+#                     drive_file_manager,
+#                     settings=settings,
+#                 )
+#         information = await get_core_data(coredata_raid.RaidInformation, db)
+#         await save_team_info(
+#             team,
+#             information,
+#             db,
+#             drive_file_manager,
+#             settings=settings,
+#         )
+#     except Exception:
+#         hyperion_error_logger.exception(f"Error while creating pdf for team {team.id}")
+#         return
 
 
 async def generate_security_file_pdf(
@@ -340,191 +343,237 @@ def scale_rect_to_fit(container, content_width, content_height):
     return fitz.Rect(x0, y0, x1, y1)
 
 
-async def prepare_complete_team_file(
-    team: models_raid.RaidTeam,
-    information: coredata_raid.RaidInformation,
-):
-    recap_file_id = await generate_recap_file_pdf(
-        team=team,
-    )
+# async def prepare_complete_team_file(
+#     team: models_raid.RaidTeam,
+#     information: coredata_raid.RaidInformation,
+# ):
+#     recap_file_id = await generate_recap_file_pdf(
+#         team=team,
+#     )
 
-    output_pdf: fitz.Document = fitz.open()
+#     output_pdf: fitz.Document = fitz.open()
 
-    concat_pdf(
-        source_directory="raid/recap",
-        source_filename=recap_file_id,
-        output_pdf=output_pdf,
-    )
+#     concat_pdf(
+#         source_directory="raid/recap",
+#         source_filename=recap_file_id,
+#         output_pdf=output_pdf,
+#     )
 
-    security_file_id = await generate_security_file_pdf(
-        participant=team.captain,
-        information=information,
-        team_number=team.number,
-    )
-    concat_pdf(
-        source_directory="raid/security_file",
-        source_filename=security_file_id,
-        output_pdf=output_pdf,
-    )
+#     security_file_id = await generate_security_file_pdf(
+#         participant=team.captain,
+#         information=information,
+#         team_number=team.number,
+#     )
+#     concat_pdf(
+#         source_directory="raid/security_file",
+#         source_filename=security_file_id,
+#         output_pdf=output_pdf,
+#     )
 
-    if team.second:
-        security_file_id = await generate_security_file_pdf(
-            participant=team.second,
-            information=information,
-            team_number=team.number,
-        )
-        concat_pdf(
-            source_directory="raid/security_file",
-            source_filename=security_file_id,
-            output_pdf=output_pdf,
-        )
+#     if team.second:
+#         security_file_id = await generate_security_file_pdf(
+#             participant=team.second,
+#             information=information,
+#             team_number=team.number,
+#         )
+#         concat_pdf(
+#             source_directory="raid/security_file",
+#             source_filename=security_file_id,
+#             output_pdf=output_pdf,
+#         )
 
-    for participant in [team.captain, team.second] if team.second else [team.captain]:
-        for document in [
-            participant.id_card,
-            participant.medical_certificate,
-            participant.student_card,
-            participant.raid_rules,
-            participant.parent_authorization,
-        ]:
-            if document:
-                path = get_file_path_from_data("raid", document.id)
+#     for participant in [team.captain, team.second] if team.second else [team.captain]:
+#         for document in [
+#             participant.id_card,
+#             participant.medical_certificate,
+#             participant.student_card,
+#             participant.raid_rules,
+#             participant.parent_authorization,
+#         ]:
+#             if document:
+#                 path = get_file_path_from_data("raid", document.id)
 
-                page = output_pdf.new_page(width=595, height=842)  # A4 size in points
-                title_font_size = 16
-                subtitle_font_size = 12
-                margin = 50
-                page.insert_text(
-                    (margin, margin),
-                    participant.firstname + " " + participant.name,
-                    fontsize=title_font_size,
-                    fontname="helv",
-                    fill=(0, 0, 0),
-                )
-                page.insert_text(
-                    (margin, margin + 25),
-                    f"Date de téléversement {date_to_string(document.uploaded_at)} | Validation : {get_document_validation_label(document.validation)}",
-                    fontsize=subtitle_font_size,
-                    fontname="helv",
-                    fill=(0.2, 0.2, 0.2),
-                )
+#                 page = output_pdf.new_page(width=595, height=842)  # A4 size in points
+#                 title_font_size = 16
+#                 subtitle_font_size = 12
+#                 margin = 50
+#                 page.insert_text(
+#                     (margin, margin),
+#                     participant.firstname + " " + participant.name,
+#                     fontsize=title_font_size,
+#                     fontname="helv",
+#                     fill=(0, 0, 0),
+#                 )
+#                 page.insert_text(
+#                     (margin, margin + 25),
+#                     f"Date de téléversement {date_to_string(document.uploaded_at)} | Validation : {get_document_validation_label(document.validation)}",
+#                     fontsize=subtitle_font_size,
+#                     fontname="helv",
+#                     fill=(0.2, 0.2, 0.2),
+#                 )
 
-                if path.suffix.lower() in [".pdf"]:
-                    src_doc = fitz.open(path)
-                    src_page = src_doc.load_page(0)
-                    pix = src_page.get_pixmap(matrix=fitz.Matrix(1.5, 1.5))
+#                 if path.suffix.lower() in [".pdf"]:
+#                     src_doc = fitz.open(path)
+#                     src_page = src_doc.load_page(0)
+#                     pix = src_page.get_pixmap(matrix=fitz.Matrix(1.5, 1.5))
 
-                else:  # assume image
-                    pix = fitz.Pixmap(path)
+#                 else:  # assume image
+#                     pix = fitz.Pixmap(path)
 
-                # Define the area for the image
-                image_rect = fitz.Rect(margin, 120, 595 - margin, 742 - margin)
+#                 # Define the area for the image
+#                 image_rect = fitz.Rect(margin, 120, 595 - margin, 742 - margin)
 
-                # Scale to fit
-                img_rect = scale_rect_to_fit(image_rect, pix.width, pix.height)
-                page.insert_image(img_rect, pixmap=pix)
+#                 # Scale to fit
+#                 img_rect = scale_rect_to_fit(image_rect, pix.width, pix.height)
+#                 page.insert_image(img_rect, pixmap=pix)
 
-                if path.suffix.lower() in [".pdf"]:
-                    if len(src_doc) > 1:
-                        output_pdf.insert_pdf(
-                            src_doc,
-                            from_page=1,
-                            to_page=len(src_doc),
-                        )
+#                 if path.suffix.lower() in [".pdf"]:
+#                     if len(src_doc) > 1:
+#                         output_pdf.insert_pdf(
+#                             src_doc,
+#                             from_page=1,
+#                             to_page=len(src_doc),
+#                         )
 
-    for i, page in enumerate(output_pdf, start=1):
-        footer_text = (
-            f"RAID Raid Centrale Lyon - équipe {team.number} {team.name} - Page {i}"
-        )
-        page_width = page.rect.width
-        font_size = 10
-        margin = 40
+#     for i, page in enumerate(output_pdf, start=1):
+#         footer_text = (
+#             f"RAID Raid Centrale Lyon - équipe {team.number} {team.name} - Page {i}"
+#         )
+#         page_width = page.rect.width
+#         font_size = 10
+#         margin = 40
 
-        # Calculate x position to center the footer
-        text_width = fitz.get_text_length(
-            footer_text,
-            fontname="helv",
-            fontsize=font_size,
-        )
-        x_pos = (page_width - text_width) / 2
+#         # Calculate x position to center the footer
+#         text_width = fitz.get_text_length(
+#             footer_text,
+#             fontname="helv",
+#             fontsize=font_size,
+#         )
+#         x_pos = (page_width - text_width) / 2
 
-        # Add footer text near the bottom of the page
-        page.insert_text(
-            (x_pos, page.rect.height - margin),
-            footer_text,
-            fontsize=font_size,
-            fontname="helv",
-            fill=(0.5, 0.5, 0.5),
-        )
+#         # Add footer text near the bottom of the page
+#         page.insert_text(
+#             (x_pos, page.rect.height - margin),
+#             footer_text,
+#             fontsize=font_size,
+#             fontname="helv",
+#             fill=(0.5, 0.5, 0.5),
+#         )
 
-    file_id = uuid.uuid4()
-    await save_bytes_as_data(
-        file_bytes=output_pdf.write(),
-        directory="raid/team",
-        filename=file_id,
-        extension="pdf",
-    )
+#     file_id = uuid.uuid4()
+#     await save_bytes_as_data(
+#         file_bytes=output_pdf.write(),
+#         directory="raid/team",
+#         filename=file_id,
+#         extension="pdf",
+#     )
 
-    output_pdf.close()
+#     output_pdf.close()
 
-    return file_id
+#     return file_id
 
 
-async def save_security_file(
-    participant: models_raid.RaidParticipant,
-    information: coredata_raid.RaidInformation,
-    team_number: int | None,
+# async def save_security_file(
+#     participant: models_raid.RaidParticipant,
+#     information: coredata_raid.RaidInformation,
+#     team_number: int | None,
+#     db: AsyncSession,
+#     drive_file_manager: DriveFileManager,
+#     settings: Settings,
+# ) -> None:
+#     try:
+#         security_file_id = await generate_security_file_pdf(
+#             participant,
+#             information,
+#             team_number,
+#         )
+
+#         file_path = get_file_path_from_data(
+#             directory="raid/security_file",
+#             filename=security_file_id,
+#         )
+
+#         file_name = f"{str(team_number) + '_' if team_number else ''}{participant.firstname}_{participant.name}_fiche_sécurité.pdf"
+#         if participant.security_file is None:
+#             hyperion_error_logger.error(
+#                 "RAID: The security file should have been created",
+#             )
+#             return
+
+#         async with DriveGoogleAPI(db, settings) as google_api:
+#             if participant.security_file.file_id:
+#                 file_id = google_api.replace_file(
+#                     str(file_path),
+#                     participant.security_file.file_id,
+#                 )
+
+#             else:
+#                 file_id = await drive_file_manager.upload_participant_file(
+#                     str(file_path),
+#                     file_name,
+#                     db,
+#                     settings=settings,
+#                 )
+
+#         await cruds_raid.update_security_file_id(
+#             participant.security_file.id,
+#             file_id,
+#             db,
+#         )
+
+#         delete_file_from_data(
+#             directory="raid/security_file",
+#             filename=participant.id,
+#         )
+#     except Exception:
+#         hyperion_error_logger.exception("Error while creating pdf")
+#         return
+
+async def get_all_security_files_zip(
     db: AsyncSession,
-    drive_file_manager: DriveFileManager,
-    settings: Settings,
-) -> None:
-    try:
-        security_file_id = await generate_security_file_pdf(
-            participant,
-            information,
-            team_number,
-        )
+    information: coredata_raid.RaidInformation,
+) -> str:
+    teams = await cruds_raid.get_all_teams(db)
+    hyperion_error_logger.warning(
+        f"RAID: Generating ZIP for {len(teams)} security files",
+    )
 
-        file_path = get_file_path_from_data(
-            directory="raid/security_file",
-            filename=security_file_id,
-        )
+    temp_dir = Path("data/raid/security_file_zip_temp")
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    files_to_zip = []
 
-        file_name = f"{str(team_number) + '_' if team_number else ''}{participant.firstname}_{participant.name}_fiche_sécurité.pdf"
-        if participant.security_file is None:
-            hyperion_error_logger.error(
-                "RAID: The security file should have been created",
+    for team in teams:
+        for participant in [team.captain] + ([team.second] if team.second else []):
+            file_id = await generate_security_file_pdf(
+                participant,
+                information,
+                team.number,
             )
-            return
+            src_pdf = Path("data/raid/security_file") / f"{file_id}.pdf"
+            safe_team = str(team.name).replace(" ", "_")
+            safe_participant = f"{participant.firstname}_{participant.name}".replace(
+                " ",
+                "_",
+            )
+            dest_pdf = temp_dir / f"{safe_team}_{safe_participant}.pdf"
+            if src_pdf.exists():
+                shutil.copy(src_pdf, dest_pdf)
+                files_to_zip.append(str(dest_pdf))
 
-        async with DriveGoogleAPI(db, settings) as google_api:
-            if participant.security_file.file_id:
-                file_id = google_api.replace_file(
-                    str(file_path),
-                    participant.security_file.file_id,
-                )
+    zip_file_id = (
+        "Fiches_Sécurité_" + datetime.now(UTC).strftime("%Y-%m-%d_%H_%M_%S") + ".zip"
+    )
+    zip_file_path = f"data/raid/{zip_file_id}"
 
-            else:
-                file_id = await drive_file_manager.upload_participant_file(
-                    str(file_path),
-                    file_name,
-                    db,
-                    settings=settings,
-                )
+    if files_to_zip:
+        files_str = " ".join(files_to_zip)
+        await aiofiles.os.system(f"zip -j {zip_file_path} {files_str}")
 
-        await cruds_raid.update_security_file_id(
-            participant.security_file.id,
-            file_id,
-            db,
-        )
+    for f in temp_dir.iterdir():
+        f.unlink()
+    temp_dir.rmdir()
 
-        delete_file_from_data(
-            directory="raid/security_file",
-            filename=participant.id,
-        )
-    except Exception:
-        hyperion_error_logger.exception("Error while creating pdf")
-        return
+    return zip_file_path
 
 
 async def get_participant(
@@ -555,13 +604,13 @@ async def generate_teams_pdf_util(
             schemas_raid.RaidTeamUpdate(number=-1),
             db,
         )
-        await post_update_actions(
-            team,
-            db,
-            drive_file_manager,
-            settings=settings,
-            should_generate_all_teams_csv=False,
-        )
+        # await post_update_actions(
+        #     team,
+        #     db,
+        #     drive_file_manager,
+        #     settings=settings,
+        #     should_generate_all_teams_csv=False,
+        # )
 
     all_teams = await cruds_raid.get_all_validated_teams(db)
     await write_teams_csv(
