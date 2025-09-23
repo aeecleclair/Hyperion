@@ -231,16 +231,19 @@ async def get_topic_membership_by_user_id_and_topic_id(
     return result.scalars().first()
 
 
-async def get_user_ids_by_topic_id(
+async def get_usernames_by_topic_id(
     topic_id: UUID,
     db: AsyncSession,
 ) -> list[str]:
     result = await db.execute(
-        select(models_notification.TopicMembership.user_id).where(
-            models_notification.TopicMembership.topic_id == topic_id,
-        ),
+        select(models_users.CoreUser)
+        .join(
+            models_notification.TopicMembership,
+            models_users.CoreUser.id == models_notification.TopicMembership.user_id,
+        )
+        .where(models_notification.TopicMembership.topic_id == topic_id),
     )
-    return list(result.scalars().all())
+    return [f"{u.firstname} {u.name}" for u in list(result.scalars().all())]
 
 
 async def get_firebase_tokens_by_user_ids(
@@ -265,6 +268,7 @@ async def get_usernames_by_firebase_tokens(
             models_notification.FirebaseDevice,
             models_users.CoreUser.id == models_notification.FirebaseDevice.user_id,
         )
-        .where(models_notification.FirebaseDevice.firebase_device_token.in_(tokens)),
+        .where(models_notification.FirebaseDevice.firebase_device_token.in_(tokens))
+        .distinct(),
     )
     return [f"{u.firstname} {u.name}" for u in list(result.scalars().all())]
