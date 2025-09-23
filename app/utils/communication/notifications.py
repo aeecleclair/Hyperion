@@ -150,7 +150,7 @@ class NotificationManager:
             db=db,
         )
 
-    async def _send_firebase_push_notification_by_topic(
+    def _send_firebase_push_notification_by_topic(
         self,
         topic_id: UUID,
         message_content: Message,
@@ -206,7 +206,10 @@ class NotificationManager:
             return
 
         topic = str(topic_id)
-        response = messaging.subscribe_to_topic(tokens, topic)
+        response: messaging.TopicManagementResponse = messaging.subscribe_to_topic(
+            tokens,
+            topic,
+        )
         if response.failure_count > 0:
             hyperion_error_logger.info(
                 f"Notification: Failed to subscribe to topic {topic} due to {[error.reason for error in response.errors]}",
@@ -283,7 +286,7 @@ class NotificationManager:
             return
 
         try:
-            await self._send_firebase_push_notification_by_topic(
+            self._send_firebase_push_notification_by_topic(
                 topic_id=topic_id,
                 message_content=message,
             )
