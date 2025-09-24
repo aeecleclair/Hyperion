@@ -71,6 +71,15 @@ def participant_complete_model_to_schema(
         certificate_file_id=participant.certificate_file_id,
         is_license_valid=participant.is_license_valid,
         user=competition_user_model_to_schema(participant.user),
+        team=schemas_sport_competition.Team(
+            id=participant.team.id,
+            name=participant.team.name,
+            edition_id=participant.team.edition_id,
+            school_id=participant.team.school_id,
+            sport_id=participant.team.sport_id,
+            captain_id=participant.team.captain_id,
+            created_at=participant.team.created_at,
+        ),
     )
 
 
