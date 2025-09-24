@@ -12,8 +12,6 @@ from pytest_mock import MockerFixture
 from app.core.groups.groups_type import GroupType
 from app.core.users import models_users
 from app.modules.raid import coredata_raid, models_raid
-
-# from app.modules.raid.coredata_raid import RaidPrice
 from app.modules.raid.models_raid import (
     RaidParticipant,
     RaidTeam,
@@ -26,8 +24,7 @@ from app.modules.raid.raid_type import (
     MeetingPlace,
     Size,
 )
-
-# from app.modules.raid.utils.utils_raid import calculate_raid_payment
+from app.modules.raid.utils.utils_raid import calculate_raid_payment
 from tests.commons import (
     add_coredata_to_db,
     add_object_to_db,
@@ -355,14 +352,6 @@ def test_create_team(client: TestClient):
     assert response.json()["name"] == "New Team"
 
 
-def test_generate_teams_pdf(client: TestClient):
-    response = client.post(
-        "/raid/teams/generate-pdf",
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
-    )
-    assert response.status_code == 200
-
-
 def test_get_team_by_participant_id(client: TestClient):
     response = client.get(
         f"/raid/participants/{simple_user.id}/team",
@@ -510,33 +499,33 @@ def test_set_security_file_participant_not_exist(client: TestClient):
     assert response.json()["detail"] == "You are not the participant."
 
 
-# def test_set_security_file_update_existing(client: TestClient):
-#     # First, create an initial security file
-#     initial_data = {
-#         "asthma": False,
-#         "emergency_contact_name": "Initial Contact",
-#         "emergency_contact_phone": "1111111111",
-#     }
-#     initial_response = client.post(
-#         f"/raid/security_file/?participant_id={simple_user.id}",
-#         json=initial_data,
-#         headers={"Authorization": f"Bearer {token_simple}"},
-#     )
-#     assert initial_response.status_code == 201
+def test_set_security_file_update_existing(client: TestClient):
+    # First, create an initial security file
+    initial_data = {
+        "asthma": False,
+        "emergency_contact_name": "Initial Contact",
+        "emergency_contact_phone": "1111111111",
+    }
+    initial_response = client.post(
+        f"/raid/security_file/?participant_id={simple_user.id}",
+        json=initial_data,
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    assert initial_response.status_code == 201
 
-#     # Now, update the security file
-#     updated_data = {
-#         "asthma": True,
-#         "emergency_contact_name": "Updated Contact",
-#         "emergency_contact_phone": "2222222222",
-#     }
-#     update_response = client.post(
-#         f"/raid/security_file/?participant_id={simple_user.id}",
-#         json=updated_data,
-#         headers={"Authorization": f"Bearer {token_simple}"},
-#     )
-#     assert update_response.status_code == 201
-#     assert update_response.json()["id"] != initial_response.json()["id"]
+    # Now, update the security file
+    updated_data = {
+        "asthma": True,
+        "emergency_contact_name": "Updated Contact",
+        "emergency_contact_phone": "2222222222",
+    }
+    update_response = client.post(
+        f"/raid/security_file/?participant_id={simple_user.id}",
+        json=updated_data,
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    assert update_response.status_code == 201
+    assert update_response.json()["id"] != initial_response.json()["id"]
 
 
 def test_validate_attestation_on_honour(client: TestClient):
@@ -622,25 +611,6 @@ def test_update_raid_information(client: TestClient):
     assert response.status_code == 204
 
 
-# def test_update_drive_folders(client: TestClient):
-#     folder_data = {"parent_folder_id": "some_folder_id"}
-#     response = client.patch(
-#         "/raid/drive",
-#         json=folder_data,
-#         headers={"Authorization": f"Bearer {token_raid_admin}"},
-#     )
-#     assert response.status_code == 204
-
-
-# Requires to initalize the driver manager
-# def test_get_drive_folders(client: TestClient):
-#     response = client.get(
-#         "/raid/drive",
-#         headers={"Authorization": f"Bearer {token_raid_admin}"},
-#     )
-#     assert response.status_code == 200
-
-
 def test_get_raid_price(client: TestClient):
     response = client.get(
         "/raid/price",
@@ -659,167 +629,12 @@ def test_update_raid_price(client: TestClient):
     assert response.status_code == 204
 
 
-# def test_get_payment_url(client: TestClient):
-#     response = client.get(
-#         "/raid/pay",
-#         headers={"Authorization": f"Bearer {token_simple}"},
-#     )
-#     assert response.status_code == 201
-#     assert "url" in response.json()
-
-
 def test_delete_team(client: TestClient):
     response = client.delete(
         f"/raid/teams/{team.id}",
         headers={"Authorization": f"Bearer {token_raid_admin}"},
     )
     assert response.status_code == 204
-
-
-# def test_get_payment_url_student_price(client: TestClient, mocker):
-#     mocker.patch(
-#         "app.modules.raid.endpoints_raid.get_core_data",
-#         return_value=coredata_raid.RaidPrice(
-#             student_price=50,
-#             t_shirt_price=15,
-#             external_price=90,
-#         ),
-#     )
-#     mock_participant = Mock(
-#         payment=False,
-#         t_shirt_size=None,
-#         t_shirt_payment=False,
-#         id=str(uuid.uuid4()),
-#         student_card=Mock(id="student_card_id", validation=DocumentValidation.accepted),
-#     )
-#     mocker.patch(
-#         "app.modules.raid.cruds_raid.get_participant_by_id",
-#         return_value=mock_participant,
-#     )
-#     mocker.patch(
-#         "app.core.payment.payment_tool.PaymentTool.init_checkout",
-#         return_value=Mock(
-#             id=str(uuid.uuid4()),
-#             payment_url="https://student.url/checkout",
-#         ),
-#     )
-#     mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
-#     response = client.get(
-#         "/raid/pay",
-#         headers={"Authorization": f"Bearer {token_simple}"},
-#     )
-#     assert response.status_code == 201
-#     assert response.json()["url"] == "https://some.url.fr/checkout"
-
-
-# def test_get_payment_url_external_price(client: TestClient, mocker):
-#     mocker.patch(
-#         "app.modules.raid.endpoints_raid.get_core_data",
-#         return_value=coredata_raid.RaidPrice(
-#             student_price=50,
-#             t_shirt_price=15,
-#             external_price=90,
-#         ),
-#     )
-#     mock_participant = Mock(
-#         payment=False,
-#         t_shirt_size=None,
-#         t_shirt_payment=False,
-#         id=str(uuid.uuid4()),
-#         student_card=Mock(id=None, validation=None),
-#     )
-#     mocker.patch(
-#         "app.modules.raid.cruds_raid.get_participant_by_id",
-#         return_value=mock_participant,
-#     )
-#     mocker.patch(
-#         "app.core.payment.payment_tool.PaymentTool.init_checkout",
-#         return_value=Mock(
-#             id=str(uuid.uuid4()),
-#             payment_url="https://external.url/checkout",
-#         ),
-#     )
-#     mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
-#     response = client.get(
-#         "/raid/pay",
-#         headers={"Authorization": f"Bearer {token_simple}"},
-#     )
-#     assert response.status_code == 201
-#     assert response.json()["url"] == "https://some.url.fr/checkout"
-
-
-# def test_get_payment_url_with_tshirt(client: TestClient, mocker):
-#     mocker.patch(
-#         "app.modules.raid.endpoints_raid.get_core_data",
-#         return_value=coredata_raid.RaidPrice(
-#             student_price=50,
-#             t_shirt_price=15,
-#             external_price=90,
-#         ),
-#     )
-#     mock_participant = Mock(
-#         payment=False,
-#         t_shirt_size=Mock(value="L"),
-#         t_shirt_payment=False,
-#         id=str(uuid.uuid4()),
-#         student_card=Mock(id="student_card_id", validation=DocumentValidation.accepted),
-#     )
-#     mocker.patch(
-#         "app.modules.raid.cruds_raid.get_participant_by_id",
-#         return_value=mock_participant,
-#     )
-#     mocker.patch(
-#         "app.core.payment.payment_tool.PaymentTool.init_checkout",
-#         return_value=Mock(
-#             id=str(uuid.uuid4()),
-#             payment_url="https://tshirt.url/checkout",
-#         ),
-#     )
-#     mocker.patch("app.modules.raid.cruds_raid.create_participant_checkout")
-#     response = client.get(
-#         "/raid/pay",
-#         headers={"Authorization": f"Bearer {token_simple}"},
-#     )
-#     assert response.status_code == 201
-#     assert response.json()["url"] == "https://some.url.fr/checkout"
-
-
-# def test_get_payment_url_prices_not_set(client: TestClient, mocker):
-#     mocker.patch(
-#         "app.modules.raid.endpoints_raid.get_core_data",
-#         return_value=coredata_raid.RaidPrice(
-#             student_price=None,
-#             t_shirt_price=None,
-#             external_price=None,
-#         ),
-#     )
-#     response = client.get(
-#         "/raid/pay",
-#         headers={"Authorization": f"Bearer {token_simple}"},
-#     )
-#     assert response.status_code == 404
-#     assert response.json()["detail"] == "Prices not set."
-
-
-# def test_get_payment_url_participant_not_found(client: TestClient, mocker):
-#     mocker.patch(
-#         "app.modules.raid.endpoints_raid.get_core_data",
-#         return_value=coredata_raid.RaidPrice(
-#             student_price=50,
-#             t_shirt_price=15,
-#             external_price=90,
-#         ),
-#     )
-#     mocker.patch(
-#         "app.modules.raid.cruds_raid.get_participant_by_id",
-#         return_value=None,
-#     )
-#     response = client.get(
-#         "/raid/pay",
-#         headers={"Authorization": f"Bearer {token_simple}"},
-#     )
-#     assert response.status_code == 404
-#     assert response.json()["detail"] == "Participant not found."
 
 
 ## Test for pdf writer
@@ -900,21 +715,6 @@ def mock_participant():
         is_minor=False,
         security_file=Mock(spec=SecurityFile, allergy="None", asthma=False),
     )
-
-
-def test_delete_all_teams(client: TestClient):
-    response = client.delete(
-        "/raid/teams",
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
-    )
-    assert response.status_code == 204
-
-    response = client.get(
-        "/raid/teams",
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
-    )
-    assert response.status_code == 200
-    assert len(response.json()) == 0
 
 
 async def test_set_team_number_utility_empty_database(
@@ -1039,108 +839,197 @@ async def test_set_team_number_utility_discovery_difficulty(
     assert args[1].number == 6  # discovery (0) + 5 + 1
 
 
-# @pytest.mark.parametrize(
-#     ("participant_kwargs", "expected_price"),
-#     [
-#         # Student price only
-#         (
-#             {
-#                 "payment": False,
-#                 "t_shirt_size": None,
-#                 "t_shirt_payment": False,
-#                 "student_card": Mock(
-#                     id="student_card_id",
-#                     validation=DocumentValidation.accepted,
-#                 ),
-#             },
-#             50,
-#         ),
-#         # External price only
-#         (
-#             {
-#                 "payment": False,
-#                 "t_shirt_size": None,
-#                 "t_shirt_payment": False,
-#                 "student_card": Mock(id=None, validation=None),
-#             },
-#             90,
-#         ),
-#         # Student price + T-shirt
-#         (
-#             {
-#                 "payment": False,
-#                 "t_shirt_size": Mock(value="L"),
-#                 "t_shirt_payment": False,
-#                 "student_card": Mock(
-#                     id="student_card_id",
-#                     validation=DocumentValidation.accepted,
-#                 ),
-#             },
-#             65,
-#         ),
-#         # External price + T-shirt
-#         (
-#             {
-#                 "payment": False,
-#                 "t_shirt_size": Mock(value="L"),
-#                 "t_shirt_payment": False,
-#                 "student_card": Mock(id=None, validation=None),
-#             },
-#             105,
-#         ),
-#         # Already paid, no T-shirt
-#         (
-#             {
-#                 "payment": True,
-#                 "t_shirt_size": None,
-#                 "t_shirt_payment": False,
-#                 "student_card": Mock(
-#                     id="student_card_id",
-#                     validation=DocumentValidation.accepted,
-#                 ),
-#             },
-#             0,
-#         ),
-#         # Already paid, T-shirt not paid
-#         (
-#             {
-#                 "payment": True,
-#                 "t_shirt_size": Mock(value="L"),
-#                 "t_shirt_payment": False,
-#                 "student_card": Mock(
-#                     id="student_card_id",
-#                     validation=DocumentValidation.accepted,
-#                 ),
-#             },
-#             15,
-#         ),
-#         # Already paid, T-shirt already paid
-#         (
-#             {
-#                 "payment": True,
-#                 "t_shirt_size": Mock(value="L"),
-#                 "t_shirt_payment": True,
-#                 "student_card": Mock(
-#                     id="student_card_id",
-#                     validation=DocumentValidation.accepted,
-#                 ),
-#             },
-#             0,
-#         ),
-#         # No student card, T-shirt already paid
-#         (
-#             {
-#                 "payment": True,
-#                 "t_shirt_size": Mock(value="L"),
-#                 "t_shirt_payment": True,
-#                 "student_card": Mock(id=None, validation=None),
-#             },
-#             0,
-#         ),
-#     ],
-# )
-# def test_calculate_raid_payment_price_only(participant_kwargs, expected_price):
-#     raid_prices = RaidPrice(student_price=50, t_shirt_price=15, external_price=90)
-#     participant = Mock(**participant_kwargs)
-#     price, _ = calculate_raid_payment(participant, raid_prices)
-#     assert price == expected_price
+@pytest.mark.parametrize(
+    ("participant_kwargs", "expected_price"),
+    [
+        # Student price only
+        (
+            {
+                "payment": False,
+                "t_shirt_size": None,
+                "t_shirt_payment": False,
+                "situation": "centrale",
+                "student_card_id": str(uuid.uuid4()),
+            },
+            50,
+        ),
+        # Student price only
+        (
+            {
+                "payment": False,
+                "t_shirt_size": None,
+                "t_shirt_payment": False,
+                "situation": "otherschool : Some School",
+                "student_card_id": str(uuid.uuid4()),
+            },
+            50,
+        ),
+        # Student price only but without student card
+        (
+            {
+                "payment": False,
+                "t_shirt_size": None,
+                "t_shirt_payment": False,
+                "situation": "centrale",
+                "student_card_id": None,
+            },
+            90,
+        ),
+        # Student price only but without student card
+        (
+            {
+                "payment": False,
+                "t_shirt_size": None,
+                "t_shirt_payment": False,
+                "situation": "otherschool : Some School",
+                "student_card_id": None,
+            },
+            90,
+        ),
+        # External price only
+        (
+            {
+                "payment": False,
+                "t_shirt_size": None,
+                "t_shirt_payment": False,
+                "situation": "other",
+                "student_card_id": None,
+            },
+            90,
+        ),
+        # Student price + T-shirt
+        (
+            {
+                "payment": False,
+                "t_shirt_size": Size.L,
+                "t_shirt_payment": False,
+                "situation": "centrale",
+                "student_card_id": str(uuid.uuid4()),
+            },
+            65,
+        ),
+        # External price + T-shirt
+        (
+            {
+                "payment": False,
+                "t_shirt_size": Size.L,
+                "t_shirt_payment": False,
+                "situation": "other",
+                "student_card_id": None,
+            },
+            105,
+        ),
+        # Already paid, no T-shirt
+        (
+            {
+                "payment": True,
+                "t_shirt_size": None,
+                "t_shirt_payment": False,
+                "situation": "centrale",
+                "student_card_id": str(uuid.uuid4()),
+            },
+            0,
+        ),
+        # Already paid, T-shirt not paid
+        (
+            {
+                "payment": True,
+                "t_shirt_size": Size.L,
+                "t_shirt_payment": False,
+                "situation": "centrale",
+                "student_card_id": str(uuid.uuid4()),
+            },
+            15,
+        ),
+        # Already paid, T-shirt already paid
+        (
+            {
+                "payment": True,
+                "t_shirt_size": Size.L,
+                "t_shirt_payment": True,
+                "situation": "centrale",
+                "student_card_id": str(uuid.uuid4()),
+            },
+            0,
+        ),
+        # No student card, T-shirt already paid
+        (
+            {
+                "payment": True,
+                "t_shirt_size": Size.L,
+                "t_shirt_payment": True,
+                "situation": "otherschool : Some School",
+                "student_card_id": str(uuid.uuid4()),
+            },
+            0,
+        ),
+    ],
+)
+def test_calculate_raid_payment_price_only(participant_kwargs, expected_price):
+    raid_prices = coredata_raid.RaidPrice(
+        student_price=50,
+        t_shirt_price=15,
+        external_price=90,
+    )
+    participant = RaidParticipant(
+        id=str(uuid.uuid4()),
+        name="Name",
+        firstname="Firstname",
+        birthday=datetime.date(2000, 1, 1),
+        phone="0123456789",
+        email="name@example.com",
+        payment=participant_kwargs["payment"],
+        t_shirt_size=participant_kwargs["t_shirt_size"],
+        t_shirt_payment=participant_kwargs["t_shirt_payment"],
+        situation=participant_kwargs["situation"],
+        student_card_id=participant_kwargs["student_card_id"],
+    )
+    price, _ = calculate_raid_payment(participant, raid_prices)
+    assert price == expected_price
+
+
+def test_download_security_files_zip(client: TestClient):
+    response = client.get(
+        "/raid/security_files_zip",
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
+    )
+    assert response.status_code == 200
+
+
+def test_download_team_files_zip(client: TestClient):
+    response = client.get(
+        "/raid/team_files_zip",
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
+    )
+    assert response.status_code == 200
+
+
+def test_delete_all_teams(client: TestClient):
+    response = client.delete(
+        "/raid/teams",
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
+    )
+    assert response.status_code == 204
+
+    response = client.get(
+        "/raid/teams",
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 0
+
+
+def test_download_security_files_zip_with_no_teams(client: TestClient):
+    response = client.get(
+        "/raid/security_files_zip",
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
+    )
+    assert response.status_code == 400
+
+
+def test_download_team_files_zip_with_no_teams(client: TestClient):
+    response = client.get(
+        "/raid/team_files_zip",
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
+    )
+    assert response.status_code == 400

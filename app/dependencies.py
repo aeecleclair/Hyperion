@@ -28,7 +28,6 @@ from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.users import cruds_users, models_users
 from app.core.utils import security
 from app.core.utils.config import Settings, construct_prod_settings
-from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.types.exceptions import (
     InvalidAppStateTypeError,
     PaymentToolCredentialsNotSetException,
@@ -106,8 +105,6 @@ async def init_state(
 
     notification_manager = NotificationManager(settings=settings)
 
-    drive_file_manager = DriveFileManager()
-
     payment_tools = init_payment_tools(
         settings=settings,
         hyperion_error_logger=hyperion_error_logger,
@@ -122,7 +119,6 @@ async def init_state(
         scheduler=scheduler,
         ws_manager=ws_manager,
         notification_manager=notification_manager,
-        drive_file_manager=drive_file_manager,
         payment_tools=payment_tools,
         mail_templates=mail_templates,
     )
@@ -272,14 +268,6 @@ def get_notification_tool(
         notification_manager=notification_manager,
         db=db,
     )
-
-
-def get_drive_file_manager() -> DriveFileManager:
-    """
-    Dependency that returns the drive file manager.
-    """
-
-    return GLOBAL_STATE["drive_file_manager"]
 
 
 @lru_cache
