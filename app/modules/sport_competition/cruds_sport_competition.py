@@ -703,6 +703,9 @@ async def load_participant_by_user_id(
                     ).selectinload(
                         models_sport_competition.CompetitionUser.user,
                     ),
+                    selectinload(
+                        models_sport_competition.CompetitionParticipant.team,
+                    ),
                 ),
             )
         )
@@ -2457,7 +2460,7 @@ async def delete_payment(
 # region: Checkouts
 
 
-def create_checkout(
+def add_checkout(
     db: AsyncSession,
     checkout: schemas_sport_competition.Checkout,
 ):
@@ -2500,3 +2503,224 @@ async def get_checkout_by_checkout_id(
 
 
 # endregion: Checkouts
+# region: Volunteers Shifts
+
+
+async def load_all_volunteer_shifts_by_edition_id(
+    edition_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_sport_competition.VolunteerShiftComplete]:
+    shifts = await db.execute(
+        select(models_sport_competition.VolunteerShift)
+        .where(
+            models_sport_competition.VolunteerShift.edition_id == edition_id,
+        )
+        .options(
+            selectinload(
+                models_sport_competition.VolunteerShift.registrations,
+            ).selectinload(
+                models_sport_competition.VolunteerRegistration.user,
+            ),
+        ),
+    )
+    return [
+        schemas_sport_competition.VolunteerShiftComplete(
+            id=shift.id,
+            edition_id=shift.edition_id,
+            name=shift.name,
+            description=shift.description,
+            value=shift.value,
+            start_time=shift.start_time,
+            end_time=shift.end_time,
+            max_volunteers=shift.max_volunteers,
+            location=shift.location,
+            registrations=[
+                schemas_sport_competition.VolunteerRegistrationWithUser(
+                    user_id=registration.user_id,
+                    shift_id=registration.shift_id,
+                    edition_id=registration.edition_id,
+                    validated=registration.validated,
+                    registered_at=registration.registered_at,
+                    user=competition_user_model_to_schema(registration.user),
+                )
+                for registration in shift.registrations
+            ],
+        )
+        for shift in shifts.scalars().all()
+    ]
+
+
+async def load_volunteer_shift_by_id(
+    shift_id: UUID,
+    db: AsyncSession,
+) -> schemas_sport_competition.VolunteerShiftComplete | None:
+    shift = (
+        (
+            await db.execute(
+                select(models_sport_competition.VolunteerShift)
+                .where(
+                    models_sport_competition.VolunteerShift.id == shift_id,
+                )
+                .options(
+                    selectinload(
+                        models_sport_competition.VolunteerShift.registrations,
+                    ).selectinload(
+                        models_sport_competition.VolunteerRegistration.user,
+                    ),
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return (
+        schemas_sport_competition.VolunteerShiftComplete(
+            id=shift.id,
+            edition_id=shift.edition_id,
+            name=shift.name,
+            description=shift.description,
+            value=shift.value,
+            start_time=shift.start_time,
+            end_time=shift.end_time,
+            max_volunteers=shift.max_volunteers,
+            location=shift.location,
+            registrations=[
+                schemas_sport_competition.VolunteerRegistrationWithUser(
+                    user_id=registration.user_id,
+                    shift_id=registration.shift_id,
+                    edition_id=registration.edition_id,
+                    validated=registration.validated,
+                    registered_at=registration.registered_at,
+                    user=competition_user_model_to_schema(registration.user),
+                )
+                for registration in shift.registrations
+            ],
+        )
+        if shift
+        else None
+    )
+
+
+async def add_volunteer_shift(
+    shift: schemas_sport_competition.VolunteerShift,
+    db: AsyncSession,
+):
+    db.add(
+        models_sport_competition.VolunteerShift(
+            id=shift.id,
+            edition_id=shift.edition_id,
+            name=shift.name,
+            description=shift.description,
+            value=shift.value,
+            start_time=shift.start_time,
+            end_time=shift.end_time,
+            max_volunteers=shift.max_volunteers,
+            location=shift.location,
+        ),
+    )
+
+
+async def update_volunteer_shift(
+    shift_id: UUID,
+    shift: schemas_sport_competition.VolunteerShiftEdit,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_sport_competition.VolunteerShift)
+        .where(models_sport_competition.VolunteerShift.id == shift_id)
+        .values(**shift.model_dump(exclude_unset=True)),
+    )
+
+
+async def delete_volunteer_shift_by_id(
+    shift_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_sport_competition.VolunteerShift).where(
+            models_sport_competition.VolunteerShift.id == shift_id,
+        ),
+    )
+
+
+# endregion: Volunteers Shifts
+# region: Volunteers Registrations
+
+
+async def load_volunteer_registrations_by_user_id(
+    user_id: str,
+    edition_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_sport_competition.VolunteerRegistrationComplete]:
+    registrations = await db.execute(
+        select(models_sport_competition.VolunteerRegistration)
+        .where(
+            models_sport_competition.VolunteerRegistration.user_id == user_id,
+            models_sport_competition.VolunteerRegistration.edition_id == edition_id,
+        )
+        .options(
+            selectinload(models_sport_competition.VolunteerRegistration.shift),
+        ),
+    )
+    return [
+        schemas_sport_competition.VolunteerRegistrationComplete(
+            user_id=registration.user_id,
+            shift_id=registration.shift_id,
+            edition_id=registration.edition_id,
+            validated=registration.validated,
+            registered_at=registration.registered_at,
+            shift=schemas_sport_competition.VolunteerShift(
+                id=registration.shift.id,
+                edition_id=registration.shift.edition_id,
+                name=registration.shift.name,
+                description=registration.shift.description,
+                value=registration.shift.value,
+                start_time=registration.shift.start_time,
+                end_time=registration.shift.end_time,
+                max_volunteers=registration.shift.max_volunteers,
+                location=registration.shift.location,
+            )
+            if registration.shift
+            else None,
+        )
+        for registration in registrations.scalars().all()
+    ]
+
+
+async def add_volunteer_registration(
+    registration: schemas_sport_competition.VolunteerRegistration,
+    db: AsyncSession,
+):
+    db.add(
+        models_sport_competition.VolunteerRegistration(
+            user_id=registration.user_id,
+            shift_id=registration.shift_id,
+            edition_id=registration.edition_id,
+            validated=registration.validated,
+            registered_at=registration.registered_at,
+        ),
+    )
+
+
+async def delete_volunteer_registration(
+    user_id: str,
+    shift_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_sport_competition.VolunteerRegistration).where(
+            models_sport_competition.VolunteerRegistration.user_id == user_id,
+            models_sport_competition.VolunteerRegistration.shift_id == shift_id,
+        ),
+    )
+
+
+async def delete_volunteer_registrations_for_shift(
+    shift_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_sport_competition.VolunteerRegistration).where(
+            models_sport_competition.VolunteerRegistration.shift_id == shift_id,
+        ),
+    )
