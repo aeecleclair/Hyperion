@@ -2,49 +2,45 @@
 
 ### Summary
 
-Brief description of what this PR does.
+<!--Brief description of what this PR does.-->
 
 ### Related Issues
 
-Closes #(issue number) <!-- If applicable -->
+<!-- If applicable -->
+Closes #<!--0-->
 
 ## Changes Made
 
-Please describe the changes made in this pull request:
+<!--Please describe the changes made in this pull request-->
 
--
--
--
+- ...
 
 ## Type of Change
 
 - [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
 - [ ] ✨ New feature (non-breaking change which adds functionality)
 - [ ] 🔨 Refactor (non-breaking change that neither fixes a bug nor adds a feature)
-- [ ] 💄 Style (formatting, missing semi colons, etc; no code change)
-- [ ] 🔧 CI/CD (changes to CI configuration files and scripts)
-- [ ] 📚 Documentation (changes to documentation only)
-- [ ] 💥 BREAKING CHANGE (fix or feature that would cause existing functionality to not work as expected)
+- [ ] 🔧 Infra CI/CD (changes to configs of workflows)
+- [ ] 💥 BREAKING CHANGE (fix or feature that require a new minimal version of the front-end)
 
 ## Impact & Scope
 
 - [ ] Core functionality changes
 - [ ] Single module changes
 - [ ] Multiple modules changes
-- [ ] Configuration changes
-- [ ] Dependencies updated
 - [ ] Database migrations required
+- [ ] Other
 
 ## Testing
 
-- [ ] I have added tests that prove my fix is effective or that my feature works
-- [ ] New and existing unit tests pass locally with my changes
-- [ ] I have tested this manually (if applicable)
+- [ ] Added/modified tests that pass the CI
+- [ ] Tested in a pre-prod
+- [ ] Tested this locally
 
 ## Documentation
 
-- [ ] I have updated the documentation accordingly if needed (docs.myecl.fr) (_Indicate the linked PR for the documentation_)
-- [ ] Code is self-documenting and/or includes docstrings
+- [ ] Updated docs accordingly (docs.myecl.fr) : <!--[Docs#0 - Title](https://github.com/aeecleclair/myecl-documentation/pull/0)-->
+- [ ] Code includes docstrings
 - [ ] No documentation needed
 
 ## Checklist
