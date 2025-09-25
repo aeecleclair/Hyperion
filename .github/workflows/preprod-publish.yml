@@ -60,9 +60,11 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          platforms: linux/amd64 #,linux/arm64
           push: true
-          tags: ${{ secrets.DOCKER_REGISTRY_URL }}/hyperion:${{ github.event.inputs.preprod_env }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: |
-            type=registry,ref=${{ secrets.DOCKER_REGISTRY_URL }}/hyperion:prod
+            type=registry,ref=${{ secrets.DOCKER_REGISTRY_URL }}/hyperion:latest
             type=registry,ref=${{ secrets.DOCKER_REGISTRY_URL }}/hyperion:alpha
           cache-to: type=registry,ref=${{ secrets.DOCKER_REGISTRY_URL }}/${{ github.repository }}/cache,mode=max
