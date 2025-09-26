@@ -160,7 +160,12 @@ class PaymentTool:
 
         # We want to ensure that any error is logged, even if modules tries to try/except this method
         # Thus we catch any exception and log it, then reraise it
-        exception_start = f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name} for payer {payer_user.firstname} {payer_user.name}"
+        exception_start = f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}"
+        exception_start += (
+            f"for payer {payer_user.firstname} {payer_user.name}"
+            if payer_user
+            else "(no payer)"
+        )
         try:
             payer: HelloAssoApiV5ModelsCartsCheckoutPayer | None = None
             if payer_user:
