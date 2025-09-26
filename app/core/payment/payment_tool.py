@@ -8,7 +8,7 @@ from helloasso_python.api.checkout_api import CheckoutApi
 from helloasso_python.api.paiements_api import PaiementsApi
 from helloasso_python.api_client import ApiClient
 from helloasso_python.configuration import Configuration
-from helloasso_python.exceptions import UnauthorizedException
+from helloasso_python.exceptions import BadRequestException, UnauthorizedException
 from helloasso_python.models.hello_asso_api_v5_models_carts_checkout_payer import (
     HelloAssoApiV5ModelsCartsCheckoutPayer,
 )
@@ -196,7 +196,7 @@ class PaymentTool:
                         self._helloasso_slug,
                         init_checkout_body,
                     )
-                except UnauthorizedException:
+                except (UnauthorizedException, BadRequestException):
                     # We know that HelloAsso may refuse some payer infos, like using the firstname "test"
                     # Even when prefilling the payer infos,the user will be able to edit them on the payment page,
                     # so we can safely retry without the payer infos
