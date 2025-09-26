@@ -1,6 +1,8 @@
+import logging
 from collections import defaultdict
 from collections.abc import Sequence
 from datetime import UTC, datetime
+from typing import List
 
 from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -686,7 +688,7 @@ async def get_remarks(
 
 
 async def add_remarks(
-    list_remarks: list[schemas_raid.Remark],
+    list_remarks: List[schemas_raid.Remark],
     db: AsyncSession,
 ):
     for remark in list_remarks:

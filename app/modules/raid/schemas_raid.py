@@ -184,3 +184,8 @@ class Remark(BaseModel):
     date: str
     ravito: str
     text: str
+
+
+class JsonFileResponse(BaseModel):
+    name: str
+    content: dict
