@@ -1,3 +1,4 @@
+import json
 import logging
 import uuid
 from datetime import UTC, date, datetime
@@ -1010,7 +1011,7 @@ async def get_temps_by_date(
 @module.router.post(
     "/chrono_raid/temps/{date}",
     response_model=list[schemas_raid.Temps],
-    status_code=201,
+    status_code=200,
 )
 async def add_or_update_time(
     list_temps: list[schemas_raid.Temps],
@@ -1023,7 +1024,6 @@ async def add_or_update_time(
     """
     for temps in list_temps:
         existing_temps = await cruds_raid.get_temps_by_id(temps.id, db)
-
         if (
             existing_temps
             and temps.last_modification_date > existing_temps.last_modification_date
@@ -1051,7 +1051,7 @@ async def get_csv_temps(
     """
     Return a csv with all times of a given parcours
     """
-    CSV_FILE_PATH = f"data/raid/results_chrono_raid_{parcours}.csv"
+    CSV_FILE_PATH = f"data/raid/chrono_raid/results_chrono_raid_{parcours}.csv"
 
     grouped_temps: dict[
         int,
@@ -1108,7 +1108,7 @@ async def get_remarks(
     status_code=200,
 )
 async def add_remarks(
-    remark_list=list[schemas_raid.Remark],
+    remark_list: list[schemas_raid.Remark],
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -1132,3 +1132,49 @@ async def delete_all_remarks(
     Delete all remarks.
     """
     await cruds_raid.delete_all_remarks(db)
+
+
+@module.router.get(
+    "/chrono_raid/json/{filename}",
+    response_model=schemas_raid.JsonFileResponse,
+    status_code=200,
+)
+async def get_json_file(filename: str):
+    """
+    Returns the contents of a JSON file.
+    """
+
+    JSON_FILE_PATH = f"data/raid/chrono_raid/{filename}.json"
+
+    if not Path(JSON_FILE_PATH).exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Le fichier {filename}.json est introuvable",
+        )
+
+    with Path.open(JSON_FILE_PATH, "r", encoding="utf-8") as f:
+        content = json.load(f)
+
+    return {"name": filename, "content": content}
+
+
+@module.router.post(
+    "/chrono_raid/json",
+    response_model=schemas_raid.JsonFileResponse,
+    status_code=200,
+)
+async def save_json_file(
+    json_file: schemas_raid.JsonFileResponse,
+):
+    """
+    Save a JSON file.
+    """
+
+    JSON_FILE_PATH = f"data/raid/chrono_raid/{json_file.name}.json"
+
+    JSON_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    with JSON_FILE_PATH.open("w", encoding="utf-8") as f:
+        json.dump(json_file.content, f, ensure_ascii=False, indent=2)
+
+    return {"name": json_file.name, "content": json_file.content}
