@@ -1140,15 +1140,15 @@ async def get_json_file(filename: str):
     Returns the contents of a JSON file.
     """
 
-    JSON_FILE_PATH = f"data/raid/chrono_raid/{filename}.json"
+    JSON_FILE_PATH = Path(f"data/raid/chrono_raid/{filename}.json")
 
-    if not Path(JSON_FILE_PATH).exists():
+    if not JSON_FILE_PATH.exists():
         raise HTTPException(
             status_code=404,
             detail=f"Le fichier {filename}.json est introuvable",
         )
 
-    with Path.open(JSON_FILE_PATH, "r", encoding="utf-8") as f:
+    with JSON_FILE_PATH.open("r", encoding="utf-8") as f:
         content = json.load(f)
 
     return {"name": filename, "content": content}
@@ -1166,7 +1166,7 @@ async def save_json_file(
     Save a JSON file.
     """
 
-    JSON_FILE_PATH = f"data/raid/chrono_raid/{json_file.name}.json"
+    JSON_FILE_PATH = Path(f"data/raid/chrono_raid/{json_file.name}.json")
 
     JSON_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
 
