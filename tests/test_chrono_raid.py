@@ -2,7 +2,7 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.core.users import models_users
-from app.modules.raid import models_raid, schemas_raid
+from app.modules.raid import models_raid
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
