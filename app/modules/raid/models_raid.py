@@ -307,3 +307,31 @@ class RaidParticipantCheckout(Base):
         ForeignKey("raid_participant.id"),
     )
     checkout_id: Mapped[str] = mapped_column(ForeignKey("payment_checkout.id"))
+
+
+#################################### MODELS FOR CHRONO RAID ####################################
+
+
+class Temps(Base):
+    __tablename__ = "chrono_raid_temps"
+    id: Mapped[str] = mapped_column(
+        primary_key=True,
+        index=True,
+    )
+    dossard: Mapped[int]
+    date: Mapped[str]
+    parcours: Mapped[str]
+    ravito: Mapped[str]
+    status: Mapped[bool]
+    last_modification_date: Mapped[str]
+
+
+class Remark(Base):
+    __tablename__ = "chrono_raid_remaks"
+    id: Mapped[str] = mapped_column(
+        primary_key=True,
+        index=True,
+    )
+    date: Mapped[str]
+    ravito: Mapped[str]
+    text: Mapped[str]

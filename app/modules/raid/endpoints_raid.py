@@ -1,3 +1,4 @@
+import json
 import logging
 import uuid
 from datetime import UTC, date, datetime
@@ -966,3 +967,210 @@ async def download_team_files_zip(
         media_type="application/zip",
         filename=Path(zip_file_path).name,
     )
+
+
+#################################### ENDPOINTS FOR CHRONO RAID ####################################
+
+
+@module.router.get(
+    "/chrono_raid/temps",
+    response_model=list[schemas_raid.Temps],
+    status_code=200,
+)
+async def get_temps(
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Return all times
+    """
+    return await cruds_raid.get_temps(
+        db=db,
+    )
+
+
+@module.router.get(
+    "/chrono_raid/temps/{date}",
+    response_model=list[schemas_raid.Temps],
+    status_code=200,
+)
+async def get_temps_by_date(
+    date: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Return all times for a given date
+    """
+    return await cruds_raid.get_temps_by_date(
+        date=date,
+        db=db,
+    )
+
+
+@module.router.post(
+    "/chrono_raid/temps/{date}",
+    response_model=list[schemas_raid.Temps],
+    status_code=200,
+)
+async def add_or_update_time(
+    list_temps: list[schemas_raid.Temps],
+    date: str,
+    db: AsyncSession = Depends(get_db),
+    # user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volonteer)),
+):
+    """
+    Add or update a list of new times
+    """
+    for temps in list_temps:
+        existing_temps = await cruds_raid.get_temps_by_id(temps.id, db)
+        if (
+            existing_temps
+            and temps.last_modification_date > existing_temps.last_modification_date
+        ):
+            await cruds_raid.update_temps(temps, db)
+        else:
+            await cruds_raid.add_temps(temps, db)
+
+    return await cruds_raid.get_temps_by_date(
+        date=date,
+        db=db,
+    )
+
+
+@module.router.get(
+    "/chrono_raid/csv_temps/{parcours}",
+    response_class=FileResponse,
+    status_code=200,
+)
+async def get_csv_temps(
+    parcours: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Return a csv with all times of a given parcours
+    """
+    CSV_FILE_PATH = Path(f"data/raid/chrono_raid/results_chrono_raid_{parcours}.csv")
+
+    grouped_temps: dict[
+        int,
+        list[models_raid.Temps],
+    ] = await cruds_raid.get_active_temps_grouped_by_dossard(parcours, db)
+
+    with Path.open(CSV_FILE_PATH, "w", encoding="utf-8") as f:
+        for dossard, temps_list in grouped_temps.items():
+            row = [str(dossard)] + [
+                temps.date.replace("T", " ") for temps in temps_list
+            ]
+            f.write(",".join(row) + "\n")
+
+    return FileResponse(
+        CSV_FILE_PATH,
+        media_type="text/csv",
+        filename=f"results_chrono_raid_{parcours}.csv",
+    )
+
+
+@module.router.delete(
+    "/chrono_raid/temps",
+    status_code=204,
+)
+async def delete_all_times(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+):
+    """
+    Delete all times.
+    """
+    await cruds_raid.delete_all_times(db)
+
+
+@module.router.get(
+    "/chrono_raid/remarks",
+    response_model=list[schemas_raid.Remark],
+    status_code=200,
+)
+async def get_remarks(
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Return all remarks
+    """
+    return await cruds_raid.get_remarks(
+        db=db,
+    )
+
+
+@module.router.post(
+    "/chrono_raid/remarks",
+    status_code=200,
+)
+async def add_remarks(
+    remark_list: list[schemas_raid.Remark],
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Add a list of remarks to the db
+    """
+    await cruds_raid.add_remarks(
+        list_remarks=remark_list,
+        db=db,
+    )
+
+
+@module.router.delete(
+    "/chrono_raid/remarks",
+    status_code=204,
+)
+async def delete_all_remarks(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+):
+    """
+    Delete all remarks.
+    """
+    await cruds_raid.delete_all_remarks(db)
+
+
+@module.router.get(
+    "/chrono_raid/json/{filename}",
+    response_model=schemas_raid.JsonFileResponse,
+    status_code=200,
+)
+def get_json_file(filename: str):
+    """
+    Returns the contents of a JSON file.
+    """
+
+    JSON_FILE_PATH = Path(f"data/raid/chrono_raid/{filename}.json")
+
+    if not JSON_FILE_PATH.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Le fichier {filename}.json est introuvable",
+        )
+
+    with JSON_FILE_PATH.open("r", encoding="utf-8") as f:
+        content = json.load(f)
+
+    return {"name": filename, "content": content}
+
+
+@module.router.post(
+    "/chrono_raid/json",
+    response_model=schemas_raid.JsonFileResponse,
+    status_code=200,
+)
+def save_json_file(
+    json_file: schemas_raid.JsonFileResponse,
+):
+    """
+    Save a JSON file.
+    """
+
+    JSON_FILE_PATH = Path(f"data/raid/chrono_raid/{json_file.name}.json")
+
+    JSON_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    with JSON_FILE_PATH.open("w", encoding="utf-8") as f:
+        json.dump(json_file.content, f, ensure_ascii=False, indent=2)
+
+    return {"name": json_file.name, "content": json_file.content}

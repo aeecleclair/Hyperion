@@ -164,3 +164,28 @@ class PaymentUrl(BaseModel):
 class RaidParticipantCheckout(BaseModel):
     participant_id: str
     checkout_id: str
+
+
+#################################### SCHEMAS FOR CHRONO RAID ####################################
+
+
+class Temps(BaseModel):
+    id: str
+    dossard: int
+    date: str
+    parcours: str
+    ravito: str
+    status: bool
+    last_modification_date: str
+
+
+class Remark(BaseModel):
+    id: str
+    date: str
+    ravito: str
+    text: str
+
+
+class JsonFileResponse(BaseModel):
+    name: str
+    content: dict

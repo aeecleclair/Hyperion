@@ -1,5 +1,7 @@
+from collections import defaultdict
 from collections.abc import Sequence
 from datetime import UTC, datetime
+from sqlite3 import IntegrityError
 
 from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -592,3 +594,114 @@ async def get_participant_checkout_by_checkout_id(
         ),
     )
     return checkout.scalars().first()
+
+
+#################################### CRUDS FOR CHRONO RAID ####################################
+
+
+async def get_temps(
+    db: AsyncSession,
+) -> Sequence[models_raid.Temps]:
+    temps = await db.execute(select(models_raid.Temps))
+    return temps.scalars().all()
+
+
+async def get_active_temps_grouped_by_dossard(
+    parcours: str,
+    db: AsyncSession,
+) -> dict[int, list[models_raid.Temps]]:
+    result = await db.execute(
+        select(models_raid.Temps)
+        .where(models_raid.Temps.status and models_raid.Temps.parcours == parcours)
+        .order_by(models_raid.Temps.dossard, models_raid.Temps.date),
+    )
+    temps_list = result.scalars().all()
+    grouped_temps = defaultdict(list)
+    for temps in temps_list:
+        grouped_temps[temps.dossard].append(temps)
+    return dict(grouped_temps)
+
+
+async def get_temps_by_date(
+    date: str,
+    db: AsyncSession,
+) -> Sequence[models_raid.Temps]:
+    temps = await db.execute(
+        select(models_raid.Temps).where(
+            models_raid.Temps.last_modification_date >= date,
+        ),
+    )
+    return temps.scalars().all()
+
+
+async def get_temps_by_id(
+    temps_id: str,
+    db: AsyncSession,
+) -> models_raid.Temps | None:
+    temps = await db.execute(
+        select(models_raid.Temps).where(models_raid.Temps.id == temps_id),
+    )
+    return temps.scalars().first()
+
+
+async def add_temps(
+    temps: schemas_raid.Temps,
+    db: AsyncSession,
+) -> models_raid.Temps:
+    temps_db = models_raid.Temps(**temps.model_dump())
+    db.add(temps_db)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise
+    else:
+        return temps_db
+
+
+async def update_temps(
+    temps: schemas_raid.Temps,
+    db: AsyncSession,
+) -> schemas_raid.Temps:
+    await db.execute(
+        update(models_raid.Temps)
+        .where(models_raid.Temps.id == temps.id)
+        .values(**temps.model_dump(exclude_none=True)),
+    )
+    await db.commit()
+    return temps
+
+
+async def delete_all_times(
+    db: AsyncSession,
+):
+    await db.execute(delete(models_raid.Temps))
+    await db.commit()
+
+
+async def get_remarks(
+    db: AsyncSession,
+) -> Sequence[models_raid.Remark]:
+    remarks = await db.execute(select(models_raid.Remark))
+    return remarks.scalars().all()
+
+
+async def add_remarks(
+    list_remarks: list[schemas_raid.Remark],
+    db: AsyncSession,
+):
+    for remark in list_remarks:
+        remark_db = models_raid.Remark(**remark.model_dump())
+        db.add(remark_db)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise
+
+
+async def delete_all_remarks(
+    db: AsyncSession,
+):
+    await db.execute(delete(models_raid.Remark))
+    await db.commit()
