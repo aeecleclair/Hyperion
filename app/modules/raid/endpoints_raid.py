@@ -1048,7 +1048,7 @@ async def get_csv_temps(
     """
     Return a csv with all times of a given parcours
     """
-    CSV_FILE_PATH = f"data/raid/chrono_raid/results_chrono_raid_{parcours}.csv"
+    CSV_FILE_PATH = Path(f"data/raid/chrono_raid/results_chrono_raid_{parcours}.csv")
 
     grouped_temps: dict[
         int,
@@ -1135,7 +1135,7 @@ async def delete_all_remarks(
     response_model=schemas_raid.JsonFileResponse,
     status_code=200,
 )
-async def get_json_file(filename: str):
+def get_json_file(filename: str):
     """
     Returns the contents of a JSON file.
     """
@@ -1159,7 +1159,7 @@ async def get_json_file(filename: str):
     response_model=schemas_raid.JsonFileResponse,
     status_code=200,
 )
-async def save_json_file(
+def save_json_file(
     json_file: schemas_raid.JsonFileResponse,
 ):
     """
