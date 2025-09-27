@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from app.core.users import models_users
 from app.modules.raid import schemas_raid
 from tests.commons import (
+    add_object_to_db,
     create_api_access_token,
     create_user_with_groups,
 )
@@ -33,29 +34,72 @@ async def init_objects() -> None:
         status=True,
         last_modification_date="2025-03-15",
     )
+    await add_object_to_db(temps)
 
-
-def test_create_teamps(client: TestClient) -> None:
-    response = client.post(
-        "/chrono_raid/temps",
-        json={
-            "id": "1",
-            "dossard": 1,
-            "date": "2025-03-15",
-            "parcours": "Sportif",
-            "ravito": "2",
-            "status": True,
-            "last_modification_date": "2025-03-15",
-        },
-        headers={"Authorization": f"Bearer {token_raid}"},
+    global temps2
+    temps2 = schemas_raid.Temps(
+        id="2",
+        dossard=1,
+        date="2025-01-15",
+        parcours="Sportif",
+        ravito="2",
+        status=True,
+        last_modification_date="2025-01-15",
     )
-    assert response.status_code == 201
+    await add_object_to_db(temps2)
+
+    global remark
+    remark = schemas_raid.Remark(
+        id="3",
+        date="2025-01-15",
+        ravito="2",
+        text="youplali youplala",
+    )
+    await add_object_to_db(remark)
 
 
-def test_get_temps(client: TestClient) -> None:
+def get_temps(client: TestClient) -> None:
     response = client.get(
         "/chrono_raid/temps",
         headers={"Authorization": f"Bearer {token_raid}"},
     )
     assert response.status_code == 200
+    assert len(response.json()) == 2
+    assert response.json()[0]["id"] not in [temps.id, temps2.id]
+    assert response.json()[1]["id"] not in [temps.id, temps2.id]
+
+
+def get_temps_by_date(client: TestClient) -> None:
+    response = client.get(
+        "/chrono_raid/temps/2025-02-15",
+        headers={"Authorization": f"Bearer {token_raid}"},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 1
     assert response.json()[0]["id"] == temps.id
+
+
+def get_remarks(client: TestClient) -> None:
+    response = client.get(
+        "/chrono_raid/remarks",
+        headers={"Authorization": f"Bearer {token_raid}"},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["id"] == remark.id
+
+
+def add_remarks(client: TestClient) -> None:
+    response = client.post(
+        "/chrono_raid/remarks",
+        json=[
+            {
+                "id": "4",
+                "date": "2025-01-15",
+                "ravito": "2",
+                "text": "Tung Tung Tung Sahur",
+            },
+        ],
+        headers={"Authorization": f"Bearer {token_raid}"},
+    )
+    assert response.status_code == 200
