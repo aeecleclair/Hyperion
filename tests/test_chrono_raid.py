@@ -2,7 +2,7 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.core.users import models_users
-from app.modules.raid import schemas_raid
+from app.modules.raid import models_raid, schemas_raid
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
@@ -13,7 +13,9 @@ raid_user: models_users.CoreUser
 
 token_raid: str
 
-temps: schemas_raid.Temps
+temps: models_raid.Temps
+temps2: models_raid.Temps
+remark: models_raid.Remark
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -25,7 +27,7 @@ async def init_objects() -> None:
     token_raid = create_api_access_token(raid_user)
 
     global temps
-    temps = schemas_raid.Temps(
+    temps = models_raid.Temps(
         id="1",
         dossard=1,
         date="2025-03-15",
@@ -37,7 +39,7 @@ async def init_objects() -> None:
     await add_object_to_db(temps)
 
     global temps2
-    temps2 = schemas_raid.Temps(
+    temps2 = models_raid.Temps(
         id="2",
         dossard=1,
         date="2025-01-15",
@@ -49,7 +51,7 @@ async def init_objects() -> None:
     await add_object_to_db(temps2)
 
     global remark
-    remark = schemas_raid.Remark(
+    remark = models_raid.Remark(
         id="3",
         date="2025-01-15",
         ravito="2",
