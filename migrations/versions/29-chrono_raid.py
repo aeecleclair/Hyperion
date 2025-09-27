@@ -4,15 +4,13 @@ Create Date: 2025-03-20 14:25:49.975112
 """
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pytest_alembic import MigrationContext
 
 import sqlalchemy as sa
 from alembic import op
-
-from app.types.sqlalchemy import TZDateTime
 
 # revision identifiers, used by Alembic.
 revision: str = "118c4f75ebda"
@@ -35,7 +33,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_chrono_raid_temps_id"), "chrono_raid_temps", ["id"], unique=False
+        op.f("ix_chrono_raid_temps_id"),
+        "chrono_raid_temps",
+        ["id"],
+        unique=False,
     )
     # ### end Alembic commands ###
 
