@@ -983,10 +983,9 @@ async def get_temps(
     """
     Return all times
     """
-    result = await cruds_raid.get_temps(
+    return await cruds_raid.get_temps(
         db=db,
     )
-    return result
 
 
 @module.router.get(
@@ -1001,11 +1000,10 @@ async def get_temps_by_date(
     """
     Return all times for a given date
     """
-    result = await cruds_raid.get_temps_by_date(
+    return await cruds_raid.get_temps_by_date(
         date=date,
         db=db,
     )
-    return result
 
 
 @module.router.post(
@@ -1032,11 +1030,10 @@ async def add_or_update_time(
         else:
             await cruds_raid.add_temps(temps, db)
 
-    result = await cruds_raid.get_temps_by_date(
+    return await cruds_raid.get_temps_by_date(
         date=date,
         db=db,
     )
-    return result
 
 
 @module.router.get(
@@ -1097,10 +1094,9 @@ async def get_remarks(
     """
     Return all remarks
     """
-    result = await cruds_raid.get_remarks(
+    return await cruds_raid.get_remarks(
         db=db,
     )
-    return result
 
 
 @module.router.post(
