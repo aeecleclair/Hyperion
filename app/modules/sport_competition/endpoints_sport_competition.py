@@ -25,9 +25,6 @@ from app.modules.sport_competition.types_sport_competition import (
     CompetitionGroupType,
     ProductSchoolType,
 )
-from app.modules.sport_competition.utils.ffsu_scrapper import (
-    validate_participant_ffsu_license,
-)
 from app.modules.sport_competition.utils_sport_competition import (
     check_validation_consistency,
     checksport_category_compatibility,
@@ -1981,13 +1978,7 @@ async def join_sport(
             name=f"{user.user.firstname} {user.user.name} - {school.school.name}",
         )
         await cruds_sport_competition.add_team(new_team, db)
-    is_license_valid = False
-    if participant_info.license:
-        is_license_valid = validate_participant_ffsu_license(
-            school,
-            user,
-            participant_info.license,
-        )
+
     participant = schemas_sport_competition.Participant(
         user_id=user.user_id,
         sport_id=sport_id,
@@ -1995,7 +1986,7 @@ async def join_sport(
         school_id=user.user.school_id,
         license=participant_info.license,
         substitute=participant_info.substitute,
-        is_license_valid=is_license_valid,
+        is_license_valid=False,
         team_id=participant_info.team_id or new_team.id,
         created_at=datetime.now(UTC),
     )

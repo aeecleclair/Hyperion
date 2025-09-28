@@ -200,7 +200,6 @@ async def init_objects() -> None:
         school_no_quota_extension
     school_sport_quota_extension = models_sport_competition.SchoolExtension(
         school_id=school_sport_quota.id,
-        ffsu_id=None,
         from_lyon=True,
         active=True,
         inscription_enabled=True,
@@ -208,7 +207,6 @@ async def init_objects() -> None:
     await add_object_to_db(school_sport_quota_extension)
     school_simple_general_quota_extension = models_sport_competition.SchoolExtension(
         school_id=school_simple_general_quota.id,
-        ffsu_id=None,
         from_lyon=True,
         active=True,
         inscription_enabled=True,
@@ -216,7 +214,6 @@ async def init_objects() -> None:
     await add_object_to_db(school_simple_general_quota_extension)
     school_athlete_general_quota_extension = models_sport_competition.SchoolExtension(
         school_id=school_athlete_general_quota.id,
-        ffsu_id=None,
         from_lyon=True,
         active=True,
         inscription_enabled=True,
@@ -225,7 +222,6 @@ async def init_objects() -> None:
     school_non_athlete_general_quota_extension = (
         models_sport_competition.SchoolExtension(
             school_id=school_non_athlete_general_quota.id,
-            ffsu_id=None,
             from_lyon=True,
             active=True,
             inscription_enabled=True,
@@ -234,7 +230,6 @@ async def init_objects() -> None:
     await add_object_to_db(school_non_athlete_general_quota_extension)
     school_product_quota_extension = models_sport_competition.SchoolExtension(
         school_id=school_product_quota.id,
-        ffsu_id=None,
         from_lyon=True,
         active=True,
         inscription_enabled=True,
@@ -242,7 +237,6 @@ async def init_objects() -> None:
     await add_object_to_db(school_product_quota_extension)
     school_no_quota_extension = models_sport_competition.SchoolExtension(
         school_id=school_no_quota.id,
-        ffsu_id=None,
         from_lyon=True,
         active=True,
         inscription_enabled=True,

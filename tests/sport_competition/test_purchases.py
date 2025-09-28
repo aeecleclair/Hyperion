@@ -326,7 +326,6 @@ async def setup():
         from_lyon=True,
         active=True,
         inscription_enabled=True,
-        ffsu_id=None,
     )
     await add_object_to_db(ecl_extension)
     school_from_lyon_extension = models_sport_competition.SchoolExtension(
@@ -334,7 +333,6 @@ async def setup():
         from_lyon=True,
         active=True,
         inscription_enabled=True,
-        ffsu_id=None,
     )
     await add_object_to_db(school_from_lyon_extension)
     school_others_extension = models_sport_competition.SchoolExtension(
@@ -342,7 +340,6 @@ async def setup():
         from_lyon=False,
         active=True,
         inscription_enabled=True,
-        ffsu_id=None,
     )
     await add_object_to_db(school_others_extension)
 

@@ -3,7 +3,6 @@ from uuid import UUID, uuid4
 
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from pytest_mock import MockerFixture
 from sqlalchemy import delete, update
 
 from app.core.groups.groups_type import GroupType
@@ -212,7 +211,6 @@ async def init_objects() -> None:
     global ecl_extension, school1_extension
     ecl_extension = models_sport_competition.SchoolExtension(
         school_id=SchoolType.centrale_lyon.value,
-        ffsu_id="GM1E",
         from_lyon=True,
         active=True,
         inscription_enabled=False,
@@ -220,7 +218,6 @@ async def init_objects() -> None:
     await add_object_to_db(ecl_extension)
     school1_extension = models_sport_competition.SchoolExtension(
         school_id=school1.id,
-        ffsu_id="EM1E",
         from_lyon=False,
         active=False,
         inscription_enabled=False,
@@ -2210,15 +2207,10 @@ async def test_user_participate_with_maximum_substitute_size(
 
 async def test_user_participate_with_valid_data(
     client: TestClient,
-    mocker: MockerFixture,
 ) -> None:
     info = ParticipantInfo(
         license="12345670089",
         substitute=False,
-    )
-    mocker.patch(
-        "app.modules.sport_competition.utils.ffsu_scrapper.validate_participant_ffsu_license",
-        False,
     )
     response = client.post(
         f"/competition/sports/{sport_free_quota.id}/participate",
