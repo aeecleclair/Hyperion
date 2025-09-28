@@ -89,7 +89,6 @@ class SchoolExtension(Base):
     school_id: Mapped[PrimaryKey] = mapped_column(
         ForeignKey("core_school.id"),
     )
-    ffsu_id: Mapped[str | None]
     from_lyon: Mapped[bool]
     active: Mapped[bool]
     inscription_enabled: Mapped[bool]
