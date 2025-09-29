@@ -19,7 +19,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.payment import cruds_payment, models_payment, schemas_payment
 from app.core.payment.types_payment import HelloAssoConfig
-from app.core.users import schemas_users
 from app.core.utils import security
 from app.types.exceptions import (
     MissingHelloAssoCheckoutIdError,
@@ -130,7 +129,7 @@ class PaymentTool:
         checkout_amount: int,
         checkout_name: str,
         db: AsyncSession,
-        payer_user: schemas_users.CoreUser | None = None,
+        payer_user: schemas_payment.PayerUser,
         redirection_uri: str | None = None,
     ) -> schemas_payment.Checkout:
         """
@@ -161,14 +160,12 @@ class PaymentTool:
         # We want to ensure that any error is logged, even if modules tries to try/except this method
         # Thus we catch any exception and log it, then reraise it
         try:
-            payer: HelloAssoApiV5ModelsCartsCheckoutPayer | None = None
-            if payer_user:
-                payer = HelloAssoApiV5ModelsCartsCheckoutPayer(
-                    firstName=payer_user.firstname,
-                    lastName=payer_user.name,
-                    email=payer_user.email,
-                    dateOfBirth=payer_user.birthday,
-                )
+            payer = HelloAssoApiV5ModelsCartsCheckoutPayer(
+                firstName=payer_user.firstname,
+                lastName=payer_user.name,
+                email=payer_user.email,
+                dateOfBirth=payer_user.birthday,
+            )
 
             checkout_model_id = uuid.uuid4()
             secret = security.generate_token(nbytes=12)
@@ -200,27 +197,22 @@ class PaymentTool:
                     # We know that HelloAsso may refuse some payer infos, like using the firstname "test"
                     # Even when prefilling the payer infos,the user will be able to edit them on the payment page,
                     # so we can safely retry without the payer infos
-                    if not payer_user:
-                        hyperion_error_logger.exception(
-                            f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name} (no payer info provided).",
-                        )
-                    else:
-                        payer_user_name = f"{payer_user.firstname} {payer_user.name}"
-                        hyperion_error_logger.warning(
-                            f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}. Retrying without payer infos for {payer_user_name}",
-                        )
+                    payer_user_name = f"{payer_user.firstname} {payer_user.name}"
+                    hyperion_error_logger.warning(
+                        f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}. Retrying without payer infos for {payer_user_name}",
+                    )
 
-                        init_checkout_body.payer = None
-                        try:
-                            response = checkout_api.organizations_organization_slug_checkout_intents_post(
-                                self._helloasso_slug,
-                                init_checkout_body,
-                            )
-                        except UnauthorizedException:
-                            # HelloAsso returned a 401 unauthorized again
-                            hyperion_error_logger.exception(
-                                f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}, with and without payer {payer_user_name} infos",
-                            )
+                    init_checkout_body.payer = None
+                    try:
+                        response = checkout_api.organizations_organization_slug_checkout_intents_post(
+                            self._helloasso_slug,
+                            init_checkout_body,
+                        )
+                    except UnauthorizedException:
+                        # HelloAsso returned a 401 unauthorized again
+                        hyperion_error_logger.exception(
+                            f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}, with and without payer {payer_user_name} infos",
+                        )
 
             if response and response.id:
                 checkout_model = models_payment.Checkout(
