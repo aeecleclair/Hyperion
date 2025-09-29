@@ -1894,27 +1894,17 @@ async def init_ha_transfer(
             detail="Wallet balance would exceed the maximum allowed balance",
         )
 
-    user_schema = schemas_users.CoreUser(
-        account_type=user.account_type,
-        school_id=user.school_id,
-        email=user.email,
-        birthday=user.birthday,
-        promo=user.promo,
-        floor=user.floor,
-        phone=user.phone,
-        created_on=user.created_on,
-        groups=[],
-        id=user.id,
-        name=user.name,
-        firstname=user.firstname,
-        nickname=user.nickname,
-    )
     checkout = await payment_tool.init_checkout(
         module="mypayment",
         checkout_amount=transfer_info.amount,
         checkout_name=f"Recharge {settings.school.payment_name}",
         redirection_uri=f"{settings.CLIENT_URL}mypayment/transfer/redirect?url={transfer_info.redirect_url}",
-        payer_user=user_schema,
+        payer_user=schemas_payment.PayerUser(
+            firstname=user.firstname,
+            name=user.name,
+            email=user.email,
+            birthday=user.birthday,
+        ),
         db=db,
     )
 

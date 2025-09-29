@@ -19,6 +19,7 @@ from app.core.groups import cruds_groups, schemas_groups
 from app.core.groups.groups_type import AccountType
 from app.core.memberships import cruds_memberships, schemas_memberships
 from app.core.payment.payment_tool import PaymentTool
+from app.core.payment.schemas_payment import PayerUser
 from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users, models_users, schemas_users
@@ -2791,33 +2792,16 @@ async def get_payment_url(
             status_code=403,
             detail="Please give an amount in cents, greater than 1€.",
         )
-    user_schema = schemas_users.CoreUser(
-        account_type=user.account_type,
-        school_id=user.school_id,
-        email=user.email,
-        birthday=user.birthday,
-        promo=user.promo,
-        floor=user.floor,
-        phone=user.phone,
-        created_on=user.created_on,
-        groups=[
-            schemas_groups.CoreGroupSimple(
-                id=group.id,
-                name=group.name,
-                description=group.description,
-            )
-            for group in user.groups
-        ],
-        id=user.id,
-        name=user.name,
-        firstname=user.firstname,
-        nickname=user.nickname,
-    )
     checkout = await payment_tool.init_checkout(
         module=module.root,
         checkout_amount=amount,
         checkout_name="Chaine de rentrée",
-        payer_user=user_schema,
+        payer_user=PayerUser(
+            firstname=user.firstname,
+            name=user.name,
+            email=user.email,
+            birthday=user.birthday,
+        ),
         db=db,
     )
     hyperion_error_logger.info(f"CDR: Logging Checkout id {checkout.id}")

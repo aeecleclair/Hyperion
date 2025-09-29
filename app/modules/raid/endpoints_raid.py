@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import AccountType
 from app.core.payment.payment_tool import PaymentTool
+from app.core.payment.schemas_payment import PayerUser
 from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users, schemas_users
@@ -967,13 +968,16 @@ async def get_payment_url(
     if not participant:
         raise HTTPException(status_code=403, detail="You are not a participant.")
     price, checkout_name = calculate_raid_payment(participant, raid_prices)
-    user_dict = user.__dict__
-    user_dict.pop("school", None)
     checkout = await payment_tool.init_checkout(
         module=module.root,
         checkout_amount=price,
         checkout_name=checkout_name,
-        payer_user=schemas_users.CoreUser(**user_dict),
+        payer_user=PayerUser(
+            firstname=user.firstname,
+            name=user.name,
+            email=user.email,
+            birthday=user.birthday,
+        ),
         db=db,
     )
     hyperion_error_logger.info(f"RAID: Logging Checkout id {checkout.id}")

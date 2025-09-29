@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 
 from pydantic import BaseModel, computed_field
 
@@ -38,3 +39,10 @@ class HelloAssoCheckoutMetadata(BaseModel):
 
 class PaymentUrl(BaseModel):
     url: str
+
+
+class PayerUser(BaseModel):
+    firstname: str
+    name: str
+    email: str
+    birthday: date | None = None
