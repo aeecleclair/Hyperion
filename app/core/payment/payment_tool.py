@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import TYPE_CHECKING
 
 from authlib.integrations.requests_client import OAuth2Session
@@ -19,7 +19,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.payment import cruds_payment, models_payment, schemas_payment
 from app.core.payment.types_payment import HelloAssoConfig
-from app.core.users import schemas_users
 from app.core.utils import security
 from app.types.exceptions import (
     MissingHelloAssoCheckoutIdError,
@@ -130,7 +129,10 @@ class PaymentTool:
         checkout_amount: int,
         checkout_name: str,
         db: AsyncSession,
-        payer_user: schemas_users.CoreUser | None = None,
+        payer_firstname: str,
+        payer_name: str,
+        payer_email: str,
+        payer_birthday: date | None = None,
         redirection_uri: str | None = None,
     ) -> schemas_payment.Checkout:
         """
@@ -152,7 +154,6 @@ class PaymentTool:
         This method use HelloAsso API. It may raise exceptions if HA checkout initialization fails.
         Exceptions can be imported from `helloasso_python` package.
         """
-        configuration = self.get_hello_asso_configuration()
 
         redirection_uri = redirection_uri or self._redirection_uri
         if not redirection_uri:
@@ -160,21 +161,15 @@ class PaymentTool:
 
         # We want to ensure that any error is logged, even if modules tries to try/except this method
         # Thus we catch any exception and log it, then reraise it
-        exception_start = f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}"
-        exception_start += (
-            f"for payer {payer_user.firstname} {payer_user.name}"
-            if payer_user
-            else "(no payer)"
-        )
+        exception_start = f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name} for payer {payer_firstname} {payer_name}"
+
         try:
-            payer: HelloAssoApiV5ModelsCartsCheckoutPayer | None = None
-            if payer_user:
-                payer = HelloAssoApiV5ModelsCartsCheckoutPayer(
-                    firstName=payer_user.firstname,
-                    lastName=payer_user.name,
-                    email=payer_user.email,
-                    dateOfBirth=payer_user.birthday,
-                )
+            payer = HelloAssoApiV5ModelsCartsCheckoutPayer(
+                firstName=payer_firstname,
+                lastName=payer_name,
+                email=payer_email,
+                dateOfBirth=payer_birthday,
+            )
 
             checkout_model_id = uuid.uuid4()
             secret = security.generate_token(nbytes=12)
@@ -195,6 +190,7 @@ class PaymentTool:
             )
 
             response: HelloAssoApiV5ModelsCartsInitCheckoutResponse | None = None
+            configuration = self.get_hello_asso_configuration()
             with ApiClient(configuration) as api_client:
                 checkout_api = CheckoutApi(api_client)
                 response = (
