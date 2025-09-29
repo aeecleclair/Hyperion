@@ -968,19 +968,23 @@ async def get_payment_url(
     if not participant:
         raise HTTPException(status_code=403, detail="You are not a participant.")
     price, checkout_name = calculate_raid_payment(participant, raid_prices)
-    checkout = await payment_tool.init_checkout(
-        module=module.root,
-        checkout_amount=price,
-        checkout_name=checkout_name,
-        payer_user=PayerUser(
-            firstname=user.firstname,
-            name=user.name,
-            email=user.email,
-            birthday=user.birthday,
-        ),
-        db=db,
-    )
+    try:
+        checkout = await payment_tool.init_checkout(
+            module=module.root,
+            checkout_amount=price,
+            checkout_name=checkout_name,
+            payer_user=PayerUser(
+                firstname=user.firstname,
+                name=user.name,
+                email=user.email,
+                birthday=user.birthday,
+            ),
+            db=db,
+        )
+    except Exception:
+        raise HTTPException(status_code=502, detail="Cannot init the checkout")
     hyperion_error_logger.info(f"RAID: Logging Checkout id {checkout.id}")
+
     await cruds_raid.create_participant_checkout(
         models_raid.RaidParticipantCheckout(
             id=str(uuid.uuid4()),
