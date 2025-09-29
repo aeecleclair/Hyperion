@@ -1260,7 +1260,7 @@ async def register_user(
         accepted_tos_version=0,
         db=db,
     )
-    db.flush()
+    await db.flush()
 
     hyperion_mypayment_logger.info(
         wallet_id,
