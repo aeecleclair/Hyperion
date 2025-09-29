@@ -3487,19 +3487,24 @@ async def get_payment_url(
             status_code=403,
             detail="Please give an amount in cents, greater than 1€.",
         )
-    checkout = await payment_tool.init_checkout(
-        module=module.root,
-        checkout_amount=amount,
-        checkout_name=f"Challenge {edition.name}",
-        payer_user=PayerUser(
-            firstname=user.firstname,
-            name=user.name,
-            email=user.email,
-            birthday=user.birthday,
-        ),
-        db=db,
-    )
+
+    try:
+        checkout = await payment_tool.init_checkout(
+            module=module.root,
+            checkout_amount=amount,
+            checkout_name=f"Challenge {edition.name}",
+            payer_user=PayerUser(
+                firstname=user.firstname,
+                name=user.name,
+                email=user.email,
+                birthday=user.birthday,
+            ),
+            db=db,
+        )
+    except Exception:
+        raise HTTPException(status_code=502, detail="Cannot init the checkout")
     hyperion_error_logger.info(f"Competition: Logging Checkout id {checkout.id}")
+
     cruds_sport_competition.add_checkout(
         db=db,
         checkout=schemas_sport_competition.Checkout(
@@ -3509,7 +3514,6 @@ async def get_payment_url(
             checkout_id=checkout.id,
         ),
     )
-
     return schemas_sport_competition.PaymentUrl(
         url=checkout.payment_url,
     )
