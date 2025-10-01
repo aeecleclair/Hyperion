@@ -3525,7 +3525,7 @@ async def get_payment_url(
 
 @module.router.get(
     "/competition/volunteers/shifts",
-    response_model=list[schemas_sport_competition.VolunteerShift],
+    response_model=list[schemas_sport_competition.VolunteerShiftComplete],
     status_code=200,
 )
 async def get_all_volunteer_shifts(
