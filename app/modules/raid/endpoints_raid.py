@@ -981,7 +981,9 @@ async def download_team_files_zip(
 )
 async def get_temps(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volunteer)),
+    user: models_users.CoreUser = Depends(
+        is_user(included_groups=[GroupType.raid_volunteer, GroupType.raid_admin])
+    ),
 ):
     """
     Return all times
@@ -997,9 +999,11 @@ async def get_temps(
     status_code=200,
 )
 async def get_temps_by_date(
-    date: date,
+    date: datetime,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volunteer)),
+    user: models_users.CoreUser = Depends(
+        is_user(included_groups=[GroupType.raid_volunteer, GroupType.raid_admin])
+    ),
 ):
     """
     Return all times that have been modified after the given date
@@ -1019,7 +1023,9 @@ async def add_or_update_time(
     list_temps: list[schemas_raid.Temps],
     date: datetime,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volunteer)),
+    user: models_users.CoreUser = Depends(
+        is_user(included_groups=[GroupType.raid_volunteer, GroupType.raid_admin])
+    ),
 ):
     """
     Add or update a list of new times
@@ -1042,13 +1048,14 @@ async def add_or_update_time(
 
 @module.router.get(
     "/chrono_raid/csv_temps/{parcours}",
-    response_class=FileResponse,
     status_code=200,
 )
 async def get_csv_temps(
     parcours: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volunteer)),
+    user: models_users.CoreUser = Depends(
+        is_user(included_groups=[GroupType.raid_volunteer, GroupType.raid_admin])
+    ),
 ):
     """
     Return a csv with all times of a given parcours
@@ -1058,23 +1065,17 @@ async def get_csv_temps(
         list[models_raid.Temps],
     ] = await cruds_raid.get_active_temps_grouped_by_dossard(parcours, db)
 
-    with BytesIO() as excel_io:
-        for dossard, temps_list in grouped_temps.items():
-            row = [str(dossard)] + [
-                temps.date.strftime("%Y-%m-%d %H:%M:%S") for temps in temps_list
-            ]
-            excel_io.write(",".join(row).encode("utf-8") + b"\n")
+    res = b""
+    for dossard, temps_list in grouped_temps.items():
+        row = [str(dossard)] + [
+            temps.date.strftime("%Y-%m-%d %H:%M:%S") for temps in temps_list
+        ]
+        res += ",".join(row).encode("utf-8") + b"\n"
 
-        res = excel_io.getvalue()
-
-        headers = {
-            "Content-Disposition": f'attachment; filename="Résultat_Chrono_Raid_{parcours}.csv"',
-        }
-        return Response(
-            res,
-            headers=headers,
-            media_type="text/csv",
-        )
+    return Response(
+        res,
+        media_type="text/csv",
+    )
 
 
 @module.router.delete(
@@ -1098,7 +1099,9 @@ async def delete_all_times(
 )
 async def get_remarks(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volunteer)),
+    user: models_users.CoreUser = Depends(
+        is_user(included_groups=[GroupType.raid_volunteer, GroupType.raid_admin])
+    ),
 ):
     """
     Return all remarks
@@ -1115,7 +1118,9 @@ async def get_remarks(
 async def add_remarks(
     remark_list: list[schemas_raid.Remark],
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volunteer)),
+    user: models_users.CoreUser = Depends(
+        is_user(included_groups=[GroupType.raid_volunteer, GroupType.raid_admin])
+    ),
 ):
     """
     Add a list of remarks to the db
@@ -1147,24 +1152,20 @@ async def delete_all_remarks(
 )
 async def get_json_file(
     filename: str,
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volunteer)),
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user(included_groups=[GroupType.raid_volunteer, GroupType.raid_admin])
+    ),
 ):
-    """
-    Returns the contents of a JSON file.
-    """
+    data = await cruds_raid.get_chrono_raid_data(filename, db)
 
-    JSON_FILE_PATH = get_file_from_data("raid/chrono_raid", f"/{filename}.json")
-
-    if not JSON_FILE_PATH.exists():
+    if data is None:
         raise HTTPException(
             status_code=404,
             detail=f"Le fichier {filename}.json est introuvable",
         )
 
-    with JSON_FILE_PATH.open("r", encoding="utf-8") as f:
-        content = json.load(f)
-
-    return {"name": filename, "content": content}
+    return {"name": filename, "content": data.content}
 
 
 @module.router.post(
@@ -1174,18 +1175,14 @@ async def get_json_file(
 )
 async def save_json_file(
     json_file: schemas_raid.JsonFileResponse,
+    db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
 ):
-    """
-    Save a JSON file.
-    """
-
-    JSON_FILE_PATH = get_file_path_from_data(
-        "raid/chrono_raid",
-        f"{json_file.name}.json",
+    await cruds_raid.delete_chrono_raid_data(json_file.name, db=db)
+    await cruds_raid.add_chrono_raid_data(
+        content=str(json_file.content),
+        name=json_file.name,
+        db=db,
     )
 
-    with JSON_FILE_PATH.open("w", encoding="utf-8") as f:
-        json.dump(json_file.content, f, ensure_ascii=False, indent=2)
-
-    return {"name": json_file.name, "content": json_file.content}
+    return json_file

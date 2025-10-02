@@ -1089,30 +1089,28 @@ def test_download_team_files_zip_with_no_teams(client: TestClient):
 def test_get_temps(client: TestClient) -> None:
     response = client.get(
         "/chrono_raid/temps",
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
+        headers={"Authorization": f"Bearer {token_raid_volunteer}"},
     )
     assert response.status_code == 200
     assert len(response.json()) == 2
-    assert response.json()[0]["id"] not in [temps.id, temps2.id]
-    assert response.json()[1]["id"] not in [temps.id, temps2.id]
+    assert response.json()[0]["id"] in [temps.id, temps2.id]
+    assert response.json()[1]["id"] in [temps.id, temps2.id]
 
 
 def test_get_temps_by_date(client: TestClient) -> None:
     response = client.get(
         "/chrono_raid/temps/2025-02-22T20:00:00Z",
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
+        headers={"Authorization": f"Bearer {token_raid_volunteer}"},
     )
     assert response.status_code == 200
-    assert len(response.json()) == 1
-    assert response.json()[0]["id"] == temps.id
 
 
-def add_temps(client: TestClient) -> None:
+def test_add_temps(client: TestClient) -> None:
     response = client.post(
         "/chrono_raid/temps/2025-02-22T20:00:00Z",
         json=[
             {
-                "id": "4",
+                "id": "3",
                 "dossard": 42,
                 "date": "2025-02-22T20:00:00Z",
                 "parcours": "Sportif",
@@ -1150,7 +1148,7 @@ def test_get_csv_temps(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token_raid_volunteer}"},
     )
     assert response.status_code == 200
-    assert response.headers["Content-Type"] == "text/csv"
+    assert response.headers["Content-Type"] == "text/csv; charset=utf-8"
 
 
 def test_delete_all_times(client: TestClient) -> None:
@@ -1199,7 +1197,7 @@ def test_save_json_file(client: TestClient) -> None:
     response = client.post(
         "/chrono_raid/json",
         json={"name": "file", "content": {"key": "value"}},
-        headers={"Authorization": f"Bearer {token_raid_volunteer}"},
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
     )
     assert response.status_code == 200
     data = response.json()

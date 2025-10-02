@@ -1,4 +1,3 @@
-from collections import defaultdict
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
 
@@ -615,10 +614,12 @@ async def get_active_temps_grouped_by_dossard(
         .order_by(models_raid.Temps.dossard, models_raid.Temps.date),
     )
     temps_list = result.scalars().all()
-    grouped_temps = defaultdict(list)
+    grouped_temps: dict[int, list[models_raid.Temps]] = {}
     for temps in temps_list:
+        if temps.dossard not in grouped_temps:
+            grouped_temps[temps.dossard] = []
         grouped_temps[temps.dossard].append(temps)
-    return dict(grouped_temps)
+    return grouped_temps
 
 
 async def get_temps_by_date(
@@ -657,6 +658,7 @@ async def add_temps(
         last_modification_date=temps.last_modification_date,
     )
     db.add(temps_db)
+    await db.flush()
 
 
 async def update_temps(
@@ -696,4 +698,40 @@ async def delete_all_remarks(
     db: AsyncSession,
 ):
     await db.execute(delete(models_raid.Remark))
-    await db.commit()
+
+
+async def get_chrono_raid_data(
+    filename: str,
+    db: AsyncSession,
+) -> models_raid.ChronoRaidData | None:
+    data = await db.execute(
+        select(models_raid.ChronoRaidData).where(
+            models_raid.ChronoRaidData.filename == filename,
+        ),
+    )
+    return data.scalars().first()
+
+
+async def add_chrono_raid_data(
+    name: str,
+    content: str,
+    db: AsyncSession,
+):
+    db.add(
+        models_raid.ChronoRaidData(
+            filename=name,
+            content=content,
+        ),
+    )
+
+
+async def delete_chrono_raid_data(
+    filename: str,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_raid.ChronoRaidData).where(
+            models_raid.ChronoRaidData.filename == filename,
+        ),
+    )
+    await db.flush()

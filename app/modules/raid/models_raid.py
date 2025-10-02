@@ -326,6 +326,15 @@ class Temps(Base):
     last_modification_date: Mapped[datetime]
 
 
+class ChronoRaidData(Base):
+    __tablename__ = "chrono_raid_data"
+    filename: Mapped[str] = mapped_column(
+        primary_key=True,
+        index=True,
+    )
+    content: Mapped[str]
+
+
 class Remark(Base):
     __tablename__ = "chrono_raid_remaks"
     id: Mapped[str] = mapped_column(
