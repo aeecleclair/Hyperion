@@ -2,7 +2,6 @@ import json
 import logging
 import uuid
 from datetime import UTC, date, datetime
-from io import BytesIO
 from pathlib import Path
 
 from fastapi import Depends, File, HTTPException, Response, UploadFile
@@ -35,7 +34,6 @@ from app.utils.tools import (
     delete_all_folder_from_data,
     get_core_data,
     get_file_from_data,
-    get_file_path_from_data,
     get_random_string,
     is_user_member_of_any_group,
     save_file_as_data,
@@ -982,7 +980,7 @@ async def download_team_files_zip(
 async def get_temps(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user(included_groups=[GroupType.raid_volunteer, GroupType.raid_admin])
+        is_user(included_groups=[GroupType.raid_volunteer, GroupType.raid_admin]),
     ),
 ):
     """
@@ -1002,7 +1000,7 @@ async def get_temps_by_date(
     date: datetime,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user(included_groups=[GroupType.raid_volunteer, GroupType.raid_admin])
+        is_user(included_groups=[GroupType.raid_volunteer, GroupType.raid_admin]),
     ),
 ):
     """
@@ -1024,7 +1022,7 @@ async def add_or_update_time(
     date: datetime,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user(included_groups=[GroupType.raid_volunteer, GroupType.raid_admin])
+        is_user(included_groups=[GroupType.raid_volunteer, GroupType.raid_admin]),
     ),
 ):
     """
@@ -1054,7 +1052,7 @@ async def get_csv_temps(
     parcours: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user(included_groups=[GroupType.raid_volunteer, GroupType.raid_admin])
+        is_user(included_groups=[GroupType.raid_volunteer, GroupType.raid_admin]),
     ),
 ):
     """
@@ -1100,7 +1098,7 @@ async def delete_all_times(
 async def get_remarks(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user(included_groups=[GroupType.raid_volunteer, GroupType.raid_admin])
+        is_user(included_groups=[GroupType.raid_volunteer, GroupType.raid_admin]),
     ),
 ):
     """
@@ -1119,7 +1117,7 @@ async def add_remarks(
     remark_list: list[schemas_raid.Remark],
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user(included_groups=[GroupType.raid_volunteer, GroupType.raid_admin])
+        is_user(included_groups=[GroupType.raid_volunteer, GroupType.raid_admin]),
     ),
 ):
     """
@@ -1154,7 +1152,7 @@ async def get_json_file(
     filename: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user(included_groups=[GroupType.raid_volunteer, GroupType.raid_admin])
+        is_user(included_groups=[GroupType.raid_volunteer, GroupType.raid_admin]),
     ),
 ):
     data = await cruds_raid.get_chrono_raid_data(filename, db)
