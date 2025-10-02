@@ -43,7 +43,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_chrono_raid_remarks_id"), "chrono_raid_remarks", ["id"], unique=False,
+        op.f("ix_chrono_raid_remarks_id"),
+        "chrono_raid_remarks",
+        ["id"],
+        unique=False,
     )
     op.create_table(
         "chrono_raid_temps",
@@ -57,7 +60,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        op.f("ix_chrono_raid_temps_id"), "chrono_raid_temps", ["id"], unique=False,
+        op.f("ix_chrono_raid_temps_id"),
+        "chrono_raid_temps",
+        ["id"],
+        unique=False,
     )
 
 
