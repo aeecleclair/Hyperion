@@ -1165,7 +1165,10 @@ async def get_json_file(
             detail=f"Le fichier {filename}.json est introuvable",
         )
 
-    return {"name": filename, "content": data.content}
+    return schemas_raid.JsonFileResponse(
+        name=filename,
+        content=json.loads(data.content),
+    )
 
 
 @module.router.post(
@@ -1180,7 +1183,7 @@ async def save_json_file(
 ):
     await cruds_raid.delete_chrono_raid_data(json_file.name, db=db)
     await cruds_raid.add_chrono_raid_data(
-        content=str(json_file.content),
+        content=json.dumps(json_file.content),
         name=json_file.name,
         db=db,
     )
