@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import BaseModel
 
@@ -172,16 +172,16 @@ class RaidParticipantCheckout(BaseModel):
 class Temps(BaseModel):
     id: str
     dossard: int
-    date: str
+    date: datetime
     parcours: str
     ravito: str
     status: bool
-    last_modification_date: str
+    last_modification_date: datetime
 
 
 class Remark(BaseModel):
     id: str
-    date: str
+    date: datetime
     ravito: str
     text: str
 

@@ -1,6 +1,6 @@
 """Models file for module_raid"""
 
-from datetime import date
+from datetime import date, datetime
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -319,11 +319,11 @@ class Temps(Base):
         index=True,
     )
     dossard: Mapped[int]
-    date: Mapped[str]
+    date: Mapped[datetime]
     parcours: Mapped[str]
     ravito: Mapped[str]
     status: Mapped[bool]
-    last_modification_date: Mapped[str]
+    last_modification_date: Mapped[datetime]
 
 
 class Remark(Base):
@@ -332,6 +332,6 @@ class Remark(Base):
         primary_key=True,
         index=True,
     )
-    date: Mapped[str]
+    date: Mapped[datetime]
     ravito: Mapped[str]
     text: Mapped[str]

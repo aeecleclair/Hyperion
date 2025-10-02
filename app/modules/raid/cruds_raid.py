@@ -1,7 +1,6 @@
 from collections import defaultdict
 from collections.abc import Sequence
-from datetime import UTC, datetime
-from sqlite3 import IntegrityError
+from datetime import UTC, date, datetime
 
 from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -623,7 +622,7 @@ async def get_active_temps_grouped_by_dossard(
 
 
 async def get_temps_by_date(
-    date: str,
+    date: date,
     db: AsyncSession,
 ) -> Sequence[models_raid.Temps]:
     temps = await db.execute(
@@ -647,36 +646,34 @@ async def get_temps_by_id(
 async def add_temps(
     temps: schemas_raid.Temps,
     db: AsyncSession,
-) -> models_raid.Temps:
-    temps_db = models_raid.Temps(**temps.model_dump())
+) -> None:
+    temps_db = models_raid.Temps(
+        id=temps.id,
+        dossard=temps.dossard,
+        date=temps.date,
+        parcours=temps.parcours,
+        ravito=temps.ravito,
+        status=temps.status,
+        last_modification_date=temps.last_modification_date,
+    )
     db.add(temps_db)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return temps_db
 
 
 async def update_temps(
     temps: schemas_raid.Temps,
     db: AsyncSession,
-) -> schemas_raid.Temps:
+) -> None:
     await db.execute(
         update(models_raid.Temps)
         .where(models_raid.Temps.id == temps.id)
-        .values(**temps.model_dump(exclude_none=True)),
+        .values(**temps.model_dump(exclude_unset=True)),
     )
-    await db.commit()
-    return temps
 
 
 async def delete_all_times(
     db: AsyncSession,
 ):
     await db.execute(delete(models_raid.Temps))
-    await db.commit()
 
 
 async def get_remarks(
@@ -693,11 +690,6 @@ async def add_remarks(
     for remark in list_remarks:
         remark_db = models_raid.Remark(**remark.model_dump())
         db.add(remark_db)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
 
 
 async def delete_all_remarks(

@@ -1,13 +1,11 @@
-from io import BytesIO
 import json
 import logging
 import uuid
 from datetime import UTC, date, datetime
+from io import BytesIO
 from pathlib import Path
 
-from flask import Response
-
-from fastapi import Depends, File, HTTPException, UploadFile
+from fastapi import Depends, File, HTTPException, Response, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -983,7 +981,7 @@ async def download_team_files_zip(
 )
 async def get_temps(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volonteer)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volunteer)),
 ):
     """
     Return all times
@@ -999,12 +997,12 @@ async def get_temps(
     status_code=200,
 )
 async def get_temps_by_date(
-    date: str,
+    date: date,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volonteer)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volunteer)),
 ):
     """
-    Return all times for a given date
+    Return all times that have been modified after the given date
     """
     return await cruds_raid.get_temps_by_date(
         date=date,
@@ -1015,13 +1013,13 @@ async def get_temps_by_date(
 @module.router.post(
     "/chrono_raid/temps/{date}",
     response_model=list[schemas_raid.Temps],
-    status_code=200,
+    status_code=201,
 )
 async def add_or_update_time(
     list_temps: list[schemas_raid.Temps],
-    date: str,
+    date: datetime,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volonteer)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volunteer)),
 ):
     """
     Add or update a list of new times
@@ -1050,7 +1048,7 @@ async def add_or_update_time(
 async def get_csv_temps(
     parcours: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volonteer)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volunteer)),
 ):
     """
     Return a csv with all times of a given parcours
@@ -1063,7 +1061,7 @@ async def get_csv_temps(
     with BytesIO() as excel_io:
         for dossard, temps_list in grouped_temps.items():
             row = [str(dossard)] + [
-                temps.date.replace("T", " ") for temps in temps_list
+                temps.date.strftime("%Y-%m-%d %H:%M:%S") for temps in temps_list
             ]
             excel_io.write(",".join(row).encode("utf-8") + b"\n")
 
@@ -1100,7 +1098,7 @@ async def delete_all_times(
 )
 async def get_remarks(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volonteer)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volunteer)),
 ):
     """
     Return all remarks
@@ -1117,7 +1115,7 @@ async def get_remarks(
 async def add_remarks(
     remark_list: list[schemas_raid.Remark],
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volonteer)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volunteer)),
 ):
     """
     Add a list of remarks to the db
@@ -1149,7 +1147,7 @@ async def delete_all_remarks(
 )
 async def get_json_file(
     filename: str,
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volonteer)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volunteer)),
 ):
     """
     Returns the contents of a JSON file.
@@ -1176,7 +1174,7 @@ async def get_json_file(
 )
 async def save_json_file(
     json_file: schemas_raid.JsonFileResponse,
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_volonteer)),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.raid_admin)),
 ):
     """
     Save a JSON file.
