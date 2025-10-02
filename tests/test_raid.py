@@ -1,8 +1,9 @@
 import datetime
+import json
 import shutil
 import uuid
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 import pytest_asyncio
@@ -47,12 +48,15 @@ simple_user_without_team: models_users.CoreUser
 validated_team_captain: models_users.CoreUser
 validated_team_second: models_users.CoreUser
 
+raid_volunteer_user: models_users.CoreUser
+
 token_raid_admin: str
 token_simple: str
 token_simple_without_participant: str
 token_simple_without_team: str
 
 token_validated_team_captain: str
+token_raid_volunteer: str
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -87,6 +91,10 @@ async def init_objects() -> None:
 
     global validated_team_second
     validated_team_second = await create_user_with_groups([])
+
+    global raid_volunteer_user, token_raid_volunteer
+    raid_volunteer_user = await create_user_with_groups([GroupType.raid_volunteer])
+    token_raid_volunteer = create_api_access_token(raid_volunteer_user)
 
     document = models_raid.Document(
         id="some_document_id",
@@ -1033,3 +1041,115 @@ def test_download_team_files_zip_with_no_teams(client: TestClient):
         headers={"Authorization": f"Bearer {token_raid_admin}"},
     )
     assert response.status_code == 400
+
+
+# Tests for JSON file endpoints
+
+
+def test_get_json_file_success(client: TestClient, mocker: MockerFixture):
+    """Test successful retrieval of a JSON file."""
+    test_content = {"key": "value", "nested": {"data": "test"}}
+
+    # Mock the file operations
+    mock_file_path = mocker.Mock()
+    mock_file_path.exists.return_value = True
+
+    # Create a proper mock for the context manager
+    mock_file = mocker.mock_open(read_data=json.dumps(test_content))
+    mock_file_path.open = mock_file
+
+    mocker.patch(
+        "app.modules.raid.endpoints_raid.get_file_from_data",
+        return_value=mock_file_path,
+    )
+    mocker.patch("json.load", return_value=test_content)
+
+    response = client.get(
+        "/raid/chrono_raid/json/test_file",
+        headers={"Authorization": f"Bearer {token_raid_volunteer}"},
+    )
+
+    assert response.status_code == 200
+    response_data = response.json()
+    assert response_data["name"] == "test_file"
+    assert response_data["content"] == test_content
+
+
+def test_get_json_file_not_found(client: TestClient, mocker: MockerFixture):
+    """Test retrieval of a JSON file that doesn't exist."""
+    # Mock the file operations
+    mock_file_path = mocker.Mock()
+    mock_file_path.exists.return_value = False
+
+    mocker.patch(
+        "app.modules.raid.endpoints_raid.get_file_from_data",
+        return_value=mock_file_path,
+    )
+
+    response = client.get(
+        "/raid/chrono_raid/json/nonexistent_file",
+        headers={"Authorization": f"Bearer {token_raid_volunteer}"},
+    )
+
+    assert response.status_code == 404
+    assert "introuvable" in response.json()["detail"]
+
+
+def test_get_json_file_unauthorized(client: TestClient):
+    """Test retrieval of a JSON file without proper authorization."""
+    response = client.get(
+        "/raid/chrono_raid/json/test_file",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+
+    assert response.status_code == 403
+
+
+def test_save_json_file_success(client: TestClient, mocker: MockerFixture):
+    """Test successful saving of a JSON file."""
+    test_content = {"key": "value", "array": [1, 2, 3]}
+    request_data = {
+        "name": "test_save_file",
+        "content": test_content,
+    }
+
+    # Mock the file operations with proper context manager
+    mock_file_path = mocker.Mock()
+    mock_file = mocker.mock_open()
+    mock_file_path.open = mock_file
+
+    mocker.patch(
+        "app.modules.raid.endpoints_raid.get_file_path_from_data",
+        return_value=mock_file_path,
+    )
+    mock_json_dump = mocker.patch("app.modules.raid.endpoints_raid.json.dump")
+
+    response = client.post(
+        "/raid/chrono_raid/json",
+        json=request_data,
+        headers={"Authorization": f"Bearer {token_raid_volunteer}"},
+    )
+
+    assert response.status_code == 200
+    response_data = response.json()
+    assert response_data["name"] == "test_save_file"
+    assert response_data["content"] == test_content
+
+    # Verify that json.dump was called
+    mock_json_dump.assert_called_once()
+
+
+def test_save_json_file_unauthorized(client: TestClient):
+    """Test saving a JSON file without proper authorization."""
+    request_data = {
+        "name": "test_file",
+        "content": {"key": "value"},
+    }
+
+    response = client.post(
+        "/raid/chrono_raid/json",
+        json=request_data,
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+
+    assert response.status_code == 403
