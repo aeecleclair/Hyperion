@@ -1,8 +1,11 @@
+from io import BytesIO
 import json
 import logging
 import uuid
 from datetime import UTC, date, datetime
 from pathlib import Path
+
+from flask import Response
 
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -34,6 +37,7 @@ from app.utils.tools import (
     delete_all_folder_from_data,
     get_core_data,
     get_file_from_data,
+    get_file_path_from_data,
     get_random_string,
     is_user_member_of_any_group,
     save_file_as_data,
@@ -1051,25 +1055,28 @@ async def get_csv_temps(
     """
     Return a csv with all times of a given parcours
     """
-    CSV_FILE_PATH = Path(f"data/raid/chrono_raid/results_chrono_raid_{parcours}.csv")
-
     grouped_temps: dict[
         int,
         list[models_raid.Temps],
     ] = await cruds_raid.get_active_temps_grouped_by_dossard(parcours, db)
 
-    with Path.open(CSV_FILE_PATH, "w", encoding="utf-8") as f:
+    with BytesIO() as excel_io:
         for dossard, temps_list in grouped_temps.items():
             row = [str(dossard)] + [
                 temps.date.replace("T", " ") for temps in temps_list
             ]
-            f.write(",".join(row) + "\n")
+            excel_io.write(",".join(row).encode("utf-8") + b"\n")
 
-    return FileResponse(
-        CSV_FILE_PATH,
-        media_type="text/csv",
-        filename=f"results_chrono_raid_{parcours}.csv",
-    )
+        res = excel_io.getvalue()
+
+        headers = {
+            "Content-Disposition": f'attachment; filename="Résultat_Chrono_Raid_{parcours}.csv"',
+        }
+        return Response(
+            res,
+            headers=headers,
+            media_type="text/csv",
+        )
 
 
 @module.router.delete(
@@ -1148,7 +1155,7 @@ async def get_json_file(
     Returns the contents of a JSON file.
     """
 
-    JSON_FILE_PATH = Path(f"data/raid/chrono_raid/{filename}.json")
+    JSON_FILE_PATH = get_file_from_data("raid/chrono_raid", f"/{filename}.json")
 
     if not JSON_FILE_PATH.exists():
         raise HTTPException(
@@ -1175,9 +1182,10 @@ async def save_json_file(
     Save a JSON file.
     """
 
-    JSON_FILE_PATH = Path(f"data/raid/chrono_raid/{json_file.name}.json")
-
-    JSON_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    JSON_FILE_PATH = get_file_path_from_data(
+        "raid/chrono_raid",
+        f"{json_file.name}.json",
+    )
 
     with JSON_FILE_PATH.open("w", encoding="utf-8") as f:
         json.dump(json_file.content, f, ensure_ascii=False, indent=2)
