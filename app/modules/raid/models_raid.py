@@ -336,7 +336,7 @@ class ChronoRaidData(Base):
 
 
 class Remark(Base):
-    __tablename__ = "chrono_raid_remaks"
+    __tablename__ = "chrono_raid_remarks"
     id: Mapped[str] = mapped_column(
         primary_key=True,
         index=True,
