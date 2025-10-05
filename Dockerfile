@@ -15,4 +15,4 @@ COPY migrations migrations/
 COPY assets assets/
 COPY app app/
 
-ENTRYPOINT fastapi run app/main.py --workers "${NB_WORKERS:-1}"
+ENTRYPOINT fastapi run --workers "${NB_WORKERS:-1}"

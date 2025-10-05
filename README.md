@@ -271,7 +271,7 @@ Check that your Hyperion instance is up and running by navigating to http://loca
 ### Using the command-line interface
 
 ```bash
-fastapi dev app/main.py
+fastapi dev
 ```
 
 Check that your Hyperion instance is up and running by navigating to http://localhost:8000/information.
