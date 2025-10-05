@@ -8,7 +8,7 @@ Hyperion is the API of an open-source project launched by ÉCLAIR, the computer 
 
 The structure of this project is modular. Hyperion has a core that performs vital functions (authentication, database migration, authorization, etc). The other functions of Hyperion are realized in what we call modules. You can contribute to the project by adding modules if you wish.
 
-## Creating a virtual environment for Python 3.12
+## 1. Creating a virtual environment for Python 3.12
 
 ### Windows
 
@@ -66,7 +66,7 @@ Activate it
 pyenv activate hyperion
 ```
 
-## Install dependencies
+## 2. Install dependencies
 
 ### About Jellyfish and Rust
 
@@ -98,7 +98,7 @@ jellyfish==1.0.4                    # String Matching
 
 > If you need to remove all modules from your virtual environnement, delete your `.venv` folder.
 
-## Install and configure a database
+## 3. Install and configure a database
 
 Choose either SQLite or PostgreSQL.
 
@@ -198,7 +198,7 @@ services:
       - ./hyperion-db:/var/lib/postgresql/data
 ```
 
-## Complete the dotenv (`.env`) and the `config.yaml`
+## 4. Complete the dotenv (`.env`) and the `config.yaml`
 
 > [!IMPORTANT]
 > Copy the `.env.template` file in a new `.env` file, likewise copy `config.template.yaml` in a new `config.yaml`.
@@ -256,7 +256,7 @@ The `config.yaml` contains environment variables that are internal to the Python
 4. `USE_FACTORIES`: `True` by default, factories seed your database, if empty, with mocked data.
    This is useful on SQLite to repopulate your new database after dropping the previous one.
 
-## Launch the API
+## 5. Launch the API
 
 > [!WARNING]
 > Beforehand, check that your venv is activated.
@@ -276,7 +276,7 @@ fastapi dev
 
 Check that your Hyperion instance is up and running by navigating to http://localhost:8000/information.
 
-## Create your own user
+## 6. Create your own user
 
 There are many ways to do so, ranked here from easiest (GUI only) to hardest (CLI only).
 Note that registration and activation are distinct steps, so for fun you may register one way and activate your account another way.
@@ -349,7 +349,7 @@ curl --json '{
 }' http://localhost:8000/users/activate
 ```
 
-## Make the first user admin
+## 7. Make the first user admin
 
 > [!WARNING]
 > This may not work if you ran the factories
