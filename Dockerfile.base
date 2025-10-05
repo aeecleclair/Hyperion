@@ -7,7 +7,6 @@ ENV UV_COMPILE_BYTECODE=1
 WORKDIR /hyperion
 
 COPY requirements-common.txt .
-COPY requirements-prod.txt .
-RUN uv pip install --system --no-cache-dir -r requirements-prod.txt
+RUN uv pip install --system --no-cache-dir -r requirements-common.txt
 
 ENTRYPOINT ["/bin/bash"]

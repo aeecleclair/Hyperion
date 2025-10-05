@@ -3,10 +3,8 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'Dockerfile.base'
-      - 'requirements-common.txt'
-      - 'requirements-prod.txt'
-
+      - "Dockerfile.base"
+      - "requirements-common.txt"
 
 jobs:
   docker:
@@ -19,7 +17,7 @@ jobs:
 
       - name: Calculate requirements md5
         run: |
-          echo "REQUIREMENTS_MD5=$(cat requirements-common.txt requirements-prod.txt | md5sum | cut -d ' ' -f 1)" >> $GITHUB_ENV
+          echo "REQUIREMENTS_MD5=$(cat requirements-common.txt | md5sum | cut -d ' ' -f 1)" >> $GITHUB_ENV
 
       - name: Check if image exists
         run: |
