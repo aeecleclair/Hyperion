@@ -151,8 +151,12 @@ None (not so heavy, configuration not so hard).
 4. Create a database named `hyperion`
 
 ```sh
-psql -U postgres -c "CREATE DATABASE hyperion;"
+psql -U postgres -c "create database hyperion;"
 ```
+
+> [!TIP]
+> SQL keywords are case-insensitive by convention.
+> No need to write `CREATE DATABASE hyperion;`
 
 Now your Hyperion database can be explored by hand (as the `postgres` user, using your password you chose) with:
 
@@ -196,8 +200,11 @@ services:
 
 ## Complete the dotenv (`.env`) and the `config.yaml`
 
-Copy the `.env.template` file in a new `.env` file, same for `config.template.yaml` in a new `config.yaml`.
-These template files were carefully crafted to work for you with minimal changes to bring, and some preconfigured services.
+> [!IMPORTANT]
+> Copy the `.env.template` file in a new `.env` file, likewise copy `config.template.yaml` in a new `config.yaml`.
+
+> [!TIP]
+> These template files were carefully crafted to work for you with minimal personal changes to bring, and some preconfigured services.
 
 For later reference, these settings are documented in [app/core/config.py](./app/core/config.py).
 Check this file to know what can and should be set using these two files.
@@ -240,17 +247,13 @@ The `config.yaml` contains environment variables that are internal to the Python
    You can generate your own if you want, or just change a couple characters, or leave it as it is.
 2. `RSA_PRIVATE_PEM_STRING`: **Uncomment it**.
    You can generate your own if you want, or just change a couple characters, or leave it as it is.
-3. `AUTH_CLIENTS`: we already provide you some configuration to run Titan and authenticate to the swagger to use it at its full potential.
-   The auth clients allow other service to manage accounts and authenticate users using Hyperion ("Login with MyECL") as a SSO (Single-Sign On).
-4. `CORS_ORIGINS`: List of URLs that are authorized to contact Hyperion.
-   _In case you have CORS issues_ with your local Hyperion, we remind you in the comment that you can use `- "*"` to allow all origins.
-5. `SQLITE_DB`: **tells Hyperion whether to use SQLite or PostgreSQL**.
+3. `SQLITE_DB`: **tells Hyperion whether to use SQLite or PostgreSQL**.
    - If you use **SQLite**: this field should be a (relative) filename, by default we named it `app.db`, you can change this name.
      Hyperion will create this file for you and use it as the database.
      Any PostgreSQL-related configuration will be ignored.
    - If you use **PostgreSQL**: empty this field.
      Hyperion will fallback to PostgreSQL settings.
-6. `USE_FACTORIES`: `True` by default, factories seed your database, if empty, with mocked data.
+4. `USE_FACTORIES`: `True` by default, factories seed your database, if empty, with mocked data.
    This is useful on SQLite to repopulate your new database after dropping the previous one.
 
 ## Launch the API

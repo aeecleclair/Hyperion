@@ -84,15 +84,16 @@ AUTH_CLIENTS:
 # Hyperion settings #
 #####################
 
-# Origins for the CORS middleware. `["http://localhost"]` can be used for development.
+# Origins for the CORS middleware. `["http://localhost:3000"]` can be used for development.
 # See https://fastapi.tiangolo.com/tutorial/cors/
 # It should begin with 'http://' or 'https:// and should never end with a '/'
+# For a local instance, using a wildcard "*" is convenient
 CORS_ORIGINS:
-  - http://localhost:3000
-  - http://127.0.0.1:3000
-#  - "*"
+  - "*"
+#  - http://localhost:3000
+#  - http://127.0.0.1:3000
 
-LOG_DEBUG_MESSAGES: True
+LOG_DEBUG_MESSAGES: False
 # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (if possible PostgreSQL should be used instead)
 SQLITE_DB: app.db
 # If True, will print all SQL queries in the console
