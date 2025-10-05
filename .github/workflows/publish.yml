@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
 
 jobs:
   docker:
@@ -16,22 +16,22 @@ jobs:
 
       - name: Calculate requirements md5
         run: |
-            echo "REQUIREMENTS_MD5=$(cat requirements-common.txt requirements-prod.txt | md5sum | cut -d ' ' -f 1)" >> $GITHUB_ENV
-          
+          echo "REQUIREMENTS_MD5=$(cat requirements-common.txt | md5sum | cut -d ' ' -f 1)" >> $GITHUB_ENV
+
       - name: Check if base image exists
         run: |
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
               -u ${{ secrets.DOCKER_REGISTRY_USERNAME }}:${{ secrets.DOCKER_REGISTRY_PASSWORD }} \
               -H "Accept: application/vnd.oci.image.index.v1+json" \
               "${{ secrets.DOCKER_REGISTRY_URL }}/v2/hyperion-base/manifests/${{ env.REQUIREMENTS_MD5 }}")
-    
+
           echo "HTTP_CODE=$HTTP_CODE" >> $GITHUB_ENV
-    
+
           if [ "$HTTP_CODE" -ne 200 ]; then
             echo "Error: Base image not found, wait for the base image to be built first"
             exit 1
           fi
-    
+
           echo "EXISTS=true" >> $GITHUB_ENV
 
       - name: Docker metadata

@@ -3,7 +3,6 @@ aiosqlite==0.20.0
 boto3-stubs[essential]==1.38.23
 google-auth-stubs==0.3.0
 mypy[faster-cache]==1.16.0
-psycopg[binary]==3.2.1              # PostgreSQL adapter for synchronous operations at startup (database initializations & migrations), binary installation is the easiest way to install it
 pytest-alembic==0.12.1
 pytest-asyncio==0.26.0
 pytest-cov==6.1.1
