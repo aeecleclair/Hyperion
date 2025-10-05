@@ -385,7 +385,7 @@ class Settings(BaseSettings):
     @computed_field  # type: ignore[prop-decorator]
     @cached_property
     def REDIS_URL(cls) -> str | None:
-        if cls.REDIS_HOST:
+        if cls.REDIS_HOST is not None and cls.REDIS_HOST != "":
             # We need to include `:` before the password
             return (
                 f"redis://:{cls.REDIS_PASSWORD or ''}@{cls.REDIS_HOST}:{cls.REDIS_PORT}"

@@ -85,7 +85,7 @@ def init_redis_client(
     Returns None if Redis is not configured.
     """
     redis_client: redis.Redis | None = None
-    if settings.REDIS_HOST:
+    if settings.REDIS_HOST is not None and settings.REDIS_HOST != "":
         try:
             redis_client = redis.Redis(
                 host=settings.REDIS_HOST,
@@ -110,7 +110,7 @@ async def init_scheduler(
     settings: Settings,
     _dependency_overrides: dict[Callable[..., Any], Callable[..., Any]],
 ) -> Scheduler:
-    if settings.REDIS_HOST:
+    if settings.REDIS_HOST is not None and settings.REDIS_HOST != "":
         scheduler = Scheduler()
 
         await scheduler.start(
