@@ -38,32 +38,36 @@ RSA_PRIVATE_PEM_STRING: |
   #8DqGvGpLkZkwbtcDmcX1zQoHjUo7RvoShZoapr59ihfrkiiEsXOkuGw=
   #-----END RSA PRIVATE KEY-----
 
-# Host or url of the instance of Hyperion
-# This url will be especially used for oidc/oauth2 discovery endpoint and links send by email
-# NOTE: A trailing / is required
-CLIENT_URL: http://127.0.0.1:8000/
+# Host or URL of the instance of Hyperion
+# This url will be especially used for OIDC/OAuth2 discovery endpoint and links send by email
+CLIENT_URL: http://127.0.0.1:8000/ # NOTE: A trailing / is required
 
 # Sometimes, when running third services with oidc inside Docker containers, and running Hyperion on your local device
 # you may need to use a different url for call made from docker and call made from your device
 # For exemple:
-#   you will access the login page from your browser http://localhost:8000/auth/authorize
-#   but the docker container should call http://host.docker.internal:8000/auth/token and not your localhost address
-# NOTE: A trailing / is required
-#OVERRIDDEN_CLIENT_URL_FOR_OIDC: "http://host.docker.internal:8000/"
+# - you will access the login page from your browser http://localhost:8000/auth/authorize
+# - but the docker container should call http://host.docker.internal:8000/auth/token and not your localhost address
+#OVERRIDDEN_CLIENT_URL_FOR_OIDC: "http://host.docker.internal:8000/" # NOTE: A trailing / is required
 
 # Configure AuthClients, to allow services to authenticate users using OAuth2 or Openid connect
 # The following format should be used in yaml config files:
+# Origins for the CORS middleware. `["http://localhost:3000"]` can be used for development.
+# See https://fastapi.tiangolo.com/tutorial/cors/
+# It should begin with 'http://' or 'https:// and should never end with a '/'
+CORS_ORIGINS:
+  - "*" # For a local instance, using a wildcard "*" is convenient
+#  - http://localhost:3000
+#  - http://127.0.0.1:3000
 # ```yml
 # AUTH_CLIENTS:
 #   <ClientId>:
-#     secret: <ClientSecret>
+#     secret: <ClientSecret> (or <null> to use PKCE instead of a client secret)
 #     redirect_uri:
 #       - <RedirectUri1>
 #       - <RedirectUri2>
 #     auth_client: <AuthClientClassName>
 # ```
 # `AuthClientClassName` should be a class from `app.utils.auth.providers`
-# `secret` may be omitted to use PKCE instead of a client secret
 AUTH_CLIENTS:
   Titan:
     secret:
@@ -84,20 +88,9 @@ AUTH_CLIENTS:
 # Hyperion settings #
 #####################
 
-# Origins for the CORS middleware. `["http://localhost:3000"]` can be used for development.
-# See https://fastapi.tiangolo.com/tutorial/cors/
-# It should begin with 'http://' or 'https:// and should never end with a '/'
-# For a local instance, using a wildcard "*" is convenient
-CORS_ORIGINS:
-  - "*"
-#  - http://localhost:3000
-#  - http://127.0.0.1:3000
-
+SQLITE_DB: app.db # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (if possible PostgreSQL should be used instead)
+DATABASE_DEBUG: False # If True, will print all SQL queries in the console
 LOG_DEBUG_MESSAGES: False
-# If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (if possible PostgreSQL should be used instead)
-SQLITE_DB: app.db
-# If True, will print all SQL queries in the console
-DATABASE_DEBUG: False
 # if True and the database is empty, it will be seeded with mocked data
 USE_FACTORIES: True
 
