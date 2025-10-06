@@ -10,7 +10,12 @@ The structure of this project is modular. Hyperion has a core that performs vita
 
 ## 1. Creating a virtual environment for Python 3.12
 
+<details>
+<summary>
+
 ### Windows
+
+</summary>
 
 Create the virtual environment
 
@@ -38,7 +43,14 @@ Activate it
 .\.venv\Scripts\activate
 ```
 
+</details>
+
+<details>
+<summary>
+
 ### macOS (using Pyenv)
+
+</summary>
 
 Install Pyenv
 
@@ -65,6 +77,8 @@ Activate it
 ```bash
 pyenv activate hyperion
 ```
+
+</details>
 
 ## 2. Install dependencies
 
@@ -140,7 +154,12 @@ None (not so heavy, configuration not so hard).
 
 #### Configuration
 
+<details>
+<summary>
+
 ##### Without Docker: native binaries
+
+</summary>
 
 1. Download the installer: https://www.enterprisedb.com/downloads/postgres-postgresql-downloads
 2. Launch it and trust the wizard
@@ -170,7 +189,14 @@ then running SQL or Postgres commands in this shell, or
 psql -U postgres -d hyperion -c "select firstname from core_user;"
 ```
 
+</details>
+
+<details>
+<summary>
+
 ##### With Docker
+
+</summary>
 
 > [!WARNING]
 > Work in progress
@@ -198,6 +224,8 @@ services:
       - ./hyperion-db:/var/lib/postgresql/data
 ```
 
+</details>
+
 ## 4. Complete the dotenv (`.env`) and the `config.yaml`
 
 > [!IMPORTANT]
@@ -217,7 +245,12 @@ The `.env` contains environment variables which need to be accessed by the OS or
 
 Again there's nothing to do.
 
+<details>
+<summary>
+
 #### With PostgreSQL
+
+</summary>
 
 Set your user, password, host and db.
 
@@ -238,6 +271,8 @@ POSTGRES_PASSWORD=""
 POSTGRES_HOST="hyperion-db"
 POSTGRES_DB="hyperion"
 ```
+
+</details>
 
 ### `config.yaml`
 
@@ -281,7 +316,12 @@ Check that your Hyperion instance is up and running by navigating to http://loca
 There are many ways to do so, ranked here from easiest (GUI only) to hardest (CLI only).
 Note that registration and activation are distinct steps, so for fun you may register one way and activate your account another way.
 
+<details>
+<summary>
+
 ### With CalypSSO
+
+</summary>
 
 #### Registering your account
 
@@ -292,12 +332,26 @@ Go to http://localhost:8000/calypsso/register and type a valid email address to 
 Go back to the shell running your Hyperion instance, in the logs look for a link looking like http://localhost:3000/calypsso/activate?activation_token=12345.
 Open it and activate (end the creation of) your account.
 
+</details>
+
+<details>
+<summary>
+
 ### With Titan
+
+</summary>
 
 1. Click "_Se connecter_" on the login page: you land CalypSSO's login page.
 2. Click "_Créer un compte_" and create your account using CalypSSO as above.
 
+</details>
+
+<details>
+<summary>
+
 ### Using the API through the swagger
+
+</summary>
 
 #### Registering your account
 
@@ -314,7 +368,14 @@ Open it and activate (end the creation of) your account.
 4. Open it, click "Try it out".
 5. Fill in your information, using the `activation_token` you copied (click "Schema" next to "Edit Value" so see what fields are optional), and click "Execute".
 
+</details>
+
+<details>
+<summary>
+
 ### Using the API in command line
+
+</summary>
 
 > [!TIP]
 > On Windows, `curl` is different.
@@ -349,6 +410,8 @@ curl --json '{
 }' http://localhost:8000/users/activate
 ```
 
+</details>
+
 ## 7. Make the first user admin
 
 > [!WARNING]
@@ -362,7 +425,12 @@ curl -X POST http://localhost:8000/users/make-admin
 
 ---
 
+<details>
+<summary>
+
 # Beyond initial configuration
+
+</summary>
 
 ## Install Docker or an equivalent
 
@@ -419,3 +487,5 @@ See [app/core/google_api/README.md](./app/core/google_api/README.md) for more in
 For production we encourage to use multiple Uvicorn workers. You can use our [docker image](./Dockerfile) and [docker-compose file](./docker-compose.yaml) files to run Hyperion with Unicorn.
 
 You should use our [init file](./init.py) to ensure that database initialization and migrations are only run once.
+
+</details>
