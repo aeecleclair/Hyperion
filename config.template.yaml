@@ -111,13 +111,14 @@ SMTP_SERVER: ""
 SMTP_USERNAME: ""
 SMTP_PASSWORD: ""
 SMTP_EMAIL: ""
+
 ##########################
 # Firebase Configuration #
 ##########################
 
 # To enable Firebase push notification capabilities, a JSON key file named `firebase.json` should be placed at Hyperion root.
 # This file can be created and downloaded from [Google cloud, IAM and administration, Service account](https://console.cloud.google.com/iam-admin/serviceaccounts) page.
-#USE_FIREBASE: False
+USE_FIREBASE: False
 
 ########################
 # Matrix configuration #
@@ -128,9 +129,9 @@ SMTP_EMAIL: ""
 # If the following parameters are not set, logging won't use the Matrix handler
 # MATRIX_SERVER_BASE_URL is optional, the official Matrix server will be used if not configured
 # Advanced note: Username and password will be used to ask for an access token. A Matrix custom client `Hyperion` is used to make all requests
-#MATRIX_SERVER_BASE_URL: ""
-#MATRIX_TOKEN: ""
-#MATRIX_LOG_ERROR_ROOM_ID: ""
+#MATRIX_SERVER_BASE_URL: "https://matrix.example.org/"
+#MATRIX_TOKEN: "mct_..."
+#MATRIX_LOG_ERROR_ROOM_ID: "!...:myecl.fr"
 #MATRIX_LOG_AMAP_ROOM_ID: ""
 
 #############################
@@ -176,16 +177,21 @@ SMTP_EMAIL: ""
 # HELLOASSO_API_BASE should have the format: `api.helloasso-sandbox.com`
 # HelloAsso only allow 20 simultaneous active access token. Note that each Hyperion worker will need its own access token.
 
-# [["name", "helloasso_client_id", "helloasso_client_secret", "helloasso_slug", "redirection_uri"]]
-#HELLOASSO_CONFIGURATIONS: []
-#HELLOASSO_API_BASE: ""
+#HELLOASSO_CONFIGURATIONS: # [["name", "helloasso_client_id", "helloasso_client_secret", "helloasso_slug", "redirection_uri"]]
+#  MYECLPAY:
+#    helloasso_client_id: ...
+#    helloasso_client_secret: ...
+#    helloasso_slug: "AEECL"
+#    redirection_uri: null
+#HELLOASSO_API_BASE: "api.helloasso-sandbox.com"
 
 # Maximum wallet balance for MyECLPay in cents, we will prevent user from adding more money to their wallet if it will make their balance exceed this value
-#MYECLPAY_MAXIMUM_WALLET_BALANCE: 1000
+#MYECLPAY_MAXIMUM_WALLET_BALANCE: 8000
 
 # Trusted urls is a list of redirect payment url that can be trusted by Hyperion.
 # These urls will be used to validate the redirect url provided by the front
-#TRUSTED_PAYMENT_REDIRECT_URLS: []
+#TRUSTED_PAYMENT_REDIRECT_URLS:
+#  - http://localhost:3000/static.html
 
 # MyECLPay requires an external service to recurrently check for transactions and state integrity, this service needs an access to all the data related to the transactions and the users involved
 # This service will use a special token to access the data
