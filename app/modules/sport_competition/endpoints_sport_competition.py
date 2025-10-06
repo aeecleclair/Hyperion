@@ -3290,7 +3290,7 @@ async def get_payments_by_user_id(
             db,
         )
     )
-    user_db = await cruds_users.get_user_by_id(user_id, db)
+    user_db = await cruds_users.get_user_by_id(db, user_id)
     if not user_db:
         raise HTTPException(
             status_code=404,
