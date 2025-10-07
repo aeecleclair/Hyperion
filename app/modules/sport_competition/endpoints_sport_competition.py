@@ -3283,9 +3283,28 @@ async def get_payments_by_user_id(
 
     **User must get his own payments or be competition admin to use this endpoint**
     """
+    competition_groups = (
+        await cruds_sport_competition.load_user_competition_groups_memberships(
+            user.id,
+            edition.id,
+            db,
+        )
+    )
+    user_db = await cruds_users.get_user_by_id(db, user_id)
+    if not user_db:
+        raise HTTPException(
+            status_code=404,
+            detail="The user does not exist.",
+        )
+
     if not (
         user_id == user.id
         or is_user_member_of_any_group(user, [GroupType.competition_admin])
+        or (
+            CompetitionGroupType.schools_bds
+            in [competition_group.group for competition_group in competition_groups]
+            and user.school_id == user_db.school_id
+        )
     ):
         raise HTTPException(
             status_code=403,
@@ -3525,7 +3544,7 @@ async def get_payment_url(
 
 @module.router.get(
     "/competition/volunteers/shifts",
-    response_model=list[schemas_sport_competition.VolunteerShift],
+    response_model=list[schemas_sport_competition.VolunteerShiftComplete],
     status_code=200,
 )
 async def get_all_volunteer_shifts(
