@@ -231,13 +231,17 @@ services:
 > [!IMPORTANT]
 > Copy the `.env.template` file in a new `.env` file, likewise copy `config.template.yaml` in a new `config.yaml`.
 
+```bash
+cp .env.template .env && cp config.template.yaml config.yaml
+```
+
 > [!TIP]
 > These template files were carefully crafted to work for you with minimal personal changes to bring, and some preconfigured services.
 
 For later reference, these settings are documented in [app/core/config.py](./app/core/config.py).
 Check this file to know what can and should be set using these two files.
 
-### `.env`
+### The `.env` file
 
 The `.env` contains environment variables which need to be accessed by the OS or by other services, such as the database.
 
@@ -274,7 +278,7 @@ POSTGRES_DB="hyperion"
 
 </details>
 
-### `config.yaml`
+### The `config.yaml` file
 
 The `config.yaml` contains environment variables that are internal to the Python runtime _because_ they are only used in the Python code.
 
@@ -289,7 +293,10 @@ The `config.yaml` contains environment variables that are internal to the Python
    - If you use **PostgreSQL**: empty this field.
      Hyperion will fallback to PostgreSQL settings.
 4. `USE_FACTORIES`: `True` by default, factories seed your database, if empty, with mocked data.
-   This is useful on SQLite to repopulate your new database after dropping the previous one.
+   This is useful on SQLite to repopulate your new database after dropping the previous one, of to create automatically your own user with admin privileges (see `FACTORIES_DEMO_USERS` below).
+5. `FACTORIES_DEMO_USERS`: **Replace the first user's data with yours**.
+   These future users will be created automatically when launching Hyperion with an empty database.
+   Plus, your user will be there with your password and be admin out of the box.
 
 ## 5. Launch the API
 
@@ -311,15 +318,21 @@ fastapi dev
 
 Check that your Hyperion instance is up and running by navigating to http://localhost:8000/information.
 
-## 6. Create your own user
+## 6. Create your own user (if not yet the case using factories)
 
-There are many ways to do so, ranked here from easiest (GUI only) to hardest (CLI only).
-Note that registration and activation are distinct steps, so for fun you may register one way and activate your account another way.
+There are at least 5 distinct ways to do so outside the use of factories, ranked here from easiest (~GUI) to hardest (~CLI).
+
+> [!IMPORTANT]
+> Using factories is the recommended way.
+> All others methods are legacy and kept here for historical reasons.
+> Feel free to create other users other ways for learning purposes.
+
+Note that registration and activation are distinct steps when calling calls to the API, so for fun you may register one way and activate your account another way (if you create your user directly in database, this distinction is not relevant).
 
 <details>
 <summary>
 
-### With CalypSSO
+### Using CalypSSO
 
 </summary>
 
@@ -337,7 +350,7 @@ Open it and activate (end the creation of) your account.
 <details>
 <summary>
 
-### With Titan
+### Using Titan
 
 </summary>
 
@@ -412,15 +425,52 @@ curl --json '{
 
 </details>
 
-## 7. Make the first user admin
+<details>
+<summary>
+
+### Using a database client in command line
+
+</summary>
 
 > [!WARNING]
-> This may not work if you ran the factories
+> Work in progress
 
-If there is exactly one user in the database, you can make it admin using the following command:
+1. Open a shell connected to your database for Hyperion
+   - PostgreSQL: see above, generally `psql -U <username> -d hyperion`.
+   - SQLite: ...
+2. Insert your own user into the users' table (for `centrale_lyon` school, generate your own user UUID and salted hash, feel free to add insert values into nullable columns) :
+
+```sql
+insert into core_user (id, firstname, name, nickname, email, password_hash, school_id, account_type) values ('01234567-89ab-cdef-0123-456789abcdef', '<Fistname>', '<Name>', '<Nickname>', '<email>', '$2b$<saltlength>$<yourpasswordsaltedhash>', 'd9772da7-1142-4002-8b86-b694b431dfed', 'student');
+```
+
+</details>
+
+## 7. Make your user admin (if not yet the case using factories)
+
+> [!IMPORTANT]
+> Again, using factories is the recommended way.
+
+### If there is exactly one user in the database
+
+Then you can make it admin using the following command:
 
 ```bash
 curl -X POST http://localhost:8000/users/make-admin
+```
+
+### Using a database client in command line
+
+> [!WARNING]
+> Work in progress
+
+1. Open a shell connected to your database for Hyperion
+   - PostgreSQL: see above, generally `psql -U <username> -d hyperion`.
+   - SQLite: ...
+2. Get the UUID for your own user, then insert it and the UUID for the admin grouptype in the memberships table :
+
+```sql
+insert into core_membership (user_id, group_id) values ('<Your user_id>', '0a25cb76-4b63-4fd3-b939-da6d9feabf28');
 ```
 
 ---

@@ -49,8 +49,6 @@ CLIENT_URL: http://127.0.0.1:8000/ # NOTE: A trailing / is required
 # - but the docker container should call http://host.docker.internal:8000/auth/token and not your localhost address
 #OVERRIDDEN_CLIENT_URL_FOR_OIDC: "http://host.docker.internal:8000/" # NOTE: A trailing / is required
 
-# Configure AuthClients, to allow services to authenticate users using OAuth2 or Openid connect
-# The following format should be used in yaml config files:
 # Origins for the CORS middleware. `["http://localhost:3000"]` can be used for development.
 # See https://fastapi.tiangolo.com/tutorial/cors/
 # It should begin with 'http://' or 'https:// and should never end with a '/'
@@ -58,6 +56,14 @@ CORS_ORIGINS:
   - "*" # For a local instance, using a wildcard "*" is convenient
 #  - http://localhost:3000
 #  - http://127.0.0.1:3000
+
+################
+# Auth Clients #
+################
+
+# Configure AuthClients, to allow services to authenticate users using OAuth2 or OpenID Connect
+# The Python-expected type is `dict[str, AuthClientConfig]` where the class `AuthClientConfig` is from `app.core.utils.config`.
+# Thus, the following format should be used in yaml config files:
 # ```yml
 # AUTH_CLIENTS:
 #   <ClientId>:
@@ -70,10 +76,12 @@ CORS_ORIGINS:
 # `AuthClientClassName` should be a class from `app.utils.auth.providers`
 AUTH_CLIENTS:
   Titan:
-    secret:
+    secret: null # PKCE
     redirect_uri:
       - http://localhost:3000/static.html
       - http://127.0.0.1:3000/static.html
+      - https://myecl.fr/static.html
+      - "fr.myecl.titan://authorized
     auth_client: AppAuthClient
   Postman:
     secret: PostmanSecret
@@ -91,8 +99,48 @@ AUTH_CLIENTS:
 SQLITE_DB: app.db # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (if possible PostgreSQL should be used instead)
 DATABASE_DEBUG: False # If True, will print all SQL queries in the console
 LOG_DEBUG_MESSAGES: False
-# if True and the database is empty, it will be seeded with mocked data
-USE_FACTORIES: True
+NB_WORKERS: 6 # Not yet used...
+
+#############
+# Factories #
+#############
+
+USE_FACTORIES: True # if True and the database is empty, it will be seeded with mocked data
+
+# Configure demo users, to populate the db with your users
+# The Python-expected type is `list[UserDemoFactoryConfig]` where the class `UserDemoFactoryConfig` is from `app.core.utils.config`.
+# Thus, the following format should be used in yaml config files:
+# ```yml
+# FACTORIES_DEMO_USERS
+#   - firstname: <Firstname>
+#     name: <Name>
+#     nickname: <Nickname> (or <null>)
+#     email: <firstname.name@etu.ec-lyon.fr>
+#     password: <password>
+#     groups:
+#       - <UUID value 1 of a GroupType>
+#       - <UUID value 2 of a GroupType>
+# ```
+# Group UUIDs should be values of the GroupType enum from `app.core.groups.groupe_type.GroupType`
+FACTORIES_DEMO_USERS:
+  - firstname: Your Firstname
+    name: Your Name
+    nickname: Your Nickname
+    email: your-firstname.your-name@etu.ec-lyon.fr
+    password: Your_P@$$w0rd
+    groups:
+      - 0a25cb76-4b63-4fd3-b939-da6d9feabf28 # admin
+      - 45649735-866a-49df-b04b-a13c74fd5886 # AE
+      - 1f841bd9-00be-41a7-96e1-860a18a46105 # eclair
+  - firstname: Foucauld
+    name: Bellanger
+    nickname: Ñool
+    email: foucauld.bellanger@etu.ec-lyon.fr
+    password: azerty
+    groups:
+      - 1f841bd9-00be-41a7-96e1-860a18a46105
+      - 45649735-866a-49df-b04b-a13c74fd5886
+      - 4ec5ae77-f955-4309-96a5-19cc3c8be71c
 
 #####################################
 # SMTP configuration using starttls #
