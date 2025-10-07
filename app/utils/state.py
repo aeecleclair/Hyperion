@@ -152,7 +152,7 @@ def init_payment_tools(
     hyperion_error_logger: logging.Logger,
 ) -> dict[HelloAssoConfigName, PaymentTool]:
     if settings.HELLOASSO_API_BASE is None:
-        hyperion_error_logger.error(
+        hyperion_error_logger.warning(
             "HelloAsso API base URL is not set in settings, payment won't be available",
         )
         return {}
