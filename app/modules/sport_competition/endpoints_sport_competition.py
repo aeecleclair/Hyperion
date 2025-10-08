@@ -1528,6 +1528,31 @@ async def get_teams_for_sport(
 
 
 @module.router.get(
+    "/competition/teams/schools/{school_id}",
+    response_model=list[schemas_sport_competition.TeamComplete],
+)
+async def get_teams_for_school(
+    school_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+    user: models_users.CoreUser = Depends(is_user()),
+) -> list[schemas_sport_competition.TeamComplete]:
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
+    if school is None:
+        raise HTTPException(
+            status_code=404,
+            detail="School not found in the database",
+        )
+    return await cruds_sport_competition.load_all_teams_by_school_id(
+        school_id,
+        edition.id,
+        db,
+    )
+
+
+@module.router.get(
     "/competition/teams/sports/{sport_id}/schools/{school_id}",
     response_model=list[schemas_sport_competition.TeamComplete],
 )
@@ -1659,9 +1684,22 @@ async def edit_team(
             status_code=404,
             detail="Team not found in the database",
         )
-    if user.id != stored.captain_id and GroupType.competition_admin.value not in [
-        group.id for group in user.groups
-    ]:
+    user_competition_groups = (
+        await cruds_sport_competition.load_user_competition_groups_memberships(
+            user.id,
+            stored.edition_id,
+            db,
+        )
+    )
+    if (
+        user.id != stored.captain_id
+        and GroupType.competition_admin.value not in [group.id for group in user.groups]
+        and (
+            CompetitionGroupType.schools_bds
+            not in [group.group for group in user_competition_groups]
+            or user.school_id != stored.school_id
+        )
+    ):
         raise HTTPException(status_code=403, detail="Unauthorized action")
     if team_info.captain_id is not None and team_info.captain_id != stored.captain_id:
         sport = await cruds_sport_competition.load_sport_by_id(
@@ -1712,6 +1750,9 @@ async def delete_team(
     team_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: schemas_users.CoreUser = Depends(is_user()),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
 ) -> None:
     stored = await cruds_sport_competition.load_team_by_id(team_id, db)
     if stored is None:
@@ -1719,9 +1760,22 @@ async def delete_team(
             status_code=404,
             detail="Team not found in the database",
         )
-    if user.id != stored.captain_id and GroupType.competition_admin.value not in [
-        group.id for group in user.groups
-    ]:
+    user_competition_groups = (
+        await cruds_sport_competition.load_user_competition_groups_memberships(
+            user.id,
+            edition.id,
+            db,
+        )
+    )
+    if (
+        user.id != stored.captain_id
+        and GroupType.competition_admin.value not in [group.id for group in user.groups]
+        and (
+            CompetitionGroupType.schools_bds
+            not in [group.group for group in user_competition_groups]
+            or user.school_id != stored.school_id
+        )
+    ):
         raise HTTPException(status_code=403, detail="Unauthorized action")
     await cruds_sport_competition.delete_team_by_id(stored.id, db)
 
