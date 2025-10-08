@@ -3152,6 +3152,49 @@ async def delete_product_variant(
 
 
 @module.router.get(
+    "/competition/purchases/schools/{school_id}",
+    response_model=dict[str, list[schemas_sport_competition.PurchaseComplete]],
+    status_code=200,
+)
+async def get_purchases_by_school_id(
+    school_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: schemas_sport_competition.CompetitionUser = Depends(
+        is_competition_user(competition_group=CompetitionGroupType.schools_bds),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Get a school's purchases.
+
+    **User must be competition admin to use this endpoint**
+    """
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
+    if not school:
+        raise HTTPException(
+            status_code=404,
+            detail="School not found.",
+        )
+    users = await cruds_sport_competition.load_all_competition_users_by_school(
+        school_id,
+        edition.id,
+        db,
+    )
+    purchases_by_user: dict[str, list[schemas_sport_competition.PurchaseComplete]] = {}
+    for db_user in users:
+        purchases_by_user[
+            db_user.user_id
+        ] = await cruds_sport_competition.load_purchases_by_user_id(
+            db_user.user_id,
+            edition.id,
+            db,
+        )
+    return purchases_by_user
+
+
+@module.router.get(
     "/competition/purchases/users/{user_id}",
     response_model=list[schemas_sport_competition.Purchase],
     status_code=200,
@@ -3352,7 +3395,7 @@ async def delete_purchase(
 
 
 @module.router.get(
-    "/competition/schools/{school_id}/payments",
+    "/competition/payments/schools/{school_id}",
     response_model=dict[str, list[schemas_sport_competition.PaymentComplete]],
     status_code=200,
 )
@@ -3391,12 +3434,13 @@ async def get_users_payments_by_school_id(
     )
     payments_by_user: dict[str, list[schemas_sport_competition.PaymentComplete]] = {}
     for db_user in users:
-        payments = await cruds_sport_competition.load_user_payments(
+        payments_by_user[
+            db_user.user_id
+        ] = await cruds_sport_competition.load_user_payments(
             db_user.user_id,
             edition.id,
             db,
         )
-        payments_by_user[user.user_id] = payments
     return payments_by_user
 
 
