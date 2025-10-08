@@ -1598,6 +1598,12 @@ async def create_team(
     ),
     user: schemas_users.CoreUser = Depends(is_user()),
 ) -> schemas_sport_competition.Team:
+    if not edition.inscription_enabled:
+        raise HTTPException(
+            status_code=400,
+            detail="Inscriptions are not enabled for the current edition",
+        )
+
     if GroupType.competition_admin.value not in [
         group.id for group in user.groups
     ] and (user.id != team_info.captain_id or user.school_id != team_info.school_id):
@@ -2146,6 +2152,12 @@ async def withdraw_from_sport(
         get_current_edition,
     ),
 ) -> None:
+    if not edition.inscription_enabled:
+        raise HTTPException(
+            status_code=400,
+            detail="Inscriptions are not enabled for this edition",
+        )
+
     participant = await cruds_sport_competition.load_participant_by_ids(
         user.user_id,
         sport_id,
@@ -2193,6 +2205,15 @@ async def delete_participant(
         get_current_edition,
     ),
 ) -> None:
+    if (
+        GroupType.competition_admin.value
+        not in [group.id for group in user.user.groups]
+        and not edition.inscription_enabled
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Editions inscriptions are closed",
+        )
     participant = await cruds_sport_competition.load_participant_by_ids(
         user_id,
         sport_id,
@@ -3188,6 +3209,12 @@ async def create_purchase(
 
     **User must create a purchase for themself**
     """
+    if not edition.inscription_enabled:
+        raise HTTPException(
+            status_code=403,
+            detail="You can't make a purchase when inscriptions are closed",
+        )
+
     competition_user = await cruds_sport_competition.load_competition_user_by_id(
         user.id,
         edition.id,
@@ -3280,6 +3307,11 @@ async def delete_purchase(
 
     **User must delete their own purchase**
     """
+    if not edition.inscription_enabled:
+        raise HTTPException(
+            status_code=403,
+            detail="You can't delete a purchase when inscriptions are closed",
+        )
 
     db_purchase = await cruds_sport_competition.load_purchase_by_ids(
         user.id,
@@ -3317,6 +3349,55 @@ async def delete_purchase(
 
 # endregion: Purchases
 # region: Payments
+
+
+@module.router.get(
+    "/competition/schools/{school_id}/payments",
+    response_model=dict[str, list[schemas_sport_competition.PaymentComplete]],
+    status_code=200,
+)
+async def get_users_payments_by_school_id(
+    school_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: schemas_sport_competition.CompetitionUser = Depends(
+        is_competition_user(competition_group=CompetitionGroupType.schools_bds),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Get a school's users payments.
+
+    **User must be competition admin to use this endpoint**
+    """
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
+    if not school:
+        raise HTTPException(
+            status_code=404,
+            detail="The school does not exist.",
+        )
+    if user.user.school_id != school_id and GroupType.competition_admin.value not in [
+        group.id for group in user.user.groups
+    ]:
+        raise HTTPException(
+            status_code=403,
+            detail="You're not allowed to see other schools payments.",
+        )
+    users = await cruds_sport_competition.load_all_competition_users_by_school(
+        school_id,
+        edition.id,
+        db,
+    )
+    payments_by_user: dict[str, list[schemas_sport_competition.PaymentComplete]] = {}
+    for db_user in users:
+        payments = await cruds_sport_competition.load_user_payments(
+            db_user.user_id,
+            edition.id,
+            db,
+        )
+        payments_by_user[user.user_id] = payments
+    return payments_by_user
 
 
 @module.router.get(
@@ -3535,7 +3616,11 @@ async def get_payment_url(
     """
     Get payment url
     """
-
+    if not edition.inscription_enabled:
+        raise HTTPException(
+            status_code=403,
+            detail="Inscriptions are not enabled for this edition.",
+        )
     purchases = await cruds_sport_competition.load_purchases_by_user_id(
         user.id,
         edition.id,
