@@ -21,16 +21,15 @@ WORKDIR /hyperion
 
 # First copy only the requirements to leverage Docker cache
 COPY requirements-common.txt .
-COPY requirements-prod.txt .
 
 # Install dependencies using uv (beaucoup plus rapide)
-RUN uv pip install --system --no-cache -r requirements-prod.txt
+RUN uv pip install --system --no-cache -r requirements-common.txt
 
 # Then copy the rest of the application code
-COPY pyproject.toml .
 COPY alembic.ini .
-COPY migrations migrations/
+COPY pyproject.toml .
 COPY assets assets/
+COPY migrations migrations/
 COPY app app/
 
 # Change ownership of the application directory to the hyperion user
@@ -42,5 +41,6 @@ USER hyperion
 # Expose port 8000
 EXPOSE 8000
 
-# Use uvicorn for better performance and flexibility
-ENTRYPOINT ["sh", "-c", "uvicorn app.main:app --workers $WORKERS --host 0.0.0.0 --port 8000"]
+# Use fastapi cli as the entrypoint
+# Use sh -c to allow environment variable expansion
+ENTRYPOINT ["sh", "-c", "fastapi run app.main:app --workers $WORKERS --host 0.0.0.0 --port 8000"]

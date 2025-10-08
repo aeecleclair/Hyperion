@@ -1,2 +1,0 @@
--r requirements-common.txt
-psycopg[binary]==3.1.19                  # PostgreSQL adapter for synchronous operations at startup (database initializations & migrations), local installation is recommended for a production site
