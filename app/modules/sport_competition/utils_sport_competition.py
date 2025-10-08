@@ -139,6 +139,16 @@ async def validate_payment(
         )
         raise ValueError(f"User checkout {checkout_id} not found.")  # noqa: TRY003
 
+    edition = await cruds_sport_competition.load_edition_by_id(
+        checkout.edition_id,
+        db,
+    )
+    if not edition or not edition.inscription_enabled:
+        raise HTTPException(
+            status_code=403,
+            detail="Inscriptions are not enabled for this edition.",
+        )
+
     db_payment = schemas_sport_competition.PaymentComplete(
         id=uuid4(),
         user_id=checkout.user_id,
