@@ -42,5 +42,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: |
+            type=registry,ref=${{ secrets.DOCKER_REGISTRY_URL }}/hyperion:alpha
+            type=registry,ref=${{ secrets.DOCKER_REGISTRY_URL }}/hyperion:latest
+          cache-to: type=registry,ref=${{ secrets.DOCKER_REGISTRY_URL }}/${{ github.repository }}/cache,mode=max
