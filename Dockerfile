@@ -22,7 +22,7 @@ WORKDIR /hyperion
 # First copy only the requirements to leverage Docker cache
 COPY requirements-common.txt .
 
-# Install dependencies using uv (beaucoup plus rapide)
+# Install dependencies using uv (way faster than pip)
 RUN uv pip install --system --no-cache -r requirements-common.txt
 
 # Then copy the rest of the application code
