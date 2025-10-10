@@ -465,7 +465,6 @@ async def add_school(
         models_sport_competition.SchoolExtension(
             school_id=school.school_id,
             from_lyon=school.from_lyon,
-            ffsu_id=school.ffsu_id,
             active=school.active,
             inscription_enabled=school.inscription_enabled,
         ),
@@ -509,7 +508,6 @@ async def load_school_base_by_id(
             from_lyon=school.from_lyon,
             active=school.active,
             inscription_enabled=school.inscription_enabled,
-            ffsu_id=school.ffsu_id,
         )
         if school
         else None

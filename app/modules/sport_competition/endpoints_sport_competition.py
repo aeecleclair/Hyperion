@@ -25,9 +25,6 @@ from app.modules.sport_competition.types_sport_competition import (
     CompetitionGroupType,
     ProductSchoolType,
 )
-from app.modules.sport_competition.utils.ffsu_scrapper import (
-    validate_participant_ffsu_license,
-)
 from app.modules.sport_competition.utils_sport_competition import (
     check_validation_consistency,
     checksport_category_compatibility,
@@ -1531,6 +1528,31 @@ async def get_teams_for_sport(
 
 
 @module.router.get(
+    "/competition/teams/schools/{school_id}",
+    response_model=list[schemas_sport_competition.TeamComplete],
+)
+async def get_teams_for_school(
+    school_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+    user: models_users.CoreUser = Depends(is_user()),
+) -> list[schemas_sport_competition.TeamComplete]:
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
+    if school is None:
+        raise HTTPException(
+            status_code=404,
+            detail="School not found in the database",
+        )
+    return await cruds_sport_competition.load_all_teams_by_school_id(
+        school_id,
+        edition.id,
+        db,
+    )
+
+
+@module.router.get(
     "/competition/teams/sports/{sport_id}/schools/{school_id}",
     response_model=list[schemas_sport_competition.TeamComplete],
 )
@@ -1576,6 +1598,12 @@ async def create_team(
     ),
     user: schemas_users.CoreUser = Depends(is_user()),
 ) -> schemas_sport_competition.Team:
+    if not edition.inscription_enabled:
+        raise HTTPException(
+            status_code=400,
+            detail="Inscriptions are not enabled for the current edition",
+        )
+
     if GroupType.competition_admin.value not in [
         group.id for group in user.groups
     ] and (user.id != team_info.captain_id or user.school_id != team_info.school_id):
@@ -1662,9 +1690,22 @@ async def edit_team(
             status_code=404,
             detail="Team not found in the database",
         )
-    if user.id != stored.captain_id and GroupType.competition_admin.value not in [
-        group.id for group in user.groups
-    ]:
+    user_competition_groups = (
+        await cruds_sport_competition.load_user_competition_groups_memberships(
+            user.id,
+            stored.edition_id,
+            db,
+        )
+    )
+    if (
+        user.id != stored.captain_id
+        and GroupType.competition_admin.value not in [group.id for group in user.groups]
+        and (
+            CompetitionGroupType.schools_bds
+            not in [group.group for group in user_competition_groups]
+            or user.school_id != stored.school_id
+        )
+    ):
         raise HTTPException(status_code=403, detail="Unauthorized action")
     if team_info.captain_id is not None and team_info.captain_id != stored.captain_id:
         sport = await cruds_sport_competition.load_sport_by_id(
@@ -1715,6 +1756,9 @@ async def delete_team(
     team_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: schemas_users.CoreUser = Depends(is_user()),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
 ) -> None:
     stored = await cruds_sport_competition.load_team_by_id(team_id, db)
     if stored is None:
@@ -1722,9 +1766,22 @@ async def delete_team(
             status_code=404,
             detail="Team not found in the database",
         )
-    if user.id != stored.captain_id and GroupType.competition_admin.value not in [
-        group.id for group in user.groups
-    ]:
+    user_competition_groups = (
+        await cruds_sport_competition.load_user_competition_groups_memberships(
+            user.id,
+            edition.id,
+            db,
+        )
+    )
+    if (
+        user.id != stored.captain_id
+        and GroupType.competition_admin.value not in [group.id for group in user.groups]
+        and (
+            CompetitionGroupType.schools_bds
+            not in [group.group for group in user_competition_groups]
+            or user.school_id != stored.school_id
+        )
+    ):
         raise HTTPException(status_code=403, detail="Unauthorized action")
     await cruds_sport_competition.delete_team_by_id(stored.id, db)
 
@@ -1981,13 +2038,7 @@ async def join_sport(
             name=f"{user.user.firstname} {user.user.name} - {school.school.name}",
         )
         await cruds_sport_competition.add_team(new_team, db)
-    is_license_valid = False
-    if participant_info.license:
-        is_license_valid = validate_participant_ffsu_license(
-            school,
-            user,
-            participant_info.license,
-        )
+
     participant = schemas_sport_competition.Participant(
         user_id=user.user_id,
         sport_id=sport_id,
@@ -1995,7 +2046,7 @@ async def join_sport(
         school_id=user.user.school_id,
         license=participant_info.license,
         substitute=participant_info.substitute,
-        is_license_valid=is_license_valid,
+        is_license_valid=False,
         team_id=participant_info.team_id or new_team.id,
         created_at=datetime.now(UTC),
     )
@@ -2101,6 +2152,12 @@ async def withdraw_from_sport(
         get_current_edition,
     ),
 ) -> None:
+    if not edition.inscription_enabled:
+        raise HTTPException(
+            status_code=400,
+            detail="Inscriptions are not enabled for this edition",
+        )
+
     participant = await cruds_sport_competition.load_participant_by_ids(
         user.user_id,
         sport_id,
@@ -2148,6 +2205,15 @@ async def delete_participant(
         get_current_edition,
     ),
 ) -> None:
+    if (
+        GroupType.competition_admin.value
+        not in [group.id for group in user.user.groups]
+        and not edition.inscription_enabled
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Editions inscriptions are closed",
+        )
     participant = await cruds_sport_competition.load_participant_by_ids(
         user_id,
         sport_id,
@@ -3086,6 +3152,49 @@ async def delete_product_variant(
 
 
 @module.router.get(
+    "/competition/purchases/schools/{school_id}",
+    response_model=dict[str, list[schemas_sport_competition.PurchaseComplete]],
+    status_code=200,
+)
+async def get_purchases_by_school_id(
+    school_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: schemas_sport_competition.CompetitionUser = Depends(
+        is_competition_user(competition_group=CompetitionGroupType.schools_bds),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Get a school's purchases.
+
+    **User must be competition admin to use this endpoint**
+    """
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
+    if not school:
+        raise HTTPException(
+            status_code=404,
+            detail="School not found.",
+        )
+    users = await cruds_sport_competition.load_all_competition_users_by_school(
+        school_id,
+        edition.id,
+        db,
+    )
+    purchases_by_user: dict[str, list[schemas_sport_competition.PurchaseComplete]] = {}
+    for db_user in users:
+        purchases_by_user[
+            db_user.user_id
+        ] = await cruds_sport_competition.load_purchases_by_user_id(
+            db_user.user_id,
+            edition.id,
+            db,
+        )
+    return purchases_by_user
+
+
+@module.router.get(
     "/competition/purchases/users/{user_id}",
     response_model=list[schemas_sport_competition.Purchase],
     status_code=200,
@@ -3143,6 +3252,12 @@ async def create_purchase(
 
     **User must create a purchase for themself**
     """
+    if not edition.inscription_enabled:
+        raise HTTPException(
+            status_code=403,
+            detail="You can't make a purchase when inscriptions are closed",
+        )
+
     competition_user = await cruds_sport_competition.load_competition_user_by_id(
         user.id,
         edition.id,
@@ -3235,6 +3350,11 @@ async def delete_purchase(
 
     **User must delete their own purchase**
     """
+    if not edition.inscription_enabled:
+        raise HTTPException(
+            status_code=403,
+            detail="You can't delete a purchase when inscriptions are closed",
+        )
 
     db_purchase = await cruds_sport_competition.load_purchase_by_ids(
         user.id,
@@ -3275,6 +3395,56 @@ async def delete_purchase(
 
 
 @module.router.get(
+    "/competition/payments/schools/{school_id}",
+    response_model=dict[str, list[schemas_sport_competition.PaymentComplete]],
+    status_code=200,
+)
+async def get_users_payments_by_school_id(
+    school_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: schemas_sport_competition.CompetitionUser = Depends(
+        is_competition_user(competition_group=CompetitionGroupType.schools_bds),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Get a school's users payments.
+
+    **User must be competition admin to use this endpoint**
+    """
+    school = await cruds_sport_competition.load_school_by_id(school_id, db)
+    if not school:
+        raise HTTPException(
+            status_code=404,
+            detail="The school does not exist.",
+        )
+    if user.user.school_id != school_id and GroupType.competition_admin.value not in [
+        group.id for group in user.user.groups
+    ]:
+        raise HTTPException(
+            status_code=403,
+            detail="You're not allowed to see other schools payments.",
+        )
+    users = await cruds_sport_competition.load_all_competition_users_by_school(
+        school_id,
+        edition.id,
+        db,
+    )
+    payments_by_user: dict[str, list[schemas_sport_competition.PaymentComplete]] = {}
+    for db_user in users:
+        payments_by_user[
+            db_user.user_id
+        ] = await cruds_sport_competition.load_user_payments(
+            db_user.user_id,
+            edition.id,
+            db,
+        )
+    return payments_by_user
+
+
+@module.router.get(
     "/competition/users/{user_id}/payments",
     response_model=list[schemas_sport_competition.PaymentComplete],
     status_code=200,
@@ -3292,9 +3462,28 @@ async def get_payments_by_user_id(
 
     **User must get his own payments or be competition admin to use this endpoint**
     """
+    competition_groups = (
+        await cruds_sport_competition.load_user_competition_groups_memberships(
+            user.id,
+            edition.id,
+            db,
+        )
+    )
+    user_db = await cruds_users.get_user_by_id(db, user_id)
+    if not user_db:
+        raise HTTPException(
+            status_code=404,
+            detail="The user does not exist.",
+        )
+
     if not (
         user_id == user.id
         or is_user_member_of_any_group(user, [GroupType.competition_admin])
+        or (
+            CompetitionGroupType.schools_bds
+            in [competition_group.group for competition_group in competition_groups]
+            and user.school_id == user_db.school_id
+        )
     ):
         raise HTTPException(
             status_code=403,
@@ -3471,7 +3660,11 @@ async def get_payment_url(
     """
     Get payment url
     """
-
+    if not edition.inscription_enabled:
+        raise HTTPException(
+            status_code=403,
+            detail="Inscriptions are not enabled for this edition.",
+        )
     purchases = await cruds_sport_competition.load_purchases_by_user_id(
         user.id,
         edition.id,
@@ -3534,7 +3727,7 @@ async def get_payment_url(
 
 @module.router.get(
     "/competition/volunteers/shifts",
-    response_model=list[schemas_sport_competition.VolunteerShift],
+    response_model=list[schemas_sport_competition.VolunteerShiftComplete],
     status_code=200,
 )
 async def get_all_volunteer_shifts(

@@ -37,7 +37,6 @@ class CompetitionEditionEdit(BaseModel):
 class SchoolExtensionBase(BaseModel):
     school_id: UUID
     from_lyon: bool
-    ffsu_id: str | None = None
     active: bool = True
     inscription_enabled: bool = False
 
@@ -48,7 +47,6 @@ class SchoolExtension(SchoolExtensionBase):
 
 class SchoolExtensionEdit(BaseModel):
     from_lyon: bool | None = None
-    ffsu_id: str | None = None
     active: bool | None = None
     inscription_enabled: bool | None = None
 
