@@ -242,7 +242,7 @@ USE_FIREBASE: False
 # HELLOASSO_API_BASE should have the format: `api.helloasso-sandbox.com`
 # HelloAsso only allow 20 simultaneous active access token. Note that each Hyperion worker will need its own access token.
 
-HELLOASSO_CONFIGURATIONS: # [["name", "helloasso_client_id", "helloasso_client_secret", "helloasso_slug", "redirection_uri"]]
+#HELLOASSO_CONFIGURATIONS: # [["name", "helloasso_client_id", "helloasso_client_secret", "helloasso_slug", "redirection_uri"]]
 #  MYECLPAY:
 #    helloasso_client_id: ...
 #    helloasso_client_secret: ...
