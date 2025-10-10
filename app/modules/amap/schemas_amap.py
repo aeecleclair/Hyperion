@@ -124,6 +124,7 @@ class CashBase(BaseModel):
 
 class CashComplete(CashBase):
     user: CoreUserSimple
+    last_ordering_date: datetime
 
 
 class CashEdit(BaseModel):

@@ -107,6 +107,7 @@ class Cash(Base):
         primary_key=True,
     )
     balance: Mapped[float]
+    last_ordering_date: Mapped[datetime]
     user: Mapped[CoreUser] = relationship("CoreUser", init=False)
 
 

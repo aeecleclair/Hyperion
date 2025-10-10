@@ -2,6 +2,7 @@
 
 import logging
 from collections.abc import Sequence
+from datetime import datetime
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -349,7 +350,7 @@ async def add_cash(db: AsyncSession, user_id: str, amount: float):
         await db.execute(
             update(models_amap.Cash)
             .where(models_amap.Cash.user_id == user_id)
-            .values(user_id=balance.user_id, balance=balance.balance + amount),
+            .values(balance=balance.balance + amount),
         )
         await db.flush()
 
@@ -363,7 +364,21 @@ async def remove_cash(db: AsyncSession, user_id: str, amount: float):
         await db.execute(
             update(models_amap.Cash)
             .where(models_amap.Cash.user_id == user_id)
-            .values(user_id=balance.user_id, balance=balance.balance - amount),
+            .values(balance=balance.balance - amount),
+        )
+        await db.flush()
+
+
+async def update_last_ordering_date(db: AsyncSession, user_id: str, date: datetime):
+    result = await db.execute(
+        select(models_amap.Cash).where(models_amap.Cash.user_id == user_id),
+    )
+    balance = result.scalars().first()
+    if balance is not None:
+        await db.execute(
+            update(models_amap.Cash)
+            .where(models_amap.Cash.user_id == user_id)
+            .values(last_ordering_date=date),
         )
         await db.flush()
 
