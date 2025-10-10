@@ -123,48 +123,6 @@ AUTH_CLIENTS:
 #SQLITE_DB: app.db # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (if possible PostgreSQL should be used instead)
 DATABASE_DEBUG: False # If True, will print all SQL queries in the console
 LOG_DEBUG_MESSAGES: True
-NB_WORKERS: 6 # Not yet used...
-
-#############
-# Factories #
-#############
-
-USE_FACTORIES: True # if True and the database is empty, it will be seeded with mocked data
-
-# Configure demo users, to populate the db with your users
-# The Python-expected type is `list[UserDemoFactoryConfig]` where the class `UserDemoFactoryConfig` is from `app.core.utils.config`.
-# Thus, the following format should be used in yaml config files:
-# ```yml
-# FACTORIES_DEMO_USERS
-#   - firstname: <Firstname>
-#     name: <Name>
-#     nickname: <Nickname> (or <null>)
-#     email: <firstname.name@etu.ec-lyon.fr>
-#     password: <password>
-#     groups:
-#       - <UUID value 1 of a GroupType>
-#       - <UUID value 2 of a GroupType>
-# ```
-# Group UUIDs should be values of the GroupType enum from `app.core.groups.groupe_type.GroupType`
-FACTORIES_DEMO_USERS:
-  - firstname: Your Firstname
-    name: Your Name
-    nickname: Your Nickname
-    email: your-firstname.your-name@etu.ec-lyon.fr
-    password: Your_P@$$w0rd
-    groups:
-      - 0a25cb76-4b63-4fd3-b939-da6d9feabf28 # admin
-      - 45649735-866a-49df-b04b-a13c74fd5886 # AE
-      - 1f841bd9-00be-41a7-96e1-860a18a46105 # eclair
-  - firstname: Foucauld
-    name: Bellanger
-    nickname: Ñool
-    email: foucauld.bellanger@etu.ec-lyon.fr
-    password: azerty
-    groups:
-      - 1f841bd9-00be-41a7-96e1-860a18a46105
-      - 45649735-866a-49df-b04b-a13c74fd5886
-      - 4ec5ae77-f955-4309-96a5-19cc3c8be71c
 
 #####################################
 # SMTP configuration using starttls #
@@ -185,54 +143,6 @@ SMTP_EMAIL: ""
 # This file can be created and downloaded from [Google cloud, IAM and administration, Service account](https://console.cloud.google.com/iam-admin/serviceaccounts) page.
 USE_FIREBASE: False
 
-########################
-# Matrix configuration #
-########################
-
-# Matrix configuration is optional. If configured, Hyperion will be able to send messages to a Matrix server.
-# This configuration will be used to send errors messages.
-# If the following parameters are not set, logging won't use the Matrix handler
-# MATRIX_SERVER_BASE_URL is optional, the official Matrix server will be used if not configured
-# Advanced note: Username and password will be used to ask for an access token. A Matrix custom client `Hyperion` is used to make all requests
-#MATRIX_SERVER_BASE_URL: "https://matrix.example.org/"
-#MATRIX_TOKEN: "mct_..."
-#MATRIX_LOG_ERROR_ROOM_ID: "!...:myecl.fr"
-#MATRIX_LOG_AMAP_ROOM_ID: ""
-
-#############################
-# Token to use the TMDB API #
-#############################
-
-# This API key is required in order to send requests to the Internet Movie Database.
-# It is only used in the Cinema module.
-#THE_MOVIE_DB_API: ""
-
-####################
-# S3 configuration #
-####################
-
-# S3 configuration is needed to use the S3 storage for MyECLPay logs
-
-#S3_BUCKET_NAME: ""
-#S3_ACCESS_KEY_ID: ""
-#S3_SECRET_ACCESS_KEY: ""
-
-##############
-# Google API #
-##############
-
-# Google API configuration #
-# Google API is used to upload files to Google Drive
-# See ./app/utils/google_api/README.md for more information
-#GOOGLE_API_CLIENT_ID: ""
-#GOOGLE_API_CLIENT_SECRET:  ""
-
-#RAID_DRIVE_REFRESH_TOKEN: ""
-#RAID_DRIVE_API_KEY: ""
-#RAID_DRIVE_CLIENT_ID: ""
-#RAID_DRIVE_CLIENT_SECRET: ""
-#RAID_PAYMENT_REDIRECTION_URL: ""
-
 ###########################
 # HelloAsso configuration #
 ###########################
@@ -242,7 +152,7 @@ USE_FIREBASE: False
 # HELLOASSO_API_BASE should have the format: `api.helloasso-sandbox.com`
 # HelloAsso only allow 20 simultaneous active access token. Note that each Hyperion worker will need its own access token.
 
-#HELLOASSO_CONFIGURATIONS: # [["name", "helloasso_client_id", "helloasso_client_secret", "helloasso_slug", "redirection_uri"]]
+HELLOASSO_CONFIGURATIONS: {} # [["name", "helloasso_client_id", "helloasso_client_secret", "helloasso_slug", "redirection_uri"]]
 #  MYECLPAY:
 #    helloasso_client_id: ...
 #    helloasso_client_secret: ...
