@@ -1598,6 +1598,18 @@ async def test_get_sport_teams(
     assert len(teams) == 2
 
 
+async def test_get_school_teams(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        f"/competition/teams/schools/{school1.id}",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 200, response.json()
+    teams = response.json()
+    assert len(teams) == 1
+
+
 async def test_get_sport_team_for_school(
     client: TestClient,
 ) -> None:
