@@ -5,8 +5,9 @@ from datetime import UTC, datetime, timedelta
 from fastapi import Depends, HTTPException, WebSocket
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import Settings
-from app.core.core_endpoints import models_core
+from app.core.groups.groups_type import AccountType
+from app.core.users import models_users
+from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
     get_settings,
@@ -15,7 +16,12 @@ from app.dependencies import (
     is_user,
     is_user_a_member,
 )
-from app.modules.rPlace import coredata_rplace, cruds_rplace, models_rplace, schemas_rplace
+from app.modules.rPlace import (
+    coredata_rplace,
+    cruds_rplace,
+    models_rplace,
+    schemas_rplace,
+)
 from app.types.module import Module
 from app.types.websocket import HyperionWebsocketsRoom, WebsocketConnectionManager
 from app.utils.tools import get_core_data
@@ -23,6 +29,8 @@ from app.utils.tools import get_core_data
 module = Module(
     root="rplace",
     tag="rplace",
+    default_allowed_account_types=[AccountType.student],
+    factory=None,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion_error_logger")
@@ -35,7 +43,7 @@ hyperion_error_logger = logging.getLogger("hyperion_error_logger")
 )
 async def get_pixels(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
     return await cruds_rplace.get_pixels(db=db)
 
@@ -48,7 +56,7 @@ async def get_pixels(
 async def create_pixel(
     pixel: schemas_rplace.Pixel,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
 ):
     pixel_id = uuid.uuid4()
@@ -62,14 +70,18 @@ async def create_pixel(
         color=pixel.color,
     )
 
-    last_pixel_placed = await get_last_pixel_date(
+    last_pixel_placed = await cruds_rplace.get_last_pixel(
         db=db,
-        user=user,
+        user_id=user.id,
     )
 
     grid_information = await get_core_data(coredata_rplace.gridInformation, db)
 
-    if datetime.now() - last_pixel_placed.date.replace(tzinfo=None) >= timedelta(microseconds=grid_information.cooldown):
+    if not last_pixel_placed or datetime.now(UTC) - last_pixel_placed.date.replace(
+        tzinfo=UTC,
+    ) >= timedelta(
+        microseconds=grid_information.cooldown,
+    ):
         try:
             res = await cruds_rplace.create_pixel(
                 rplace_pixel=db_item,
@@ -87,7 +99,7 @@ async def create_pixel(
                         color=pixel.color,
                     ),
                 ),
-                room_id=HyperionWebsocketsRoom.Rplace,
+                room_id=HyperionWebsocketsRoom.RPLACE,
             )
         except Exception:
             hyperion_error_logger.exception(
@@ -95,11 +107,11 @@ async def create_pixel(
             )
         return res
     else:
-         raise HTTPException(
-                status_code=401,
-                detail="Vous devez attendre avant de placer un autre pixel",
-            )
-         
+        raise HTTPException(
+            status_code=401,
+            detail="Vous devez attendre avant de placer un autre pixel",
+        )
+
 
 @module.router.get(
     "/rplace/information",
@@ -108,7 +120,7 @@ async def create_pixel(
 )
 async def get_grid_information(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Get grid information
@@ -126,9 +138,10 @@ async def websocket_endpoint(
     await ws_manager.manage_websocket(
         websocket=websocket,
         settings=settings,
-        room=HyperionWebsocketsRoom.Rplace,
+        room=HyperionWebsocketsRoom.RPLACE,
         db=db,
     )
+
 
 @module.router.get(
     "/rplace/pixel_info/{x}/{y}",
@@ -139,14 +152,14 @@ async def get_pixel_info(
     x: int,
     y: int,
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
     info = await cruds_rplace.get_pixel_info(db=db, x=x, y=y)
     if info is None:
-            raise HTTPException(
-                status_code=404,
-                detail="pas de pixel place",
-            )
+        raise HTTPException(
+            status_code=404,
+            detail="pas de pixel place",
+        )
     return info
 
 
@@ -157,18 +170,6 @@ async def get_pixel_info(
 )
 async def get_last_pixel_date(
     db: AsyncSession = Depends(get_db),
-    user: models_core.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
-    date = await cruds_rplace.get_last_pixel_date(db=db, user_id=user.id)
-    if date is None:
-            date = models_rplace.Pixel(
-                    id=uuid.uuid4(),
-                    date=datetime(2003, 5, 17, 7, 46, 0, 0),
-                    user_id=user.id,
-                    x=-1,
-                    y=-1,
-                    color="",
-                )
-    return date
-    
-
+    return await cruds_rplace.get_last_pixel_date(db=db, user_id=user.id)

@@ -1,7 +1,7 @@
-import datetime
-from app.types import core_data
+from app.types.core_data import BaseCoreData
 
-class gridInformation(core_data.BaseCoreData):
+
+class gridInformation(BaseCoreData):
     nbLigne: int = 100
     nbColonne: int = 100
     pixelSize: float = 10

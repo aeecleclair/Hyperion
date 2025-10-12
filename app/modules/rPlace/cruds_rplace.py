@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
-from sqlalchemy import and_, delete, func, select, update
+from sqlalchemy import and_, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -29,7 +29,7 @@ async def get_pixels(db: AsyncSession) -> list[models_rplace.Pixel]:
                 models_rplace.Pixel.date == subquery.c.max_date,
             ),
         )
-        .order_by(models_rplace.Pixel.date.desc())
+        .order_by(models_rplace.Pixel.date.desc()),
     )
 
     return list(result.scalars().all())
@@ -50,7 +50,9 @@ async def create_pixel(
 
 
 async def get_pixel_info(
-    db: AsyncSession, x: int, y: int
+    db: AsyncSession,
+    x: int,
+    y: int,
 ) -> models_rplace.Pixel | None:
     result = await db.execute(
         select(models_rplace.Pixel)
@@ -64,11 +66,34 @@ async def get_pixel_info(
     return result.scalars().first()
 
 
-async def get_last_pixel_date(db: AsyncSession, user_id: str) -> datetime:
+async def get_last_pixel_date(
+    db: AsyncSession,
+    user_id: str,
+) -> datetime:
+    result = await db.execute(
+        select(models_rplace.Pixel.date)
+        .where(
+            models_rplace.Pixel.user_id == user_id,
+        )
+        .order_by(
+            models_rplace.Pixel.date.desc(),
+        )
+        .limit(1),
+    )
+    return result.scalars().first() or datetime(2003, 12, 18, 7, 46, 0, 0, UTC)
+
+
+async def get_last_pixel(
+    db: AsyncSession,
+    user_id: str,
+) -> models_rplace.Pixel:
     result = await db.execute(
         select(models_rplace.Pixel)
-        .where(models_rplace.Pixel.user_id == user_id)
-        .order_by(models_rplace.Pixel.date.desc())
+        .where(
+            models_rplace.Pixel.user_id == user_id,
+        )
+        .order_by(
+            models_rplace.Pixel.date.desc(),
+        ),
     )
-
     return result.scalars().first()
