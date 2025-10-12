@@ -34,10 +34,6 @@ jobs:
           username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
           password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
-      - name: Normalize repository name
-        id: repo
-        run: echo "repo_lc=${GITHUB_REPOSITORY,,}" >> $GITHUB_OUTPUT
-
       - name: Build and push app
         uses: docker/build-push-action@v6.18.0
         with:
@@ -47,6 +43,6 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: |
-            type=registry,ref=${{ secrets.DOCKER_REGISTRY_URL }}/hyperion:alpha
-            type=registry,ref=${{ secrets.DOCKER_REGISTRY_URL }}/hyperion:latest
-          cache-to: type=registry,ref=${{ secrets.DOCKER_REGISTRY_URL }}/${{ steps.repo.outputs.repo_lc }}/cache,mode=max
+            type=registry,ref=${{ secrets.DOCKER_REGISTRY_IDENTIFER }}/hyperion:alpha
+            type=registry,ref=${{ secrets.DOCKER_REGISTRY_IDENTIFER }}/hyperion:latest
+          cache-to: type=inline
