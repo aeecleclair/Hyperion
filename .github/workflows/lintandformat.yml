@@ -16,14 +16,14 @@ jobs:
 
       # Setup Python (faster than using Python container)
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         id: setup-python
         with:
           python-version: "3.11"
 
       - name: Cache uv folder
         id: cache-uv
-        uses: actions/cache@v4
+        uses: actions/cache@v4.3.0
         with:
           path: ~/.cache/uv
           key: ${{ runner.os }}-python-${{ steps.setup-python.outputs.python-version }}-uv-${{ hashFiles('requirements-common.txt', 'requirements-dev.txt') }}
@@ -36,7 +36,7 @@ jobs:
 
       - name: Cache .ruff_cache folder
         id: ruff_cache
-        uses: actions/cache@v4
+        uses: actions/cache@v4.3.0
         with:
           path: .ruff_cache
           key: ruff_cache-${{ github.head_ref }}
@@ -48,7 +48,7 @@ jobs:
 
       - name: Cache .mypy_cache folder
         id: mypy_cache
-        uses: actions/cache@v4
+        uses: actions/cache@v4.3.0
         with:
           path: .mypy_cache
           key: mypy_cache-${{ github.head_ref }}

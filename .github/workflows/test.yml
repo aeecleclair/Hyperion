@@ -54,14 +54,14 @@ jobs:
 
       # Setup Python (faster than using Python container)
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         id: setup-python
         with:
           python-version: "3.11"
 
       - name: Cache uv folder
         id: cache-uv
-        uses: actions/cache@v4
+        uses: actions/cache@v4.3.0
         with:
           path: ~/.cache/uv
           key: ${{ runner.os }}-python-${{ steps.setup-python.outputs.python-version }}-uv-${{ hashFiles('requirements-common.txt', 'requirements-dev.txt') }}
@@ -74,16 +74,15 @@ jobs:
 
       - name: Cache .pytest_cache folder
         id: pytest_cache
-        uses: actions/cache@v4
+        uses: actions/cache@v4.3.0
         with:
           path: .pytest_cache
           key: pytest_cache-${{ github.head_ref }}
-      
 
       - name: Run unit tests with Postgresql
         run: python -m pytest --cov
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v5.5.1
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

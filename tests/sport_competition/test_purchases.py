@@ -1049,6 +1049,21 @@ async def test_delete_product_variant_with_purchases(
     )
 
 
+async def test_get_school_users_purchases(
+    client: TestClient,
+):
+    response = client.get(
+        f"/competition/purchases/schools/{SchoolType.centrale_lyon.value}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, dict)
+    assert admin_user.id in data
+    assert isinstance(data[admin_user.id], list)
+    assert len(data[admin_user.id]) == 2
+
+
 async def get_user_purchases(
     client: TestClient,
 ):
@@ -1202,6 +1217,21 @@ async def test_delete_validated_purchase(
         purchase["product_variant_id"] == str(validated_purchase.product_variant_id)
         for purchase in purchases_data
     )
+
+
+async def test_get_school_users_payments(
+    client: TestClient,
+):
+    response = client.get(
+        f"/competition/payments/schools/{SchoolType.centrale_lyon.value}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, dict)
+    assert admin_user.id in data
+    assert isinstance(data[admin_user.id], list)
+    assert len(data[admin_user.id]) == 1
 
 
 async def test_get_payments(
