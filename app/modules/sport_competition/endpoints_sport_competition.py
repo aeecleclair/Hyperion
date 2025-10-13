@@ -25,8 +25,10 @@ from app.modules.sport_competition.types_sport_competition import (
     CompetitionGroupType,
     ProductSchoolType,
 )
-from app.modules.sport_competition.utils_sport_competition import (
+from app.modules.sport_competition.utils.validation_checker import (
     check_validation_consistency,
+)
+from app.modules.sport_competition.utils_sport_competition import (
     checksport_category_compatibility,
     get_public_type_from_user,
     validate_payment,
