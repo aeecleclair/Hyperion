@@ -65,7 +65,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: |
-            type=registry,ref=${{ secrets.DOCKER_REGISTRY_URL }}/hyperion:${{ github.event.inputs.preprod_env }}
-            type=registry,ref=${{ secrets.DOCKER_REGISTRY_URL }}/hyperion:alpha
-            type=registry,ref=${{ secrets.DOCKER_REGISTRY_URL }}/hyperion:latest
-          cache-to: type=registry,ref=${{ secrets.DOCKER_REGISTRY_URL }}/${{ github.repository }}/cache,mode=max
+            type=registry,ref=${{ secrets.DOCKER_REGISTRY_IDENTIFER }}/hyperion:${{ github.event.inputs.preprod_env }}
+            type=registry,ref=${{ secrets.DOCKER_REGISTRY_IDENTIFER }}/hyperion:alpha
+            type=registry,ref=${{ secrets.DOCKER_REGISTRY_IDENTIFER }}/hyperion:latest
+          cache-to: type=inline
