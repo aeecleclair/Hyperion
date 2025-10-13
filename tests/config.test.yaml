@@ -123,6 +123,7 @@ AUTH_CLIENTS:
 #SQLITE_DB: app.db # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (if possible PostgreSQL should be used instead)
 DATABASE_DEBUG: False # If True, will print all SQL queries in the console
 LOG_DEBUG_MESSAGES: True
+ENABLE_RATE_LIMITER: False
 
 #####################################
 # SMTP configuration using starttls #
