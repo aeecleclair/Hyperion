@@ -243,7 +243,7 @@ Check this file to know what can and should be set using these two files.
 
 ### The `.env` file
 
-The `.env` contains environment variables which need to be accessed by the OS or by other services, such as the database.
+The `.env` contains environment variables which can to be accessed by the OS or by other services, such as the database.
 
 #### With SQLite
 
@@ -324,7 +324,7 @@ There are at least 5 distinct ways to do so outside the use of factories, ranked
 
 > [!IMPORTANT]
 > Using factories is the recommended way.
-> All others methods are legacy and kept here for historical reasons.
+> All others methods are legacy and kept here for historical reasons (excepted using Titan, which is the way users create their account in production).
 > Feel free to create other users other ways for learning purposes.
 
 Note that registration and activation are distinct steps when calling calls to the API, so for fun you may register one way and activate your account another way (if you create your user directly in database, this distinction is not relevant).
