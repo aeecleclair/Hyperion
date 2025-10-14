@@ -24,10 +24,10 @@
     // We don't want Copilot to be active
     // on config.yaml and dotenv files
     "yaml": false,
-    "dotenv": false
+    "properties": false
   },
   "files.associations": {
-    ".env": "dotenv",
-    ".env.template": "dotenv"
+    ".env": "properties",
+    ".env.template": "properties"
   }
 }
