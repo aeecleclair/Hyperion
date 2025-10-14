@@ -47,7 +47,7 @@ CLIENT_URL: http://127.0.0.1:8000/ # NOTE: A trailing / is required
 # For exemple:
 # - you will access the login page from your browser http://localhost:8000/auth/authorize
 # - but the docker container should call http://host.docker.internal:8000/auth/token and not your localhost address
-#OVERRIDDEN_CLIENT_URL_FOR_OIDC: "http://host.docker.internal:8000/" # NOTE: A trailing / is required
+#OVERRIDDEN_CLIENT_URL_FOR_OIDC: http://host.docker.internal:8000/ # NOTE: A trailing / is required
 
 # Origins for the CORS middleware. `["http://localhost:3000"]` can be used for development.
 # See https://fastapi.tiangolo.com/tutorial/cors/
@@ -81,7 +81,7 @@ AUTH_CLIENTS:
       - http://localhost:3000/static.html
       - http://127.0.0.1:3000/static.html
       - https://myecl.fr/static.html
-      - "fr.myecl.titan://authorized
+      - fr.myecl.titan://authorized
     auth_client: AppAuthClient
   Postman:
     secret: PostmanSecret
@@ -147,10 +147,10 @@ FACTORIES_DEMO_USERS:
 
 SMTP_ACTIVE: False
 SMTP_PORT: 587
-SMTP_SERVER: ""
-SMTP_USERNAME: ""
-SMTP_PASSWORD: ""
-SMTP_EMAIL: ""
+SMTP_SERVER:
+SMTP_USERNAME:
+SMTP_PASSWORD:
+SMTP_EMAIL:
 
 ##########################
 # Firebase Configuration #
@@ -159,7 +159,6 @@ SMTP_EMAIL: ""
 # To enable Firebase push notification capabilities, a JSON key file named `firebase.json` should be placed at Hyperion root.
 # This file can be created and downloaded from [Google cloud, IAM and administration, Service account](https://console.cloud.google.com/iam-admin/serviceaccounts) page.
 USE_FIREBASE: False
-
 ########################
 # Matrix configuration #
 ########################
@@ -169,10 +168,10 @@ USE_FIREBASE: False
 # If the following parameters are not set, logging won't use the Matrix handler
 # MATRIX_SERVER_BASE_URL is optional, the official Matrix server will be used if not configured
 # Advanced note: Username and password will be used to ask for an access token. A Matrix custom client `Hyperion` is used to make all requests
-#MATRIX_SERVER_BASE_URL: "https://matrix.example.org/"
-#MATRIX_TOKEN: "mct_..."
-#MATRIX_LOG_ERROR_ROOM_ID: "!...:myecl.fr"
-#MATRIX_LOG_AMAP_ROOM_ID: ""
+#MATRIX_SERVER_BASE_URL: https://matrix.example.org/
+#MATRIX_TOKEN: mct_...
+#MATRIX_LOG_ERROR_ROOM_ID: !...:myecl.fr
+#MATRIX_LOG_AMAP_ROOM_ID:
 
 #############################
 # Token to use the TMDB API #
@@ -180,7 +179,7 @@ USE_FIREBASE: False
 
 # This API key is required in order to send requests to the Internet Movie Database.
 # It is only used in the Cinema module.
-#THE_MOVIE_DB_API: ""
+#THE_MOVIE_DB_API:
 
 ####################
 # S3 configuration #
@@ -188,9 +187,9 @@ USE_FIREBASE: False
 
 # S3 configuration is needed to use the S3 storage for MyECLPay logs
 
-#S3_BUCKET_NAME: ""
-#S3_ACCESS_KEY_ID: ""
-#S3_SECRET_ACCESS_KEY: ""
+#S3_BUCKET_NAME:
+#S3_ACCESS_KEY_ID:
+#S3_SECRET_ACCESS_KEY:
 
 ##############
 # Google API #
@@ -199,14 +198,14 @@ USE_FIREBASE: False
 # Google API configuration #
 # Google API is used to upload files to Google Drive
 # See ./app/utils/google_api/README.md for more information
-#GOOGLE_API_CLIENT_ID: ""
-#GOOGLE_API_CLIENT_SECRET:  ""
+#GOOGLE_API_CLIENT_ID:
+#GOOGLE_API_CLIENT_SECRET:
 
-#RAID_DRIVE_REFRESH_TOKEN: ""
-#RAID_DRIVE_API_KEY: ""
-#RAID_DRIVE_CLIENT_ID: ""
-#RAID_DRIVE_CLIENT_SECRET: ""
-#RAID_PAYMENT_REDIRECTION_URL: ""
+#RAID_DRIVE_REFRESH_TOKEN:
+#RAID_DRIVE_API_KEY:
+#RAID_DRIVE_CLIENT_ID:
+#RAID_DRIVE_CLIENT_SECRET:
+#RAID_PAYMENT_REDIRECTION_URL:
 
 ###########################
 # HelloAsso configuration #
@@ -217,13 +216,13 @@ USE_FIREBASE: False
 # HELLOASSO_API_BASE should have the format: `api.helloasso-sandbox.com`
 # HelloAsso only allow 20 simultaneous active access token. Note that each Hyperion worker will need its own access token.
 
-#HELLOASSO_CONFIGURATIONS: # [["name", "helloasso_client_id", "helloasso_client_secret", "helloasso_slug", "redirection_uri"]]
+#HELLOASSO_CONFIGURATIONS:
 #  MYECLPAY:
 #    helloasso_client_id: ...
 #    helloasso_client_secret: ...
-#    helloasso_slug: "AEECL"
+#    helloasso_slug: AEECL
 #    redirection_uri: null
-#HELLOASSO_API_BASE: "api.helloasso-sandbox.com"
+#HELLOASSO_API_BASE: api.helloasso-sandbox.com
 
 # Maximum wallet balance for MyECLPay in cents, we will prevent user from adding more money to their wallet if it will make their balance exceed this value
 #MYECLPAY_MAXIMUM_WALLET_BALANCE: 8000
@@ -236,4 +235,4 @@ USE_FIREBASE: False
 # MyECLPay requires an external service to recurrently check for transactions and state integrity, this service needs an access to all the data related to the transactions and the users involved
 # This service will use a special token to access the data
 # If this token is not set, the service will not be able to access the data and no integrity check will be performed
-#MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN: ""
+#MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN:

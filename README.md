@@ -84,7 +84,7 @@ pyenv activate hyperion
 
 ### About Jellyfish and Rust
 
-If you don't have Rust installed or don't want to install it, decrase the version of `jellyfish` to `0.10.0` in the `requirements-common.txt` file:
+If you don't have Rust installed or don't want to install it, decrease the version of `jellyfish` to `0.10.0` in the `requirements-common.txt` file:
 
 ```
 jellyfish==0.10.0                    # String Matching
@@ -282,10 +282,8 @@ POSTGRES_DB="hyperion"
 
 The `config.yaml` contains environment variables that are internal to the Python runtime _because_ they are only used in the Python code.
 
-1. `ACCESS_TOKEN_SECRET_KEY`: **Uncomment it**.
-   You can generate your own if you want, or just change a couple characters, or leave it as it is.
-2. `RSA_PRIVATE_PEM_STRING`: **Uncomment it**.
-   You can generate your own if you want, or just change a couple characters, or leave it as it is.
+1. `ACCESS_TOKEN_SECRET_KEY`: You can generate your own if you want, or just change a couple characters, or leave it as it is.
+2. `RSA_PRIVATE_PEM_STRING`: You can generate your own if you want, or just change a couple characters, or leave it as it is.
 3. `SQLITE_DB`: **tells Hyperion whether to use SQLite or PostgreSQL**.
    - If you use **SQLite**: this field should be a (relative) filename, by default we named it `app.db`, you can change this name.
      Hyperion will create this file for you and use it as the database.
