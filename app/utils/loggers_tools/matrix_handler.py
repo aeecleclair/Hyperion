@@ -1,7 +1,6 @@
 import logging
 from logging import StreamHandler
 
-from fastapi import BackgroundTasks
 from typing_extensions import override
 
 from app.utils.communication.matrix import Matrix
@@ -22,7 +21,6 @@ class MatrixHandler(StreamHandler):
 
     def __init__(
         self,
-        background_tasks: BackgroundTasks,
         room_id: str,
         token: str,
         server_base_url: str | None,
@@ -32,7 +30,6 @@ class MatrixHandler(StreamHandler):
         super().__init__()
         self.setLevel(level)
 
-        self.background_tasks = background_tasks
         self.room_id = room_id
         self.enabled = enabled
         if self.enabled:
@@ -46,9 +43,7 @@ class MatrixHandler(StreamHandler):
         if self.enabled:
             msg = self.format(record)
             try:
-                self.background_tasks.add_task(
-                    self.matrix.send_message, room_id=self.room_id, formatted_body=msg
-                )
+                self.matrix.send_message(self.room_id, msg)
             # We should catch and log any error, as Python may discarded them in production
             except Exception as err:
                 # We use warning level so that the message is not sent to matrix again
