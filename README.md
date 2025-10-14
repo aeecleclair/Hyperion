@@ -243,7 +243,7 @@ Check this file to know what can and should be set using these two files.
 
 ### The `.env` file
 
-The `.env` contains environment variables which can to be accessed by the OS or by other services, such as the database.
+The `.env` contains environment variables which can be accessed by the OS to convey them to other services that need them, such as the database.
 
 #### With SQLite
 
