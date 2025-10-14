@@ -99,7 +99,6 @@ AUTH_CLIENTS:
 SQLITE_DB: app.db # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (if possible PostgreSQL should be used instead)
 DATABASE_DEBUG: False # If True, will print all SQL queries in the console
 LOG_DEBUG_MESSAGES: False
-NB_WORKERS: 6 # Not yet used...
 
 #############
 # Factories #
