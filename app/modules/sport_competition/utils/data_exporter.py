@@ -1,15 +1,14 @@
 from io import BytesIO
-from typing import TYPE_CHECKING
 
 import xlsxwriter
 
-from app.modules.sport_competition import (
-    models_sport_competition,
-    types_sport_competition,
-)
+from app.modules.sport_competition import schemas_sport_competition
+from app.modules.sport_competition.types_sport_competition import ExcelExportParams
+from app.types.exceptions import MissingDataError
 
-if TYPE_CHECKING:
-    from uuid import UUID
+FIXED_COLUMNS = ["Nom", "Prénom", "Email", "École", "Type", "Statut"]
+PARTICIPANTS_COLUMNS = ["Sport", "Licence", "Licence valide", "Équipe"]
+PAYMENTS_COLUMNS = ["Total à payer", "Total payé", "Tout payé"]
 
 
 def generate_format(workbook: xlsxwriter.Workbook):
@@ -151,32 +150,17 @@ def generate_format(workbook: xlsxwriter.Workbook):
 
 
 def build_product_structure(
-    products: list[models_sport_competition.CompetitionProduct],
-    variants: list[models_sport_competition.CompetitionProductVariant],
+    products: list[schemas_sport_competition.ProductComplete],
 ):
-    variants_by_product: dict[
-        UUID,
-        list[models_sport_competition.CompetitionProductVariant],
-    ] = {}
-    for v in variants:
-        variants_by_product.setdefault(v.product_id, []).append(v)
-
-    fixed_columns = ["Nom", "Prénom", "Surnom", "Email"]
-    col_idx = len(fixed_columns)
+    col_idx = 0
 
     product_structure = []
     for product in products:
-        product_variants = variants_by_product.get(product.id, [])
-        needs_validation = getattr(product, "needs_validation", True)
-
         variants_info = []
-        for variant in product_variants:
+        for variant in product.variants:
             qty_col = col_idx
-            col_idx += 1
-            valid_col = None
-            if needs_validation:
-                valid_col = col_idx
-                col_idx += 1
+            valid_col = col_idx + 1
+            col_idx += 2
             variants_info.append(
                 {
                     "variant": variant,
@@ -189,40 +173,98 @@ def build_product_structure(
             {
                 "product": product,
                 "variants_info": variants_info,
-                "needs_validation": needs_validation,
             },
         )
 
     return product_structure, col_idx
 
 
+def get_user_types(user: schemas_sport_competition.CompetitionUser) -> list[str]:
+    types = []
+    if user.is_athlete:
+        types.append("Athlète")
+    if user.is_pompom:
+        types.append("Pom-pom")
+    if user.is_cameraman:
+        types.append("Cameraman")
+    if user.is_fanfare:
+        types.append("Fanfare")
+    if user.is_volunteer:
+        types.append("Bénévole")
+    return types
+
+
 def build_data_rows(
-    parameters: list[types_sport_competition.ExcelExportParams],
-    users: list[models_sport_competition.CompetitionUser],
-    users_purchases: dict[str, list[models_sport_competition.CompetitionPurchase]],
-    product_structure: dict,
+    parameters: list[ExcelExportParams],
+    users: list[schemas_sport_competition.CompetitionUser],
+    sports: list[schemas_sport_competition.Sport],
+    users_participant: dict[str, schemas_sport_competition.ParticipantComplete] | None,
+    users_purchases: dict[str, list[schemas_sport_competition.PurchaseComplete]],
+    users_payments: dict[str, list[schemas_sport_competition.PaymentComplete]] | None,
+    product_structure: dict | None,
     col_idx: int,
 ):
     data_rows = []
     for user in users:
+        user_purchases = users_purchases.get(user.user.id, [])
         row: list[str | int] = [""] * col_idx
         row[0] = user.user.name
         row[1] = user.user.firstname
         row[2] = user.user.email
+        row[3] = user.user.school.name if user.user.school else str(user.user.school_id)
+        row[4] = ", ".join(get_user_types(user))
+        if user.validated and all(p.validated for p in user_purchases):
+            row[5] = "Validé et payé"
+        elif user.validated:
+            row[5] = "Validé mais non payé"
+        else:
+            row[5] = "Non validé"
         purchases_map = {
             p.product_variant_id: p for p in users_purchases.get(user.user.id, [])
         }
+        if ExcelExportParams.participants in parameters and users_participant:
+            participant = users_participant.get(user.user.id, None)
+            if participant:
+                sport = next(s for s in sports if s.id == participant.sport_id)
+                row[6] = sport.name
+                row[7] = participant.license if participant.license else "N/A"
+                row[8] = participant.is_license_valid
+                row[9] = participant.team.name
+            else:
+                row[6] = ""
+                row[7] = ""
+                row[8] = ""
+                row[9] = ""
 
-        for prod_struct in product_structure:
-            for vinfo in prod_struct["variants_info"]:
-                p = purchases_map.get(vinfo["variant"].id, None)
-                if p and p.quantity > 0:
-                    row[vinfo["qty_col"]] = p.quantity
-                    if (
-                        prod_struct["needs_validation"]
-                        and vinfo["valid_col"] is not None
-                    ):
-                        row[vinfo["valid_col"]] = "OUI" if p.validated else "NON"
+        if ExcelExportParams.purchases in parameters and product_structure is not None:
+            offset = 3 if ExcelExportParams.participants in parameters else 0
+            for prod_struct in product_structure:
+                for vinfo in prod_struct["variants_info"]:
+                    p = purchases_map.get(vinfo["variant"].id, None)
+                    if p and p.quantity > 0:
+                        row[vinfo["qty_col"] + offset] = p.quantity
+                        row[vinfo["valid_col"] + offset] = (
+                            "OUI" if p.validated else "NON"
+                        )
+
+        if ExcelExportParams.payments in parameters and users_payments is not None:
+            user_payments = users_payments.get(user.user.id, [])
+            offset = 0
+            if ExcelExportParams.participants in parameters:
+                offset += 4
+            if (
+                ExcelExportParams.purchases in parameters
+                and product_structure is not None
+            ):
+                offset += sum(
+                    len(prod_struct["variants_info"]) * 2
+                    for prod_struct in product_structure.values()
+                )
+            total = sum(p.quantity * p.product_variant.price for p in user_purchases)
+            paid = sum(p.total for p in user_payments)
+            row[offset + 4] = total
+            row[offset + 5] = paid
+            row[offset + 6] = "OUI" if total == paid else "NON"
 
         data_rows.append(row)
 
@@ -231,142 +273,135 @@ def build_data_rows(
 
 def write_fixed_headers(
     worksheet: xlsxwriter.Workbook.worksheet_class,
-    fixed_columns: list[str],
     formats: dict,
 ):
-    for col, title in enumerate(fixed_columns):
-        worksheet.merge_range(0, col, 2, col, title, formats["header"]["base"])
+    for col, title in enumerate(FIXED_COLUMNS):
+        worksheet.merge_range(0, col, 4, col, title, formats["header"]["base"])
+
+
+def write_participant_headers(
+    worksheet: xlsxwriter.Workbook.worksheet_class,
+    formats: dict,
+    columns_max_length: list[int],
+):
+    worksheet.merge_range(
+        0,
+        len(FIXED_COLUMNS),
+        0,
+        len(FIXED_COLUMNS) + 3,
+        "Participants",
+        formats["header"]["base"],
+    )
+    for i, title in enumerate(PARTICIPANTS_COLUMNS, start=len(FIXED_COLUMNS)):
+        worksheet.merge_range(1, i, 4, i, title, formats["header"]["base"])
+        columns_max_length[i] = max(columns_max_length[i], len(title))
+
+
+def write_payment_headers(
+    worksheet: xlsxwriter.Workbook.worksheet_class,
+    formats: dict,
+    start_index: int,
+    columns_max_length: list[int],
+):
+    worksheet.merge_range(
+        0,
+        start_index,
+        0,
+        start_index + 2,
+        "Paiements",
+        formats["header"]["base"],
+    )
+    for i, title in enumerate(PAYMENTS_COLUMNS, start=start_index):
+        worksheet.merge_range(1, i, 4, i, title, formats["header"]["base"])
+        columns_max_length[i] = max(columns_max_length[i], len(title))
 
 
 def write_product_headers(
     worksheet: xlsxwriter.Workbook.worksheet_class,
     product_structure: dict,
-    fixed_columns: list[str],
     formats: dict,
-    max_lens: list[int],
-):
+    start_index: int,
+    columns_max_length: list[int],
+) -> tuple[list[int], list[int]]:
     product_end_cols = [
-        len(fixed_columns) - 1,
+        start_index - 1,
     ]
-    variant_end_cols = set()
+    variant_end_cols: set[int] = set()
     for prod_struct in product_structure:
-        product = prod_struct["product"]
+        product = schemas_sport_competition.Product.model_validate(
+            prod_struct["product"],
+        )
         variants_info = prod_struct["variants_info"]
-        fields = prod_struct["fields"]
-        custom_cols = prod_struct["custom_cols"]
-        needs_validation = prod_struct["needs_validation"]
-
-        if variants_info:
-            start_col = variants_info[0]["qty_col"]
-            end_col = (
-                variants_info[-1]["valid_col"]
-                if (needs_validation and variants_info[-1]["valid_col"] is not None)
-                else variants_info[-1]["qty_col"]
-            )
-        elif custom_cols:
-            start_col = custom_cols[0]
-        else:
-            continue
-        if custom_cols:
-            end_col = custom_cols[-1]
+        start_col = variants_info[0]["qty_col"] + start_index
+        end_col = start_col + len(variants_info) * 2 - 1
 
         if start_col < end_col:
             worksheet.merge_range(
-                0,
+                1,
                 start_col,
-                0,
+                1,
                 end_col,
-                product.name_fr,
+                product.name,
                 formats["header"]["base"],
             )
         else:
-            worksheet.write(0, start_col, product.name_fr, formats["header"]["base"])
+            worksheet.write(0, start_col, product.name, formats["header"]["base"])
 
         product_end_cols.append(end_col)
 
         for vinfo in variants_info:
-            qty_col = vinfo["qty_col"]
-            if needs_validation:
-                worksheet.merge_range(
-                    1,
-                    qty_col,
-                    1,
-                    qty_col + 1,
-                    vinfo["variant"].name_fr,
-                    formats["header"]["base"],
-                )
-            else:
-                worksheet.write(
-                    1,
-                    qty_col,
-                    vinfo["variant"].name_fr,
-                    formats["header"]["base"],
-                )
-
-            if needs_validation and vinfo["valid_col"] is not None:
-                variant_end_cols.add(vinfo["valid_col"])
-            else:
-                variant_end_cols.add(vinfo["qty_col"])
-
-        if custom_cols:
-            if len(custom_cols) > 1:
-                worksheet.merge_range(
-                    1,
-                    custom_cols[0],
-                    1,
-                    custom_cols[-1],
-                    "Informations complémentaires",
-                    formats["header"]["base"],
-                )
-            else:
-                worksheet.write(
-                    1,
-                    custom_cols[0],
-                    "Informations complémentaires",
-                    formats["header"]["base"],
-                )
-
-            info_comp_len = len("Informations complémentaires")
-            for c in range(custom_cols[0], custom_cols[-1] + 1):
-                max_lens[c] = max(max_lens[c], info_comp_len)
-
-        for vinfo in variants_info:
-            worksheet.write(2, vinfo["qty_col"], "Quantité", formats["header"]["base"])
-            max_lens[vinfo["qty_col"]] = max(
-                max_lens[vinfo["qty_col"]],
+            worksheet.merge_range(
+                2,
+                vinfo["qty_col"],
+                2,
+                vinfo["valid_col"],
+                vinfo["variant"].name,
+                formats["header"]["base"],
+            )
+            worksheet.merge_range(
+                3,
+                vinfo["qty_col"],
+                3,
+                vinfo["valid_col"],
+                str(vinfo["variant"].price / 100) + " €",
+                formats["header"]["base"],
+            )
+            worksheet.write(4, vinfo["qty_col"], "Quantité", formats["header"]["base"])
+            columns_max_length[vinfo["qty_col"]] = max(
+                columns_max_length[vinfo["qty_col"]],
                 len("Quantité"),
             )
-            if needs_validation and vinfo["valid_col"] is not None:
-                worksheet.write(
-                    2,
-                    vinfo["valid_col"],
-                    "Validé",
-                    formats["header"]["base"],
-                )
-                max_lens[vinfo["valid_col"]] = max(
-                    max_lens[vinfo["valid_col"]],
-                    len("Validé"),
-                )
-
-        for i, field in enumerate(fields):
-            worksheet.write(2, custom_cols[i], field.name, formats["header"]["base"])
-            max_lens[custom_cols[i]] = max(max_lens[custom_cols[i]], len(field.name))
+            worksheet.write(4, vinfo["valid_col"], "Validé", formats["header"]["base"])
+            columns_max_length[vinfo["valid_col"]] = max(
+                columns_max_length[vinfo["valid_col"]],
+                len("Validé"),
+            )
+            variant_end_cols.add(vinfo["valid_col"])
 
         for c in range(start_col, end_col + 1):
-            max_lens[c] = max(max_lens[c], len(product.name_fr))
+            columns_max_length[c] = max(columns_max_length[c], len(product.name))
 
-    return product_end_cols, variant_end_cols
+    worksheet.merge_range(
+        0,
+        start_index,
+        0,
+        product_end_cols[-1],
+        "Produits",
+        formats["header"]["base"],
+    )
+
+    return product_end_cols, list(variant_end_cols)
 
 
 def write_data_rows(
-    parameters: list[types_sport_competition.ExcelExportParams],
+    parameters: list[ExcelExportParams],
     worksheet: xlsxwriter.Workbook.worksheet_class,
     data_rows: list,
     product_end_cols: list[int],
     variant_end_cols: list[int],
     formats: dict,
-    max_lens: list[int],
-    start_row: int = 3,
+    columns_max_length: list[int],
+    start_row: int = 5,
 ):
     for row_idx, row in enumerate(data_rows, start=start_row):
         is_last_row = row_idx == start_row + len(data_rows) - 1
@@ -392,6 +427,19 @@ def write_data_rows(
                 )
                 fmt = base["bottom_right"] if is_last_row else base["right"]
 
+            elif (
+                ExcelExportParams.participants in parameters
+                and len(FIXED_COLUMNS) - 1 == col_idx
+            ) or (
+                ExcelExportParams.payments in parameters
+                and col_idx == product_end_cols[-1] + 3
+            ):
+                fmt = (
+                    formats["other"]["bottom_thick"]
+                    if is_last_row
+                    else formats["other"]["thick"]
+                )
+
             else:
                 base = (
                     formats["validated"]
@@ -403,38 +451,61 @@ def write_data_rows(
                 fmt = base["bottom"] if is_last_row else base["base"]
 
             worksheet.write(row_idx, col_idx, val, fmt)
-            max_lens[col_idx] = max(max_lens[col_idx], len(str(val)))
+            columns_max_length[col_idx] = max(
+                columns_max_length[col_idx],
+                len(str(val)),
+            )
 
 
 def autosize_columns(
     worksheet: xlsxwriter.Workbook.worksheet_class,
-    max_lens: list[int],
+    columns_max_length: list[int],
 ):
-    for i, length in enumerate(max_lens):
+    for i, length in enumerate(columns_max_length):
         worksheet.set_column(i, i, length + 3)
 
 
 def write_to_excel(
-    parameters: list[types_sport_competition.ExcelExportParams],
+    parameters: list[ExcelExportParams],
     workbook: xlsxwriter.Workbook,
     worksheet_name: str,
-    fixed_columns: list[str],
     product_structure,
     data_rows: list,
     col_idx: int,
     formats: dict,
 ):
     worksheet = workbook.add_worksheet(worksheet_name)
-    max_lens = [len(c) for c in fixed_columns] + [0] * (col_idx - len(fixed_columns))
-
-    write_fixed_headers(worksheet, fixed_columns, formats)
-    product_end_cols, variant_end_cols = write_product_headers(
-        worksheet,
-        product_structure,
-        fixed_columns,
-        formats,
-        max_lens,
+    columns_max_length = [len(c) for c in FIXED_COLUMNS] + [0] * (
+        col_idx - len(FIXED_COLUMNS)
     )
+    product_end_cols: list[int] = []
+    variant_end_cols: list[int] = []
+
+    write_fixed_headers(worksheet, formats)
+    if ExcelExportParams.participants in parameters:
+        write_participant_headers(worksheet, formats, columns_max_length)
+    if ExcelExportParams.purchases in parameters:
+        product_end_cols, variant_end_cols = write_product_headers(
+            worksheet,
+            product_structure,
+            formats,
+            len(FIXED_COLUMNS)
+            + (4 if ExcelExportParams.participants in parameters else 0),
+            columns_max_length,
+        )
+    if ExcelExportParams.payments in parameters:
+        start_index = len(FIXED_COLUMNS)
+        if ExcelExportParams.participants in parameters:
+            start_index += 4
+        if ExcelExportParams.purchases in parameters:
+            start_index = product_end_cols[-1] + 1
+        write_payment_headers(
+            worksheet,
+            formats,
+            start_index,
+            columns_max_length,
+        )
+
     write_data_rows(
         parameters,
         worksheet,
@@ -442,30 +513,50 @@ def write_to_excel(
         product_end_cols,
         variant_end_cols,
         formats,
-        max_lens,
+        columns_max_length,
     )
-    autosize_columns(worksheet, max_lens)
-    worksheet.freeze_panes(3, len(fixed_columns))
+    autosize_columns(worksheet, columns_max_length)
+    worksheet.freeze_panes(3, 3)
 
 
-def construct_dataframe_from_users_purchases(
-    parameters: list[types_sport_competition.ExcelExportParams],
-    users_purchases: dict[str, list[models_sport_competition.CompetitionPurchase]],
-    users: list[models_sport_competition.CompetitionUser],
-    products: list[models_sport_competition.CompetitionProduct],
-    variants: list[models_sport_competition.CompetitionProductVariant],
+def construct_users_excel_with_parameters(
+    parameters: list[ExcelExportParams],
+    sports: list[schemas_sport_competition.Sport],
+    users: list[schemas_sport_competition.CompetitionUser],
+    users_participant: dict[str, schemas_sport_competition.ParticipantComplete] | None,
+    users_purchases: dict[str, list[schemas_sport_competition.PurchaseComplete]],
+    users_payments: dict[str, list[schemas_sport_competition.PaymentComplete]] | None,
+    products: list[schemas_sport_competition.ProductComplete] | None,
     export_io: BytesIO,
 ):
-    fixed_columns = ["Nom", "Prénom", "Email"]
+    if products is None and ExcelExportParams.purchases in parameters:
+        raise MissingDataError("products")
+    if users_payments is None and ExcelExportParams.payments in parameters:
+        raise MissingDataError("users_payments")
+    if users_participant is None and ExcelExportParams.participants in parameters:
+        raise MissingDataError("users_participant")
 
-    product_structure, col_idx = build_product_structure(
-        products,
-        variants,
-    )
+    product_structure = {}
+    col_idx = len(FIXED_COLUMNS)
+    if ExcelExportParams.purchases in parameters and products is not None:
+        product_structure = build_product_structure(
+            products,
+        )
+        col_idx += sum(
+            len(prod_struct["variants_info"]) * 2
+            for prod_struct in product_structure.values()
+        )
+    if ExcelExportParams.participants in parameters:
+        col_idx += 4
+    if ExcelExportParams.payments in parameters:
+        col_idx += 3
     data_rows = build_data_rows(
         parameters,
         users,
+        sports,
+        users_participant,
         users_purchases,
+        users_payments,
         product_structure,
         col_idx,
     )
@@ -477,7 +568,6 @@ def construct_dataframe_from_users_purchases(
         parameters,
         workbook,
         "Données",
-        fixed_columns,
         product_structure,
         data_rows,
         col_idx,

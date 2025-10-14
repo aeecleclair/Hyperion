@@ -1,8 +1,9 @@
 import logging
 from datetime import UTC, datetime
+from io import BytesIO
 from uuid import UUID, uuid4
 
-from fastapi import Body, Depends, File, HTTPException, UploadFile
+from fastapi import Body, Depends, File, HTTPException, Response, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,7 +24,11 @@ from app.modules.sport_competition.dependencies_sport_competition import (
 )
 from app.modules.sport_competition.types_sport_competition import (
     CompetitionGroupType,
+    ExcelExportParams,
     ProductSchoolType,
+)
+from app.modules.sport_competition.utils.data_exporter import (
+    construct_users_excel_with_parameters,
 )
 from app.modules.sport_competition.utils.validation_checker import (
     check_validation_consistency,
@@ -728,6 +733,75 @@ async def invalidate_competition_user(
         user_id,
         edition.id,
         db,
+    )
+
+
+@module.router.get(
+    "/competition/users/data-export",
+    response_class=FileResponse,
+    status_code=200,
+)
+async def export_competition_users_data(
+    included_fields: list[ExcelExportParams],
+    exclude_non_validated: bool = False,
+    db: AsyncSession = Depends(get_db),
+    user: schemas_sport_competition.CompetitionUser = Depends(
+        is_user_in(group_id=GroupType.competition_admin),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Export competition users data for the current edition as a CSV file.
+    """
+    users = await cruds_sport_competition.load_all_competition_users(
+        edition.id,
+        db,
+        exclude_non_validated=exclude_non_validated,
+    )
+    products = await cruds_sport_competition.load_products(
+        edition.id,
+        db,
+    )
+    sports = await cruds_sport_competition.load_all_sports(db)
+
+    participants = None
+    if ExcelExportParams.participants in included_fields:
+        all_participants = await cruds_sport_competition.load_all_participants(
+            edition.id,
+            db,
+        )
+        participants = {p.user_id: p for p in all_participants}
+    payments = None
+    if ExcelExportParams.payments in included_fields:
+        payments = await cruds_sport_competition.load_all_payments(edition.id, db)
+    purchases = await cruds_sport_competition.load_all_purchases(edition.id, db)
+
+    excel_io = BytesIO()
+
+    construct_users_excel_with_parameters(
+        parameters=included_fields,
+        sports=sports,
+        users=users,
+        products=products,
+        users_participant=participants,
+        users_payments=payments,
+        users_purchases=purchases,
+        export_io=excel_io,
+    )
+
+    res = excel_io.getvalue()
+
+    excel_io.close()
+
+    headers = {
+        "Content-Disposition": f'attachment; filename="competition_users_{edition.name}.xlsx"',
+    }
+    return Response(
+        res,
+        headers=headers,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
 
