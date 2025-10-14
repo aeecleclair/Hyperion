@@ -25,9 +25,9 @@ minimal-titan-version-code = 139
 # Same as Black.
 line-length = 88
 indent-width = 4
-target-version = "py311"
+target-version = "py312"
 
-[tool.lint]
+[tool.ruff.lint]
 select = [
     "FAST",
     "YTT",
@@ -70,7 +70,7 @@ select = [
     "FURB",
     "RUF",
     "TRY",
-    "TCH",
+    "TC",
 ]
 # We may want to enable "ERA" to found commented-out code
 ignore = [
@@ -98,7 +98,7 @@ ignore = [
 fixable = ["ALL"]
 unfixable = []
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 # Allow `assert` and hardcoded passwords for tests.
 # Ignore PLW0603 to be able to define global models from init fixture 
 "tests/*" = ["S101", "S105", "S106", "ASYNC230", "PLW0603"]
@@ -115,7 +115,7 @@ unfixable = []
 # Allow complexe methods for auth endpoints
 "app/core/auth/endpoints_auth.py" = ["C901"]
 
-[tool.ruff.mccabe]
+[tool.ruff.lint.mccabe]
 # Flag errors (`C901`) whenever the complexity level exceeds 18.
 max-complexity = 18
 
