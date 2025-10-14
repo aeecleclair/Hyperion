@@ -1,7 +1,6 @@
 import logging
 from logging import StreamHandler
-
-from typing_extensions import override
+from typing import override
 
 from app.utils.communication.matrix import Matrix
 
