@@ -207,8 +207,8 @@ def build_data_rows(
     users_payments: dict[str, list[schemas_sport_competition.PaymentComplete]] | None,
     product_structure: tuple[list, int] | None,
     col_idx: int,
-):
-    data_rows = []
+) -> tuple[list[list[str | int]], list[int]]:
+    data_rows: list[list[str | int]] = []
     for user in users:
         user_purchases = users_purchases.get(user.user.id, [])
         row: list[str | int] = [""] * col_idx
@@ -226,6 +226,7 @@ def build_data_rows(
             row[5] = "Validé mais non payé"
         else:
             row[5] = "Non validé"
+        thick_columns = [5]
         purchases_map = {
             p.product_variant_id: p for p in users_purchases.get(user.user.id, [])
         }
@@ -244,6 +245,7 @@ def build_data_rows(
                 row[7] = ""
                 row[8] = ""
                 row[9] = ""
+            thick_columns.append(9)
 
         if ExcelExportParams.purchases in parameters and product_structure is not None:
             offset = 10 if ExcelExportParams.participants in parameters else 7
@@ -255,6 +257,9 @@ def build_data_rows(
                         row[vinfo["valid_col"] + offset] = (
                             "OUI" if p.validated else "NON"
                         )
+            thick_columns.append(
+                offset + product_structure[0][-1]["variants_info"][-1]["valid_col"],
+            )
 
         if ExcelExportParams.payments in parameters and users_payments is not None:
             user_payments = users_payments.get(user.user.id, [])
@@ -274,10 +279,11 @@ def build_data_rows(
             row[offset] = str(total / 100)
             row[offset + 1] = str(paid / 100)
             row[offset + 2] = "OUI" if total == paid else "NON"
+            thick_columns.append(offset + 2)
 
         data_rows.append(row)
 
-    return data_rows
+    return data_rows, thick_columns
 
 
 def write_fixed_headers(
@@ -419,39 +425,26 @@ def write_product_headers(
 
 
 def write_data_rows(
-    parameters: list[ExcelExportParams],
     worksheet: xlsxwriter.Workbook.worksheet_class,
     data_rows: list,
-    product_end_cols: list[int],
-    variant_end_cols: list[int],
+    thick_columns: list[int],
     formats: dict,
     columns_max_length: list[int],
     start_row: int = 5,
 ):
-    thick_columns = set()
-    thick_columns.add(len(FIXED_COLUMNS) - 1)
-    if ExcelExportParams.participants in parameters:
-        thick_columns.add(len(FIXED_COLUMNS) + 3)
-    if ExcelExportParams.purchases in parameters and product_end_cols:
-        thick_columns.union(product_end_cols)
-    if ExcelExportParams.payments in parameters:
-        if product_end_cols:
-            thick_columns.add(product_end_cols[-1] + 3)
-        elif ExcelExportParams.participants in parameters:
-            thick_columns.add(len(FIXED_COLUMNS) + 2)
     for row_idx, row in enumerate(data_rows, start=start_row):
-        # is_last_row = row_idx == start_row + len(data_rows) - 1
+        is_last_row = row_idx == start_row + len(data_rows) - 1
         for col_idx, val in enumerate(row):
             # Choix du format selon la colonne
-            # if col_idx in thick_columns:
-            #     base = (
-            #         formats["validated"]
-            #         if val == "OUI"
-            #         else formats["not_validated"]
-            #         if val == "NON"
-            #         else formats["other"]
-            #     )
-            #     fmt = base["bottom_thick"] if is_last_row else base["thick"]
+            if col_idx in thick_columns:
+                base = (
+                    formats["validated"]
+                    if val == "OUI"
+                    else formats["not_validated"]
+                    if val == "NON"
+                    else formats["other"]
+                )
+                fmt = base["bottom_thick"] if is_last_row else base["thick"]
 
             # elif col_idx in variant_end_cols:
             #     base = (
@@ -462,16 +455,15 @@ def write_data_rows(
             #         else formats["other"]
             #     )
             #     fmt = base["bottom_right"] if is_last_row else base["right"]
-            # else:
-            base = (
-                formats["validated"]
-                if val == "OUI"
-                else formats["not_validated"]
-                if val == "NON"
-                else formats["other"]
-            )
-            fmt = base["base"]
-            # fmt = base["bottom"] if is_last_row else base["base"]
+            else:
+                base = (
+                    formats["validated"]
+                    if val == "OUI"
+                    else formats["not_validated"]
+                    if val == "NON"
+                    else formats["other"]
+                )
+                fmt = base["bottom"] if is_last_row else base["base"]
 
             worksheet.write(row_idx, col_idx, val, fmt)
             columns_max_length[col_idx] = max(
@@ -494,6 +486,7 @@ def write_to_excel(
     worksheet_name: str,
     product_structure: tuple[list, int],
     data_rows: list,
+    thick_columns: list[int],
     col_idx: int,
     formats: dict,
 ):
@@ -501,14 +494,12 @@ def write_to_excel(
     columns_max_length = [len(c) for c in FIXED_COLUMNS] + [0] * (
         col_idx - len(FIXED_COLUMNS)
     )
-    product_end_cols: list[int] = []
-    variant_end_cols: list[int] = []
 
     write_fixed_headers(worksheet, formats)
     if ExcelExportParams.participants in parameters:
         write_participant_headers(worksheet, formats, columns_max_length)
     if ExcelExportParams.purchases in parameters:
-        product_end_cols, variant_end_cols = write_product_headers(
+        write_product_headers(
             worksheet,
             product_structure,
             formats,
@@ -520,8 +511,6 @@ def write_to_excel(
         start_index = len(FIXED_COLUMNS)
         if ExcelExportParams.participants in parameters:
             start_index += 4
-        if ExcelExportParams.purchases in parameters:
-            start_index = product_end_cols[-1] + 1
         write_payment_headers(
             worksheet,
             formats,
@@ -530,11 +519,9 @@ def write_to_excel(
         )
 
     write_data_rows(
-        parameters,
         worksheet,
         data_rows,
-        product_end_cols,
-        variant_end_cols,
+        thick_columns,
         formats,
         columns_max_length,
     )
@@ -576,7 +563,7 @@ def construct_users_excel_with_parameters(
         col_idx += 4
     if ExcelExportParams.payments in parameters:
         col_idx += 3
-    data_rows = build_data_rows(
+    data_rows, thick_columns = build_data_rows(
         parameters,
         users,
         schools,
@@ -597,6 +584,7 @@ def construct_users_excel_with_parameters(
         "Données",
         product_structure,
         data_rows,
+        thick_columns,
         col_idx,
         formats,
     )
