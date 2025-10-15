@@ -258,7 +258,7 @@ def build_data_rows(
                             "OUI" if p.validated else "NON"
                         )
             thick_columns.append(
-                offset + product_structure[0][-1]["variants_info"][-1]["valid_col"],
+                offset + product_structure[1] - 1,
             )
 
         if ExcelExportParams.payments in parameters and users_payments is not None:
@@ -511,6 +511,8 @@ def write_to_excel(
         start_index = len(FIXED_COLUMNS)
         if ExcelExportParams.participants in parameters:
             start_index += 4
+        if ExcelExportParams.purchases in parameters:
+            start_index += product_structure[1]
         write_payment_headers(
             worksheet,
             formats,
