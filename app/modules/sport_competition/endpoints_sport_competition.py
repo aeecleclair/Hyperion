@@ -380,6 +380,7 @@ async def export_competition_users_data(
         db,
     )
     sports = await cruds_sport_competition.load_all_sports(db)
+    schools = await cruds_sport_competition.load_all_schools(edition.id, db)
 
     participants = None
     if ExcelExportParams.participants in included_fields:
@@ -398,6 +399,7 @@ async def export_competition_users_data(
     construct_users_excel_with_parameters(
         parameters=included_fields,
         sports=sports,
+        schools=schools,
         users=users,
         products=products,
         users_participant=participants,

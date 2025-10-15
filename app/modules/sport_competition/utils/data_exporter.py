@@ -1,3 +1,4 @@
+import logging
 from io import BytesIO
 
 import xlsxwriter
@@ -9,6 +10,8 @@ from app.types.exceptions import MissingDataError
 FIXED_COLUMNS = ["Nom", "Prénom", "Email", "École", "Type", "Statut"]
 PARTICIPANTS_COLUMNS = ["Sport", "Licence", "Licence valide", "Équipe"]
 PAYMENTS_COLUMNS = ["Total à payer", "Total payé", "Tout payé"]
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 def generate_format(workbook: xlsxwriter.Workbook):
@@ -197,6 +200,7 @@ def get_user_types(user: schemas_sport_competition.CompetitionUser) -> list[str]
 def build_data_rows(
     parameters: list[ExcelExportParams],
     users: list[schemas_sport_competition.CompetitionUser],
+    schools: list[schemas_sport_competition.SchoolExtension],
     sports: list[schemas_sport_competition.Sport],
     users_participant: dict[str, schemas_sport_competition.ParticipantComplete] | None,
     users_purchases: dict[str, list[schemas_sport_competition.PurchaseComplete]],
@@ -211,7 +215,10 @@ def build_data_rows(
         row[0] = user.user.name
         row[1] = user.user.firstname
         row[2] = user.user.email
-        row[3] = user.user.school.name if user.user.school else str(user.user.school_id)
+        row[3] = next(
+            (s.school.name for s in schools if s.school_id == user.user.school_id),
+            str(user.user.school_id),
+        )
         row[4] = ", ".join(get_user_types(user))
         if user.validated and all(p.validated for p in user_purchases):
             row[5] = "Validé et payé"
@@ -229,7 +236,9 @@ def build_data_rows(
                 row[6] = sport.name
                 row[7] = participant.license if participant.license else "N/A"
                 row[8] = participant.is_license_valid
-                row[9] = participant.team.name
+                row[9] = (
+                    f"{participant.team.name}{' (capitaine)' if participant.team.captain_id == user.user.id else ''}"
+                )
             else:
                 row[6] = ""
                 row[7] = ""
@@ -237,7 +246,7 @@ def build_data_rows(
                 row[9] = ""
 
         if ExcelExportParams.purchases in parameters and product_structure is not None:
-            offset = 3 if ExcelExportParams.participants in parameters else 0
+            offset = 10 if ExcelExportParams.participants in parameters else 7
             for prod_struct in product_structure[0]:
                 for vinfo in prod_struct["variants_info"]:
                     p = purchases_map.get(vinfo["variant"].id, None)
@@ -249,7 +258,7 @@ def build_data_rows(
 
         if ExcelExportParams.payments in parameters and users_payments is not None:
             user_payments = users_payments.get(user.user.id, [])
-            offset = 0
+            offset = 6
             if ExcelExportParams.participants in parameters:
                 offset += 4
             if (
@@ -262,9 +271,9 @@ def build_data_rows(
                 )
             total = sum(p.quantity * p.product_variant.price for p in user_purchases)
             paid = sum(p.total for p in user_payments)
-            row[offset + 4] = total
-            row[offset + 5] = paid
-            row[offset + 6] = "OUI" if total == paid else "NON"
+            row[offset] = str(total / 100)
+            row[offset + 1] = str(paid / 100)
+            row[offset + 2] = "OUI" if total == paid else "NON"
 
         data_rows.append(row)
 
@@ -275,8 +284,16 @@ def write_fixed_headers(
     worksheet: xlsxwriter.Workbook.worksheet_class,
     formats: dict,
 ):
+    worksheet.merge_range(
+        0,
+        0,
+        0,
+        len(FIXED_COLUMNS) - 1,
+        "Informations utilisateur",
+        formats["header"]["base"],
+    )
     for col, title in enumerate(FIXED_COLUMNS):
-        worksheet.merge_range(0, col, 4, col, title, formats["header"]["base"])
+        worksheet.merge_range(1, col, 4, col, title, formats["header"]["base"])
 
 
 def write_participant_headers(
@@ -318,16 +335,14 @@ def write_payment_headers(
 
 def write_product_headers(
     worksheet: xlsxwriter.Workbook.worksheet_class,
-    product_structure: dict,
+    product_structure: tuple[list, int],
     formats: dict,
     start_index: int,
     columns_max_length: list[int],
 ) -> tuple[list[int], list[int]]:
-    product_end_cols = [
-        start_index - 1,
-    ]
-    variant_end_cols: set[int] = set()
-    for prod_struct in product_structure:
+    product_end_cols: list[int] = []
+    variant_end_cols: list[int] = []
+    for prod_struct in product_structure[0]:
         product = schemas_sport_competition.Product.model_validate(
             prod_struct["product"],
         )
@@ -352,31 +367,41 @@ def write_product_headers(
         for vinfo in variants_info:
             worksheet.merge_range(
                 2,
-                vinfo["qty_col"],
+                vinfo["qty_col"] + start_index,
                 2,
-                vinfo["valid_col"],
+                vinfo["valid_col"] + start_index,
                 vinfo["variant"].name,
                 formats["header"]["base"],
             )
             worksheet.merge_range(
                 3,
-                vinfo["qty_col"],
+                vinfo["qty_col"] + start_index,
                 3,
-                vinfo["valid_col"],
+                vinfo["valid_col"] + start_index,
                 str(vinfo["variant"].price / 100) + " €",
                 formats["header"]["base"],
             )
-            worksheet.write(4, vinfo["qty_col"], "Quantité", formats["header"]["base"])
+            worksheet.write(
+                4,
+                vinfo["qty_col"] + start_index,
+                "Quantité",
+                formats["header"]["base"],
+            )
             columns_max_length[vinfo["qty_col"]] = max(
                 columns_max_length[vinfo["qty_col"]],
                 len("Quantité"),
             )
-            worksheet.write(4, vinfo["valid_col"], "Validé", formats["header"]["base"])
+            worksheet.write(
+                4,
+                vinfo["valid_col"] + start_index,
+                "Validé",
+                formats["header"]["base"],
+            )
             columns_max_length[vinfo["valid_col"]] = max(
                 columns_max_length[vinfo["valid_col"]],
                 len("Validé"),
             )
-            variant_end_cols.add(vinfo["valid_col"])
+            variant_end_cols.append(vinfo["valid_col"])
 
         for c in range(start_col, end_col + 1):
             columns_max_length[c] = max(columns_max_length[c], len(product.name))
@@ -403,11 +428,22 @@ def write_data_rows(
     columns_max_length: list[int],
     start_row: int = 5,
 ):
+    thick_columns = set()
+    thick_columns.add(len(FIXED_COLUMNS) - 1)
+    if ExcelExportParams.participants in parameters:
+        thick_columns.add(len(FIXED_COLUMNS) + 3)
+    if ExcelExportParams.purchases in parameters and product_end_cols:
+        thick_columns.union(product_end_cols)
+    if ExcelExportParams.payments in parameters:
+        if product_end_cols:
+            thick_columns.add(product_end_cols[-1] + 3)
+        elif ExcelExportParams.participants in parameters:
+            thick_columns.add(len(FIXED_COLUMNS) + 2)
     for row_idx, row in enumerate(data_rows, start=start_row):
         is_last_row = row_idx == start_row + len(data_rows) - 1
         for col_idx, val in enumerate(row):
             # Choix du format selon la colonne
-            if col_idx in product_end_cols:
+            if col_idx in thick_columns:
                 base = (
                     formats["validated"]
                     if val == "OUI"
@@ -426,20 +462,6 @@ def write_data_rows(
                     else formats["other"]
                 )
                 fmt = base["bottom_right"] if is_last_row else base["right"]
-
-            elif (
-                ExcelExportParams.participants in parameters
-                and len(FIXED_COLUMNS) - 1 == col_idx
-            ) or (
-                ExcelExportParams.payments in parameters
-                and col_idx == product_end_cols[-1] + 3
-            ):
-                fmt = (
-                    formats["other"]["bottom_thick"]
-                    if is_last_row
-                    else formats["other"]["thick"]
-                )
-
             else:
                 base = (
                     formats["validated"]
@@ -469,7 +491,7 @@ def write_to_excel(
     parameters: list[ExcelExportParams],
     workbook: xlsxwriter.Workbook,
     worksheet_name: str,
-    product_structure,
+    product_structure: tuple[list, int],
     data_rows: list,
     col_idx: int,
     formats: dict,
@@ -522,6 +544,7 @@ def write_to_excel(
 def construct_users_excel_with_parameters(
     parameters: list[ExcelExportParams],
     sports: list[schemas_sport_competition.Sport],
+    schools: list[schemas_sport_competition.SchoolExtension],
     users: list[schemas_sport_competition.CompetitionUser],
     users_participant: dict[str, schemas_sport_competition.ParticipantComplete] | None,
     users_purchases: dict[str, list[schemas_sport_competition.PurchaseComplete]],
@@ -546,6 +569,8 @@ def construct_users_excel_with_parameters(
             len(prod_struct["variants_info"]) * 2
             for prod_struct in product_structure[0]
         )
+        hyperion_error_logger.debug(f"Product structure: {product_structure}")
+
     if ExcelExportParams.participants in parameters:
         col_idx += 4
     if ExcelExportParams.payments in parameters:
@@ -553,6 +578,7 @@ def construct_users_excel_with_parameters(
     data_rows = build_data_rows(
         parameters,
         users,
+        schools,
         sports,
         users_participant,
         users_purchases,
