@@ -43,10 +43,10 @@ async def create_pixel(
     db.add(rplace_pixel)
     try:
         await db.commit()
-        return rplace_pixel
     except IntegrityError as error:
         await db.rollback()
         raise ValueError(error)
+    return rplace_pixel
 
 
 async def get_pixel_info(
@@ -81,12 +81,13 @@ async def get_last_pixel_date(
         .limit(1),
     )
     return result.scalars().first() or datetime(2003, 12, 18, 7, 46, 0, 0, UTC)
+    #    return {"last_pixel_date": date_result.isoformat()}
 
 
 async def get_last_pixel(
     db: AsyncSession,
     user_id: str,
-) -> models_rplace.Pixel:
+) -> models_rplace.Pixel | None:
     result = await db.execute(
         select(models_rplace.Pixel)
         .where(

@@ -154,7 +154,11 @@ async def get_pixel_info(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
 ):
-    info = await cruds_rplace.get_pixel_info(db=db, x=x, y=y)
+    info = await cruds_rplace.get_pixel_info(
+        db=db,
+        x=x,
+        y=y,
+    )
     if info is None:
         raise HTTPException(
             status_code=404,
@@ -172,4 +176,8 @@ async def get_last_pixel_date(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
 ):
-    return await cruds_rplace.get_last_pixel_date(db=db, user_id=user.id)
+    date = await cruds_rplace.get_last_pixel_date(
+        db=db,
+        user_id=user.id,
+    )
+    return schemas_rplace.UserInfo(date=date)
