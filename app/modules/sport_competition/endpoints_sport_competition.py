@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from io import BytesIO
 from uuid import UUID, uuid4
 
-from fastapi import Body, Depends, File, HTTPException, Response, UploadFile
+from fastapi import Body, Depends, File, HTTPException, Query, Response, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -357,7 +357,7 @@ async def get_current_user_competition(
     status_code=200,
 )
 async def export_competition_users_data(
-    included_fields: list[ExcelExportParams],
+    included_fields: list[ExcelExportParams] = Query(default=[]),
     exclude_non_validated: bool = False,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
