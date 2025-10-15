@@ -528,7 +528,7 @@ def write_to_excel(
         columns_max_length,
     )
     autosize_columns(worksheet, columns_max_length)
-    worksheet.freeze_panes(3, 3)
+    worksheet.freeze_panes(5, 4)
 
 
 def construct_users_excel_with_parameters(
