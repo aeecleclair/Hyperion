@@ -201,7 +201,7 @@ def build_data_rows(
     users_participant: dict[str, schemas_sport_competition.ParticipantComplete] | None,
     users_purchases: dict[str, list[schemas_sport_competition.PurchaseComplete]],
     users_payments: dict[str, list[schemas_sport_competition.PaymentComplete]] | None,
-    product_structure: dict | None,
+    product_structure: tuple[list, int] | None,
     col_idx: int,
 ):
     data_rows = []
@@ -238,7 +238,7 @@ def build_data_rows(
 
         if ExcelExportParams.purchases in parameters and product_structure is not None:
             offset = 3 if ExcelExportParams.participants in parameters else 0
-            for prod_struct in product_structure:
+            for prod_struct in product_structure[0]:
                 for vinfo in prod_struct["variants_info"]:
                     p = purchases_map.get(vinfo["variant"].id, None)
                     if p and p.quantity > 0:
@@ -258,7 +258,7 @@ def build_data_rows(
             ):
                 offset += sum(
                     len(prod_struct["variants_info"]) * 2
-                    for prod_struct in product_structure.values()
+                    for prod_struct in product_structure[0]
                 )
             total = sum(p.quantity * p.product_variant.price for p in user_purchases)
             paid = sum(p.total for p in user_payments)
@@ -536,7 +536,7 @@ def construct_users_excel_with_parameters(
     if users_participant is None and ExcelExportParams.participants in parameters:
         raise MissingDataError("users_participant")
 
-    product_structure = {}
+    product_structure: tuple = ()
     col_idx = len(FIXED_COLUMNS)
     if ExcelExportParams.purchases in parameters and products is not None:
         product_structure = build_product_structure(
@@ -544,7 +544,7 @@ def construct_users_excel_with_parameters(
         )
         col_idx += sum(
             len(prod_struct["variants_info"]) * 2
-            for prod_struct in product_structure.values()
+            for prod_struct in product_structure[0]
         )
     if ExcelExportParams.participants in parameters:
         col_idx += 4
