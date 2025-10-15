@@ -440,37 +440,38 @@ def write_data_rows(
         elif ExcelExportParams.participants in parameters:
             thick_columns.add(len(FIXED_COLUMNS) + 2)
     for row_idx, row in enumerate(data_rows, start=start_row):
-        is_last_row = row_idx == start_row + len(data_rows) - 1
+        # is_last_row = row_idx == start_row + len(data_rows) - 1
         for col_idx, val in enumerate(row):
             # Choix du format selon la colonne
-            if col_idx in thick_columns:
-                base = (
-                    formats["validated"]
-                    if val == "OUI"
-                    else formats["not_validated"]
-                    if val == "NON"
-                    else formats["other"]
-                )
-                fmt = base["bottom_thick"] if is_last_row else base["thick"]
+            # if col_idx in thick_columns:
+            #     base = (
+            #         formats["validated"]
+            #         if val == "OUI"
+            #         else formats["not_validated"]
+            #         if val == "NON"
+            #         else formats["other"]
+            #     )
+            #     fmt = base["bottom_thick"] if is_last_row else base["thick"]
 
-            elif col_idx in variant_end_cols:
-                base = (
-                    formats["validated"]
-                    if val == "OUI"
-                    else formats["not_validated"]
-                    if val == "NON"
-                    else formats["other"]
-                )
-                fmt = base["bottom_right"] if is_last_row else base["right"]
-            else:
-                base = (
-                    formats["validated"]
-                    if val == "OUI"
-                    else formats["not_validated"]
-                    if val == "NON"
-                    else formats["other"]
-                )
-                fmt = base["bottom"] if is_last_row else base["base"]
+            # elif col_idx in variant_end_cols:
+            #     base = (
+            #         formats["validated"]
+            #         if val == "OUI"
+            #         else formats["not_validated"]
+            #         if val == "NON"
+            #         else formats["other"]
+            #     )
+            #     fmt = base["bottom_right"] if is_last_row else base["right"]
+            # else:
+            base = (
+                formats["validated"]
+                if val == "OUI"
+                else formats["not_validated"]
+                if val == "NON"
+                else formats["other"]
+            )
+            fmt = base["base"]
+            # fmt = base["bottom"] if is_last_row else base["base"]
 
             worksheet.write(row_idx, col_idx, val, fmt)
             columns_max_length[col_idx] = max(
