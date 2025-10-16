@@ -414,14 +414,15 @@ def write_product_headers(
         for c in range(start_col, end_col + 1):
             columns_max_length[c] = max(columns_max_length[c], len(product.name))
 
-    worksheet.merge_range(
-        0,
-        start_index,
-        0,
-        product_end_cols[-1],
-        "Produits",
-        formats["header"]["base"],
-    )
+    if product_end_cols:
+        worksheet.merge_range(
+            0,
+            start_index,
+            0,
+            product_end_cols[-1],
+            "Produits",
+            formats["header"]["base"],
+        )
 
     return product_end_cols, list(variant_end_cols)
 
