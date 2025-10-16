@@ -159,6 +159,8 @@ def build_product_structure(
 
     product_structure = []
     for product in products:
+        if not product.variants:
+            continue
         variants_info = []
         for variant in product.variants:
             qty_col = col_idx
