@@ -7,7 +7,6 @@ authors = [{ name = "AEECL ECLAIR" }]
 # Hyperion follows Semantic Versioning
 # https://semver.org/
 version = "4.9.8"
-minimal-titan-version-code = 139
 requires-python = ">= 3.11, < 3.13"
 
 license = "MIT"
@@ -18,13 +17,15 @@ license-files = [
     "assets/myeclpay-terms-of-service.txt",
 ]
 
+[tool.titan]
+minimal-titan-version-code = 139
 
 [tool.ruff]
 # By default ruff also respect gitignore files
 # Same as Black.
 line-length = 88
 indent-width = 4
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = [
@@ -69,7 +70,7 @@ select = [
     "FURB",
     "RUF",
     "TRY",
-    "TCH",
+    "TC",
 ]
 # We may want to enable "ERA" to found commented-out code
 ignore = [
@@ -129,7 +130,7 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 plugins = ["pydantic.mypy"]
 
 warn_unreachable = true
@@ -201,3 +202,4 @@ exclude_also = []
 
 skip_covered = true
 show_missing = true
+
