@@ -641,11 +641,28 @@ async def reset_password(
             ),
         )
 
+    user = await cruds_users.get_user_by_id(db=db, user_id=recover_request.user_id)
+    if user.should_change_password:
+        # we control whether we check if the new password is different
+        if security.verify_password(
+            reset_password_request.new_password,
+            user.password_hash,
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="The new password should not be identical to the current password",
+            )
+
     new_password_hash = security.get_password_hash(reset_password_request.new_password)
     await cruds_users.update_user_password_by_id(
         db=db,
         user_id=recover_request.user_id,
         new_password_hash=new_password_hash,
+    )
+    await cruds_users.update_should_user_change_password_by_id(
+        db=db,
+        user_id=recover_request.user_id,
+        should_change_password=False,
     )
 
     # As the user has reset its password, all other recovery requests can be deleted from the table
@@ -823,11 +840,27 @@ async def change_password(
     if user is None:
         raise HTTPException(status_code=403, detail="The old password is invalid")
 
+    if user.should_change_password:
+        # we control whether we check if the new password is different
+        if security.verify_password(
+            change_password_request.new_password,
+            user.password_hash,
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="The new password should not be identical to the current password",
+            )
+
     new_password_hash = security.get_password_hash(change_password_request.new_password)
     await cruds_users.update_user_password_by_id(
         db=db,
         user_id=user.id,
         new_password_hash=new_password_hash,
+    )
+    await cruds_users.update_should_user_change_password_by_id(
+        db=db,
+        user_id=user.id,
+        should_change_password=False,
     )
 
     # Revoke existing auth refresh tokens
