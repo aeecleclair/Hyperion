@@ -643,7 +643,7 @@ async def reset_password(
 
     user = await cruds_users.get_user_by_id(db=db, user_id=recover_request.user_id)
     if user is None:
-        raise HTTPException("Invalid user ID")
+        raise HTTPException(status_code=404, detail="Invalid user ID")
     if user.should_change_password:
         # we control whether we check if the new password is different
         if security.verify_password(
