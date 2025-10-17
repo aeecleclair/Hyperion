@@ -283,6 +283,18 @@ async def update_user_password_by_id(
     await db.flush()
 
 
+async def update_should_user_change_password_by_id(
+    db: AsyncSession,
+    user_id: str,
+    should_change_password: bool = True,
+):
+    await db.execute(
+        update(models_users.CoreUser)
+        .where(models_users.CoreUser.id == user_id)
+        .values(should_change_password=should_change_password),
+    )
+
+
 async def remove_users_from_school(
     db: AsyncSession,
     school_id: UUID,
