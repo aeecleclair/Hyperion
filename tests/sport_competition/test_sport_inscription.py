@@ -3102,3 +3102,13 @@ async def test_register_to_volunteer_shift(
         None,
     )
     assert registration_check is not None, registrations_json
+
+
+async def test_data_exporter(
+    client: TestClient,
+):
+    response = client.get(
+        "/competition/users/data-export?included_fields=purchases&included_fields=payments&included_fields=participants",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200

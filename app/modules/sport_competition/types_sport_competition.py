@@ -35,3 +35,9 @@ class ProductSchoolType(Enum):
     centrale = "centrale"
     from_lyon = "from_lyon"
     others = "others"
+
+
+class ExcelExportParams(Enum):
+    participants = "participants"
+    purchases = "purchases"
+    payments = "payments"
