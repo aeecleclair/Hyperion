@@ -741,6 +741,21 @@ async def change_password(
     return standard_responses.Result()
 
 
+@router.post("/users/invalidate-password/{user_id}", status_code=201)
+async def invalidate_password(
+    user_id: str,
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Invalidate one user's password.
+    The concerned user should change their password with a different one to use our services again.
+
+    **This endpoint is only usable by administrators**
+    """
+    await cruds_users.update_should_user_change_password_by_id(db=db, user_id=user_id)
+
+
 @router.post(
     "/users/migrate-mail",
     status_code=204,
