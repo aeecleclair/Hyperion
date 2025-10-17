@@ -404,6 +404,7 @@ async def activate_user(
         school_id=school_id,
         account_type=account_type,
         password_hash=password_hash,
+        should_change_password=False,
         name=user.name,
         firstname=user.firstname,
         nickname=user.nickname,
