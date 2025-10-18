@@ -240,7 +240,7 @@ class SynapseAuthClient(BaseAuthClient):
 
         return {
             "sub": user.id,
-            # "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture",
+            "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture",
             # Matrix does not support special characters in username
             "username": username,
             "displayname": user.full_name,
