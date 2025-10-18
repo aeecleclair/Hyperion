@@ -2733,7 +2733,7 @@ async def edit_match(
     match_id: UUID,
     match_info: schemas_sport_competition.MatchEdit,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
+    user: models_users.CoreUser = Depends(
         has_user_competition_access(
             competition_group=CompetitionGroupType.sport_manager,
         ),
@@ -2809,7 +2809,7 @@ async def get_global_podiums(
 
 
 @module.router.get(
-    "/competition/podiums/sport/{sport_id}",
+    "/competition/podiums/sports/{sport_id}",
     response_model=list[schemas_sport_competition.TeamSportResultComplete],
     status_code=200,
 )
@@ -2834,7 +2834,7 @@ async def get_sport_podiums(
 
 
 @module.router.get(
-    "/competition/podiums/school/{school_id}",
+    "/competition/podiums/schools/{school_id}",
     response_model=list[schemas_sport_competition.TeamSportResultComplete],
     status_code=200,
 )
@@ -2859,7 +2859,7 @@ async def get_school_podiums(
 
 
 @module.router.post(
-    "/competition/podiums/sport/{sport_id}",
+    "/competition/podiums/sports/{sport_id}",
     response_model=list[schemas_sport_competition.TeamSportResult],
     status_code=201,
 )
@@ -2909,7 +2909,7 @@ async def create_sport_podium(
 
 
 @module.router.delete(
-    "/competition/podiums/sport/{sport_id}",
+    "/competition/podiums/sports/{sport_id}",
     status_code=204,
 )
 async def delete_sport_podium(

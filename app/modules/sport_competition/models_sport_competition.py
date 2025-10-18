@@ -297,9 +297,12 @@ class SportPodium(Base):
         ForeignKey("competition_school_extension.school_id"),
         primary_key=True,
     )
+    team_id: Mapped[UUID] = mapped_column(
+        ForeignKey("competition_team.id"),
+        primary_key=True,
+    )
     points: Mapped[int]
     rank: Mapped[int]
-    team_id: Mapped[UUID] = mapped_column(ForeignKey("competition_team.id"))
 
     team: Mapped[CompetitionTeam] = relationship(
         "CompetitionTeam",
