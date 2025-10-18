@@ -7,7 +7,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups import groups_type
 from app.core.groups.groups_type import GroupType
-from app.dependencies import get_db, get_user_id_from_token_with_scopes
+from app.dependencies import (
+    get_db,
+    get_user_from_token_with_scopes,
+    get_user_id_from_token_with_scopes,
+)
 from app.modules.sport_competition import (
     cruds_sport_competition,
     schemas_sport_competition,
@@ -75,6 +79,68 @@ def is_competition_user(
     async def is_user_a_member_of(
         user: schemas_sport_competition.CompetitionUser = Depends(
             get_competition_user_from_token_with_scopes([[ScopeType.API]]),
+        ),
+        edition: schemas_sport_competition.CompetitionEdition = Depends(
+            get_current_edition,
+        ),
+        db: AsyncSession = Depends(get_db),
+    ) -> schemas_sport_competition.CompetitionUser:
+        """
+        A dependency that checks that user is a member of the group with the given id then returns the corresponding user.
+        """
+        if (
+            exclude_external
+            and user.user.account_type == groups_type.AccountType.external
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="User is external",
+            )
+        if group_id is not None and not any(
+            group.id == group_id for group in user.user.groups
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="User is not a member of the group",
+            )
+        if competition_group is not None and not any(
+            group.id == GroupType.competition_admin.value for group in user.user.groups
+        ):
+            user_groups = (
+                await cruds_sport_competition.load_user_competition_groups_memberships(
+                    db=db,
+                    user_id=user.user_id,
+                    edition_id=edition.id,
+                )
+            )
+            if not any(group.group == competition_group for group in user_groups):
+                raise HTTPException(
+                    status_code=403,
+                    detail="User is not a member of the competition group",
+                )
+        return user
+
+    return is_user_a_member_of
+
+
+def has_user_competition_access(
+    group_id: GroupType | None = None,
+    competition_group: CompetitionGroupType | None = None,
+    exclude_external: bool = False,
+) -> Callable[
+    [schemas_sport_competition.CompetitionUser],
+    Coroutine[Any, Any, schemas_sport_competition.CompetitionUser],
+]:
+    """
+    Generate a dependency which will:
+        * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
+        * make sure the user making the request exists and is a member of the group with the given id (if provided)
+        * make sure the user is a member of the competition group with the given id for the current edition (if provided)
+    """
+
+    async def is_user_a_member_of(
+        user: schemas_sport_competition.CompetitionUser = Depends(
+            get_user_from_token_with_scopes([[ScopeType.API]]),
         ),
         edition: schemas_sport_competition.CompetitionEdition = Depends(
             get_current_edition,

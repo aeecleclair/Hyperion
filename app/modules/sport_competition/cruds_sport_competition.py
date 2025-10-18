@@ -1404,6 +1404,20 @@ async def delete_team_by_id(
     await db.flush()
 
 
+async def load_all_teams(
+    edition_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_sport_competition.TeamComplete]:
+    teams = await db.execute(
+        select(models_sport_competition.CompetitionTeam)
+        .where(models_sport_competition.CompetitionTeam.edition_id == edition_id)
+        .options(
+            selectinload(models_sport_competition.CompetitionTeam.participants),
+        ),
+    )
+    return [team_model_to_schema(team) for team in teams.scalars().all()]
+
+
 async def load_team_by_id(
     team_id,
     db: AsyncSession,
@@ -1709,6 +1723,22 @@ async def delete_match_by_id(
         ),
     )
     await db.flush()
+
+
+async def load_all_matches_by_edition_id(
+    edition_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_sport_competition.MatchComplete]:
+    matches = await db.execute(
+        select(models_sport_competition.Match)
+        .where(models_sport_competition.Match.edition_id == edition_id)
+        .options(
+            selectinload(models_sport_competition.Match.team1),
+            selectinload(models_sport_competition.Match.team2),
+        ),
+    )
+
+    return [match_model_to_schema(match) for match in matches.scalars().all()]
 
 
 async def load_match_by_id(
