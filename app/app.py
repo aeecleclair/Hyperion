@@ -483,6 +483,7 @@ def test_configuration(
     # Create folder for calendars if they don't already exists
     Path("data/ics/").mkdir(parents=True, exist_ok=True)
     Path("data/core/").mkdir(parents=True, exist_ok=True)
+    Path("data/raid/chrono_raid").mkdir(parents=True, exist_ok=True)
 
 
 async def init_lifespan(
