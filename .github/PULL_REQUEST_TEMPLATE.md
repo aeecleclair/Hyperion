@@ -43,12 +43,15 @@
 - [ ] 🔧 Infra CI/CD (changes to configs of workflows)
 - [ ] 💥 BREAKING CHANGE (fix or feature that require a new minimal version of the front-end)
 
+- [ ] 😶‍🌫️ No impact for the end-users
+
 ### Impact & Scope
 
 - [ ] Core functionality changes
 - [ ] Single module changes
 - [ ] Multiple modules changes
 - [ ] Database migrations required
+
 - [ ] Other: <!--not module-oriented-->
 
 ### Testing
@@ -56,6 +59,7 @@
 - [ ] 1. Tested this locally
 - [ ] 2. Added/modified tests that pass the CI
 - [ ] 3. Tested in a pre-prod
+
 - [ ] 0. Untestable (exceptionally), will be tested in prod directly
 
 ### Documentation
@@ -63,6 +67,7 @@
 - [ ] Updated [the docs](docs.myecl.fr) accordingly : <!--[Docs#0 - Title](https://github.com/aeecleclair/myecl-documentation/pull/0)-->
 - [ ] `"` Docstrings
 - [ ] `#` Inline comments
+
 - [ ] No documentation needed
 
 </details>
