@@ -20,10 +20,10 @@ RUN groupadd --gid 1000 hyperion && \
 WORKDIR /hyperion
 
 # First copy only the requirements to leverage Docker cache
-COPY requirements-common.txt .
+COPY requirements.txt .
 
 # Install dependencies using uv (way faster than pip)
-RUN uv pip install --system --no-cache -r requirements-common.txt
+RUN uv pip install --system --no-cache -r requirements.txt
 
 # Then copy the rest of the application code
 COPY alembic.ini .
@@ -43,4 +43,4 @@ EXPOSE 8000
 
 # Use fastapi cli as the entrypoint
 # Use sh -c to allow environment variable expansion
-ENTRYPOINT ["sh", "-c", "fastapi run app/main.py --workers $WORKERS --host 0.0.0.0 --port 8000"]
+ENTRYPOINT ["sh", "-c", "fastapi run --workers $WORKERS --host 0.0.0.0 --port 8000"]

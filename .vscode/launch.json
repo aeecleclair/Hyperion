@@ -9,7 +9,7 @@
       "type": "debugpy",
       "request": "launch",
       "module": "fastapi_cli",
-      "args": ["dev", "app/main.py"],
+      "args": ["dev"],
       "jinja": true,
       "justMyCode": true
     }
