@@ -3,19 +3,39 @@
 ### Summary
 
 <!--Brief description of what this PR does.-->
+<!--Don't explain the code, justify what this PR exists for!-->
+
+<!--Sources/references at the end-->
 
 ### Related Issues
 
-<!-- If applicable -->
-Closes #<!--0-->
+<!-- If applicable. -->
+<!--Fixes #0-->
 
-## Changes Made
+### Required PRs
+
+<!-- If applicable -->
+<!--Depends on #0-->
+
+### Changes Made
 
 <!--Please describe the changes made in this pull request-->
+<!--Tell the big steps, use a checklist to show progress. You can explain here how the code works.-->
 
-- ...
+- [x] ...
+- [ ] ...
 
-## Type of Change
+### Additional Notes
+
+<!--Anything relevant that does not quite fit in the summary-->
+
+<summary>
+
+## Classification
+
+<details>
+
+### Type of Change
 
 - [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
 - [ ] ✨ New feature (non-breaking change which adds functionality)
@@ -23,32 +43,28 @@ Closes #<!--0-->
 - [ ] 🔧 Infra CI/CD (changes to configs of workflows)
 - [ ] 💥 BREAKING CHANGE (fix or feature that require a new minimal version of the front-end)
 
-## Impact & Scope
+### Impact & Scope
 
 - [ ] Core functionality changes
 - [ ] Single module changes
 - [ ] Multiple modules changes
 - [ ] Database migrations required
-- [ ] Other
+- [ ] Other: <!--not module-oriented-->
 
-## Testing
+### Testing
 
-- [ ] Added/modified tests that pass the CI
-- [ ] Tested in a pre-prod
-- [ ] Tested this locally
+- [ ] 1. Tested this locally
+- [ ] 2. Added/modified tests that pass the CI
+- [ ] 3. Tested in a pre-prod
+- [ ] 0. Untestable (exceptionally), will be tested in prod directly
 
-## Documentation
+### Documentation
 
-- [ ] Updated docs accordingly (docs.myecl.fr) : <!--[Docs#0 - Title](https://github.com/aeecleclair/myecl-documentation/pull/0)-->
-- [ ] Code includes docstrings
+- [ ] Updated [the docs](docs.myecl.fr) accordingly : <!--[Docs#0 - Title](https://github.com/aeecleclair/myecl-documentation/pull/0)-->
+- [ ] `"` Docstrings
+- [ ] `#` Inline comments
 - [ ] No documentation needed
 
-## Checklist
+</details>
 
-- [ ] My code follows the style guidelines of this project
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] Any dependent changes have been merged and published (_Indicate the linked PR for the dependent changes_)
-
-## Additional Notes
-
-Add any other context, screenshots, or information about the pull request here.
+</summary>
