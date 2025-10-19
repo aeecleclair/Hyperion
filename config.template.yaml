@@ -3,40 +3,40 @@
 ###############################################
 
 # ACCESS_TOKEN_SECRET_KEY should contain a random string with enough entropy (at least 32 bytes long) to securely sign all access_tokens for OAuth and Openid connect
-# If you want to generate a 2048-bit long PEM certificate and save it in a file, the following command may be used:
-# openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out certificate.pem
-ACCESS_TOKEN_SECRET_KEY: YWZOHliiI53lJMJc5BI_WbGbA4GF2T7Wbt1airIhOXEa3c021c4-1c55-4182-b141-7778bcc8fac4
+ACCESS_TOKEN_SECRET_KEY: #YWZOHliiI53lJMJc5BI_WbGbA4GF2T7Wbt1airIhOXEa3c021c4-1c55-4182-b141-7778bcc8fac4
 
 # RSA_PRIVATE_PEM_STRING should be a string containing the PEM certificate of a private RSA key. It will be used to sign id_tokens for Openid connect authentication
-# The example below was generated using a 2048-bit RSA key generator
+# The 2048-bit-long PEM certificate example below was generated using a 2048-bit RSA key generator online.
+# If you want to generate a PEM certificate and save in a file, the following openssl command may be used:
+# openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out certificate.pem
 RSA_PRIVATE_PEM_STRING: |
-  -----BEGIN RSA PRIVATE KEY-----
-  MIIEpQIBAAKCAQEA1tpj3TZDkJakp2RygsM392pQbcmNBOGFT8FlETcRG/JVFT7k
-  iClJu+CVOJSVD0epfpYp93cYepfw74SezYnBCyuoLJ2yg5Qh4KlCrWmvwM7vhFIN
-  x0xddIQi+Gm0T3dxGtv4Ga50TYX4SV4FE3ctJG9m3pyNF6POODp5tMJvShQWYTto
-  W9qNhltZ8Z+14bq2INV/efpT47WuMT+VD/fa9/WwopAtgBcQOvq57fv5+DaPOIVR
-  9BiP7F+pv+v6wQ373hI22QzCMsA4Whl+BmWFKcFoBDOBRjlW5VqhJWJkWZIRP0q+
-  VAZHk2xJK+0YFc9jmaC+ExMtuyHYK0RnQK/8LQIDAQABAoIBABxJ8v4sZ+cAvrs/
-  kYhAFf1gpShfck7jNr9SknEa1Aje9m7usf5vmULAhkVF4v55DAsb0HjB2JpDqTiQ
-  OKyNZ7qFzAXb2aZTecZv4tScZsS3OngsqZ3FI0T1JPmaSWBxNJY5wkf3XV7btd5L
-  H9X5ShtTA7Np33XuXneu01mGhEq3boLro+vfXMHV5QHyle1F4LUFWEqtP0UmZ5wA
-  rro0Y7pA8R88tu5X4iWEjQPnAsbRixwFQ9LNMD8+40e1UIguobRySnP5umErHaIh
-  Kui7ZijLjbZh/dPS0IfpgahL1K6s9XhT3mD9WMvAvMkNtLewHIZZukG45mOQBrjF
-  vvyYxoECgYEA+EY6YimGw0IKnUuf+5uZRXST7kDMENz1Flkcj8oZvo47hdX8/lDN
-  i0y7gm3VNfHAK2R2KZPmSbtXA0DvS7kmx1/CFcmwkaakhuU5dyCHldWwSaTME3IE
-  xjSZfTvlAiq9i6nUflgfkKo3Bdsiq8TYOUAv25S2SwYDH9Tx0fQwwGECgYEA3Ynt
-  CHc8e4YRlGT65UQmEZ8cptmqVRyY4ClMU1xht7Pn0G1JwKRraiEL5/LndwscWf3h
-  DygQuArJ28pp4d22FEW1LeXozXYUjJoz3anIA45IZ1OihS7Cx7tJB51/QNJeFdF4
-  EX/XHaVukHyYSsAxkwCUYOw3cSgZOSEddL5Wf00CgYEA7JlIlDmMwtFR+jqSmJ3c
-  //Kr8zZvAnb/Xa/IZ0MrK4yyLsYR1m48o06Ztx9iO4lKIFAZx1+563QL5P7hzOEC
-  kqev90GA8hzD2AXksKEgdOrymAvjq3hSEm0YBN+qS1ldzxYmec0TL7L2wq7lqJnr
-  kQuZUAG1g2OUYKZ3WSUDvKECgYEAv24NSkFuG/avfiD7w9xtYNCye2KekskROLG2
-  6FltfsWQTEQDdNkekChaF2WHqRAKwaBlNymRuNZpsuhnMerZCQ9rDWwbDF86RnyA
-  0MuCr7/kxJQ6XQcY/GnTIydu7F5bOlM0gzqKcW2f6m4fUohczf+0N0QmbDsQAJOi
-  1lwadgkCgYEA3tkCBJIPTQecfjWiLqSocS6SrwXU+r3Jw6kI3/IB6ban/nsFdHSb
-  nADST7f2zZatN6XALwsLU7f2R09R39ub0AJPyfToxo7MngR1rvaUYooF3rLlaU32
-  8DqGvGpLkZkwbtcDmcX1zQoHjUo7RvoShZoapr59ihfrkiiEsXOkuGw=
-  -----END RSA PRIVATE KEY-----
+  # -----BEGIN RSA PRIVATE KEY-----
+  # MIIEpQIBAAKCAQEA1tpj3TZDkJakp2RygsM392pQbcmNBOGFT8FlETcRG/JVFT7k
+  # iClJu+CVOJSVD0epfpYp93cYepfw74SezYnBCyuoLJ2yg5Qh4KlCrWmvwM7vhFIN
+  # x0xddIQi+Gm0T3dxGtv4Ga50TYX4SV4FE3ctJG9m3pyNF6POODp5tMJvShQWYTto
+  # W9qNhltZ8Z+14bq2INV/efpT47WuMT+VD/fa9/WwopAtgBcQOvq57fv5+DaPOIVR
+  # 9BiP7F+pv+v6wQ373hI22QzCMsA4Whl+BmWFKcFoBDOBRjlW5VqhJWJkWZIRP0q+
+  # VAZHk2xJK+0YFc9jmaC+ExMtuyHYK0RnQK/8LQIDAQABAoIBABxJ8v4sZ+cAvrs/
+  # kYhAFf1gpShfck7jNr9SknEa1Aje9m7usf5vmULAhkVF4v55DAsb0HjB2JpDqTiQ
+  # OKyNZ7qFzAXb2aZTecZv4tScZsS3OngsqZ3FI0T1JPmaSWBxNJY5wkf3XV7btd5L
+  # H9X5ShtTA7Np33XuXneu01mGhEq3boLro+vfXMHV5QHyle1F4LUFWEqtP0UmZ5wA
+  # rro0Y7pA8R88tu5X4iWEjQPnAsbRixwFQ9LNMD8+40e1UIguobRySnP5umErHaIh
+  # Kui7ZijLjbZh/dPS0IfpgahL1K6s9XhT3mD9WMvAvMkNtLewHIZZukG45mOQBrjF
+  # vvyYxoECgYEA+EY6YimGw0IKnUuf+5uZRXST7kDMENz1Flkcj8oZvo47hdX8/lDN
+  # i0y7gm3VNfHAK2R2KZPmSbtXA0DvS7kmx1/CFcmwkaakhuU5dyCHldWwSaTME3IE
+  # xjSZfTvlAiq9i6nUflgfkKo3Bdsiq8TYOUAv25S2SwYDH9Tx0fQwwGECgYEA3Ynt
+  # CHc8e4YRlGT65UQmEZ8cptmqVRyY4ClMU1xht7Pn0G1JwKRraiEL5/LndwscWf3h
+  # DygQuArJ28pp4d22FEW1LeXozXYUjJoz3anIA45IZ1OihS7Cx7tJB51/QNJeFdF4
+  # EX/XHaVukHyYSsAxkwCUYOw3cSgZOSEddL5Wf00CgYEA7JlIlDmMwtFR+jqSmJ3c
+  # //Kr8zZvAnb/Xa/IZ0MrK4yyLsYR1m48o06Ztx9iO4lKIFAZx1+563QL5P7hzOEC
+  # kqev90GA8hzD2AXksKEgdOrymAvjq3hSEm0YBN+qS1ldzxYmec0TL7L2wq7lqJnr
+  # kQuZUAG1g2OUYKZ3WSUDvKECgYEAv24NSkFuG/avfiD7w9xtYNCye2KekskROLG2
+  # 6FltfsWQTEQDdNkekChaF2WHqRAKwaBlNymRuNZpsuhnMerZCQ9rDWwbDF86RnyA
+  # 0MuCr7/kxJQ6XQcY/GnTIydu7F5bOlM0gzqKcW2f6m4fUohczf+0N0QmbDsQAJOi
+  # 1lwadgkCgYEA3tkCBJIPTQecfjWiLqSocS6SrwXU+r3Jw6kI3/IB6ban/nsFdHSb
+  # nADST7f2zZatN6XALwsLU7f2R09R39ub0AJPyfToxo7MngR1rvaUYooF3rLlaU32
+  # 8DqGvGpLkZkwbtcDmcX1zQoHjUo7RvoShZoapr59ihfrkiiEsXOkuGw=
+  # -----END RSA PRIVATE KEY-----
 
 # Host or URL of the instance of Hyperion
 # This url will be especially used for OIDC/OAuth2 discovery endpoint and links send by email
@@ -122,24 +122,16 @@ USE_FACTORIES: True # if True and the database is empty, it will be seeded with 
 # ```
 # Group UUIDs should be values of the GroupType enum from `app.core.groups.groupe_type.GroupType`
 FACTORIES_DEMO_USERS:
-  - firstname: Your Firstname
-    name: Your Name
-    nickname: Your Nickname
-    email: your-firstname.your-name@etu.ec-lyon.fr
-    password: Your_P@$$w0rd
+  - firstname: #Foucauld
+    name: #Bellanger
+    nickname: #Ñool
+    email: #foucauld.bellanger@etu.ec-lyon.fr
+    password: #azerty
     groups:
       - 0a25cb76-4b63-4fd3-b939-da6d9feabf28 # admin
       - 45649735-866a-49df-b04b-a13c74fd5886 # AE
       - 1f841bd9-00be-41a7-96e1-860a18a46105 # eclair
-  - firstname: Foucauld
-    name: Bellanger
-    nickname: Ñool
-    email: foucauld.bellanger@etu.ec-lyon.fr
-    password: azerty
-    groups:
-      - 1f841bd9-00be-41a7-96e1-860a18a46105
-      - 45649735-866a-49df-b04b-a13c74fd5886
-      - 4ec5ae77-f955-4309-96a5-19cc3c8be71c
+  # - firstname: ...
 
 #####################################
 # SMTP configuration using starttls #
