@@ -9,12 +9,12 @@
 
 ### Related Issues
 
-<!-- If applicable. -->
+<!-- If applicable. Use keywords "fixes", "closes", or others at https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/using-keywords-in-issues-and-pull-requests -->
 <!--Fixes #0-->
 
 ### Required PRs
 
-<!-- If applicable -->
+<!-- If applicable. Use keywords "depends on" or "blocked by", see https://github.com/gregsdennis/dependencies-action -->
 <!--Depends on #0-->
 
 ### Changes Made

@@ -1,0 +1,20 @@
+name: "PR dependency"
+
+on:
+  pull_request:
+    types: [opened, edited, ready_for_review, synchronize]
+
+jobs:
+  pr_dependencies:
+    name: PR Dependencies
+    runs-on: ubuntu-latest
+    permissions:
+      issues: read
+      pull-requests: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+      - name: Check PR Dependencies
+        uses: gregsdennis/dependencies-action@main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
