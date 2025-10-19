@@ -1,4 +1,4 @@
-name: "PR dependency"
+name: "PR dependencies"
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
 
 jobs:
   pr_dependencies:
-    name: PR Dependencies
+    name: Check PR dependencies
     runs-on: ubuntu-latest
     permissions:
       issues: read

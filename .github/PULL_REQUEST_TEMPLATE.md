@@ -7,15 +7,21 @@
 
 <!--Sources/references at the end-->
 
-### Related Issues
+### Issues to be resolved
 
-<!-- If applicable. Use keywords "fixes", "closes", or others at https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/using-keywords-in-issues-and-pull-requests -->
-<!--Fixes #0-->
+<!-- If applicable-->
+<!--Use keywords "closes", "fixes", "resolves", or others at https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/using-keywords-in-issues-and-pull-requests -->
+
+<!--Fixes #-->
+<!--Fixes aeecleclair/CalypSSO#-->
 
 ### Required PRs
 
-<!-- If applicable. Use keywords "depends on" or "blocked by", see https://github.com/gregsdennis/dependencies-action -->
-<!--Depends on #0-->
+<!-- If applicable-->
+<!--Use keywords "depends on" or "blocked by", see https://github.com/gregsdennis/dependencies-action -->
+
+<!--Depends on #-->
+<!--Depends on aeecleclair/CalypSSO#-->
 
 ### Changes Made
 
