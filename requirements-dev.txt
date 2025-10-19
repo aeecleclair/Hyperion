@@ -1,4 +1,4 @@
--r requirements-common.txt
+-r requirements.txt
 aiosqlite==0.20.0
 boto3-stubs[essential]==1.38.23
 google-auth-stubs==0.3.0

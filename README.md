@@ -84,7 +84,7 @@ pyenv activate hyperion
 
 ### About Jellyfish and Rust
 
-If you don't have Rust installed or don't want to install it, decrease the version of `jellyfish` to `0.10.0` in the `requirements-common.txt` file:
+If you don't have Rust installed or don't want to install it, decrease the version of `jellyfish` to `0.10.0` in the `requirements.txt` file:
 
 ```
 jellyfish==0.10.0                    # String Matching
