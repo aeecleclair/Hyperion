@@ -35,11 +35,12 @@
 
 <!--Anything relevant that does not quite fit in the summary-->
 
+<details>
 <summary>
 
 ## Classification
 
-<details>
+</summary>
 
 ### Type of Change
 
@@ -77,5 +78,3 @@
 - [ ] No documentation needed
 
 </details>
-
-</summary>
