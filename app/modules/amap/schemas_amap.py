@@ -47,6 +47,7 @@ class ProductQuantity(BaseModel):
 class DeliveryBase(BaseModel):
     """Base schema for AMAP deliveries"""
 
+    name: str
     delivery_date: date
     products_ids: list[str] = []
 
@@ -58,6 +59,7 @@ class DeliveryComplete(DeliveryBase):
 
 
 class DeliveryUpdate(BaseModel):
+    name: str | None = None
     delivery_date: date | None = None
 
 
@@ -77,13 +79,13 @@ class OrderComplete(OrderBase):
     order_id: str
     amount: float
     ordering_date: datetime
-    delivery_date: date
     model_config = ConfigDict(from_attributes=True)
 
 
 class OrderReturn(BaseModel):
     user: CoreUserSimple
     delivery_id: str
+    delivery_name: str
     productsdetail: Sequence[ProductQuantity]
     collection_slot: AmapSlotType
     order_id: str
@@ -101,6 +103,7 @@ class OrderEdit(BaseModel):
 
 
 class DeliveryReturn(BaseModel):
+    name: str
     delivery_date: date
     products: list[ProductComplete] = []
     id: str
@@ -121,10 +124,7 @@ class CashBase(BaseModel):
 
 class CashComplete(CashBase):
     user: CoreUserSimple
-
-
-class CashDB(CashBase):
-    user_id: str
+    last_order_date: datetime
 
 
 class CashEdit(BaseModel):
