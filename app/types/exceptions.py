@@ -213,6 +213,11 @@ class InvalidS3FolderError(Exception):
         )
 
 
+class MissingDataError(Exception):
+    def __init__(self, data_name: str):
+        super().__init__(f"Missing data: {data_name}")
+
+
 class ObjectExpectedInDbNotFoundError(Exception):
     """
     This exception should be raised when an object is expected to be found in database, but the select crud return None.

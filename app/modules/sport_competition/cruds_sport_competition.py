@@ -313,10 +313,14 @@ async def remove_user_from_group(
 async def load_all_competition_users(
     edition_id: UUID,
     db: AsyncSession,
+    exclude_non_validated: bool = False,
 ) -> list[schemas_sport_competition.CompetitionUser]:
     competition_users = await db.execute(
         select(models_sport_competition.CompetitionUser).where(
             models_sport_competition.CompetitionUser.edition_id == edition_id,
+            models_sport_competition.CompetitionUser.validated
+            if exclude_non_validated
+            else and_(True),
         ),
     )
     return [
@@ -1400,6 +1404,20 @@ async def delete_team_by_id(
     await db.flush()
 
 
+async def load_all_teams(
+    edition_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_sport_competition.TeamComplete]:
+    teams = await db.execute(
+        select(models_sport_competition.CompetitionTeam)
+        .where(models_sport_competition.CompetitionTeam.edition_id == edition_id)
+        .options(
+            selectinload(models_sport_competition.CompetitionTeam.participants),
+        ),
+    )
+    return [team_model_to_schema(team) for team in teams.scalars().all()]
+
+
 async def load_team_by_id(
     team_id,
     db: AsyncSession,
@@ -1705,6 +1723,22 @@ async def delete_match_by_id(
         ),
     )
     await db.flush()
+
+
+async def load_all_matches_by_edition_id(
+    edition_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_sport_competition.MatchComplete]:
+    matches = await db.execute(
+        select(models_sport_competition.Match)
+        .where(models_sport_competition.Match.edition_id == edition_id)
+        .options(
+            selectinload(models_sport_competition.Match.team1),
+            selectinload(models_sport_competition.Match.team2),
+        ),
+    )
+
+    return [match_model_to_schema(match) for match in matches.scalars().all()]
 
 
 async def load_match_by_id(
@@ -2219,6 +2253,27 @@ async def delete_product_variant_by_id(
 # region: Purchases
 
 
+async def load_all_purchases(
+    edition_id: UUID,
+    db: AsyncSession,
+) -> dict[str, list[schemas_sport_competition.PurchaseComplete]]:
+    purchases = await db.execute(
+        select(models_sport_competition.CompetitionPurchase)
+        .where(
+            models_sport_competition.CompetitionPurchase.edition_id == edition_id,
+        )
+        .options(
+            selectinload(models_sport_competition.CompetitionPurchase.product_variant),
+        ),
+    )
+    users_purchases: dict[str, list[schemas_sport_competition.PurchaseComplete]] = {}
+    for purchase in purchases.scalars().all():
+        if purchase.user_id not in users_purchases:
+            users_purchases[purchase.user_id] = []
+        users_purchases[purchase.user_id].append(purchase_model_to_schema(purchase))
+    return users_purchases
+
+
 async def load_purchases_by_user_id(
     user_id: str,
     edition_id: UUID,
@@ -2386,6 +2441,30 @@ async def delete_purchase(
 
 # endregion: Purchases
 # region: Payments
+
+
+async def load_all_payments(
+    edition_id: UUID,
+    db: AsyncSession,
+) -> dict[str, list[schemas_sport_competition.PaymentComplete]]:
+    payments = await db.execute(
+        select(models_sport_competition.CompetitionPayment).where(
+            models_sport_competition.CompetitionPayment.edition_id == edition_id,
+        ),
+    )
+    users_payments: dict[str, list[schemas_sport_competition.PaymentComplete]] = {}
+    for payment in payments.scalars().all():
+        if payment.user_id not in users_payments:
+            users_payments[payment.user_id] = []
+        users_payments[payment.user_id].append(
+            schemas_sport_competition.PaymentComplete(
+                id=payment.id,
+                user_id=payment.user_id,
+                edition_id=payment.edition_id,
+                total=payment.total,
+            ),
+        )
+    return users_payments
 
 
 async def load_user_payments(
