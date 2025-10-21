@@ -1,6 +1,6 @@
 """Models file for module_raid"""
 
-from datetime import date
+from datetime import date, datetime
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -307,3 +307,40 @@ class RaidParticipantCheckout(Base):
         ForeignKey("raid_participant.id"),
     )
     checkout_id: Mapped[str] = mapped_column(ForeignKey("payment_checkout.id"))
+
+
+#################################### MODELS FOR CHRONO RAID ####################################
+
+
+class Temps(Base):
+    __tablename__ = "chrono_raid_temps"
+    id: Mapped[str] = mapped_column(
+        primary_key=True,
+        index=True,
+    )
+    dossard: Mapped[int]
+    date: Mapped[datetime]
+    parcours: Mapped[str]
+    ravito: Mapped[str]
+    status: Mapped[bool]
+    last_modification_date: Mapped[datetime]
+
+
+class ChronoRaidData(Base):
+    __tablename__ = "chrono_raid_data"
+    filename: Mapped[str] = mapped_column(
+        primary_key=True,
+        index=True,
+    )
+    content: Mapped[str]
+
+
+class Remark(Base):
+    __tablename__ = "chrono_raid_remarks"
+    id: Mapped[str] = mapped_column(
+        primary_key=True,
+        index=True,
+    )
+    date: Mapped[datetime]
+    ravito: Mapped[str]
+    text: Mapped[str]

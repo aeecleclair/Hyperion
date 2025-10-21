@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -592,3 +592,146 @@ async def get_participant_checkout_by_checkout_id(
         ),
     )
     return checkout.scalars().first()
+
+
+#################################### CRUDS FOR CHRONO RAID ####################################
+
+
+async def get_temps(
+    db: AsyncSession,
+) -> Sequence[models_raid.Temps]:
+    temps = await db.execute(select(models_raid.Temps))
+    return temps.scalars().all()
+
+
+async def get_active_temps_grouped_by_dossard(
+    parcours: str,
+    db: AsyncSession,
+) -> dict[int, list[models_raid.Temps]]:
+    result = await db.execute(
+        select(models_raid.Temps)
+        .where(models_raid.Temps.status and models_raid.Temps.parcours == parcours)
+        .order_by(models_raid.Temps.dossard, models_raid.Temps.date),
+    )
+    temps_list = result.scalars().all()
+    grouped_temps: dict[int, list[models_raid.Temps]] = {}
+    for temps in temps_list:
+        if temps.dossard not in grouped_temps:
+            grouped_temps[temps.dossard] = []
+        grouped_temps[temps.dossard].append(temps)
+    return grouped_temps
+
+
+async def get_temps_by_date(
+    date: date,
+    db: AsyncSession,
+) -> Sequence[models_raid.Temps]:
+    temps = await db.execute(
+        select(models_raid.Temps).where(
+            models_raid.Temps.last_modification_date >= date,
+        ),
+    )
+    return temps.scalars().all()
+
+
+async def get_temps_by_id(
+    temps_id: str,
+    db: AsyncSession,
+) -> models_raid.Temps | None:
+    temps = await db.execute(
+        select(models_raid.Temps).where(models_raid.Temps.id == temps_id),
+    )
+    return temps.scalars().first()
+
+
+async def add_temps(
+    temps: schemas_raid.Temps,
+    db: AsyncSession,
+) -> None:
+    temps_db = models_raid.Temps(
+        id=temps.id,
+        dossard=temps.dossard,
+        date=temps.date,
+        parcours=temps.parcours,
+        ravito=temps.ravito,
+        status=temps.status,
+        last_modification_date=temps.last_modification_date,
+    )
+    db.add(temps_db)
+    await db.flush()
+
+
+async def update_temps(
+    temps: schemas_raid.Temps,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_raid.Temps)
+        .where(models_raid.Temps.id == temps.id)
+        .values(**temps.model_dump(exclude_unset=True)),
+    )
+
+
+async def delete_all_times(
+    db: AsyncSession,
+):
+    await db.execute(delete(models_raid.Temps))
+
+
+async def get_remarks(
+    db: AsyncSession,
+) -> Sequence[models_raid.Remark]:
+    remarks = await db.execute(select(models_raid.Remark))
+    return remarks.scalars().all()
+
+
+async def add_remarks(
+    list_remarks: list[schemas_raid.Remark],
+    db: AsyncSession,
+):
+    for remark in list_remarks:
+        remark_db = models_raid.Remark(**remark.model_dump())
+        db.add(remark_db)
+
+
+async def delete_all_remarks(
+    db: AsyncSession,
+):
+    await db.execute(delete(models_raid.Remark))
+
+
+async def get_chrono_raid_data(
+    filename: str,
+    db: AsyncSession,
+) -> models_raid.ChronoRaidData | None:
+    data = await db.execute(
+        select(models_raid.ChronoRaidData).where(
+            models_raid.ChronoRaidData.filename == filename,
+        ),
+    )
+    return data.scalars().first()
+
+
+async def add_chrono_raid_data(
+    name: str,
+    content: str,
+    db: AsyncSession,
+):
+    db.add(
+        models_raid.ChronoRaidData(
+            filename=name,
+            content=content,
+        ),
+    )
+
+
+async def delete_chrono_raid_data(
+    filename: str,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_raid.ChronoRaidData).where(
+            models_raid.ChronoRaidData.filename == filename,
+        ),
+    )
+    await db.flush()

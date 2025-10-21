@@ -21,6 +21,7 @@ class GroupType(str, Enum):
     CAA = "6c6d7e88-fdb8-4e42-b2b5-3d3cfd12e7d6"
     cinema = "ce5f36e6-5377-489f-9696-de70e2477300"
     raid_admin = "e9e6e3d3-9f5f-4e9b-8e5f-9f5f4e9b8e5f"
+    raid_volunteer = "34f53760-ece8-4d59-91d7-a5745eecc428"
     ph = "4ec5ae77-f955-4309-96a5-19cc3c8be71c"
     admin_cdr = "c1275229-46b2-4e53-a7c4-305513bb1a2a"
     eclair = "1f841bd9-00be-41a7-96e1-860a18a46105"
