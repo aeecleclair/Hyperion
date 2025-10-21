@@ -3,19 +3,46 @@
 ### Summary
 
 <!--Brief description of what this PR does.-->
+<!--Don't explain the code, justify what this PR exists for!-->
 
-### Related Issues
+<!--Sources/references at the end-->
 
-<!-- If applicable -->
-Closes #<!--0-->
+### Issues to be resolved
 
-## Changes Made
+<!-- If applicable-->
+<!--Use keywords "closes", "fixes", "resolves", or others at https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/using-keywords-in-issues-and-pull-requests -->
+
+<!--Fixes #-->
+<!--Fixes aeecleclair/CalypSSO#-->
+
+### Required PRs
+
+<!-- If applicable-->
+<!--Use keywords "depends on" or "blocked by", see https://github.com/gregsdennis/dependencies-action -->
+
+<!--Depends on #-->
+<!--Depends on aeecleclair/CalypSSO#-->
+
+### Changes Made
 
 <!--Please describe the changes made in this pull request-->
+<!--Tell the big steps, use a checklist to show progress. You can explain here how the code works.-->
 
-- ...
+- [x] ...
+- [ ] ...
 
-## Type of Change
+### Additional Notes
+
+<!--Anything relevant that does not quite fit in the summary-->
+
+<details>
+<summary>
+
+## Classification
+
+</summary>
+
+### Type of Change
 
 - [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
 - [ ] ✨ New feature (non-breaking change which adds functionality)
@@ -23,32 +50,31 @@ Closes #<!--0-->
 - [ ] 🔧 Infra CI/CD (changes to configs of workflows)
 - [ ] 💥 BREAKING CHANGE (fix or feature that require a new minimal version of the front-end)
 
-## Impact & Scope
+- [ ] 😶‍🌫️ No impact for the end-users
+
+### Impact & Scope
 
 - [ ] Core functionality changes
 - [ ] Single module changes
 - [ ] Multiple modules changes
 - [ ] Database migrations required
-- [ ] Other
 
-## Testing
+- [ ] Other: <!--not module-oriented-->
 
-- [ ] Added/modified tests that pass the CI
-- [ ] Tested in a pre-prod
-- [ ] Tested this locally
+### Testing
 
-## Documentation
+- [ ] 1. Tested this locally
+- [ ] 2. Added/modified tests that pass the CI
+- [ ] 3. Tested in a pre-prod
 
-- [ ] Updated docs accordingly (docs.myecl.fr) : <!--[Docs#0 - Title](https://github.com/aeecleclair/myecl-documentation/pull/0)-->
-- [ ] Code includes docstrings
+- [ ] 0. Untestable (exceptionally), will be tested in prod directly
+
+### Documentation
+
+- [ ] Updated [the docs](docs.myecl.fr) accordingly : <!--[Docs#0 - Title](https://github.com/aeecleclair/myecl-documentation/pull/0)-->
+- [ ] `"` Docstrings
+- [ ] `#` Inline comments
+
 - [ ] No documentation needed
 
-## Checklist
-
-- [ ] My code follows the style guidelines of this project
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] Any dependent changes have been merged and published (_Indicate the linked PR for the dependent changes_)
-
-## Additional Notes
-
-Add any other context, screenshots, or information about the pull request here.
+</details>
