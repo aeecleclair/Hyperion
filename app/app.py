@@ -673,7 +673,9 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
             )
             raise HTTPException(status_code=400, detail="No client information")
 
-        ip_address = request.client.host
+        ip_address = str(
+            request.client.host,
+        )  # host can be an Object of type IPv4Address or IPv6Address and would be refused by redis
         port = request.client.port
         client_address = f"{ip_address}:{port}"
 
