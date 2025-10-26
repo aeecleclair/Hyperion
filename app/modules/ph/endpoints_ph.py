@@ -50,6 +50,7 @@ module = Module(
     default_allowed_account_types=[AccountType.student],
     registred_topics=[ph_topic],
     factory=None,
+    permissions=PHPermissions,
 )
 
 
