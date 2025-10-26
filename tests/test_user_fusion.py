@@ -4,7 +4,6 @@ from uuid import uuid4
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.core_endpoints import models_core
 from app.core.groups import models_groups
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import models_memberships
@@ -68,7 +67,7 @@ async def init_objects() -> None:
     core_association_membership = models_memberships.CoreAssociationMembership(
         id=uuid4(),
         name="AEECL",
-        manager_group_id=GroupType.BDE,
+        manager_group_id=group1.id,
     )
     await add_object_to_db(core_association_membership)
 

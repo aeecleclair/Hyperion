@@ -28,9 +28,6 @@ from tests.commons import (
 
 year = datetime.now(UTC).year
 
-cdr_admin: models_users.CoreUser
-cdr_bde: models_users.CoreUser
-cdr_user: models_users.CoreUser
 admin_group: models_groups.CoreGroup
 seller_group: models_groups.CoreGroup
 online_seller_group: models_groups.CoreGroup
@@ -357,7 +354,7 @@ async def init_objects():
     association_membership = models_memberships.CoreAssociationMembership(
         id=uuid.uuid4(),
         name="AEECL",
-        manager_group_id=GroupType.BDE,
+        manager_group_id=admin_group.id,
     )
     await add_object_to_db(association_membership)
 

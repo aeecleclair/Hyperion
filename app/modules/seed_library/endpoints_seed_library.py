@@ -297,10 +297,12 @@ async def create_plant(
     **This endpoint is only usable if the plant has an ancestor_id or by seed_library **
     """
     if plant_base.ancestor_id is None:
-        if not has_user_permission(
-            user=user,
-            permission_name=SeedLibraryPermissions.manage_seed_library,
-            db=db,
+        if not (
+            await has_user_permission(
+                user=user,
+                permission_name=SeedLibraryPermissions.manage_seed_library,
+                db=db,
+            )
         ):
             raise HTTPException(
                 status_code=403,

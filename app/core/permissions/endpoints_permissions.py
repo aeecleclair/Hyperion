@@ -17,7 +17,6 @@ from app.dependencies import (
     is_user,
     is_user_in,
 )
-from app.module import full_name_permissions_list, permissions_list
 from app.types.module import CoreModule
 from app.utils.tools import is_group_id_valid
 
@@ -30,6 +29,7 @@ core_module = CoreModule(
     root="permissions",
     tag="Permissions",
     router=router,
+    factory=None,
 )
 
 hyperion_security_logger = logging.getLogger("hyperion.security")
@@ -46,6 +46,7 @@ async def read_permissions_list(
     """
     Return all permissions from database
     """
+    from app.module import full_name_permissions_list  # noqa: PLC0415
 
     return full_name_permissions_list
 
@@ -79,6 +80,8 @@ async def read_permission(
     """
     Return permission with name from database
     """
+    from app.module import permissions_list  # noqa: PLC0415
+
     if permission_name not in permissions_list:
         raise HTTPException(
             status_code=404,
@@ -108,6 +111,8 @@ async def create_permission(
     """
     Create a new permission in database
     """
+    from app.module import permissions_list  # noqa: PLC0415
+
     if permission.permission_name not in permissions_list:
         raise HTTPException(
             status_code=404,
@@ -138,6 +143,8 @@ async def delete_permission(
     """
     Delete a permission from database by name
     """
+    from app.module import permissions_list  # noqa: PLC0415
+
     if permission.permission_name not in permissions_list:
         raise HTTPException(
             status_code=404,

@@ -3318,7 +3318,7 @@ async def create_custom_data(
             detail="Field not found.",
         )
     if not (
-        has_user_permission(user, CdrPermissions.manage_cdr)
+        await has_user_permission(user, CdrPermissions.manage_cdr, db)
         or seller_id
         in [
             s.id
@@ -3371,7 +3371,7 @@ async def update_custom_data(
             detail="Field Data not found.",
         )
     if not (
-        has_user_permission(user, CdrPermissions.manage_cdr)
+        await has_user_permission(user, CdrPermissions.manage_cdr, db)
         or seller_id
         in [
             s.id
@@ -3419,7 +3419,7 @@ async def delete_customdata(
             detail="Field Data not found.",
         )
     if not (
-        has_user_permission(user, CdrPermissions.manage_cdr)
+        await has_user_permission(user, CdrPermissions.manage_cdr, db)
         or seller_id
         in [
             s.id

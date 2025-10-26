@@ -22,31 +22,21 @@ AUTH_CLIENTS:
     redirect_uri:
       - "http://127.0.0.1:8000/docs"
     auth_client: "AppAuthClient"
-  BaseAuthClient:
+  GroupPermissionAuthClient:
     secret: "secret"
     redirect_uri:
       - "http://127.0.0.1:8000/docs"
-    auth_client: "BaseAuthClient"
-  RalllyAuthClient:
+    auth_client: "AppAuthClient"
+  AccountTypePermissionAuthClient:
     secret: "secret"
     redirect_uri:
       - "http://127.0.0.1:8000/docs"
     auth_client: "RalllyAuthClient"
-  SynapseAuthClient:
+  TokenIntrospectionAuthClient:
     secret: "secret"
     redirect_uri:
       - "http://127.0.0.1:8000/docs"
     auth_client: "SynapseAuthClient"
-  AcceptingOnlyECLUsersAuthClient:
-    secret: "secret"
-    redirect_uri:
-      - "http://127.0.0.1:8000/docs"
-    auth_client: "NextcloudAuthClient"
-  RestrictingUsersGroupsAuthClient:
-    secret: "secret"
-    redirect_uri:
-      - "http://127.0.0.1:8000/docs"
-    auth_client: "DocumensoAuthClient"
 
 # Logging configuration #
 
