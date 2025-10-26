@@ -136,7 +136,7 @@ def test_get_voters(client: TestClient) -> None:
 
 
 async def test_delete_voter_by_group_id(client: TestClient) -> None:
-    permission = models_permissions.CorePermission(
+    permission = models_permissions.CorePermissionGroup(
         permission_name=CampaignPermissions.vote,
         group_id=dummy_group.id,
     )

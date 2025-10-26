@@ -5,12 +5,13 @@ from datetime import UTC, datetime
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import AccountType, GroupType
+from app.core.groups.groups_type import AccountType
+from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users
 from app.dependencies import (
     get_db,
     is_user,
-    is_user_in,
+    is_user_allowed_to,
 )
 from app.modules.seed_library import (
     coredata_seed_library,
@@ -21,13 +22,19 @@ from app.modules.seed_library.factory_seed_library import SeedLibraryFactory
 from app.modules.seed_library.types_seed_library import PlantState, SpeciesType
 from app.types.module import Module
 from app.utils import tools
-from app.utils.tools import is_user_member_of_any_group
+from app.utils.tools import has_user_permission
+
+
+class SeedLibraryPermissions(ModulePermissions):
+    manage_seed_library = "manage_seed_library"
+
 
 module = Module(
     root="seed_library",
     tag="seed_library",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
     factory=SeedLibraryFactory(),
+    permissions=None,
 )
 
 
@@ -73,7 +80,9 @@ async def get_all_species_types(
 async def create_species(
     species_base: schemas_seed_library.SpeciesBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.seed_library)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SeedLibraryPermissions.manage_seed_library]),
+    ),
 ):
     """
     Create a new Species by giving an SpeciesBase scheme
@@ -122,7 +131,9 @@ async def create_species(
 async def update_species(
     species_id: uuid.UUID,
     species_edit: schemas_seed_library.SpeciesEdit,
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.seed_library)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SeedLibraryPermissions.manage_seed_library]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -178,7 +189,9 @@ async def update_species(
 async def delete_species(
     species_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.seed_library)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SeedLibraryPermissions.manage_seed_library]),
+    ),
 ):
     """
     Delete a Species
@@ -240,7 +253,9 @@ async def get_my_plants(
 async def get_plants_by_user_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.seed_library)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SeedLibraryPermissions.manage_seed_library]),
+    ),
 ):
     """
     Return all plants where borrower_id = {user_id} from database as a list of PlantsComplete schemas
@@ -282,9 +297,10 @@ async def create_plant(
     **This endpoint is only usable if the plant has an ancestor_id or by seed_library **
     """
     if plant_base.ancestor_id is None:
-        if not is_user_member_of_any_group(
+        if not has_user_permission(
             user=user,
-            allowed_groups=[GroupType.seed_library],
+            permission_name=SeedLibraryPermissions.manage_seed_library,
+            db=db,
         ):
             raise HTTPException(
                 status_code=403,
@@ -367,7 +383,9 @@ async def update_plant(
 async def update_plant_admin(
     plant_id: uuid.UUID,
     plant_edit: schemas_seed_library.PlantEdit,
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.seed_library)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SeedLibraryPermissions.manage_seed_library]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -412,7 +430,9 @@ async def borrow_plant(
 async def delete_plant(
     plant_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.seed_library)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SeedLibraryPermissions.manage_seed_library]),
+    ),
 ):
     """
     Delete a Plant
@@ -456,7 +476,9 @@ async def get_seed_library_information(
 )
 async def update_seed_library_information(
     information: coredata_seed_library.SeedLibraryInformation,
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.seed_library)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SeedLibraryPermissions.manage_seed_library]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     await tools.set_core_data(

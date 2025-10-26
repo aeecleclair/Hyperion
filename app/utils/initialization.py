@@ -186,8 +186,10 @@ def clean_permissions_sync(db: Session, permssion_list: list[str]) -> None:
     Delete all unused permissions in the database
     """
     db.execute(
-        delete(models_permissions.CorePermission).where(
-            models_permissions.CorePermission.permission_name.notin_(permssion_list),
+        delete(models_permissions.CorePermissionGroup).where(
+            models_permissions.CorePermissionGroup.permission_name.notin_(
+                permssion_list
+            ),
         ),
     )
     db.commit()

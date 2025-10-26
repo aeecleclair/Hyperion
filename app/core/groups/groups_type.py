@@ -3,27 +3,21 @@ from enum import Enum
 
 class GroupType(str, Enum):
     """
-    In Hyperion, each user may have multiple groups. Belonging to a group gives access to a set of specific endpoints.
-    Usually, one or a few groups are associated to some rights over their corresponding module. For example a member of amap group is allowed to administrate the amap module
+    In Hyperion, each user may have multiple groups. Belonging to a group gives access to a set of specific permissions.
 
-    A group may also allow using Hyperion OAuth/Openid connect capabilities to sign in to a specific external platform.
-
+    The only hardcoded group is the admin group.
     Being member of admin only gives rights over admin specific endpoints. For example, an admin won't be able to administrate amap module
+
+    Other groups are created by the admin and can be associated with a set of permissions.
     """
 
-    # Core groups
     admin = "0a25cb76-4b63-4fd3-b939-da6d9feabf28"
-
-    # Auth related groups
-
-    def __str__(self):
-        return f"{self.name}<{self.value}>"
 
 
 class AccountType(str, Enum):
     """
     Various account types that can be created in Hyperion.
-    These values should match GroupType's. They are the lower level groups in Hyperion
+    Each account type is associated with a set of permissions.
     """
 
     student = "student"
