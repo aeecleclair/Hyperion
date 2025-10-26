@@ -25,6 +25,7 @@ module = Module(
     tag="Flappy Bird",
     default_allowed_account_types=[AccountType.student],
     factory=None,
+    permissions=FlappyBirdPermissions,
 )
 
 

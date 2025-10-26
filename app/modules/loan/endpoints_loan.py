@@ -41,6 +41,7 @@ module = Module(
     tag="Loans",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
     factory=LoanFactory(),
+    permissions=LoanPermissions,
 )
 
 

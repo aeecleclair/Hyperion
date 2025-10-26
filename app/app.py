@@ -41,7 +41,7 @@ from app.dependencies import (
     get_redis_client,
     init_state,
 )
-from app.module import all_modules, module_list
+from app.module import all_modules, module_list, permissions_list
 from app.types.exceptions import (
     ContentHTTPException,
     GoogleAPIInvalidCredentialsError,
@@ -299,7 +299,6 @@ def initialize_module_visibility(
             coredata_core.ModuleVisibilityAwareness,
             db,
         )
-
         new_modules = [
             module
             for module in module_list
@@ -438,6 +437,8 @@ def init_db(
         sync_engine=sync_engine,
         hyperion_error_logger=hyperion_error_logger,
     )
+    with Session(sync_engine) as db:
+        initialization.clean_permissions_sync(db, permissions_list)
 
 
 async def init_google_API(

@@ -36,6 +36,7 @@ module = Module(
     tag="Recommendation",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
     factory=RecommendationFactory(),
+    permissions=RecommendationPermissions,
 )
 
 

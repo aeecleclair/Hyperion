@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.core.core_endpoints import models_core
 from app.core.groups import models_groups
+from app.core.permissions import models_permissions
 from app.core.schools import models_schools
 from app.core.utils.config import Settings
 from app.types import core_data
@@ -178,6 +179,18 @@ def create_school_sync(
         raise
     else:
         return school
+
+
+def clean_permissions_sync(db: Session, permssion_list: list[str]) -> None:
+    """
+    Delete all unused permissions in the database
+    """
+    db.execute(
+        delete(models_permissions.CorePermission).where(
+            models_permissions.CorePermission.permission_name.notin_(permssion_list),
+        ),
+    )
+    db.commit()
 
 
 def delete_core_data_crud_sync(schema: str, db: Session) -> None:

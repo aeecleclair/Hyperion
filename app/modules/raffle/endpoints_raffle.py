@@ -42,6 +42,7 @@ module = Module(
     tag="Raffle",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
     factory=None,
+    permissions=RafflePermissions,
 )
 
 hyperion_raffle_logger = logging.getLogger("hyperion.raffle")
