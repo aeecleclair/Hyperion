@@ -747,7 +747,7 @@ async def test_set_team_number_utility_empty_database(
     mock_update_team = mocker.patch("app.modules.raid.cruds_raid.update_team")
 
     # Call the function
-    from app.modules.raid.utils.utils_raid import set_team_number  # noqa: PLC0415
+    from app.modules.raid.utils.utils_raid import set_team_number
 
     await set_team_number(mock_team, mock_db)
 
@@ -780,7 +780,7 @@ async def test_set_team_number_utility_existing_teams(
     mock_update_team = mocker.patch("app.modules.raid.cruds_raid.update_team")
 
     # Call the function
-    from app.modules.raid.utils.utils_raid import set_team_number  # noqa: PLC0415
+    from app.modules.raid.utils.utils_raid import set_team_number
 
     await set_team_number(mock_team, mock_db)
 
@@ -807,7 +807,7 @@ async def test_set_team_number_utility_no_difficulty(
     mock_update_team = mocker.patch("app.modules.raid.cruds_raid.update_team")
 
     # Call the function
-    from app.modules.raid.utils.utils_raid import set_team_number  # noqa: PLC0415
+    from app.modules.raid.utils.utils_raid import set_team_number
 
     await set_team_number(mock_team, mock_db)
 
@@ -836,7 +836,7 @@ async def test_set_team_number_utility_discovery_difficulty(
     mock_update_team = mocker.patch("app.modules.raid.cruds_raid.update_team")
 
     # Call the function
-    from app.modules.raid.utils.utils_raid import set_team_number  # noqa: PLC0415
+    from app.modules.raid.utils.utils_raid import set_team_number
 
     await set_team_number(mock_team, mock_db)
 
