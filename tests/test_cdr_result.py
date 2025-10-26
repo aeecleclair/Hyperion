@@ -4,14 +4,20 @@ from io import BytesIO
 
 import pytest_asyncio
 
-from app.core.groups.groups_type import GroupType
+from app.core.groups import models_groups
 from app.core.users import models_users
 from app.modules.cdr import models_cdr
+from app.modules.cdr.endpoints_cdr import CdrPermissions
 from app.modules.cdr.utils_cdr import construct_dataframe_from_users_purchases
 from tests.commons import (
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
 )
+
+admin_group: models_groups.CoreGroup
+seller1_group: models_groups.CoreGroup
+seller2_group: models_groups.CoreGroup
 
 cdr_admin: models_users.CoreUser
 cdr_user1: models_users.CoreUser
@@ -52,9 +58,23 @@ customdata_user3: models_cdr.CustomData
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
+    global admin_group, seller1_group, seller2_group
+    admin_group = await create_groups_with_permissions(
+        [CdrPermissions.manage_cdr],
+        "cdr_admin",
+    )
+    seller1_group = await create_groups_with_permissions(
+        [],
+        "BDE",
+    )
+    seller2_group = await create_groups_with_permissions(
+        [],
+        "CAA",
+    )
+
     global cdr_admin
     cdr_admin = await create_user_with_groups(
-        [GroupType.admin_cdr],
+        [admin_group.id],
         email="cdr_admin@etu.ec-lyon.fr",
     )
 
@@ -86,7 +106,7 @@ async def init_objects():
     seller1 = models_cdr.Seller(
         id=uuid.uuid4(),
         name="BDE",
-        group_id=str(GroupType.BDE.value),
+        group_id=str(seller1_group.id),
         order=1,
     )
 
@@ -94,7 +114,7 @@ async def init_objects():
     seller2 = models_cdr.Seller(
         id=uuid.uuid4(),
         name="CAA",
-        group_id=str(GroupType.CAA.value),
+        group_id=str(seller2_group.id),
         order=2,
     )
 
