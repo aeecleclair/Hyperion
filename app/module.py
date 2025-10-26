@@ -15,9 +15,9 @@ for endpoints_file in Path().glob("app/modules/*/endpoints_*.py"):
         ".".join(endpoints_file.with_suffix("").parts),
     )
     if hasattr(endpoint_module, "module"):
-        each_module: Module = endpoint_module.module
-        module_list.append(each_module)
-        all_modules.append(each_module)
+        module: Module = endpoint_module.module
+        module_list.append(module)
+        all_modules.append(module)
     else:
         hyperion_error_logger.error(
             f"Module {endpoints_file} does not declare a module. It won't be enabled.",
@@ -38,6 +38,10 @@ for endpoints_file in Path().glob("app/core/*/endpoints_*.py"):
         )
 
 
+permissions_list: list[str] = []
+full_name_permissions_list: list[str] = []
+
+
 class DuplicatePermissionsError(Exception):
     def __init__(self, permissions: list[list[str]]):
         arranged_permissions = [
@@ -48,10 +52,6 @@ class DuplicatePermissionsError(Exception):
             "Duplicate permissions name found in modules:\n"
             + "\n".join(arranged_permissions),
         )
-
-
-permissions_list: list[str] = []
-full_name_permissions_list: list[str] = []
 
 
 for each_module in all_modules:
