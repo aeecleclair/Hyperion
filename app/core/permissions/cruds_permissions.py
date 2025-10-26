@@ -16,7 +16,9 @@ async def get_permissions(
     """Return all permissions from database"""
 
     result = (
-        (await db.execute(select(models_permissions.CorePermission))).scalars().all()
+        (await db.execute(select(models_permissions.CorePermissionGroup)))
+        .scalars()
+        .all()
     )
     return [
         schemas_permissions.CorePermission(
@@ -29,17 +31,17 @@ async def get_permissions(
 
 async def get_permissions_by_group_id_and_permission_name(
     db: AsyncSession,
-    permission_name: ModulePermissions | str,
+    permission_name: ModulePermissions,
     group_id: str,
 ) -> schemas_permissions.CorePermission | None:
     """Return permission with name from database"""
     result = (
         (
             await db.execute(
-                select(models_permissions.CorePermission).where(
-                    models_permissions.CorePermission.permission_name
+                select(models_permissions.CorePermissionGroup).where(
+                    models_permissions.CorePermissionGroup.permission_name
                     == permission_name,
-                    models_permissions.CorePermission.group_id == group_id,
+                    models_permissions.CorePermissionGroup.group_id == group_id,
                 ),
             )
         )
@@ -58,14 +60,14 @@ async def get_permissions_by_group_id_and_permission_name(
 
 async def get_permissions_by_permission_name(
     db: AsyncSession,
-    permission_name: ModulePermissions | str,
+    permission_name: ModulePermissions,
 ) -> Sequence[schemas_permissions.CorePermission]:
     """Return permission with name from database"""
     result = (
         (
             await db.execute(
-                select(models_permissions.CorePermission).where(
-                    models_permissions.CorePermission.permission_name
+                select(models_permissions.CorePermissionGroup).where(
+                    models_permissions.CorePermissionGroup.permission_name
                     == permission_name,
                 ),
             )
@@ -87,7 +89,7 @@ async def create_permission(
     db: AsyncSession,
 ) -> None:
     """Create a new permission in database and return it"""
-    permission_db = models_permissions.CorePermission(
+    permission_db = models_permissions.CorePermissionGroup(
         permission_name=permission.permission_name,
         group_id=permission.group_id,
     )
@@ -106,10 +108,10 @@ async def delete_permission(
 ) -> None:
     """Delete a permission from database by name"""
     await db.execute(
-        delete(models_permissions.CorePermission).where(
-            models_permissions.CorePermission.permission_name
+        delete(models_permissions.CorePermissionGroup).where(
+            models_permissions.CorePermissionGroup.permission_name
             == permission.permission_name,
-            models_permissions.CorePermission.group_id == permission.group_id,
+            models_permissions.CorePermissionGroup.group_id == permission.group_id,
         ),
     )
     await db.commit()
@@ -121,8 +123,8 @@ async def delete_permissions_by_permission_name(
 ) -> None:
     """Delete a permission from database by name"""
     await db.execute(
-        delete(models_permissions.CorePermission).where(
-            models_permissions.CorePermission.permission_name == permission_name,
+        delete(models_permissions.CorePermissionGroup).where(
+            models_permissions.CorePermissionGroup.permission_name == permission_name,
         ),
     )
     await db.commit()
@@ -134,8 +136,10 @@ async def delete_unused_permissions(
 ) -> None:
     """Delete all permissions that are not used anymore"""
     await db.execute(
-        delete(models_permissions.CorePermission).where(
-            models_permissions.CorePermission.permission_name.notin_(used_permissions),
+        delete(models_permissions.CorePermissionGroup).where(
+            models_permissions.CorePermissionGroup.permission_name.notin_(
+                used_permissions,
+            ),
         ),
     )
     await db.commit()
