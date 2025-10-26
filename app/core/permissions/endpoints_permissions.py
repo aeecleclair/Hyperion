@@ -5,6 +5,7 @@ Group management is part of the core of Hyperion. These endpoints allow managing
 """
 
 import logging
+from typing import TYPE_CHECKING, cast
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +20,9 @@ from app.dependencies import (
 from app.module import full_name_permissions_list, permissions_list
 from app.types.module import CoreModule
 from app.utils.tools import is_group_id_valid
+
+if TYPE_CHECKING:
+    from app.core.permissions.type_permissions import ModulePermissions
 
 router = APIRouter(tags=["Permissions"])
 
@@ -48,7 +52,7 @@ async def read_permissions_list(
 
 @router.get(
     "/permissions/",
-    response_model=list[schemas_permissions.CorePermission],
+    response_model=schemas_permissions.CorePermissions,
     status_code=200,
 )
 async def read_permissions(
@@ -64,7 +68,7 @@ async def read_permissions(
 
 @router.get(
     "/permissions/{permission_name}",
-    response_model=list[schemas_permissions.CorePermission],
+    response_model=schemas_permissions.CorePermissions,
     status_code=200,
 )
 async def read_permission(
@@ -80,10 +84,14 @@ async def read_permission(
             status_code=404,
             detail="Permission not found",
         )
+    permission = cast(
+        "ModulePermissions",
+        permission_name,
+    )
 
     return await cruds_permissions.get_permissions_by_permission_name(
         db,
-        permission_name,
+        permission,
     )
 
 
@@ -92,25 +100,28 @@ async def read_permission(
     status_code=201,
 )
 async def create_permission(
-    permission: schemas_permissions.CorePermission,
+    permission: schemas_permissions.CoreGroupPermission
+    | schemas_permissions.CoreAccountTypePermission,
     db: AsyncSession = Depends(get_db),
     user=Depends(is_user_in(GroupType.admin)),
 ):
     """
     Create a new permission in database
     """
-    if not await is_group_id_valid(permission.group_id, db):
-        raise HTTPException(
-            status_code=404,
-            detail="Group not found",
-        )
     if permission.permission_name not in permissions_list:
         raise HTTPException(
             status_code=404,
             detail="Permission not found",
         )
-
-    await cruds_permissions.create_permission(permission, db)
+    if isinstance(permission, schemas_permissions.CoreGroupPermission):
+        if not await is_group_id_valid(permission.group_id, db):
+            raise HTTPException(
+                status_code=404,
+                detail="Group not found",
+            )
+        await cruds_permissions.create_group_permission(permission, db)
+    else:
+        await cruds_permissions.create_account_type_permission(permission, db)
     return {"message": "Permission created successfully"}
 
 
@@ -119,25 +130,50 @@ async def create_permission(
     status_code=204,
 )
 async def delete_permission(
-    permission: schemas_permissions.CorePermission,
+    permission: schemas_permissions.CoreGroupPermission
+    | schemas_permissions.CoreAccountTypePermission,
     db: AsyncSession = Depends(get_db),
     user=Depends(is_user_in(GroupType.admin)),
 ):
     """
     Delete a permission from database by name
     """
-    permission_db = (
-        await cruds_permissions.get_permissions_by_group_id_and_permission_name(
-            db,
-            permission.permission_name,
-            permission.group_id,
-        )
-    )
-    if not permission_db:
+    if permission.permission_name not in permissions_list:
         raise HTTPException(
             status_code=404,
             detail="Permission not found",
         )
-
-    await cruds_permissions.delete_permission(db, permission)
+    permission_name = cast(
+        "ModulePermissions",
+        permission.permission_name,
+    )
+    if isinstance(permission, schemas_permissions.CoreGroupPermission):
+        if not await is_group_id_valid(permission.group_id, db):
+            raise HTTPException(
+                status_code=404,
+                detail="Group not found",
+            )
+        group_permission_db = await cruds_permissions.get_group_permission_by_group_id_and_permission_name(
+            db,
+            permission_name,
+            permission.group_id,
+        )
+        if not group_permission_db:
+            raise HTTPException(
+                status_code=404,
+                detail="Permission not found",
+            )
+        await cruds_permissions.delete_group_permission(db, permission)
+    else:
+        account_type_permission_db = await cruds_permissions.get_account_type_permission_by_account_type_and_permission_name(
+            db,
+            permission_name,
+            permission.account_type,
+        )
+        if not account_type_permission_db:
+            raise HTTPException(
+                status_code=404,
+                detail="Permission not found",
+            )
+        await cruds_permissions.delete_account_type_permission(db, permission)
     return {"message": "Permission deleted successfully"}
