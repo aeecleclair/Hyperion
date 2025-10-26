@@ -6,15 +6,16 @@ from typing import TYPE_CHECKING
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import AccountType, GroupType
+from app.core.groups.groups_type import AccountType
 from app.core.notification.schemas_notification import Message
+from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users
 from app.dependencies import (
     get_db,
     get_notification_tool,
     get_scheduler,
     is_user_a_member,
-    is_user_in,
+    is_user_allowed_to,
 )
 from app.modules.loan import cruds_loan, models_loan, schemas_loan
 from app.modules.loan.factory_loan import LoanFactory
@@ -29,6 +30,11 @@ from app.utils.tools import (
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+
+
+class LoanPermissions(ModulePermissions):
+    manage_loans = "manage_loans"
+    manage_loaners = "manage_loaners"
 
 
 module = Module(
@@ -49,7 +55,9 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def read_loaners(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([LoanPermissions.manage_loaners]),
+    ),
 ):
     """
     Get existing loaners.
@@ -68,7 +76,9 @@ async def read_loaners(
 async def create_loaner(
     loaner: schemas_loan.LoanerBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([LoanPermissions.manage_loaners]),
+    ),
 ):
     """
     Create a new loaner.
@@ -104,7 +114,9 @@ async def create_loaner(
 async def delete_loaner(
     loaner_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([LoanPermissions.manage_loaners]),
+    ),
 ):
     """
     Delete a loaner. All items and loans associated with the loaner will also be deleted from the database.
@@ -140,7 +152,9 @@ async def update_loaner(
     loaner_id: str,
     loaner_update: schemas_loan.LoanerUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([LoanPermissions.manage_loaners]),
+    ),
 ):
     """
     Update a loaner, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value.
