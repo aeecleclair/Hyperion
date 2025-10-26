@@ -33,7 +33,6 @@ if TYPE_CHECKING:
 
 
 class LoanPermissions(ModulePermissions):
-    manage_loans = "manage_loans"
     manage_loaners = "manage_loaners"
 
 
