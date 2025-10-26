@@ -5,6 +5,7 @@ from app.core.groups import models_groups
 from app.core.groups.groups_type import GroupType
 from app.core.permissions import models_permissions
 from app.core.users import models_users
+from app.module import permissions_list
 from app.modules.booking.endpoints_booking import BookingPermissions
 from app.modules.cinema.endpoints_cinema import CinemaPermissions
 from tests.commons import (
@@ -42,6 +43,17 @@ async def init_objects() -> None:
     admin_user = await create_user_with_groups([GroupType.admin])
     global admin_token
     admin_token = create_api_access_token(admin_user)
+
+
+def test_read_permissions_list(client: TestClient) -> None:
+    response = client.get(
+        "/permissions/list",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+    assert (
+        len(response.json()) == len(permissions_list)
+    )  # We ensure that the number of permissions in full_name_permissions_list is the same as the number of permissions in the permissions_list
 
 
 def test_read_permissions(client: TestClient) -> None:
