@@ -15,9 +15,9 @@ for endpoints_file in Path().glob("app/modules/*/endpoints_*.py"):
         ".".join(endpoints_file.with_suffix("").parts),
     )
     if hasattr(endpoint_module, "module"):
-        module: Module = endpoint_module.module
-        module_list.append(module)
-        all_modules.append(module)
+        each_module: Module = endpoint_module.module
+        module_list.append(each_module)
+        all_modules.append(each_module)
     else:
         hyperion_error_logger.error(
             f"Module {endpoints_file} does not declare a module. It won't be enabled.",
@@ -37,18 +37,42 @@ for endpoints_file in Path().glob("app/core/*/endpoints_*.py"):
             f"Core module {endpoints_file} does not declare a core module. It won't be enabled.",
         )
 
+
+class DuplicatePermissionsError(Exception):
+    def __init__(self, permissions: list[list[str]]):
+        arranged_permissions = [
+            f"    - '{permission[0].split('.')[1]}': {', '.join(permission)}"
+            for permission in permissions
+        ]
+        super().__init__(
+            "Duplicate permissions name found in modules:\n"
+            + "\n".join(arranged_permissions),
+        )
+
+
 permissions_list: list[str] = []
 full_name_permissions_list: list[str] = []
 
 
-for module in all_modules:
-    if module.permissions:
+for each_module in all_modules:
+    if each_module.permissions:
         permissions_list.extend(
-            module.permissions.__members__.keys(),
+            each_module.permissions.__members__.keys(),
         )
         full_name_permissions_list.extend(
             [
-                module.permissions.__name__ + "." + name
-                for name in module.permissions.__members__
+                each_module.permissions.__name__ + "." + name
+                for name in each_module.permissions.__members__
             ],
         )
+if len(set(permissions_list)) != len(permissions_list):
+    duplicates = list({x for x in permissions_list if permissions_list.count(x) > 1})
+    full_name_duplicates = [
+        [name for name in full_name_permissions_list if name.split(".")[1] == duplicate]
+        for duplicate in duplicates
+    ]
+    hyperion_error_logger.error(
+        "Duplicate permissions found in modules: %s",
+        full_name_duplicates,
+    )
+    raise DuplicatePermissionsError(full_name_duplicates)
