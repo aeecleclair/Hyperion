@@ -6,6 +6,8 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.core.groups import models_groups
+from app.core.groups.groups_type import AccountType
+from app.core.permissions import models_permissions
 from app.core.users import models_users
 from app.modules.advert import models_advert
 from app.modules.advert.endpoints_advert import AdvertPermissions
@@ -40,8 +42,13 @@ async def init_objects() -> None:
     )
     advertiser_group = await create_groups_with_permissions(
         [],
-        "CAA",
+        "CAA advertiser",
     )
+    student_perms = models_permissions.CorePermissionAccountType(
+        account_type=AccountType.student,
+        permission_name=AdvertPermissions.see_adverts.name,
+    )
+    await add_object_to_db(student_perms)
 
     global user_admin
     user_admin = await create_user_with_groups([admin_group.id])

@@ -341,7 +341,7 @@ async def update_list(
 
 @module.router.get(
     "/campaign/voters",
-    response_model=list[schemas_permissions.CoreGroupPermission],
+    response_model=schemas_permissions.CorePermissions,
     status_code=200,
 )
 async def get_voters(
@@ -355,11 +355,10 @@ async def get_voters(
 
     **The user must be a member of a group authorized to manage the campaign to use this endpoint**
     """
-    voters = await cruds_permissions.get_permissions_by_permission_name(
+    return await cruds_permissions.get_permissions_by_permission_name(
         db=db,
         permission_name=CampaignPermissions.vote,
     )
-    return voters
 
 
 @module.router.post(

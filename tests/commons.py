@@ -4,7 +4,6 @@ from datetime import timedelta
 from functools import lru_cache
 
 from fastapi import FastAPI
-from psycopg import IntegrityError
 from sqlalchemy import NullPool
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -196,15 +195,16 @@ async def create_groups_with_permissions(
                         group_id=group_id,
                     ),
                 )
-
-        except IntegrityError:
+            await db.commit()
+        except Exception as error:
             await db.rollback()
-            raise
+            raise FailedToAddObjectToDB from error
         finally:
             await db.close()
     async with TestingSessionLocal() as db:
         group_db = await cruds_groups.get_group_by_id(db, group_id)
         await db.close()
+
     return group_db  # type: ignore # (group_db can't be None)  # noqa: PGH003
 
 

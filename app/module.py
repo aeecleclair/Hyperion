@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 
 from app.types.module import CoreModule, Module
+from app.utils.auth.providers import AuthPermissions
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -61,10 +62,14 @@ for each_module in all_modules:
         )
         full_name_permissions_list.extend(
             [
-                each_module.permissions.__name__ + "." + name
+                f"{each_module.root}.{name}"
                 for name in each_module.permissions.__members__
             ],
         )
+permissions_list.extend(AuthPermissions.__members__.keys())
+full_name_permissions_list.extend(
+    [f"Auth.{name}" for name in AuthPermissions.__members__],
+)
 if len(set(permissions_list)) != len(permissions_list):
     duplicates = list({x for x in permissions_list if permissions_list.count(x) > 1})
     full_name_duplicates = [

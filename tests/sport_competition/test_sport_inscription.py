@@ -5,11 +5,14 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import delete, update
 
-from app.core.groups.groups_type import GroupType
+from app.core.groups import models_groups
 from app.core.schools import models_schools
 from app.core.schools.schools_type import SchoolType
 from app.core.users import models_users
 from app.modules.sport_competition import models_sport_competition
+from app.modules.sport_competition.endpoints_sport_competition import (
+    SportCompetitionPermissions,
+)
 from app.modules.sport_competition.schemas_sport_competition import (
     LocationBase,
     MatchBase,
@@ -26,9 +29,12 @@ from app.modules.sport_competition.types_sport_competition import (
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
     get_TestingSessionLocal,
 )
+
+admin_group: models_groups.CoreGroup
 
 school1: models_schools.CoreSchool
 school2: models_schools.CoreSchool
@@ -107,6 +113,12 @@ async def create_competition_user(
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
+    global admin_group
+    admin_group = await create_groups_with_permissions(
+        [SportCompetitionPermissions.manage_sport_competition],
+        "competition_admin_group",
+    )
+
     global school1, school2, active_edition, old_edition
     school1 = models_schools.CoreSchool(
         id=uuid4(),
@@ -143,7 +155,7 @@ async def init_objects() -> None:
 
     global admin_user, school_bds_user, sport_manager_user, user3, user4
     admin_user = await create_user_with_groups(
-        [GroupType.competition_admin],
+        [admin_group.id],
         email="Admin User",
     )
     school_bds_user = await create_user_with_groups(
