@@ -15,8 +15,8 @@ from app.dependencies import (
     get_db,
     get_notification_manager,
     get_notification_tool,
+    is_user,
     is_user_allowed_to,
-    is_user_an_ecl_member,
 )
 from app.modules.advert import (
     cruds_advert,
@@ -40,6 +40,8 @@ root = "advert"
 
 
 class AdvertPermissions(ModulePermissions):
+    see_adverts = "see_adverts"
+    post_adverts = "post_adverts"
     manage_advertisers = "manage_advertisers"
 
 
@@ -61,7 +63,9 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def read_advertisers(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AdvertPermissions.see_adverts]),
+    ),
 ):
     """
     Get existing advertisers.
@@ -194,7 +198,9 @@ async def update_advertiser(
 )
 async def get_current_user_advertisers(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AdvertPermissions.see_adverts]),
+    ),
 ):
     """
     Return all advertisers the current user can manage.
@@ -217,7 +223,9 @@ async def get_current_user_advertisers(
 async def read_adverts(
     advertisers: list[str] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AdvertPermissions.see_adverts]),
+    ),
 ):
     """
     Get existing adverts. If advertisers optional parameter is used, search adverts by advertisers
@@ -241,7 +249,9 @@ async def read_adverts(
 async def read_advert(
     advert_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AdvertPermissions.see_adverts]),
+    ),
 ):
     """
     Get an advert
@@ -260,7 +270,9 @@ async def read_advert(
 async def create_advert(
     advert: schemas_advert.AdvertBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user(),
+    ),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -323,7 +335,9 @@ async def update_advert(
     advert_id: str,
     advert_update: schemas_advert.AdvertUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user(),
+    ),
 ):
     """
     Edit an advert
@@ -360,7 +374,9 @@ async def update_advert(
 async def delete_advert(
     advert_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user(),
+    ),
 ):
     """
     Delete an advert
@@ -398,7 +414,9 @@ async def delete_advert(
 async def read_advert_image(
     advert_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AdvertPermissions.see_adverts]),
+    ),
 ):
     """
     Get the image of an advert
@@ -427,7 +445,9 @@ async def read_advert_image(
 async def create_advert_image(
     advert_id: str,
     image: UploadFile = File(...),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user(),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -440,6 +460,14 @@ async def create_advert_image(
         raise HTTPException(
             status_code=404,
             detail="The advert does not exist",
+        )
+    if not is_user_member_of_any_group(
+        user,
+        [advert.advertiser.group_manager_id],
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Unauthorized to manage {advert.advertiser.name} adverts",
         )
 
     if not is_user_member_of_any_group(

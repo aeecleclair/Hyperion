@@ -189,9 +189,9 @@ async def create_groups_with_permissions(
             await cruds_groups.create_group(db=db, group=group)
 
             for permission in permissions:
-                await cruds_permissions.create_permission(
+                await cruds_permissions.create_group_permission(
                     db=db,
-                    permission=schemas_permissions.CorePermission(
+                    permission=schemas_permissions.CoreGroupPermission(
                         permission_name=permission,
                         group_id=group_id,
                     ),

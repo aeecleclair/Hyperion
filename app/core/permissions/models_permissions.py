@@ -20,7 +20,7 @@ class CorePermissionAccountType(Base):
     __tablename__ = "core_permission_account_type"
 
     permission_name: Mapped[str] = mapped_column(primary_key=True, index=True)
-    group_id: Mapped[AccountType] = mapped_column(
+    account_type: Mapped[AccountType] = mapped_column(
         index=True,
         primary_key=True,
     )
