@@ -29,7 +29,7 @@ from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import is_group_id_valid, is_user_member_of_any_group
 
 
-class BookingPermission(ModulePermissions):
+class BookingPermissions(ModulePermissions):
     manage_managers = "manage_managers"
     manage_rooms = "manage_rooms"
 
@@ -39,7 +39,7 @@ module = Module(
     tag="Booking",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
     factory=BookingFactory(),
-    permissions=BookingPermission,
+    permissions=BookingPermissions,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -53,7 +53,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 async def get_managers(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([BookingPermission.manage_managers]),
+        is_user_allowed_to([BookingPermissions.manage_managers]),
     ),
 ):
     """
@@ -74,7 +74,7 @@ async def create_manager(
     manager: schemas_booking.ManagerBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([BookingPermission.manage_managers]),
+        is_user_allowed_to([BookingPermissions.manage_managers]),
     ),
 ):
     """
@@ -108,7 +108,7 @@ async def update_manager(
     manager_update: schemas_booking.ManagerUpdate,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([BookingPermission.manage_managers]),
+        is_user_allowed_to([BookingPermissions.manage_managers]),
     ),
 ):
     """
@@ -142,7 +142,7 @@ async def delete_manager(
     manager_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([BookingPermission.manage_managers]),
+        is_user_allowed_to([BookingPermissions.manage_managers]),
     ),
 ):
     """
@@ -436,7 +436,7 @@ async def create_room(
     room: schemas_booking.RoomBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([BookingPermission.manage_rooms]),
+        is_user_allowed_to([BookingPermissions.manage_rooms]),
     ),
 ):
     """
@@ -461,7 +461,7 @@ async def edit_room(
     room: schemas_booking.RoomBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([BookingPermission.manage_rooms]),
+        is_user_allowed_to([BookingPermissions.manage_rooms]),
     ),
 ):
     """
@@ -481,7 +481,7 @@ async def delete_room(
     room_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([BookingPermission.manage_rooms]),
+        is_user_allowed_to([BookingPermissions.manage_rooms]),
     ),
 ):
     """
