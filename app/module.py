@@ -36,3 +36,19 @@ for endpoints_file in Path().glob("app/core/*/endpoints_*.py"):
         hyperion_error_logger.error(
             f"Core module {endpoints_file} does not declare a core module. It won't be enabled.",
         )
+
+permissions_list: list[str] = []
+full_name_permissions_list: list[str] = []
+
+
+for module in all_modules:
+    if module.permissions:
+        permissions_list.extend(
+            module.permissions.__members__.keys(),
+        )
+        full_name_permissions_list.extend(
+            [
+                module.permissions.__name__ + "." + name
+                for name in module.permissions.__members__
+            ],
+        )

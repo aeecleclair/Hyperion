@@ -29,7 +29,7 @@ async def get_permissions(
 
 async def get_permissions_by_group_id_and_permission_name(
     db: AsyncSession,
-    permission_name: ModulePermissions,
+    permission_name: ModulePermissions | str,
     group_id: str,
 ) -> schemas_permissions.CorePermission | None:
     """Return permission with name from database"""
