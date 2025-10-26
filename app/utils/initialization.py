@@ -188,7 +188,7 @@ def clean_permissions_sync(db: Session, permssion_list: list[str]) -> None:
     db.execute(
         delete(models_permissions.CorePermissionGroup).where(
             models_permissions.CorePermissionGroup.permission_name.notin_(
-                permssion_list
+                permssion_list,
             ),
         ),
     )

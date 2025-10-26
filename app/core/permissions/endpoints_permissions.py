@@ -46,7 +46,7 @@ async def read_permissions_list(
     """
     Return all permissions from database
     """
-    from app.module import full_name_permissions_list  # noqa: PLC0415
+    from app.module import full_name_permissions_list
 
     return full_name_permissions_list
 
@@ -80,7 +80,7 @@ async def read_permission(
     """
     Return permission with name from database
     """
-    from app.module import permissions_list  # noqa: PLC0415
+    from app.module import permissions_list
 
     if permission_name not in permissions_list:
         raise HTTPException(
@@ -111,7 +111,7 @@ async def create_permission(
     """
     Create a new permission in database
     """
-    from app.module import permissions_list  # noqa: PLC0415
+    from app.module import permissions_list
 
     if permission.permission_name not in permissions_list:
         raise HTTPException(
@@ -143,7 +143,7 @@ async def delete_permission(
     """
     Delete a permission from database by name
     """
-    from app.module import permissions_list  # noqa: PLC0415
+    from app.module import permissions_list
 
     if permission.permission_name not in permissions_list:
         raise HTTPException(
