@@ -10,7 +10,6 @@ from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users
 from app.dependencies import (
     get_db,
-    is_user,
     is_user_allowed_to,
 )
 from app.modules.seed_library import (
@@ -26,13 +25,14 @@ from app.utils.tools import has_user_permission
 
 
 class SeedLibraryPermissions(ModulePermissions):
+    access_seed_library = "access_seed_library"
     manage_seed_library = "manage_seed_library"
 
 
 module = Module(
     root="seed_library",
     tag="seed_library",
-    default_allowed_account_types=[AccountType.student, AccountType.staff],
+    default_allowed_account_types=list(AccountType),
     factory=SeedLibraryFactory(),
     permissions=None,
 )
@@ -48,7 +48,9 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def get_all_species(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SeedLibraryPermissions.access_seed_library]),
+    ),
 ):
     """
     Return all species from database as a list of SpeciesComplete schemas
@@ -62,7 +64,9 @@ async def get_all_species(
     status_code=200,
 )
 async def get_all_species_types(
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SeedLibraryPermissions.access_seed_library]),
+    ),
 ):
     """
     Return all available types of species from SpeciesType enum.
@@ -222,7 +226,9 @@ async def delete_species(
 )
 async def get_waiting_plants(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SeedLibraryPermissions.access_seed_library]),
+    ),
 ):
     """
     Return all plants where state=waiting from database as a list of PlantsComplete schemas
@@ -237,7 +243,9 @@ async def get_waiting_plants(
 )
 async def get_my_plants(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SeedLibraryPermissions.access_seed_library]),
+    ),
 ):
     """
     Return all plants where user ={user_id} from database as a list of PlantsComplete schemas
@@ -271,7 +279,9 @@ async def get_plants_by_user_id(
 async def get_plant_by_id(
     plant_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SeedLibraryPermissions.access_seed_library]),
+    ),
 ):
     """
     Return the plants where plant ={plant_id} from database as a PlantsComplete schemas
@@ -290,7 +300,9 @@ async def get_plant_by_id(
 async def create_plant(
     plant_base: schemas_seed_library.PlantCreation,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SeedLibraryPermissions.access_seed_library]),
+    ),
 ):
     """
     Create a new Plant by giving an PlantCreation scheme
@@ -355,7 +367,9 @@ async def create_plant(
 async def update_plant(
     plant_id: uuid.UUID,
     plant_edit: schemas_seed_library.PlantEdit,
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SeedLibraryPermissions.access_seed_library]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -411,7 +425,9 @@ async def update_plant_admin(
 )
 async def borrow_plant(
     plant_id: uuid.UUID,
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SeedLibraryPermissions.access_seed_library]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -464,7 +480,9 @@ async def delete_plant(
 )
 async def get_seed_library_information(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SeedLibraryPermissions.access_seed_library]),
+    ),
 ):
     return await tools.get_core_data(
         coredata_seed_library.SeedLibraryInformation,

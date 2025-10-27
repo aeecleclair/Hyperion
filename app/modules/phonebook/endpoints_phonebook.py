@@ -12,7 +12,6 @@ from app.core.users import cruds_users, models_users
 from app.dependencies import (
     get_db,
     is_user_allowed_to,
-    is_user_an_ecl_member,
     is_user_in,
 )
 from app.modules.phonebook import (
@@ -33,6 +32,7 @@ from app.utils.tools import (
 
 
 class PhonebookPermissions(ModulePermissions):
+    access_phonebook = "access_phonebook"
     manage_phonebook = "manage_phonebook"
 
 
@@ -54,7 +54,9 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def get_all_associations(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PhonebookPermissions.access_phonebook]),
+    ),
 ):
     """
     Return all associations from database as a list of AssociationComplete schemas
@@ -81,7 +83,9 @@ async def get_all_associations(
 )
 async def get_all_role_tags(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PhonebookPermissions.access_phonebook]),
+    ),
 ):
     """
     Return all available role tags from RoleTags enum.
@@ -96,7 +100,9 @@ async def get_all_role_tags(
     status_code=200,
 )
 async def get_all_kinds(
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PhonebookPermissions.access_phonebook]),
+    ),
 ):
     """
     Return all available kinds of from Kinds enum.
@@ -153,7 +159,9 @@ async def create_association(
 async def update_association(
     association_id: str,
     association_edit: schemas_phonebook.AssociationEdit,
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PhonebookPermissions.access_phonebook]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -265,7 +273,9 @@ async def delete_association(
 )
 async def get_association_members(
     association_id: str,
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PhonebookPermissions.access_phonebook]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """Return the list of MemberComplete of an Association."""
@@ -301,7 +311,9 @@ async def get_association_members(
 async def get_association_members_by_mandate_year(
     association_id: str,
     mandate_year: int,
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PhonebookPermissions.access_phonebook]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """Return the list of MemberComplete of an Association with given mandate_year."""
@@ -340,7 +352,9 @@ async def get_association_members_by_mandate_year(
 async def get_member_details(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PhonebookPermissions.access_phonebook]),
+    ),
 ):
     """Return MemberComplete for given user_id."""
 
@@ -364,7 +378,9 @@ async def get_member_details(
 )
 async def create_membership(
     membership: schemas_phonebook.MembershipBase,
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PhonebookPermissions.access_phonebook]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -465,7 +481,9 @@ async def create_membership(
 async def update_membership(
     updated_membership: schemas_phonebook.MembershipEdit,
     membership_id: str,
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PhonebookPermissions.access_phonebook]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -529,7 +547,9 @@ async def update_membership(
 )
 async def delete_membership(
     membership_id: str,
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PhonebookPermissions.access_phonebook]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -576,7 +596,9 @@ async def delete_membership(
 async def create_association_logo(
     association_id: str,
     image: UploadFile = File(),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PhonebookPermissions.access_phonebook]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -627,7 +649,9 @@ async def create_association_logo(
 async def read_association_logo(
     association_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PhonebookPermissions.access_phonebook]),
+    ),
 ) -> FileResponse:
     """
     Get the logo of an Association.

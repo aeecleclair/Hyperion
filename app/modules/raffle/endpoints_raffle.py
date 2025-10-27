@@ -15,7 +15,6 @@ from app.dependencies import (
     get_db,
     get_redis_client,
     get_request_id,
-    is_user_a_member,
     is_user_allowed_to,
 )
 from app.modules.raffle import cruds_raffle, models_raffle, schemas_raffle
@@ -33,6 +32,7 @@ from app.utils.tools import (
 
 
 class RafflePermissions(ModulePermissions):
+    access_raffle = "access_raffle"
     manage_raffle = "manage_raffle"
     manage_cash = "manage_cash"
 
@@ -56,7 +56,9 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def get_raffle(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
 ):
     """
     Return all raffles
@@ -98,7 +100,9 @@ async def edit_raffle(
     raffle_id: str,
     raffle_update: schemas_raffle.RaffleEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
 ):
     """
     Edit a raffle
@@ -136,7 +140,9 @@ async def edit_raffle(
 async def delete_raffle(
     raffle_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
 ):
     """
     Delete a raffle.
@@ -170,7 +176,9 @@ async def delete_raffle(
 async def get_raffles_by_group_id(
     group_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
 ):
     """
     Return all raffles from a group
@@ -186,7 +194,9 @@ async def get_raffles_by_group_id(
 async def get_raffle_stats(
     raffle_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
 ):
     """Return the number of ticket sold and the total amount recollected for a raffle"""
     raffle = await cruds_raffle.get_raffle_by_id(db=db, raffle_id=raffle_id)
@@ -214,7 +224,9 @@ async def get_raffle_stats(
 async def create_current_raffle_logo(
     raffle_id: str,
     image: UploadFile = File(...),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
     request_id: str = Depends(get_request_id),
     db: AsyncSession = Depends(get_db),
 ):
@@ -261,7 +273,9 @@ async def create_current_raffle_logo(
 )
 async def read_raffle_logo(
     raffle_id: str,
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -285,7 +299,9 @@ async def read_raffle_logo(
 )
 async def get_pack_tickets(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
 ):
     """
     Return all tickets
@@ -301,7 +317,9 @@ async def get_pack_tickets(
 async def create_packticket(
     packticket: schemas_raffle.PackTicketBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
 ):
     """
     Create a new packticket
@@ -334,7 +352,9 @@ async def edit_packticket(
     packticket_id: str,
     packticket_update: schemas_raffle.PackTicketEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
 ):
     """
     Edit a packticket
@@ -380,7 +400,9 @@ async def edit_packticket(
 async def delete_packticket(
     packticket_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
 ):
     """
     Delete a packticket.
@@ -416,7 +438,9 @@ async def delete_packticket(
 async def get_pack_tickets_by_raffle_id(
     raffle_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
 ):
     """
     Return all pack_tickets associated to a raffle
@@ -452,7 +476,9 @@ async def buy_ticket(
     pack_id: str,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis | None = Depends(get_redis_client),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -530,7 +556,9 @@ async def buy_ticket(
 async def get_tickets_by_userid(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
 ):
     """
     Get tickets of a specific user.
@@ -561,7 +589,9 @@ async def get_tickets_by_userid(
 async def get_tickets_by_raffleid(
     raffle_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
 ):
     """
     Get tickets from a specific raffle.
@@ -595,7 +625,9 @@ async def get_tickets_by_raffleid(
 )
 async def get_prizes(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
 ):
     """
     Return all prizes
@@ -611,7 +643,9 @@ async def get_prizes(
 async def create_prize(
     prize: schemas_raffle.PrizeBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
 ):
     """
     Create a new prize
@@ -647,7 +681,9 @@ async def edit_prize(
     prize_id: str,
     prize_update: schemas_raffle.PrizeEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
 ):
     """
     Edit a prize
@@ -686,7 +722,9 @@ async def edit_prize(
 async def delete_prize(
     prize_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
 ):
     """
     Delete a prize.
@@ -720,7 +758,9 @@ async def delete_prize(
 async def get_prizes_by_raffleid(
     raffle_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
 ):
     """
     Get prizes from a specific raffle.
@@ -737,7 +777,9 @@ async def get_prizes_by_raffleid(
 async def create_prize_picture(
     prize_id: str,
     image: UploadFile = File(...),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
     request_id: str = Depends(get_request_id),
     db: AsyncSession = Depends(get_db),
 ):
@@ -789,7 +831,9 @@ async def create_prize_picture(
 )
 async def read_prize_logo(
     prize_id: str,
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -833,7 +877,9 @@ async def get_users_cash(
 async def get_cash_by_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
 ):
     """
     Get cash from a specific user.
@@ -964,7 +1010,9 @@ async def edit_cash_by_id(
 async def draw_winner(
     prize_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
 ):
     prize = await cruds_raffle.get_prize_by_id(db=db, prize_id=prize_id)
     if prize is None:
@@ -1005,7 +1053,9 @@ async def draw_winner(
 async def open_raffle(
     raffle_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
 ):
     """
     Open a raffle
@@ -1043,7 +1093,9 @@ async def open_raffle(
 async def lock_raffle(
     raffle_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RafflePermissions.access_raffle]),
+    ),
 ):
     """
     Lock a raffle

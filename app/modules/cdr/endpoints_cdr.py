@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups import cruds_groups, schemas_groups
+from app.core.groups.groups_type import AccountType
 from app.core.memberships import cruds_memberships, schemas_memberships
 from app.core.payment.payment_tool import PaymentTool
 from app.core.payment.types_payment import HelloAssoConfigName
@@ -30,8 +31,6 @@ from app.dependencies import (
     get_settings,
     get_unsafe_db,
     get_websocket_connection_manager,
-    is_user,
-    is_user_a_member,
     is_user_allowed_to,
 )
 from app.modules.cdr import coredata_cdr, cruds_cdr, models_cdr, schemas_cdr
@@ -65,6 +64,7 @@ from app.utils.tools import (
 
 
 class CdrPermissions(ModulePermissions):
+    access_cdr = "access_cdr"
     manage_cdr = "manage_cdr"
 
 
@@ -72,6 +72,7 @@ module = Module(
     root="cdr",
     tag="Cdr",
     payment_callback=validate_payment,
+    default_allowed_account_types=list(AccountType),
     factory=None,
     permissions=CdrPermissions,
 )
@@ -86,7 +87,9 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def get_cdr_users(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     """
     Get all users.
@@ -120,7 +123,9 @@ async def get_cdr_users(
 )
 async def get_cdr_users_pending_validation(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     """
     Get all users that have non-validated purchases.
@@ -178,7 +183,9 @@ async def get_cdr_users_pending_validation(
 async def get_cdr_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     """
     Get a user.
@@ -378,7 +385,9 @@ async def get_sellers(
 )
 async def get_sellers_by_user_id(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     """
     Get sellers user is part of the group. If user is adminCDR, returns all sellers.
@@ -401,7 +410,9 @@ async def get_sellers_by_user_id(
 )
 async def get_online_sellers(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
@@ -532,7 +543,9 @@ async def generate_and_send_results(
 async def send_seller_results(
     seller_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
     # settings: Settings = Depends(get_settings),
 ):
     """
@@ -562,7 +575,9 @@ async def send_seller_results(
 )
 async def get_all_available_online_products(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
@@ -583,7 +598,9 @@ async def get_all_available_online_products(
 )
 async def get_all_products(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
@@ -716,7 +733,9 @@ async def delete_seller(
 async def get_products_by_seller_id(
     seller_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
@@ -740,7 +759,9 @@ async def get_products_by_seller_id(
 async def get_available_online_products(
     seller_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
@@ -764,7 +785,9 @@ async def create_product(
     seller_id: UUID,
     product: schemas_cdr.ProductBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
@@ -842,7 +865,9 @@ async def update_product(
     product_id: UUID,
     product: schemas_cdr.ProductEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     """
     Edit a product.
@@ -913,7 +938,9 @@ async def delete_product(
     seller_id: UUID,
     product_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     """
     Delete a product.
@@ -958,7 +985,9 @@ async def create_product_variant(
     product_id: UUID,
     product_variant: schemas_cdr.ProductVariantBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
@@ -1046,7 +1075,9 @@ async def update_product_variant(
     variant_id: UUID,
     product_variant: schemas_cdr.ProductVariantEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     """
     Edit a product variant.
@@ -1135,7 +1166,9 @@ async def delete_product_variant(
     product_id: UUID,
     variant_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     """
     Delete a product variant.
@@ -1178,7 +1211,9 @@ async def delete_product_variant(
 async def get_seller_documents(
     seller_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     """
     Get a seller's documents.
@@ -1200,7 +1235,9 @@ async def get_seller_documents(
 )
 async def get_all_sellers_documents(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     """
     Get a seller's documents.
@@ -1229,7 +1266,9 @@ async def create_document(
     seller_id: UUID,
     document: schemas_cdr.DocumentBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     """
     Create a document.
@@ -1263,7 +1302,9 @@ async def delete_document(
     seller_id: UUID,
     document_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     """
     Delete a document.
@@ -1295,7 +1336,9 @@ async def delete_document(
 async def get_purchases_by_user_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
@@ -1377,7 +1420,9 @@ async def get_purchases_by_user_id(
 )
 async def get_my_purchases(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     return await get_purchases_by_user_id(user.id, db, user, cdr_year)
@@ -1392,7 +1437,9 @@ async def get_purchases_by_user_id_by_seller_id(
     seller_id: UUID,
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
@@ -1473,7 +1520,9 @@ async def create_purchase(
     product_variant_id: UUID,
     purchase: schemas_cdr.PurchaseBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
@@ -1558,7 +1607,9 @@ async def create_purchase(
 async def create_purchase_batch(
     batch: schemas_cdr.BatchPurchase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
@@ -1890,7 +1941,9 @@ async def delete_purchase(
     user_id: str,
     product_variant_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
@@ -2005,7 +2058,9 @@ async def delete_purchase(
 async def get_signatures_by_user_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     """
     Get a user's signatures.
@@ -2032,7 +2087,9 @@ async def get_signatures_by_user_id_by_seller_id(
     seller_id: UUID,
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     """
     Get a user's signatures for a single seller.
@@ -2059,7 +2116,9 @@ async def create_signature(
     document_id: UUID,
     signature: schemas_cdr.SignatureBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     """
     Create a signature.
@@ -2158,7 +2217,9 @@ async def delete_signature(
 )
 async def get_curriculums(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     """
     Get all curriculums.
@@ -2241,7 +2302,9 @@ async def create_curriculum_membership(
     user_id: str,
     curriculum_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
 ):
     """
@@ -2342,7 +2405,9 @@ async def update_curriculum_membership(
     user_id: str,
     curriculum_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
 ):
     """
@@ -2420,7 +2485,9 @@ async def delete_curriculum_membership(
     user_id: str,
     curriculum_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
 ):
     """
@@ -2495,7 +2562,9 @@ async def delete_curriculum_membership(
 async def get_payments_by_user_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
@@ -2619,7 +2688,9 @@ async def delete_payment(
 )
 async def get_payment_url(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
     settings: Settings = Depends(get_settings),
     payment_tool: PaymentTool = Depends(get_payment_tool(HelloAssoConfigName.CDR)),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
@@ -2778,7 +2849,9 @@ async def update_status(
 )
 async def get_my_tickets(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     return await cruds_cdr.get_tickets_of_user(db=db, user_id=user.id)
 
@@ -2791,7 +2864,9 @@ async def get_my_tickets(
 async def get_tickets_of_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     if not (
         await has_user_permission(user, CdrPermissions.manage_cdr, db)
@@ -2812,7 +2887,9 @@ async def get_tickets_of_user(
 async def get_ticket_secret(
     ticket_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     ticket = await cruds_cdr.get_ticket(db=db, ticket_id=ticket_id)
     if not ticket:
@@ -2839,7 +2916,9 @@ async def get_ticket_by_secret(
     generator_id: UUID,
     secret: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     product = await check_request_consistency(
         db=db,
@@ -2891,7 +2970,9 @@ async def scan_ticket(
     secret: UUID,
     ticket_data: schemas_cdr.TicketScan,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     product = await check_request_consistency(
         db=db,
@@ -2961,7 +3042,9 @@ async def get_users_by_tag(
     generator_id: UUID,
     tag: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     product = await check_request_consistency(
         db=db,
@@ -3007,7 +3090,9 @@ async def get_tags_of_ticket(
     product_id: UUID,
     generator_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     product = await check_request_consistency(
         db=db,
@@ -3053,7 +3138,9 @@ async def generate_ticket_for_product(
     product_id: UUID,
     ticket_data: schemas_cdr.GenerateTicketBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
     product = await check_request_consistency(
@@ -3108,7 +3195,9 @@ async def delete_ticket_generator_for_product(
     product_id: UUID,
     ticket_generator_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
     product = await check_request_consistency(
@@ -3149,7 +3238,9 @@ async def get_custom_data_fields(
     seller_id: UUID,
     product_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     await is_user_in_a_seller_group(
         seller_id,
@@ -3170,7 +3261,9 @@ async def create_custom_data_field(
     product_id: UUID,
     custom_data_field: schemas_cdr.CustomDataFieldBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     await is_user_in_a_seller_group(
         seller_id,
@@ -3200,7 +3293,9 @@ async def update_custom_data_field(
     field_id: UUID,
     custom_data_field: schemas_cdr.CustomDataFieldBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     await is_user_in_a_seller_group(
         seller_id,
@@ -3241,7 +3336,9 @@ async def delete_customdata_field(
     product_id: UUID,
     field_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     await is_user_in_a_seller_group(
         seller_id,
@@ -3278,7 +3375,9 @@ async def get_customdata(
     user_id: str,
     field_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     await is_user_in_a_seller_group(
         seller_id,
@@ -3308,7 +3407,9 @@ async def create_custom_data(
     field_id: UUID,
     custom_data: schemas_cdr.CustomDataBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
     db_field = await cruds_cdr.get_customdata_field(db=db, field_id=field_id)
@@ -3361,7 +3462,9 @@ async def update_custom_data(
     field_id: UUID,
     custom_data: schemas_cdr.CustomDataBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
     db_data = await cruds_cdr.get_customdata(db=db, field_id=field_id, user_id=user_id)
@@ -3409,7 +3512,9 @@ async def delete_customdata(
     user_id: str,
     field_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
 ):
     await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
     db_data = await cruds_cdr.get_customdata(db=db, field_id=field_id, user_id=user_id)

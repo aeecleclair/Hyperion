@@ -15,7 +15,6 @@ from app.dependencies import (
     get_db,
     get_notification_tool,
     is_user_allowed_to,
-    is_user_an_ecl_member,
 )
 from app.modules.booking import (
     cruds_booking,
@@ -30,6 +29,7 @@ from app.utils.tools import is_group_id_valid, is_user_member_of_any_group
 
 
 class BookingPermissions(ModulePermissions):
+    access_booking = "access_booking"
     manage_managers = "manage_managers"
     manage_rooms = "manage_rooms"
 
@@ -167,7 +167,9 @@ async def delete_manager(
 )
 async def get_current_user_managers(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([BookingPermissions.access_booking]),
+    ),
 ):
     """
     Return all managers the current user is a member.
@@ -185,7 +187,9 @@ async def get_current_user_managers(
 )
 async def get_bookings_for_manager(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([BookingPermissions.access_booking]),
+    ),
 ):
     """
     Return all bookings a user can manage.
@@ -208,7 +212,9 @@ async def get_bookings_for_manager(
 )
 async def get_confirmed_bookings_for_manager(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([BookingPermissions.access_booking]),
+    ),
 ):
     """
     Return all confirmed bookings a user can manage.
@@ -230,7 +236,9 @@ async def get_confirmed_bookings_for_manager(
 )
 async def get_confirmed_bookings(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([BookingPermissions.access_booking]),
+    ),
 ):
     """
     Return all confirmed bookings.
@@ -248,7 +256,9 @@ async def get_confirmed_bookings(
 )
 async def get_applicant_bookings(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([BookingPermissions.access_booking]),
+    ),
 ):
     """
     Get the user bookings.
@@ -266,7 +276,9 @@ async def get_applicant_bookings(
 async def create_booking(
     booking: schemas_booking.BookingBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([BookingPermissions.access_booking]),
+    ),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -317,7 +329,9 @@ async def edit_booking(
     booking_id: str,
     booking_edit: schemas_booking.BookingEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([BookingPermissions.access_booking]),
+    ),
 ):
     """
     Edit a booking.
@@ -353,7 +367,9 @@ async def confirm_booking(
     booking_id: str,
     decision: Decision,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([BookingPermissions.access_booking]),
+    ),
 ):
     """
     Give a decision to a booking.
@@ -386,7 +402,9 @@ async def confirm_booking(
 async def delete_booking(
     booking_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([BookingPermissions.access_booking]),
+    ),
 ):
     """
     Remove a booking.
@@ -416,7 +434,9 @@ async def delete_booking(
 )
 async def get_rooms(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([BookingPermissions.access_booking]),
+    ),
 ):
     """
     Get all rooms.

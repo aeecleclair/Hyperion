@@ -15,7 +15,6 @@ from app.dependencies import (
     get_db,
     get_notification_manager,
     get_notification_tool,
-    is_user,
     is_user_allowed_to,
 )
 from app.modules.advert import (
@@ -40,8 +39,7 @@ root = "advert"
 
 
 class AdvertPermissions(ModulePermissions):
-    see_adverts = "see_adverts"
-    post_adverts = "post_adverts"
+    access_adverts = "access_adverts"
     manage_advertisers = "manage_advertisers"
 
 
@@ -64,7 +62,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 async def read_advertisers(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AdvertPermissions.see_adverts]),
+        is_user_allowed_to([AdvertPermissions.access_adverts]),
     ),
 ):
     """
@@ -199,7 +197,7 @@ async def update_advertiser(
 async def get_current_user_advertisers(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AdvertPermissions.see_adverts]),
+        is_user_allowed_to([AdvertPermissions.access_adverts]),
     ),
 ):
     """
@@ -224,7 +222,7 @@ async def read_adverts(
     advertisers: list[str] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AdvertPermissions.see_adverts]),
+        is_user_allowed_to([AdvertPermissions.access_adverts]),
     ),
 ):
     """
@@ -250,7 +248,7 @@ async def read_advert(
     advert_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AdvertPermissions.see_adverts]),
+        is_user_allowed_to([AdvertPermissions.access_adverts]),
     ),
 ):
     """
@@ -271,7 +269,7 @@ async def create_advert(
     advert: schemas_advert.AdvertBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user(),
+        is_user_allowed_to([AdvertPermissions.access_adverts]),
     ),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
@@ -336,7 +334,7 @@ async def update_advert(
     advert_update: schemas_advert.AdvertUpdate,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user(),
+        is_user_allowed_to([AdvertPermissions.access_adverts]),
     ),
 ):
     """
@@ -375,7 +373,7 @@ async def delete_advert(
     advert_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user(),
+        is_user_allowed_to([AdvertPermissions.access_adverts]),
     ),
 ):
     """
@@ -415,7 +413,7 @@ async def read_advert_image(
     advert_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AdvertPermissions.see_adverts]),
+        is_user_allowed_to([AdvertPermissions.access_adverts]),
     ),
 ):
     """
@@ -446,7 +444,7 @@ async def create_advert_image(
     advert_id: str,
     image: UploadFile = File(...),
     user: models_users.CoreUser = Depends(
-        is_user(),
+        is_user_allowed_to([AdvertPermissions.access_adverts]),
     ),
     db: AsyncSession = Depends(get_db),
 ):

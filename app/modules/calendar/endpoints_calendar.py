@@ -11,7 +11,6 @@ from app.core.users import models_users
 from app.dependencies import (
     get_db,
     is_user_allowed_to,
-    is_user_an_ecl_member,
 )
 from app.modules.calendar import (
     cruds_calendar,
@@ -25,6 +24,7 @@ from app.utils.tools import has_user_permission
 
 
 class CalendarPermissions(ModulePermissions):
+    access_calendar = "access_calendar"
     manage_events = "manage_events"
     create_ical = "create_ical"
 
@@ -62,7 +62,9 @@ async def get_events(
 )
 async def get_confirmed_events(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.access_calendar]),
+    ),
 ):
     """
     Get all confirmed events.
@@ -80,7 +82,9 @@ async def get_confirmed_events(
 async def get_applicant_bookings(
     applicant_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.access_calendar]),
+    ),
 ):
     """
     Get one user bookings.
@@ -107,7 +111,9 @@ async def get_applicant_bookings(
 async def get_event_by_id(
     event_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.access_calendar]),
+    ),
 ):
     """Get an event's information by its id."""
 
@@ -143,7 +149,9 @@ async def get_event_applicant(
 async def add_event(
     event: schemas_calendar.EventBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.access_calendar]),
+    ),
 ):
     """Add an event to the calendar."""
 
@@ -167,7 +175,9 @@ async def edit_bookings_id(
     event_id: str,
     event_edit: schemas_calendar.EventEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.access_calendar]),
+    ),
 ):
     """
     Edit an event.
@@ -219,7 +229,9 @@ async def confirm_booking(
 async def delete_bookings_id(
     event_id,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.access_calendar]),
+    ),
 ):
     """
     Remove an event.

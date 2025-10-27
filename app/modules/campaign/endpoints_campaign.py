@@ -8,13 +8,13 @@ from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.groups.groups_type import AccountType
 from app.core.permissions import cruds_permissions, schemas_permissions
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users, models_users
 from app.dependencies import (
     get_db,
     get_request_id,
-    is_user,
     is_user_allowed_to,
 )
 from app.modules.campaign import (
@@ -35,6 +35,7 @@ from app.utils.tools import (
 
 
 class CampaignPermissions(ModulePermissions):
+    access_campaign = "access_campaign"
     manage_campaign = "manage_campaign"
     vote = "vote"
 
@@ -42,6 +43,7 @@ class CampaignPermissions(ModulePermissions):
 module = Module(
     root="vote",
     tag="Campaign",
+    default_allowed_account_types=[AccountType.student],
     factory=CampaignFactory(),
     permissions=CampaignPermissions,
 )
@@ -347,7 +349,7 @@ async def update_list(
 async def get_voters(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user(),
+        is_user_allowed_to([CampaignPermissions.access_campaign]),
     ),
 ):
     """
