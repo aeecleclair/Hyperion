@@ -846,7 +846,7 @@ def test_borrow(client: TestClient):
         f"/seed_library/plants/{plant_from_1_update_test.id}/borrow",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
-    assert response.status_code == 204
+    assert response.status_code == 204, response.text
     ############## Check Update ###############
     response_updated_get = client.get(
         f"/seed_library/plants/{plant_from_1_update_test.id}",
