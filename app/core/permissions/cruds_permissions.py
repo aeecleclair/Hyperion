@@ -49,7 +49,7 @@ async def get_permissions_by_permission_name(
     db: AsyncSession,
     permission_name: ModulePermissions,
 ) -> schemas_permissions.CorePermissions:
-    """Return permission with name from database"""
+    """Return permissions with name from database"""
     result_group = (
         (
             await db.execute(
@@ -97,7 +97,7 @@ async def get_group_permission_by_group_id_and_permission_name(
     permission_name: ModulePermissions,
     group_id: str,
 ) -> schemas_permissions.CoreGroupPermission | None:
-    """Return permission with name from database"""
+    """Return permission with name and group id from database"""
     result = (
         (
             await db.execute(
@@ -126,7 +126,7 @@ async def get_account_type_permission_by_account_type_and_permission_name(
     permission_name: ModulePermissions,
     account_type: AccountType,
 ) -> schemas_permissions.CoreAccountTypePermission | None:
-    """Return permission with name from database"""
+    """Return permission with name and account type from database"""
     result = (
         (
             await db.execute(
@@ -155,7 +155,7 @@ async def create_group_permission(
     permission: schemas_permissions.CoreGroupPermission,
     db: AsyncSession,
 ) -> None:
-    """Create a new permission in database and return it"""
+    """Create a new permission in database"""
     permission_db = models_permissions.CorePermissionGroup(
         permission_name=permission.permission_name,
         group_id=permission.group_id,
@@ -173,7 +173,7 @@ async def create_account_type_permission(
     permission: schemas_permissions.CoreAccountTypePermission,
     db: AsyncSession,
 ) -> None:
-    """Create a new permission in database and return it"""
+    """Create a new permission in database"""
     permission_db = models_permissions.CorePermissionAccountType(
         permission_name=permission.permission_name,
         account_type=permission.account_type,
@@ -191,7 +191,7 @@ async def delete_group_permission(
     db: AsyncSession,
     permission: schemas_permissions.CoreGroupPermission,
 ) -> None:
-    """Delete a permission from database by name"""
+    """Delete a permission"""
     await db.execute(
         delete(models_permissions.CorePermissionGroup).where(
             models_permissions.CorePermissionGroup.permission_name
@@ -206,7 +206,7 @@ async def delete_account_type_permission(
     db: AsyncSession,
     permission: schemas_permissions.CoreAccountTypePermission,
 ) -> None:
-    """Delete a permission from database by name"""
+    """Delete a permission"""
     await db.execute(
         delete(models_permissions.CorePermissionAccountType).where(
             models_permissions.CorePermissionAccountType.permission_name
@@ -222,7 +222,7 @@ async def delete_permissions_by_permission_name(
     db: AsyncSession,
     permission_name: ModulePermissions,
 ) -> None:
-    """Delete a permission from database by name"""
+    """Delete permissions from database by name"""
     await db.execute(
         delete(models_permissions.CorePermissionGroup).where(
             models_permissions.CorePermissionGroup.permission_name == permission_name,
