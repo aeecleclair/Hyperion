@@ -13,7 +13,7 @@ from app.modules.sport_competition import (
     cruds_sport_competition,
     models_sport_competition,
 )
-from app.modules.sport_competition.endpoints_sport_competition import (
+from app.modules.sport_competition.permissions_sport_competition import (
     SportCompetitionPermissions,
 )
 from app.modules.sport_competition.types_sport_competition import (

@@ -15,7 +15,7 @@ from app.modules.sport_competition import (
     models_sport_competition,
     schemas_sport_competition,
 )
-from app.modules.sport_competition.endpoints_sport_competition import (
+from app.modules.sport_competition.permissions_sport_competition import (
     SportCompetitionPermissions,
 )
 from app.modules.sport_competition.types_sport_competition import (
