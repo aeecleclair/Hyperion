@@ -62,6 +62,7 @@ def upgrade() -> None:
     op.drop_table("campaign_voter_groups")
     op.drop_table("module_account_type_visibility")
     op.drop_table("module_group_visibility")
+    op.execute("DELETE FROM core_data WHERE schema='ModuleVisibilityAwareness'")
     # ### end Alembic commands ###
 
 
@@ -95,6 +96,7 @@ def downgrade() -> None:
     )
     op.drop_table("core_permission_group")
     op.drop_table("core_permission_account_type")
+    op.execute("DELETE FROM core_data WHERE schema='ModuleVisibilityAwareness'")
     # ### end Alembic commands ###
 
 
