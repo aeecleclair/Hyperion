@@ -34,7 +34,7 @@ module = Module(
     tag="seed_library",
     default_allowed_account_types=list(AccountType),
     factory=SeedLibraryFactory(),
-    permissions=None,
+    permissions=SeedLibraryPermissions,
 )
 
 
