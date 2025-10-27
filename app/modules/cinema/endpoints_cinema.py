@@ -17,7 +17,6 @@ from app.dependencies import (
     get_notification_tool,
     get_scheduler,
     get_settings,
-    is_user_a_member,
     is_user_allowed_to,
 )
 from app.modules.cinema import cruds_cinema, schemas_cinema
@@ -46,6 +45,7 @@ cinema_topic = Topic(
 
 
 class CinemaPermissions(ModulePermissions):
+    access_cinema = "access_cinema"
     manage_sessions = "manage_sessions"
 
 
@@ -127,7 +127,9 @@ async def get_movie(
 )
 async def get_sessions(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CinemaPermissions.access_cinema]),
+    ),
 ):
     return await cruds_cinema.get_sessions(db=db)
 
@@ -254,7 +256,9 @@ async def create_campaigns_logo(
 )
 async def read_session_poster(
     session_id: str,
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CinemaPermissions.access_cinema]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     session = await cruds_cinema.get_session_by_id(db=db, session_id=session_id)

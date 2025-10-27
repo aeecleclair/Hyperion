@@ -60,6 +60,8 @@ def upgrade() -> None:
         ),
     )
     op.drop_table("campaign_voter_groups")
+    op.drop_table("module_account_type_visibility")
+    op.drop_table("module_group_visibility")
     # ### end Alembic commands ###
 
 
@@ -70,9 +72,28 @@ def downgrade() -> None:
         sa.Column("group_id", sa.VARCHAR(), autoincrement=False, nullable=False),
         sa.PrimaryKeyConstraint("group_id", name="campaign_voter_groups_pkey"),
     )
-
+    op.create_table(
+        "module_account_type_visibility",
+        sa.Column("root", sa.String(), nullable=False, index=True),
+        sa.Column(
+            "allowed_account_type",
+            postgresql.ENUM(
+                AccountType,
+                name="accounttype",
+                create_type=False,
+            ),
+            nullable=False,
+            index=True,
+        ),
+        sa.PrimaryKeyConstraint("root", "allowed_account_type"),
+    )
+    op.create_table(
+        "module_group_visibility",
+        sa.Column("root", sa.String(), nullable=False, index=True),
+        sa.Column("allowed_group_id", sa.String(), nullable=False, index=True),
+        sa.PrimaryKeyConstraint("root", "allowed_group_id"),
+    )
     op.drop_table("core_permission_group")
-
     op.drop_table("core_permission_account_type")
     # ### end Alembic commands ###
 

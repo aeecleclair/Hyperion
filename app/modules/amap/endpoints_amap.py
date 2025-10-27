@@ -16,7 +16,6 @@ from app.dependencies import (
     get_notification_tool,
     get_redis_client,
     get_request_id,
-    is_user_a_member,
     is_user_allowed_to,
 )
 from app.modules.amap import cruds_amap, models_amap, schemas_amap
@@ -29,6 +28,7 @@ from app.utils.tools import has_user_permission
 
 
 class AmapPermissions(ModulePermissions):
+    access_amap = "access_amap"
     manage_amap = "manage_amap"
 
 
@@ -103,7 +103,9 @@ async def create_product(
 async def get_product_by_id(
     product_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.access_amap]),
+    ),
 ):
     """
     Get a specific product
@@ -182,7 +184,9 @@ async def delete_product(
 )
 async def get_deliveries(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.access_amap]),
+    ),
 ):
     """
     Get all deliveries.
@@ -425,7 +429,9 @@ async def add_order_to_delievery(
     order: schemas_amap.OrderBase,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis | None = Depends(get_redis_client),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.access_amap]),
+    ),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -539,7 +545,9 @@ async def edit_order_from_delivery(
     order: schemas_amap.OrderEdit,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis | None = Depends(get_redis_client),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.access_amap]),
+    ),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -653,7 +661,9 @@ async def remove_order(
     order_id: str,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis | None = Depends(get_redis_client),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.access_amap]),
+    ),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -849,7 +859,9 @@ async def get_users_cash(
 async def get_cash_by_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.access_amap]),
+    ),
 ):
     """
     Get cash from a specific user.
@@ -991,7 +1003,9 @@ async def edit_cash_by_id(
 async def get_orders_of_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.access_amap]),
+    ),
 ):
     """
     Get orders from an user.
@@ -1027,7 +1041,9 @@ async def get_orders_of_user(
 )
 async def get_information(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.access_amap]),
+    ),
 ):
     """
     Return all information

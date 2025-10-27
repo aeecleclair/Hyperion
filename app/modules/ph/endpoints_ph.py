@@ -14,7 +14,6 @@ from app.dependencies import (
     get_notification_tool,
     get_request_id,
     get_scheduler,
-    is_user_a_member,
     is_user_allowed_to,
 )
 from app.modules.ph import cruds_ph, models_ph, schemas_ph
@@ -41,6 +40,7 @@ ph_topic = Topic(
 
 
 class PHPermissions(ModulePermissions):
+    access_ph = "access_ph"
     manage_ph = "manage_ph"
 
 
@@ -62,7 +62,9 @@ module = Module(
 async def get_paper_pdf(
     paper_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PHPermissions.access_ph]),
+    ),
 ):
     paper = await cruds_ph.get_paper_by_id(db=db, paper_id=paper_id)
     if paper is None:
@@ -85,7 +87,9 @@ async def get_paper_pdf(
 )
 async def get_papers(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PHPermissions.access_ph]),
+    ),
 ):
     """
     Return all editions until now, sorted from the latest to the oldest
@@ -212,7 +216,9 @@ async def create_paper_pdf_and_cover(
 )
 async def get_cover(
     paper_id: uuid.UUID,
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PHPermissions.access_ph]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     paper = await cruds_ph.get_paper_by_id(db=db, paper_id=paper_id)

@@ -15,7 +15,6 @@ from app.core.users import models_users, schemas_users
 from app.dependencies import (
     get_db,
     get_payment_tool,
-    is_user,
     is_user_allowed_to,
 )
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
@@ -44,6 +43,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 class RaidPermissions(ModulePermissions):
+    access_raid = "access_raid"
     manage_raid = "manage_raid"
 
 
@@ -51,7 +51,7 @@ module = Module(
     root="raid",
     tag="Raid",
     payment_callback=validate_payment,
-    default_allowed_account_types=[AccountType.student, AccountType.staff],
+    default_allowed_account_types=list(AccountType),
     factory=None,
     permissions=RaidPermissions,
 )
@@ -65,7 +65,9 @@ module = Module(
 async def get_participant_by_id(
     participant_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.access_raid]),
+    ),
 ):
     """
     Get a participant by id
@@ -90,7 +92,9 @@ async def get_participant_by_id(
 )
 async def create_participant(
     participant: schemas_raid.RaidParticipantBase,
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.access_raid]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -124,7 +128,9 @@ async def create_participant(
 async def update_participant(
     participant_id: str,
     participant: schemas_raid.RaidParticipantUpdate,
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.access_raid]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -226,7 +232,9 @@ async def update_participant(
 )
 async def create_team(
     team: schemas_raid.RaidTeamBase,
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.access_raid]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -261,7 +269,9 @@ async def create_team(
 async def get_team_by_participant_id(
     participant_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.access_raid]),
+    ),
 ):
     """
     Get a team by participant id
@@ -323,7 +333,9 @@ async def update_team(
     team_id: str,
     team: schemas_raid.RaidTeamUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.access_raid]),
+    ),
 ):
     """
     Update a team
@@ -390,7 +402,9 @@ async def delete_all_teams(
 async def upload_document(
     document_type: DocumentType,
     file: UploadFile = File(...),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.access_raid]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -445,7 +459,9 @@ async def upload_document(
 async def read_document(
     document_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.access_raid]),
+    ),
 ):
     """
     Read a document
@@ -519,7 +535,9 @@ async def set_security_file(
     security_file: schemas_raid.SecurityFileBase,
     participant_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.access_raid]),
+    ),
 ):
     """
     Confirm security file
@@ -616,7 +634,9 @@ async def confirm_t_shirt_payment(
 async def validate_attestation_on_honour(
     participant_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.access_raid]),
+    ),
 ):
     """
     Validate attestation on honour
@@ -634,7 +654,9 @@ async def validate_attestation_on_honour(
 async def create_invite_token(
     team_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.access_raid]),
+    ),
 ):
     """
     Create an invite token
@@ -668,7 +690,9 @@ async def create_invite_token(
 async def join_team(
     token: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.access_raid]),
+    ),
 ):
     """
     Join a team
@@ -801,7 +825,9 @@ async def merge_teams(
 )
 async def get_raid_information(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.access_raid]),
+    ),
 ):
     """
     Get raid information
@@ -886,7 +912,9 @@ async def get_drive_folders(
 )
 async def get_raid_price(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.access_raid]),
+    ),
 ):
     """
     Get raid price
@@ -918,7 +946,9 @@ async def update_raid_price(
 )
 async def get_payment_url(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.access_raid]),
+    ),
     payment_tool: PaymentTool = Depends(get_payment_tool(HelloAssoConfigName.RAID)),
 ):
     """

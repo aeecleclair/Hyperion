@@ -10,7 +10,6 @@ from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users
 from app.dependencies import (
     get_db,
-    is_user_a_member,
     is_user_allowed_to,
 )
 from app.modules.recommendation import (
@@ -28,6 +27,7 @@ router = APIRouter()
 
 
 class RecommendationPermissions(ModulePermissions):
+    access_recommendation = "access_recommendation"
     manage_recommendation = "manage_recommendation"
 
 
@@ -47,7 +47,9 @@ module = Module(
 )
 async def get_recommendation(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RecommendationPermissions.access_recommendation]),
+    ),
 ):
     """
     Get recommendations.
@@ -150,7 +152,9 @@ async def delete_recommendation(
 async def read_recommendation_image(
     recommendation_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RecommendationPermissions.access_recommendation]),
+    ),
 ):
     """
     Get the image of a recommendation.
