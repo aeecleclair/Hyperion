@@ -71,6 +71,7 @@ from app.dependencies import (
     get_payment_tool,
     get_request_id,
     get_settings,
+    get_token_data,
     is_user,
     is_user_an_ecl_member,
     is_user_in,
@@ -78,7 +79,7 @@ from app.dependencies import (
 from app.types import standard_responses
 from app.types.module import CoreModule
 from app.types.scopes_type import ScopeType
-from app.utils.auth.auth_utils import get_token_data, get_user_id_from_token_with_scopes
+from app.utils.auth.auth_utils import get_user_id_from_token_with_scopes
 from app.utils.communication.notifications import NotificationTool
 from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
@@ -2643,7 +2644,6 @@ async def download_invoice(
 async def create_structure_invoice(
     structure_id: UUID,
     db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
     token_data: schemas_auth.TokenData = Depends(get_token_data),
 ):
     """
