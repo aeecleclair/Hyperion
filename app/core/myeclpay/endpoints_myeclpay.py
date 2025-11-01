@@ -32,6 +32,7 @@ from app.core.myeclpay.exceptions_myeclpay import (
     InvoiceNotFoundAfterCreationError,
     ReferencedStructureNotFoundError,
 )
+from app.core.myeclpay.factory_myeclpay import MyECLPayFactory
 from app.core.myeclpay.integrity_myeclpay import (
     format_cancel_log,
     format_refund_log,
@@ -96,7 +97,7 @@ core_module = CoreModule(
     tag="MyECLPay",
     router=router,
     payment_callback=validate_transfer_callback,
-    factory=None,
+    factory=MyECLPayFactory,
 )
 
 templates = Jinja2Templates(directory="assets/templates")

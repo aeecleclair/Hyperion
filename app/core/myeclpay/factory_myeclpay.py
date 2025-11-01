@@ -16,7 +16,7 @@ faker = Faker()
 OTHER_STRUCTURES = 2
 
 
-class MyPaymentFactory(Factory):
+class MyECLPayFactory(Factory):
     depends_on = [CoreUsersFactory]
 
     demo_structures_id: list[uuid.UUID]
