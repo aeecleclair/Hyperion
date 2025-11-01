@@ -14,6 +14,9 @@ from pytest_mock import MockerFixture
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import models_memberships
 from app.core.myeclpay import cruds_myeclpay, models_myeclpay
+from app.core.myeclpay.coredata_myeclpay import (
+    MyECLPayBankAccountHolder,
+)
 from app.core.myeclpay.schemas_myeclpay import QRCodeContentData
 from app.core.myeclpay.types_myeclpay import (
     TransactionStatus,
@@ -25,6 +28,7 @@ from app.core.myeclpay.types_myeclpay import (
 from app.core.myeclpay.utils_myeclpay import LATEST_TOS
 from app.core.users import models_users
 from tests.commons import (
+    add_coredata_to_db,
     add_object_to_db,
     create_api_access_token,
     create_user_with_groups,
@@ -35,6 +39,8 @@ admin_user: models_users.CoreUser
 admin_user_token: str
 structure_manager_user: models_users.CoreUser
 structure_manager_user_token: str
+structure2_manager_user: models_users.CoreUser
+structure2_manager_user_token: str
 
 ecl_user: models_users.CoreUser
 ecl_user_access_token: str
@@ -55,8 +61,11 @@ ecl_user2_payment: models_myeclpay.UserPayment
 association_membership: models_memberships.CoreAssociationMembership
 association_membership_user: models_memberships.CoreAssociationUserMembership
 structure: models_myeclpay.Structure
+structure2: models_myeclpay.Structure
 store_wallet: models_myeclpay.Wallet
 store: models_myeclpay.Store
+store2: models_myeclpay.Store
+store3: models_myeclpay.Store
 store_wallet_device_private_key: Ed25519PrivateKey
 store_wallet_device: models_myeclpay.WalletDevice
 
@@ -68,6 +77,12 @@ transaction_from_ecl_user2_to_ecl_user: models_myeclpay.Transaction
 
 used_qr_code: models_myeclpay.UsedQRCode
 
+invoice1: models_myeclpay.Invoice
+invoice2: models_myeclpay.Invoice
+invoice3: models_myeclpay.Invoice
+invoice1_detail: models_myeclpay.InvoiceDetail
+invoice2_detail: models_myeclpay.InvoiceDetail
+invoice3_detail: models_myeclpay.InvoiceDetail
 
 store_seller_can_bank_user: models_users.CoreUser
 store_seller_no_permission_user_access_token: str
@@ -96,7 +111,13 @@ async def init_objects() -> None:
     )
     await add_object_to_db(association_membership)
 
-    global structure_manager_user, structure_manager_user_token, structure
+    global \
+        structure_manager_user, \
+        structure_manager_user_token, \
+        structure, \
+        structure2_manager_user, \
+        structure2_manager_user_token, \
+        structure2
 
     structure_manager_user = await create_user_with_groups(groups=[])
     structure_manager_user_token = create_api_access_token(structure_manager_user)
@@ -104,11 +125,44 @@ async def init_objects() -> None:
     structure = models_myeclpay.Structure(
         id=uuid4(),
         name="Test Structure",
+        creation=datetime.now(UTC),
         association_membership_id=association_membership.id,
         manager_user_id=structure_manager_user.id,
+        short_id="ABC",
+        siege_address_street="123 Test Street",
+        siege_address_city="Test City",
+        siege_address_zipcode="12345",
+        siege_address_country="Test Country",
+        siret="12345678901234",
+        iban="FR76 1234 5678 9012 3456 7890 123",
+        bic="AZERTYUIOP",
+    )
+    await add_object_to_db(structure)
+
+    await add_coredata_to_db(
+        MyECLPayBankAccountHolder(
+            holder_structure_id=structure.id,
+        ),
     )
 
-    await add_object_to_db(structure)
+    structure2_manager_user = await create_user_with_groups(groups=[])
+    structure2_manager_user_token = create_api_access_token(structure2_manager_user)
+
+    structure2 = models_myeclpay.Structure(
+        id=uuid4(),
+        name="Test Structure 2",
+        creation=datetime.now(UTC),
+        manager_user_id=structure_manager_user.id,
+        short_id="XYZ",
+        siege_address_street="456 Test Street",
+        siege_address_city="Test City 2",
+        siege_address_zipcode="67890",
+        siege_address_country="Test Country 2",
+        siret="23456789012345",
+        iban="FR76 1234 5678 9012 3456 7890 123",
+        bic="AZERTYUIOP",
+    )
+    await add_object_to_db(structure2)
 
     # ecl_user
 
@@ -222,15 +276,45 @@ async def init_objects() -> None:
         balance=5000,  # 50€
     )
     await add_object_to_db(store_wallet)
+    store2_wallet = models_myeclpay.Wallet(
+        id=uuid4(),
+        type=WalletType.STORE,
+        balance=5000,  # 50€
+    )
+    await add_object_to_db(store2_wallet)
+    store3_wallet = models_myeclpay.Wallet(
+        id=uuid4(),
+        type=WalletType.STORE,
+        balance=5000,  # 50€
+    )
+    await add_object_to_db(store3_wallet)
 
-    global store
+    global store, store2
     store = models_myeclpay.Store(
         id=uuid4(),
         wallet_id=store_wallet.id,
         name="Test Store",
         structure_id=structure.id,
+        creation=datetime.now(UTC),
     )
     await add_object_to_db(store)
+    store2 = models_myeclpay.Store(
+        id=uuid4(),
+        wallet_id=store2_wallet.id,
+        name="Test Store 2",
+        structure_id=structure2.id,
+        creation=datetime.now(UTC),
+    )
+    await add_object_to_db(store2)
+    store3 = models_myeclpay.Store(
+        id=uuid4(),
+        wallet_id=store3_wallet.id,
+        name="Test Store 3",
+        structure_id=structure2.id,
+        creation=datetime.now(UTC),
+    )
+    await add_object_to_db(store3)
+
     manager_as_admin = models_myeclpay.Seller(
         user_id=structure_manager_user.id,
         store_id=store.id,
@@ -443,6 +527,68 @@ async def init_objects() -> None:
     )
     unregistered_ecl_user_access_token = create_api_access_token(unregistered_ecl_user)
 
+    global \
+        invoice1, \
+        invoice1_detail, \
+        invoice2, \
+        invoice2_detail, \
+        invoice3, \
+        invoice3_detail
+    invoice1 = models_myeclpay.Invoice(
+        id=uuid4(),
+        reference=f"MYPAY{datetime.now(UTC).year}{structure.short_id}0001",
+        structure_id=structure.id,
+        creation=datetime.now(UTC),
+        total=1000,
+        paid=True,
+        received=True,
+        start_date=datetime.now(UTC) - timedelta(days=30),
+        end_date=datetime.now(UTC) - timedelta(days=20),
+    )
+    await add_object_to_db(invoice1)
+    invoice1_detail = models_myeclpay.InvoiceDetail(
+        invoice_id=invoice1.id,
+        store_id=store.id,
+        total=1000,
+    )
+    await add_object_to_db(invoice1_detail)
+    invoice2 = models_myeclpay.Invoice(
+        id=uuid4(),
+        reference=f"MYPAY{datetime.now(UTC).year}{structure.short_id}0002",
+        structure_id=structure.id,
+        creation=datetime.now(UTC),
+        total=1000,
+        paid=False,
+        received=False,
+        start_date=datetime.now(UTC) - timedelta(days=20),
+        end_date=datetime.now(UTC) - timedelta(days=10),
+    )
+    await add_object_to_db(invoice2)
+    invoice2_detail = models_myeclpay.InvoiceDetail(
+        invoice_id=invoice2.id,
+        store_id=store.id,
+        total=1000,
+    )
+    await add_object_to_db(invoice2_detail)
+    invoice3 = models_myeclpay.Invoice(
+        id=uuid4(),
+        reference=f"MYPAY{datetime.now(UTC).year}{structure2.short_id}0001",
+        structure_id=structure2.id,
+        creation=datetime.now(UTC),
+        total=1000,
+        paid=False,
+        received=False,
+        start_date=datetime.now(UTC) - timedelta(days=30),
+        end_date=datetime.now(UTC) - timedelta(days=20),
+    )
+    await add_object_to_db(invoice3)
+    invoice3_detail = models_myeclpay.InvoiceDetail(
+        invoice_id=invoice3.id,
+        store_id=store2.id,
+        total=1000,
+    )
+    await add_object_to_db(invoice3_detail)
+
 
 async def test_get_structures(client: TestClient):
     response = client.get(
@@ -450,7 +596,7 @@ async def test_get_structures(client: TestClient):
         headers={"Authorization": f"Bearer {ecl_user_access_token}"},
     )
     assert response.status_code == 200
-    assert len(response.json()) == 1
+    assert len(response.json()) == 2
 
 
 async def test_create_structure(client: TestClient):
@@ -461,6 +607,14 @@ async def test_create_structure(client: TestClient):
             "name": "Test Structure USEECL",
             "association_membership_id": str(association_membership.id),
             "manager_user_id": structure_manager_user.id,
+            "short_id": "TUS",
+            "siege_address_street": "123 Test Street",
+            "siege_address_city": "Test City",
+            "siege_address_zipcode": "12345",
+            "siege_address_country": "Test Country",
+            "siret": "12345678901236",
+            "iban": "FR76 1234 5678 9012 3456 7890 124",
+            "bic": "BNPAFRPPXXX",
         },
     )
     assert response.status_code == 201
@@ -521,8 +675,17 @@ async def test_delete_structure_as_admin_with_stores(client: TestClient):
 async def test_delete_structure_as_admin(client: TestClient):
     new_structure = models_myeclpay.Structure(
         id=uuid4(),
-        name="Test Structure 2",
+        short_id="TSA",
+        name="Test Structure add",
+        creation=datetime.now(UTC),
         manager_user_id=structure_manager_user.id,
+        siege_address_street="123 Test Street",
+        siege_address_city="Test City",
+        siege_address_zipcode="12345",
+        siege_address_country="Test Country",
+        siret="12345678901235",
+        iban="FR76 1234 5678 9012 3456 7890 123",
+        bic="AZERTYUIOP",
     )
     await add_object_to_db(new_structure)
     response = client.delete(
@@ -600,8 +763,17 @@ async def test_transfer_structure_manager_as_manager(
 ):
     new_structure = models_myeclpay.Structure(
         id=uuid4(),
-        name="Test Structure 2",
+        name="Test Structure 3",
         manager_user_id=structure_manager_user.id,
+        creation=datetime.now(UTC),
+        short_id="TS3",
+        siege_address_street="123 Test Street",
+        siege_address_city="Test City",
+        siege_address_zipcode="12345",
+        siege_address_country="Test Country",
+        siret="12345678901235",
+        iban="FR76 1234 5678 9012 3456 7890 123",
+        bic="AZERTYUIOP",
     )
     await add_object_to_db(new_structure)
     new_wallet = models_myeclpay.Wallet(
@@ -612,6 +784,7 @@ async def test_transfer_structure_manager_as_manager(
     await add_object_to_db(new_wallet)
     new_store = models_myeclpay.Store(
         id=uuid4(),
+        creation=datetime.now(UTC),
         wallet_id=new_wallet.id,
         name="Test Store Structure 2",
         structure_id=new_structure.id,
@@ -625,6 +798,7 @@ async def test_transfer_structure_manager_as_manager(
     await add_object_to_db(new_wallet2)
     new_store2_where_new_manager_already_seller = models_myeclpay.Store(
         id=uuid4(),
+        creation=datetime.now(UTC),
         wallet_id=new_wallet2.id,
         name="Test Store Structure 2 Where New Manager Already Seller",
         structure_id=new_structure.id,
@@ -901,6 +1075,7 @@ async def test_delete_store(client: TestClient):
     await add_object_to_db(new_wallet)
     new_store = models_myeclpay.Store(
         id=store_id,
+        creation=datetime.now(UTC),
         wallet_id=new_wallet.id,
         name="Test Store to Delete",
         structure_id=structure.id,
@@ -934,8 +1109,9 @@ async def test_update_store(client: TestClient):
     await add_object_to_db(new_wallet)
     new_store = models_myeclpay.Store(
         id=uuid4(),
+        creation=datetime.now(UTC),
         wallet_id=new_wallet.id,
-        name="Test Store 2",
+        name="Test Store Update",
         structure_id=structure.id,
     )
     await add_object_to_db(new_store)
@@ -943,7 +1119,7 @@ async def test_update_store(client: TestClient):
         f"/myeclpay/stores/{new_store.id}",
         headers={"Authorization": f"Bearer {structure_manager_user_token}"},
         json={
-            "name": "Test Store 2 Updated",
+            "name": "Test Store Updated",
         },
     )
     assert response.status_code == 204
@@ -2606,3 +2782,270 @@ async def test_transaction_refund_partial(client: TestClient):
         credited_wallet_after_refund.balance
         == credited_wallet_before_refund.balance - 50
     )
+
+
+async def test_get_invoices_as_random_user(client: TestClient):
+    response = client.get(
+        "/myeclpay/invoices",
+        headers={"Authorization": f"Bearer {structure2_manager_user_token}"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "User is not the bank account holder"
+
+
+async def test_get_invoices_as_bank_account_holder(client: TestClient):
+    response = client.get(
+        "/myeclpay/invoices",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()) == 3
+
+
+async def test_get_invoices_as_bank_account_holder_with_date(
+    client: TestClient,
+):
+    response = client.get(
+        "/myeclpay/invoices",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
+        params={
+            "start_date": (datetime.now(UTC) - timedelta(days=40)).strftime(
+                "%Y-%m-%dT%H:%M:%SZ",
+            ),
+            "end_date": (datetime.now(UTC) - timedelta(days=15)).strftime(
+                "%Y-%m-%dT%H:%M:%SZ",
+            ),
+        },
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+
+
+async def test_get_invoices_as_bank_account_holder_with_structure_id(
+    client: TestClient,
+):
+    response = client.get(
+        f"/myeclpay/invoices?structures_ids={structure2.id}",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+
+
+async def test_get_invoices_as_bank_account_holder_with_limit(
+    client: TestClient,
+):
+    response = client.get(
+        "/myeclpay/invoices",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
+        params={
+            "page": 1,
+            "page_size": 1,
+        },
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+
+    # Check that the first invoice is the most recent one
+    invoices = response.json()
+    assert invoices[0]["id"] == str(
+        invoice2.id,
+    )
+
+
+async def test_get_structure_invoices_as_structure_manager(
+    client: TestClient,
+):
+    response = client.get(
+        f"/myeclpay/invoices/structures/{structure.id}",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+
+
+async def test_generate_invoice_as_structure_manager(
+    client: TestClient,
+):
+    response = client.post(
+        f"/myeclpay/invoices/structures/{structure.id}",
+        headers={"Authorization": f"Bearer {structure2_manager_user_token}"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "User is not the bank account holder"
+
+
+async def test_generate_invoice_as_bank_account_holder(
+    client: TestClient,
+):
+    response = client.post(
+        f"/myeclpay/invoices/structures/{structure2.id}",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["id"] is not None
+    assert response.json()["structure_id"] == str(structure2.id)
+    assert (
+        response.json()["reference"]
+        == f"MYPAY{datetime.now(UTC).year}{structure2.short_id}0002"
+    )
+
+    assert response.json()["total"] == 9000
+
+    invoices = client.get(
+        f"/myeclpay/invoices/structures/{structure2.id}",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
+    )
+    assert len(invoices.json()) == 2
+
+
+async def test_empty_invoice_on_null_details(
+    client: TestClient,
+):
+    response = client.post(
+        f"/myeclpay/invoices/structures/{structure2.id}",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "No invoice to create"
+
+
+async def test_update_invoice_paid_status_as_structure_manager(
+    client: TestClient,
+):
+    response = client.patch(
+        f"/myeclpay/invoices/{invoice3.id}/paid",
+        headers={"Authorization": f"Bearer {structure2_manager_user_token}"},
+        params={"paid": True},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "User is not the bank account holder"
+
+
+async def test_update_invoice_paid_status_as_bank_account_holder(
+    client: TestClient,
+):
+    response = client.patch(
+        f"/myeclpay/invoices/{invoice2.id}/paid",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
+        params={"paid": True},
+    )
+
+    assert response.status_code == 204, response.text
+
+    async with get_TestingSessionLocal()() as db:
+        invoice = await cruds_myeclpay.get_invoice_by_id(
+            db=db,
+            invoice_id=invoice2.id,
+        )
+        assert invoice is not None
+        assert invoice.paid is True
+
+    response = client.patch(
+        f"/myeclpay/invoices/{invoice2.id}/paid",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
+        params={"paid": False},
+    )
+
+    assert response.status_code == 204
+
+    async with get_TestingSessionLocal()() as db:
+        invoice = await cruds_myeclpay.get_invoice_by_id(
+            db=db,
+            invoice_id=invoice2.id,
+        )
+        assert invoice is not None
+        assert invoice.paid is False
+
+
+async def test_update_invoice_received_status_as_structure_manager(
+    client: TestClient,
+):
+    async with get_TestingSessionLocal()() as db:
+        await cruds_myeclpay.update_invoice_paid_status(
+            db=db,
+            invoice_id=invoice2.id,
+            paid=True,
+        )
+        await db.commit()
+        invoice = await cruds_myeclpay.get_invoice_by_id(
+            db=db,
+            invoice_id=invoice2.id,
+        )
+        assert invoice is not None
+
+        store_wallet = await cruds_myeclpay.get_wallet(
+            db=db,
+            wallet_id=invoice.details[0].store.wallet_id,
+        )
+        assert store_wallet is not None
+        store_balance = store_wallet.balance
+
+    response = client.patch(
+        f"/myeclpay/invoices/{invoice2.id}/received",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
+    )
+    assert response.status_code == 204, response.text
+
+    async with get_TestingSessionLocal()() as db:
+        invoice = await cruds_myeclpay.get_invoice_by_id(
+            db=db,
+            invoice_id=invoice2.id,
+        )
+        assert invoice is not None
+        assert invoice.received is True
+
+        store_wallet = await cruds_myeclpay.get_wallet(
+            db=db,
+            wallet_id=invoice.details[0].store.wallet_id,
+        )
+        assert store_wallet is not None
+        assert store_wallet.balance == store_balance - invoice.details[0].total
+
+        withdrawals = await cruds_myeclpay.get_withdrawals_by_wallet_id(
+            db=db,
+            wallet_id=store_wallet.id,
+        )
+        assert len(withdrawals) == 1
+        assert withdrawals[0].total == invoice.details[0].total
+
+
+async def test_delete_paid_invoice(
+    client: TestClient,
+):
+    response = client.delete(
+        f"/myeclpay/invoices/{invoice2.id}",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
+    )
+    assert response.status_code == 400, response.text
+    assert (
+        response.json()["detail"]
+        == "Cannot delete an invoice that has already been paid"
+    )
+
+
+async def test_delete_invoice(
+    client: TestClient,
+):
+    response = client.delete(
+        f"/myeclpay/invoices/{invoice3.id}",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
+    )
+    assert response.status_code == 204, response.text
+
+    response = client.get(
+        "/myeclpay/invoices",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
+    )
+    assert response.status_code == 200
+    assert not any(invoice["id"] == invoice3.id for invoice in response.json())
