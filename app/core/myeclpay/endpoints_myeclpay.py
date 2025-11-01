@@ -2710,7 +2710,7 @@ async def create_structure_invoice(
         )
         if store_wallet_db is None:
             hyperion_error_logger.error(
-                "MyPayment: Could not find wallet associated with a store, this should never happen",
+                "MyECLPAy: Could not find wallet associated with a store, this should never happen",
             )
             raise HTTPException(
                 status_code=500,
@@ -2763,7 +2763,7 @@ async def create_structure_invoice(
     )
     invoice = schemas_myeclpay.InvoiceInfo(
         id=invoice_id,
-        reference=f"MYPAY{security_now.year}{structure.short_id}{last_invoice_number + 1:04d}",
+        reference=f"PAY{security_now.year}{structure.short_id}{last_invoice_number + 1:04d}",
         structure_id=structure_id,
         creation=datetime.now(UTC),
         start_date=last_structure_invoice.end_date
@@ -2898,7 +2898,7 @@ async def aknowledge_invoice_as_received(
         )
         if store is None:
             hyperion_error_logger.error(
-                "MyPayment: Could not find store associated with an invoice, this should never happen",
+                "MyECLPay: Could not find store associated with an invoice, this should never happen",
             )
             raise HTTPException(
                 status_code=500,

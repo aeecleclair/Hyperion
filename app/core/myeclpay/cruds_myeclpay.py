@@ -15,6 +15,7 @@ from app.core.myeclpay.types_myeclpay import (
 )
 from app.core.myeclpay.utils_myeclpay import (
     invoice_model_to_schema,
+    refund_model_to_schema,
     structure_model_to_schema,
 )
 from app.core.users import schemas_users
@@ -789,47 +790,7 @@ async def get_refund_by_transaction_id(
         .scalars()
         .first()
     )
-    return (
-        schemas_myeclpay.Refund(
-            id=result.id,
-            transaction_id=result.transaction_id,
-            credited_wallet_id=result.credited_wallet_id,
-            debited_wallet_id=result.debited_wallet_id,
-            total=result.total,
-            creation=result.creation,
-            seller_user_id=result.seller_user_id,
-            transaction=schemas_myeclpay.Transaction(
-                id=result.transaction.id,
-                debited_wallet_id=result.transaction.debited_wallet_id,
-                credited_wallet_id=result.transaction.credited_wallet_id,
-                transaction_type=result.transaction.transaction_type,
-                seller_user_id=result.transaction.seller_user_id,
-                total=result.transaction.total,
-                creation=result.transaction.creation,
-                status=result.transaction.status,
-            ),
-            debited_wallet=schemas_myeclpay.WalletInfo(
-                id=result.debited_wallet.id,
-                type=result.debited_wallet.type,
-                owner_name=result.debited_wallet.store.name
-                if result.debited_wallet.store
-                else result.debited_wallet.user.full_name
-                if result.debited_wallet.user
-                else None,
-            ),
-            credited_wallet=schemas_myeclpay.WalletInfo(
-                id=result.credited_wallet.id,
-                type=result.credited_wallet.type,
-                owner_name=result.credited_wallet.store.name
-                if result.credited_wallet.store
-                else result.credited_wallet.user.full_name
-                if result.credited_wallet.user
-                else None,
-            ),
-        )
-        if result
-        else None
-    )
+    return refund_model_to_schema(result) if result else None
 
 
 async def get_refunds_by_wallet_id(
@@ -858,46 +819,7 @@ async def get_refunds_by_wallet_id(
         .scalars()
         .all()
     )
-    return [
-        schemas_myeclpay.Refund(
-            id=refund.id,
-            transaction_id=refund.transaction_id,
-            credited_wallet_id=refund.credited_wallet_id,
-            debited_wallet_id=refund.debited_wallet_id,
-            total=refund.total,
-            creation=refund.creation,
-            seller_user_id=refund.seller_user_id,
-            transaction=schemas_myeclpay.Transaction(
-                id=refund.transaction.id,
-                debited_wallet_id=refund.transaction.debited_wallet_id,
-                credited_wallet_id=refund.transaction.credited_wallet_id,
-                transaction_type=refund.transaction.transaction_type,
-                seller_user_id=refund.transaction.seller_user_id,
-                total=refund.transaction.total,
-                creation=refund.transaction.creation,
-                status=refund.transaction.status,
-            ),
-            debited_wallet=schemas_myeclpay.WalletInfo(
-                id=refund.debited_wallet.id,
-                type=refund.debited_wallet.type,
-                owner_name=refund.debited_wallet.store.name
-                if refund.debited_wallet.store
-                else refund.debited_wallet.user.full_name
-                if refund.debited_wallet.user
-                else None,
-            ),
-            credited_wallet=schemas_myeclpay.WalletInfo(
-                id=refund.credited_wallet.id,
-                type=refund.credited_wallet.type,
-                owner_name=refund.credited_wallet.store.name
-                if refund.credited_wallet.store
-                else refund.credited_wallet.user.full_name
-                if refund.credited_wallet.user
-                else None,
-            ),
-        )
-        for refund in result
-    ]
+    return [refund_model_to_schema(refund) for refund in result]
 
 
 async def get_store(
