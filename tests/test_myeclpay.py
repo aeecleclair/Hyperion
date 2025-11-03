@@ -2895,7 +2895,7 @@ async def test_generate_invoice_as_bank_account_holder(
     assert response.json()["structure_id"] == str(structure2.id)
     assert (
         response.json()["reference"]
-        == f"MYPAY{datetime.now(UTC).year}{structure2.short_id}0002"
+        == f"PAY{datetime.now(UTC).year}{structure2.short_id}0002"
     )
 
     assert response.json()["total"] == 9000
