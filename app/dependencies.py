@@ -334,7 +334,7 @@ def get_user_id_from_token_with_scopes(
         The expected scopes are passed as list of list of scopes, each list of scopes is an "AND" condition, and the list of list of scopes is an "OR" condition.
         """
 
-        return await auth_utils.get_user_id_from_token_with_scopes(
+        return auth_utils.get_user_id_from_token_with_scopes(
             scopes=scopes,
             token_data=token_data,
         )

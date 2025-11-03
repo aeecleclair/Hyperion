@@ -56,6 +56,7 @@ class ActionType(str, Enum):
     REFUND = "refund"
     CANCEL = "cancel"
     TRANSACTION = "transaction"
+    WITHDRAWAL = "withdrawal"
 
 
 class UnexpectedError(Exception):
