@@ -128,6 +128,7 @@ def upgrade() -> None:
             structure_table,
         ).values(
             {
+                "short_id": "ABC",
                 "siege_address_street": "To change",
                 "siege_address_city": "To change",
                 "siege_address_zipcode": "To change",
