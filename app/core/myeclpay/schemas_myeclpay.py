@@ -49,6 +49,7 @@ class Structure(StructureSimple):
 
 class StructureUpdate(BaseModel):
     name: str | None = None
+    short_id: str | None = None
     association_membership_id: UUID | None = None
     siret: str | None = None
     siege_address_street: str | None = None
