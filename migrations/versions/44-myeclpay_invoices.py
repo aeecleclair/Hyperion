@@ -128,7 +128,6 @@ def upgrade() -> None:
             structure_table,
         ).values(
             {
-                "short_id": "ABC",
                 "siege_address_street": "To change",
                 "siege_address_city": "To change",
                 "siege_address_zipcode": "To change",
@@ -140,6 +139,23 @@ def upgrade() -> None:
             },
         ),
     )
+    structures = conn.execute(
+        sa.select(structure_table.c.id),
+    ).all()
+    for idx, (structure_id,) in enumerate(structures):
+        conn.execute(
+            sa.update(
+                structure_table,
+            )
+            .where(
+                structure_table.c.id == structure_id,
+            )
+            .values(
+                {
+                    "short_id": f"{idx + 1:03d}",
+                },
+            ),
+        )
     conn.execute(
         sa.update(
             store_table,
