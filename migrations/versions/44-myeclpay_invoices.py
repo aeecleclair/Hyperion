@@ -152,7 +152,7 @@ def upgrade() -> None:
             )
             .values(
                 {
-                    "short_id": f"{idx + 1:3d}",
+                    "short_id": f"{idx + 1:03d}",
                 },
             ),
         )
