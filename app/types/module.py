@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification.schemas_notification import Topic
 from app.core.payment import schemas_payment
+from app.core.permissions.type_permissions import ModulePermissions
 from app.types.factory import Factory
 
 
@@ -22,6 +23,7 @@ class CoreModule:
         ]
         | None = None,
         registred_topics: list[Topic] | None = None,
+        permissions: type[ModulePermissions] | None = None,
     ):
         """
         Initialize a new Module object.
@@ -41,6 +43,7 @@ class CoreModule:
         ) = payment_callback
         self.registred_topics = registred_topics
         self.factory = factory
+        self.permissions = permissions
 
 
 class Module(CoreModule):
@@ -58,6 +61,7 @@ class Module(CoreModule):
         ]
         | None = None,
         registred_topics: list[Topic] | None = None,
+        permissions: type[ModulePermissions] | None = None,
     ):
         """
         Initialize a new Module object.
@@ -81,3 +85,4 @@ class Module(CoreModule):
         ) = payment_callback
         self.registred_topics = registred_topics
         self.factory = factory
+        self.permissions = permissions

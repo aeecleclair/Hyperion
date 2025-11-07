@@ -3,14 +3,14 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import GroupType
+from app.core.groups.factory_groups import CoreGroupsFactory
 from app.core.utils.config import Settings
 from app.modules.advert import cruds_advert, models_advert
 from app.types.factory import Factory
 
 
 class AdvertFactory(Factory):
-    depends_on = []
+    depends_on = [CoreGroupsFactory]
 
     @classmethod
     async def run(cls, db: AsyncSession, settings: Settings) -> None:
@@ -18,7 +18,7 @@ class AdvertFactory(Factory):
             id=str(uuid.uuid4()),
             name="Le BDE",
             adverts=[],
-            group_manager_id=str(GroupType.BDE.value),
+            group_manager_id=CoreGroupsFactory.groups_ids[0],
         )
 
         await cruds_advert.create_advert(
@@ -51,7 +51,7 @@ class AdvertFactory(Factory):
             id=str(uuid.uuid4()),
             name="Eclair ces bgs",
             adverts=[],
-            group_manager_id=str(GroupType.eclair.value),
+            group_manager_id=CoreGroupsFactory.groups_ids[1],
         )
 
         await cruds_advert.create_advert(

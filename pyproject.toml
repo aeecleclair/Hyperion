@@ -85,6 +85,7 @@ ignore = [
     "SIM102",
     "SIM105",
     "RUF012",  # We may want to enable "Mutable class attributes should be annotated with `typing.ClassVar`"
+    "PLC0415", # "`import` should be at the top-level of a file"
     "PLR0911", # "Too many return statements"
     "PLR0912", # "Too many branches"
     "PLR0913", # "Too many arguments in function definition"

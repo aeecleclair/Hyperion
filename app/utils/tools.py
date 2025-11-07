@@ -26,7 +26,9 @@ from weasyprint import CSS, HTML
 from app.core.core_endpoints import cruds_core, models_core
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import AccountType, GroupType
-from app.core.users import cruds_users, models_users
+from app.core.permissions import cruds_permissions
+from app.core.permissions.type_permissions import ModulePermissions
+from app.core.users import cruds_users, models_users, schemas_users
 from app.core.users.models_users import CoreUser
 from app.core.utils import security
 from app.types import core_data
@@ -102,7 +104,7 @@ def sort_user(
 
 
 def is_user_member_of_any_group(
-    user: models_users.CoreUser,
+    user: models_users.CoreUser | schemas_users.CoreUser,
     allowed_groups: list[str] | list[GroupType],
 ) -> bool:
     """
@@ -128,6 +130,28 @@ async def is_user_id_valid(user_id: str, db: AsyncSession) -> bool:
     Test if the provided user_id is a valid user.
     """
     return await cruds_users.get_user_by_id(db=db, user_id=user_id) is not None
+
+
+async def has_user_permission(
+    user: models_users.CoreUser | schemas_users.CoreUser,
+    permission_name: ModulePermissions,
+    db: AsyncSession,
+) -> bool:
+    """
+    Check if the user has the permission to perform the action.
+    """
+    if GroupType.admin in [group.id for group in user.groups]:
+        return True
+    permissions = await cruds_permissions.get_permissions_by_permission_name(
+        permission_name=permission_name,
+        db=db,
+    )
+    return is_user_member_of_any_group(
+        user,
+        [perm.group_id for perm in permissions.group_permissions],
+    ) or user.account_type in [
+        perm.account_type for perm in permissions.account_type_permissions
+    ]
 
 
 async def save_file_as_data(
