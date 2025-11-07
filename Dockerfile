@@ -14,6 +14,7 @@ ENV PYTHONUNBUFFERED=1
 ENV UV_COMPILE_BYTECODE=1
 
 # Create non-root user early for better security
+# Choose an id that is not likely to be a default one
 RUN groupadd --gid 10101 hyperion && \
     useradd --uid 10101 --gid hyperion --shell /bin/bash --create-home hyperion
 
@@ -43,4 +44,5 @@ EXPOSE 8000
 
 # Use fastapi cli as the entrypoint
 # Use sh -c to allow environment variable expansion
+
 ENTRYPOINT ["sh", "-c", "fastapi run app/main.py --workers $WORKERS --host 0.0.0.0 --port 8000"]
