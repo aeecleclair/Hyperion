@@ -29,7 +29,9 @@ jobs:
     steps:
       - name: Branch name from input PR number
         id: branch
-        run: echo "branch=$(curl -f ${{ github.api_url }}/repos/${{ github.repository }}/pulls/${{ github.event.inputs.pr }} | jq -r '.head.ref')" >> "$GITHUB_OUTPUT"
+        run: |
+          branch=$(curl -fs ${{ github.api_url }}/repos/${{ github.repository }}/pulls/${{ github.event.inputs.pr }} | jq -r '.head.ref')
+          echo "branch=${branch:?'PR #${{ github.event.inputs.pr }} does not exist'}" >> "$GITHUB_OUTPUT"
       - name: Checkout code
         uses: actions/checkout@v5
         with:
