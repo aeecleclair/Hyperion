@@ -32,7 +32,7 @@ jobs:
         run: |
           url=${{ github.api_url }}/repos/${{ github.repository }}/pulls/${{ github.event.inputs.pr }};
           echo $url;
-          branch=$(curl $url | jq  '.head.ref');
+          branch=$(curl $url | jq -r '.head.ref');
           echo "branch=$branch" >> "$GITHUB_OUTPUT";
           cat "$GITHUB_OUTPUT";
       - name: Checkout code
