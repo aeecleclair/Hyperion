@@ -30,8 +30,8 @@ jobs:
       - name: Branch name from input PR number
         id: branch
         run: |
-          url=$(${{ github.api_url }}/repos/${{ github.repository }}/pulls/${{ github.events.inputs.pr }});
-          echo url;
+          url=$(${{ github.api_url }}/repos/${{ github.repository }}/pulls/${{ github.event.inputs.pr }});
+          echo $url;
           branch=$(curl $url | jq  '.head.ref');
           echo "branch=$branch" >> "$GITHUB_OUTPUT";
           cat "$GITHUB_OUTPUT";
