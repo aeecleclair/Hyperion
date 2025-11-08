@@ -29,7 +29,7 @@ jobs:
     steps:
       - name: Branch name from input PR number
         id: branch
-        run: echo "branch=$(curl https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.events.inputs.pr }} | jq  '.head.ref')" >> "$GITHUB_OUTPUT"
+        run: echo "branch=$(curl ${{ GITHUB_API_URL }}/repos/${{ GITHUB_REPOSITORY }}/pulls/${{ github.events.inputs.pr }} | jq  '.head.ref')" >> "$GITHUB_OUTPUT"
 
       - name: Checkout code
         uses: actions/checkout@v5
