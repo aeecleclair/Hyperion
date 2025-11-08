@@ -3,10 +3,11 @@ name: Build and Publish Preprod
 on:
   workflow_dispatch:
     inputs:
-      branch:
-        description: "Branch to deploy in preprod"
+      pr:
+        description: "PR to deploy in preprod"
         required: true
-        default: "main"
+        type: choice
+        options: ${{ fromJSON($(curl https://api.github.com/repos/${{ github.repository }}/pulls | jq '[.[] | ("#" + (.number|tostring) + " - " + .title)]')) }}
       preprod_env:
         description: "Preprod environment"
         required: true
@@ -31,7 +32,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.inputs.branch }}
+          ref: $(curl https://api.github.com/repos/${github.repository}/pulls/ ${${{github.event.inputs.pr }}//@(*#| *)} | jq '.head.ref')
 
       - name: Docker metadata
         id: meta
