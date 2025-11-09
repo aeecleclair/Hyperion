@@ -52,8 +52,8 @@ jobs:
       - name: Check out the code
         uses: actions/checkout@v5
 
-      - name: Fetch main branch
-        run: git fetch origin main --depth=1
+      - name: Fetch full main branch history # We don't known the the base commit of the PR
+        run: git fetch origin main --unshallow
 
       # Setup Python (faster than using Python container)
       - name: Setup Python
