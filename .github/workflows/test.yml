@@ -79,8 +79,14 @@ jobs:
           path: .pytest_cache
           key: pytest_cache-${{ github.head_ref }}
 
-      - name: Run unit tests with Postgresql
-        run: python -m pytest --cov
+      # Run unit tests, run them all when push to main branch
+      - name: Run all unit tests
+        run: python test_script.py --cov --all
+        if: github.event_name == 'push'
+
+      - name: Run unit tests for changed files
+        run: python test_script.py --cov
+        if: github.event_name == 'pull_request'
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5.5.1
