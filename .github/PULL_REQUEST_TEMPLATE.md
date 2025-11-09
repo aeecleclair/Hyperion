@@ -8,7 +8,7 @@
 
 <!--#### Sources at the end-->
 
-## Isuues/PR dependencies
+## Issues/PR dependencies
 
 <!--Use a keyword, then #123 for the same repo or aeecleclair/RepoName#123 for another-->
 
