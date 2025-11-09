@@ -1,80 +1,75 @@
-## Description
+# Description
 
-### Summary
+## Summary
 
-<!--Brief description of what this PR does.-->
-<!--Don't explain the code, justify what this PR exists for!-->
+<!--BRIEF description: DONT'T EXPLAIN the code: JUSTIFY what this PR is for!-->
 
-<!--Sources/references at the end-->
+...
+
+<!--#### Sources at the end-->
+
+## Isuues/PR dependencies
+
+<!--Use a keyword, then #123 for the same repo or aeecleclair/RepoName#123 for another-->
 
 ### Issues to be resolved
 
-<!-- If applicable-->
-<!--Use keywords "closes", "fixes", "resolves", or others at https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/using-keywords-in-issues-and-pull-requests -->
-
+<!--Keywords: "closes", "fixes", "resolves" -->
 <!--Fixes #-->
-<!--Fixes aeecleclair/CalypSSO#-->
 
 ### Required PRs
 
-<!-- If applicable-->
-<!--Use keywords "depends on" or "blocked by", see https://github.com/gregsdennis/dependencies-action -->
-
+<!--Keywords: "depends on", "blocked by" -->
 <!--Depends on #-->
-<!--Depends on aeecleclair/CalypSSO#-->
 
-### Changes Made
+## Changes Made
 
-<!--Please describe the changes made in this pull request-->
-<!--Tell the big steps, use a checklist to show progress. You can explain here how the code works.-->
+<!--DESCRIBE the changes: tell the BIG STEPS, use a CHECKLIST to show progress. You can explain below how the code works.-->
 
 - [x] ...
 - [ ] ...
 
-### Additional Notes
+## Additional Notes
 
 <!--Anything relevant that does not quite fit in the summary-->
 
+<!--Don't touch thses two tags-->
 <details>
 <summary>
 
-## Classification
+# Classification
 
 </summary>
 
-### Type of Change
+## Type of Change
 
 - [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
 - [ ] ✨ New feature (non-breaking change which adds functionality)
 - [ ] 🔨 Refactor (non-breaking change that neither fixes a bug nor adds a feature)
 - [ ] 🔧 Infra CI/CD (changes to configs of workflows)
 - [ ] 💥 BREAKING CHANGE (fix or feature that require a new minimal version of the front-end)
-
 - [ ] 😶‍🌫️ No impact for the end-users
 
-### Impact & Scope
+## Impact & Scope
 
 - [ ] Core functionality changes
 - [ ] Single module changes
 - [ ] Multiple modules changes
 - [ ] Database migrations required
+- [ ] Other: ... <!--Not module-oriented: write something!-->
 
-- [ ] Other: <!--not module-oriented-->
-
-### Testing
+## Testing
 
 - [ ] 1. Tested this locally
-- [ ] 2. Added/modified tests that pass the CI
-- [ ] 3. Tested in a pre-prod
-
+- [ ] 2. Added/modified tests that pass the CI (or tested in a downstream fork)
+- [ ] 3. Tested in a deployed pre-prod
 - [ ] 0. Untestable (exceptionally), will be tested in prod directly
 
-### Documentation
+## Documentation
 
 - [ ] Updated [the docs](docs.myecl.fr) accordingly : <!--[Docs#0 - Title](https://github.com/aeecleclair/myecl-documentation/pull/0)-->
 - [ ] `"` Docstrings
 - [ ] `#` Inline comments
-
 - [ ] No documentation needed
 
 </details>
