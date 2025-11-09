@@ -52,6 +52,9 @@ jobs:
       - name: Check out the code
         uses: actions/checkout@v5
 
+      - name: Fetch main branch
+        run: git fetch origin main --depth=1
+
       # Setup Python (faster than using Python container)
       - name: Setup Python
         uses: actions/setup-python@v6
