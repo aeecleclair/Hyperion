@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
+import logging
 import subprocess
 import sys
 from pathlib import Path
+
+# Configure logging for GitHub Actions
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger(__name__)
 
 
 def get_changed_files():
     """Enumerate files changed compared to main branch."""
     try:
-        diff = subprocess.check_output(
-            ["git", "diff", "--name-only", "origin/main..."],
+        diff = subprocess.check_output(  # noqa: S603
+            ["git", "diff", "--name-only", "origin/main..."],  # noqa: S607
             text=True,
         ).strip()
         return diff.splitlines()
@@ -20,7 +25,7 @@ def detect_modules(changed_files):
     """DDetect impacted modules based on file paths."""
     modules = set()
     for f in changed_files:
-        print(f)
+        logger.info(f"Changed file: {f}")
         if f.startswith("app/modules/"):
             module = f.split("/")[2]
             modules.add(module)
@@ -44,8 +49,8 @@ def run_tests(modules, coverage=True, run_all=False):
         ]
 
     if run_all:
-        print("Running all tests.")
-        return sys.exit(subprocess.call(base_cmd))
+        logger.info("Running all tests.")
+        return sys.exit(subprocess.call(base_cmd))  # noqa: S603
 
     # core always tested
     patterns = ["tests/core/"]
@@ -56,12 +61,12 @@ def run_tests(modules, coverage=True, run_all=False):
             patterns.append(path)
 
     if not modules:
-        print("No specific module modified, testing core only.")
+        logger.info("No specific module modified, testing core only.")
     else:
-        print(f"Impacted modules: {', '.join(modules)}")
+        logger.info(f"Impacted modules: {', '.join(modules)}")
 
-    print(f"Launching tests : {patterns}")
-    sys.exit(subprocess.call(base_cmd + patterns))
+    logger.info(f"Launching tests: {patterns}")
+    sys.exit(subprocess.call(base_cmd + patterns))  # noqa: S603
 
 
 if __name__ == "__main__":
@@ -74,8 +79,8 @@ if __name__ == "__main__":
     run_all = "--all" in sys.argv
 
     if scope_only and not run_all:
-        print("Changes are module-scoped only.")
+        logger.info("Changes are module-scoped only.")
         run_tests(modules, coverage=coverage)
     else:
-        print("Changes affect broader scope, running all tests.")
+        logger.info("Changes affect broader scope, running all tests.")
         run_tests(modules, coverage=coverage, run_all=True)
