@@ -1,7 +1,7 @@
-"""Schemas file for endpoint /sdec-facturation"""
+"""Schemas file for endpoint /sdec_facturation"""
 
-import uuid
 from datetime import date
+from uuid import UUID
 
 from pydantic import BaseModel
 
@@ -9,6 +9,7 @@ from app.modules.sdec_facturation.types_sdec_facturation import (
     AssociationStructureType,
     AssociationType,
     IndividualCategoryType,
+    ProductCategoryType,
     RoleType,
 )
 
@@ -21,7 +22,7 @@ class MemberBase(BaseModel):
 
 
 class MemberComplete(MemberBase):
-    id: uuid.UUID
+    id: UUID
     modified_date: date
 
 
@@ -42,78 +43,98 @@ class AssociationBase(BaseModel):
 
 
 class AssociationComplete(AssociationBase):
-    id: uuid.UUID
+    id: UUID
     modified_date: date
 
 
 class ProductBase(BaseModel):
     code: str
     name: str
-    individual_price: float
-    association_price: float
-    ae_price: float
-    category: str
+    category: ProductCategoryType
     for_sale: bool = True
 
 
 class ProductComplete(ProductBase):
-    id: uuid.UUID
+    id: UUID
     creation_date: date
 
 
-class ProductMinorUpdate(BaseModel):
-    name: str | None = None
-    category: str | None = None
-
-
 class ProductUpdate(BaseModel):
+    name: str | None = None
+    category: ProductCategoryType | None = None
+    for_sale: bool | None = None
+
+
+class ProductPriceBase(BaseModel):
+    product_id: UUID
     individual_price: float
     association_price: float
     ae_price: float
 
 
+class ProductPriceComplete(ProductPriceBase):
+    id: UUID
+    effective_date: date
+
+
+class ProductPriceUpdate(BaseModel):
+    individual_price: float
+    association_price: float
+    ae_price: float
+
+
+class ProductAndPriceBase(ProductBase):
+    individual_price: float
+    association_price: float
+    ae_price: float
+
+
+class ProductAndPriceComplete(ProductAndPriceBase):
+    id: UUID
+    creation_date: date
+    effective_date: date
+
+
 class OrderBase(BaseModel):
-    association_id: uuid.UUID
-    member_id: uuid.UUID
+    association_id: UUID
+    member_id: UUID
     order: str
     valid: bool = True
 
 
 class OrderComplete(OrderBase):
-    id: uuid.UUID
+    id: UUID
     creation_date: date
 
 
 class OrderUpdate(BaseModel):
-    valid: bool
-    order: str
+    order: str | None = None
 
 
 class FactureAssociationBase(BaseModel):
     facture_number: str
-    member_id: uuid.UUID
-    association_id: uuid.UUID
-    association_order: list[int]
+    member_id: UUID
+    association_id: UUID
+    start_date: date
+    end_date: date
     price: float
-    valid: bool
-    paid: bool
+    valid: bool = True
+    paid: bool = False
     payment_date: date | None = None
 
 
 class FactureAssociationComplete(FactureAssociationBase):
     facture_date: date
-    id: uuid.UUID
+    id: UUID
 
 
-class FactureUpdate(BaseModel):
-    valid: bool | None = None
+class FactureAssociationUpdate(BaseModel):
     paid: bool | None = None
-    payment_date: date | None = None
 
 
 class FactureIndividualBase(BaseModel):
     facture_number: str
-    member_id: uuid.UUID
+    member_id: UUID
     individual_order: str
     individual_category: IndividualCategoryType
     price: float
@@ -123,11 +144,21 @@ class FactureIndividualBase(BaseModel):
     postal_code: str
     city: str
     country: str
-    valid: bool
-    paid: bool
+    valid: bool = True
+    paid: bool = False
     payment_date: date | None = None
 
 
 class FactureIndividualComplete(FactureIndividualBase):
     facture_date: date
-    id: uuid.UUID
+    id: UUID
+
+
+class FactureIndividualUpdate(BaseModel):
+    firstname: str | None = None
+    lastname: str | None = None
+    adresse: str | None = None
+    postal_code: str | None = None
+    city: str | None = None
+    country: str | None = None
+    paid: bool | None = None

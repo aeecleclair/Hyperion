@@ -10,6 +10,7 @@ from app.modules.sdec_facturation.types_sdec_facturation import (
     AssociationStructureType,
     AssociationType,
     IndividualCategoryType,
+    ProductCategoryType,
     RoleType,
 )
 from app.types.sqlalchemy import Base, PrimaryKey
@@ -46,12 +47,19 @@ class Product(Base):
     id: Mapped[PrimaryKey]
     code: Mapped[str]
     name: Mapped[str]
+    category: Mapped[ProductCategoryType]
+    creation_date: Mapped[date]
+    for_sale: Mapped[bool] = mapped_column(default=True)
+
+
+class ProductPrice(Base):
+    __tablename__ = "sdec_facturation_product_price"
+    id: Mapped[PrimaryKey]
+    product_id: Mapped[UUID] = mapped_column(ForeignKey("sdec_facturation_product.id"))
     individual_price: Mapped[float]
     association_price: Mapped[float]
     ae_price: Mapped[float]
-    category: Mapped[str]
-    creation_date: Mapped[date]
-    for_sale: Mapped[bool] = mapped_column(default=True)
+    effective_date: Mapped[date]
 
 
 class Order(Base):
@@ -74,11 +82,12 @@ class FactureAssociation(Base):
     association_id: Mapped[UUID] = mapped_column(
         ForeignKey("sdec_facturation_association.id"),
     )
-    association_order: Mapped[str]
+    start_date: Mapped[date]
+    end_date: Mapped[date]
     price: Mapped[float]
     facture_date: Mapped[date]
-    valid: Mapped[bool]
-    paid: Mapped[bool]
+    paid: Mapped[bool] = mapped_column(default=False)
+    valid: Mapped[bool] = mapped_column(default=True)
     payment_date: Mapped[date | None] = mapped_column(default=None)
 
 
@@ -97,6 +106,6 @@ class FactureIndividual(Base):
     postal_code: Mapped[str]
     city: Mapped[str]
     country: Mapped[str]
-    valid: Mapped[bool]
-    paid: Mapped[bool]
+    paid: Mapped[bool] = mapped_column(default=False)
+    valid: Mapped[bool] = mapped_column(default=True)
     payment_date: Mapped[date | None] = mapped_column(default=None)

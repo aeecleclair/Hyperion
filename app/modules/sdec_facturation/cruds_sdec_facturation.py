@@ -154,7 +154,7 @@ async def get_member_by_name(
 
 
 # ---------------------------------------------------------------------------- #
-#                                     Mandat                                  #
+#                                     Mandate                                  #
 # ---------------------------------------------------------------------------- #
 async def create_mandate(
     mandate: schemas_sdec_facturation.MandateComplete,
@@ -247,7 +247,7 @@ async def get_mandate_by_year(
 
 
 # ---------------------------------------------------------------------------- #
-#                                  Associationciation                                 #
+#                                  Association                                 #
 # ---------------------------------------------------------------------------- #
 
 
@@ -272,8 +272,8 @@ async def create_association(
         name=association_db.name,
         type=association_db.type,
         structure=association_db.structure,
-        visible=association_db.visible,
         modified_date=association_db.modified_date,
+        visible=association_db.visible,
     )
 
 
@@ -393,100 +393,120 @@ async def get_association_by_name(
 
 
 async def create_product(
-    product: schemas_sdec_facturation.ProductBase,
+    product: schemas_sdec_facturation.ProductAndPriceBase,
     db: AsyncSession,
-) -> schemas_sdec_facturation.ProductComplete:
+) -> schemas_sdec_facturation.ProductAndPriceComplete:
     """Create a new product in the database"""
 
     product_db = models_sdec_facturation.Product(
         id=uuid.uuid4(),
         code=product.code,
         name=product.name,
-        individual_price=product.individual_price,
-        association_price=product.association_price,
-        ae_price=product.ae_price,
         category=product.category,
         for_sale=product.for_sale,
         creation_date=datetime.now(tz=UTC),
     )
     db.add(product_db)
     await db.flush()
-    return schemas_sdec_facturation.ProductComplete(
+
+    price_db = models_sdec_facturation.ProductPrice(
+        id=uuid.uuid4(),
+        product_id=product_db.id,
+        individual_price=product.individual_price,
+        association_price=product.association_price,
+        ae_price=product.ae_price,
+        effective_date=datetime.now(tz=UTC),
+    )
+    db.add(price_db)
+    await db.flush()
+    return schemas_sdec_facturation.ProductAndPriceComplete(
         id=product_db.id,
         code=product_db.code,
         name=product_db.name,
-        individual_price=product_db.individual_price,
-        association_price=product_db.association_price,
-        ae_price=product_db.ae_price,
+        individual_price=price_db.individual_price,
+        association_price=price_db.association_price,
+        ae_price=price_db.ae_price,
         category=product_db.category,
         for_sale=product_db.for_sale,
         creation_date=product_db.creation_date,
+        effective_date=price_db.effective_date,
     )
 
 
 async def update_product(
-    product_code: str,
-    product_edit: schemas_sdec_facturation.ProductBase,
+    product_id: uuid.UUID,
+    product_edit: schemas_sdec_facturation.ProductUpdate,
     db: AsyncSession,
 ):
     """Update a product in the database"""
-
-    product_db = models_sdec_facturation.Product(
-        id=uuid.uuid4(),
-        code=product_code,
-        name=product_edit.name,
-        individual_price=product_edit.individual_price,
-        association_price=product_edit.association_price,
-        ae_price=product_edit.ae_price,
-        category=product_edit.category,
-        for_sale=product_edit.for_sale,
-        creation_date=datetime.now(tz=UTC),
-    )
-    db.add(product_db)
-    await db.flush()
-    return schemas_sdec_facturation.ProductComplete(
-        id=product_db.id,
-        code=product_db.code,
-        name=product_db.name,
-        individual_price=product_db.individual_price,
-        association_price=product_db.association_price,
-        ae_price=product_db.ae_price,
-        category=product_db.category,
-        for_sale=product_db.for_sale,
-        creation_date=product_db.creation_date,
-    )
-
-
-async def minor_update_product(
-    product_code: str,
-    product_edit: schemas_sdec_facturation.ProductMinorUpdate,
-    db: AsyncSession,
-):
-    """Minor update of a product in the database"""
 
     update_values = {
         key: value
         for key, value in product_edit.model_dump().items()
         if value is not None
     }
-
     await db.execute(
         update(models_sdec_facturation.Product)
-        .where(models_sdec_facturation.Product.code == product_code)
+        .where(models_sdec_facturation.Product.id == product_id)
         .values(**update_values),
     )
     await db.flush()
 
 
+async def create_price(
+    product_id: uuid.UUID,
+    price_edit: schemas_sdec_facturation.ProductPriceUpdate,
+    db: AsyncSession,
+) -> schemas_sdec_facturation.ProductPriceComplete:
+    """Minor update of a product in the database"""
+
+    price_db = models_sdec_facturation.ProductPrice(
+        id=uuid.uuid4(),
+        product_id=product_id,
+        individual_price=price_edit.individual_price,
+        association_price=price_edit.association_price,
+        ae_price=price_edit.ae_price,
+        effective_date=datetime.now(tz=UTC),
+    )
+
+    db.add(price_db)
+    await db.flush()
+
+    return schemas_sdec_facturation.ProductPriceComplete(
+        id=price_db.id,
+        product_id=price_db.product_id,
+        individual_price=price_db.individual_price,
+        association_price=price_db.association_price,
+        ae_price=price_db.ae_price,
+        effective_date=price_db.effective_date,
+    )
+
+
+async def update_price(
+    product_id: uuid.UUID,
+    price_edit: schemas_sdec_facturation.ProductPriceUpdate,
+    db: AsyncSession,
+):
+    """Update the price of a product in the database"""
+    current_date = datetime.now(tz=UTC)
+    await db.execute(
+        update(models_sdec_facturation.ProductPrice)
+        .where(models_sdec_facturation.ProductPrice.id == product_id)
+        .where(models_sdec_facturation.ProductPrice.effective_date == current_date)
+        .values(**price_edit.model_dump()),
+    )
+    await db.flush()
+
+
 async def delete_product(
-    product_code: str,
+    product_id: uuid.UUID,
     db: AsyncSession,
 ):
     """Delete a product from the database"""
 
     await db.execute(
         update(models_sdec_facturation.Product)
-        .where(models_sdec_facturation.Product.code == product_code)
+        .where(models_sdec_facturation.Product.id == product_id)
         .values(
             for_sale=False,
         ),
@@ -494,14 +514,45 @@ async def delete_product(
     await db.flush()
 
 
-async def get_all_products(
+async def get_all_products_and_price(
     db: AsyncSession,
-) -> Sequence[schemas_sdec_facturation.ProductComplete]:
+) -> Sequence[schemas_sdec_facturation.ProductAndPriceComplete]:
     """Get all products from the database"""
-    result = await db.execute(select(models_sdec_facturation.Product))
-    products = result.scalars().all()
+
+    query = select(
+        models_sdec_facturation.Product,
+        models_sdec_facturation.ProductPrice,
+    ).outerjoin(
+        models_sdec_facturation.ProductPrice,
+        models_sdec_facturation.Product.id
+        == models_sdec_facturation.ProductPrice.product_id,
+    )
+    result = await db.execute(query)
+    rows = result.all()  # list of (Product, ProductPrice|None)
+
+    products = []
+    for product, product_price in rows:
+        individual_price = product_price.individual_price if product_price else 0.0
+        association_price = product_price.association_price if product_price else 0.0
+        ae_price = product_price.ae_price if product_price else 0.0
+
+        products.append(
+            schemas_sdec_facturation.ProductAndPriceComplete(
+                id=product.id,
+                code=product.code,
+                name=product.name,
+                individual_price=individual_price,
+                association_price=association_price,
+                ae_price=ae_price,
+                category=product.category,
+                for_sale=product.for_sale,
+                creation_date=product.creation_date,
+                effective_date=product_price.effective_date if product_price else None,
+            ),
+        )
+
     return [
-        schemas_sdec_facturation.ProductComplete(
+        schemas_sdec_facturation.ProductAndPriceComplete(
             id=product.id,
             code=product.code,
             name=product.name,
@@ -511,6 +562,7 @@ async def get_all_products(
             category=product.category,
             for_sale=product.for_sale,
             creation_date=product.creation_date,
+            effective_date=product_price.effective_date,
         )
         for product in products
     ]
@@ -521,6 +573,7 @@ async def get_product_by_id(
     db: AsyncSession,
 ) -> schemas_sdec_facturation.ProductComplete | None:
     """Get a specific product by its ID from the database"""
+
     result = (
         (
             await db.execute(
@@ -537,9 +590,6 @@ async def get_product_by_id(
             id=result.id,
             code=result.code,
             name=result.name,
-            individual_price=result.individual_price,
-            association_price=result.association_price,
-            ae_price=result.ae_price,
             category=result.category,
             for_sale=result.for_sale,
             creation_date=result.creation_date,
@@ -570,9 +620,6 @@ async def get_product_by_code(
             id=result.id,
             code=result.code,
             name=result.name,
-            individual_price=result.individual_price,
-            association_price=result.association_price,
-            ae_price=result.ae_price,
             category=result.category,
             for_sale=result.for_sale,
             creation_date=result.creation_date,
@@ -603,12 +650,40 @@ async def get_product_by_name(
             id=result.id,
             code=result.code,
             name=result.name,
-            individual_price=result.individual_price,
-            association_price=result.association_price,
-            ae_price=result.ae_price,
             category=result.category,
             for_sale=result.for_sale,
             creation_date=result.creation_date,
+        )
+        if result
+        else None
+    )
+
+
+async def get_prices_by_product_id_and_date(
+    product_id: uuid.UUID,
+    db: AsyncSession,
+) -> schemas_sdec_facturation.ProductPriceComplete | None:
+    """Get the price of a product by its ID and a specific date from the database"""
+    date = datetime.now(tz=UTC)
+    result = (
+        (
+            await db.execute(
+                select(models_sdec_facturation.ProductPrice)
+                .where(models_sdec_facturation.ProductPrice.product_id == product_id)
+                .where(models_sdec_facturation.ProductPrice.effective_date == date),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return (
+        schemas_sdec_facturation.ProductPriceComplete(
+            id=result.id,
+            product_id=result.product_id,
+            individual_price=result.individual_price,
+            association_price=result.association_price,
+            ae_price=result.ae_price,
+            effective_date=result.effective_date,
         )
         if result
         else None
@@ -656,9 +731,22 @@ async def update_order(
     await db.execute(
         update(models_sdec_facturation.Order)
         .where(models_sdec_facturation.Order.id == order_id)
-        .values(valid=order_edit.valid, order=order_edit.order),
+        .values(order=order_edit.order),
     )
     await db.flush()
+
+
+async def delete_order(
+    order_id: uuid.UUID,
+    db: AsyncSession,
+):
+    """Delete an order from the database"""
+
+    await db.execute(
+        update(models_sdec_facturation.Order)
+        .where(models_sdec_facturation.Order.id == order_id)
+        .values(valid=False),
+    )
 
 
 async def get_all_orders(
@@ -724,9 +812,8 @@ async def create_facture_association(
         facture_number=facture_association.facture_number,
         member_id=facture_association.member_id,
         association_id=facture_association.association_id,
-        association_order=",".join(
-            [str(cmd_id) for cmd_id in facture_association.association_order],
-        ),
+        start_date=facture_association.start_date,
+        end_date=facture_association.end_date,
         price=facture_association.price,
         facture_date=datetime.now(tz=UTC),
         valid=facture_association.valid,
@@ -740,10 +827,8 @@ async def create_facture_association(
         facture_number=facture_association_db.facture_number,
         member_id=facture_association_db.member_id,
         association_id=facture_association_db.association_id,
-        association_order=[
-            int(cmd_id)
-            for cmd_id in facture_association_db.association_order.split(",")
-        ],
+        start_date=facture_association.start_date,
+        end_date=facture_association.end_date,
         price=facture_association_db.price,
         facture_date=facture_association_db.facture_date,
         valid=facture_association_db.valid,
@@ -752,21 +837,37 @@ async def create_facture_association(
     )
 
 
-async def upfacture_date_association(
+async def update_facture_association(
     facture_association_id: uuid.UUID,
-    facture_association_edit: schemas_sdec_facturation.FactureAssociationBase,
+    facture_association_edit: schemas_sdec_facturation.FactureAssociationUpdate,
     db: AsyncSession,
 ):
     """Update an associationciation invoice in the database"""
+    current_date: datetime | None = datetime.now(tz=UTC)
+    if not facture_association_edit.paid:
+        current_date = None
 
     await db.execute(
         update(models_sdec_facturation.FactureAssociation)
         .where(models_sdec_facturation.FactureAssociation.id == facture_association_id)
         .values(
-            valid=facture_association_edit.valid,
             paid=facture_association_edit.paid,
-            payment_date=facture_association_edit.payment_date,
+            payment_date=current_date,
         ),
+    )
+    await db.flush()
+
+
+async def delete_facture_association(
+    facture_association_id: uuid.UUID,
+    db: AsyncSession,
+):
+    """Delete an associationciation invoice from the database"""
+
+    await db.execute(
+        update(models_sdec_facturation.FactureAssociation)
+        .where(models_sdec_facturation.FactureAssociation.id == facture_association_id)
+        .values(valid=False),
     )
     await db.flush()
 
@@ -783,10 +884,8 @@ async def get_all_factures_association(
             facture_number=facture_association.facture_number,
             member_id=facture_association.member_id,
             association_id=facture_association.association_id,
-            association_order=[
-                int(cmd_id)
-                for cmd_id in facture_association.association_order.split(",")
-            ],
+            start_date=facture_association.start_date,
+            end_date=facture_association.end_date,
             price=facture_association.price,
             facture_date=facture_association.facture_date,
             valid=facture_association.valid,
@@ -820,9 +919,44 @@ async def get_facture_association_by_id(
             facture_number=result.facture_number,
             member_id=result.member_id,
             association_id=result.association_id,
-            association_order=[
-                int(cmd_id) for cmd_id in result.association_order.split(",")
-            ],
+            start_date=result.start_date,
+            end_date=result.end_date,
+            price=result.price,
+            facture_date=result.facture_date,
+            valid=result.valid,
+            paid=result.paid,
+            payment_date=result.payment_date,
+        )
+        if result
+        else None
+    )
+
+
+async def get_facture_association_by_number(
+    facture_number: str,
+    db: AsyncSession,
+) -> schemas_sdec_facturation.FactureAssociationComplete | None:
+    """Get specific associationciation invoices by their facture number from the database"""
+    result = (
+        (
+            await db.execute(
+                select(models_sdec_facturation.FactureAssociation).where(
+                    models_sdec_facturation.FactureAssociation.facture_number
+                    == facture_number,
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return (
+        schemas_sdec_facturation.FactureAssociationComplete(
+            id=result.id,
+            facture_number=result.facture_number,
+            member_id=result.member_id,
+            association_id=result.association_id,
+            start_date=result.start_date,
+            end_date=result.end_date,
             price=result.price,
             facture_date=result.facture_date,
             valid=result.valid,
@@ -837,107 +971,120 @@ async def get_facture_association_by_id(
 # ---------------------------------------------------------------------------- #
 #                               Facture Individual                             #
 # ---------------------------------------------------------------------------- #
-async def create_facture_particulier(
-    facture_particulier: schemas_sdec_facturation.FactureIndividualBase,
+async def create_facture_individual(
+    facture_individual: schemas_sdec_facturation.FactureIndividualBase,
     db: AsyncSession,
 ) -> schemas_sdec_facturation.FactureIndividualComplete:
     """Create a new individual invoice in the database"""
 
-    facture_particulier_db = models_sdec_facturation.FactureIndividual(
+    facture_individual_db = models_sdec_facturation.FactureIndividual(
         id=uuid.uuid4(),
-        facture_number=facture_particulier.facture_number,
-        member_id=facture_particulier.member_id,
-        individual_order=facture_particulier.individual_order,
-        individual_category=facture_particulier.individual_category,
-        price=facture_particulier.price,
+        facture_number=facture_individual.facture_number,
+        member_id=facture_individual.member_id,
+        individual_order=facture_individual.individual_order,
+        individual_category=facture_individual.individual_category,
+        price=facture_individual.price,
         facture_date=datetime.now(tz=UTC),
-        firstname=facture_particulier.firstname,
-        lastname=facture_particulier.lastname,
-        adresse=facture_particulier.adresse,
-        postal_code=facture_particulier.postal_code,
-        city=facture_particulier.city,
-        country=facture_particulier.country,
-        valid=facture_particulier.valid,
-        paid=facture_particulier.paid,
-        payment_date=facture_particulier.payment_date,
+        firstname=facture_individual.firstname,
+        lastname=facture_individual.lastname,
+        adresse=facture_individual.adresse,
+        postal_code=facture_individual.postal_code,
+        city=facture_individual.city,
+        country=facture_individual.country,
     )
-    db.add(facture_particulier_db)
+    db.add(facture_individual_db)
     await db.flush()
     return schemas_sdec_facturation.FactureIndividualComplete(
-        id=facture_particulier_db.id,
-        facture_number=facture_particulier_db.facture_number,
-        member_id=facture_particulier_db.member_id,
-        individual_order=facture_particulier_db.individual_order,
-        individual_category=facture_particulier_db.individual_category,
-        price=facture_particulier_db.price,
-        facture_date=facture_particulier_db.facture_date,
-        firstname=facture_particulier_db.firstname,
-        lastname=facture_particulier_db.lastname,
-        adresse=facture_particulier_db.adresse,
-        postal_code=facture_particulier_db.postal_code,
-        city=facture_particulier_db.city,
-        country=facture_particulier_db.country,
-        valid=facture_particulier_db.valid,
-        paid=facture_particulier_db.paid,
-        payment_date=facture_particulier_db.payment_date,
+        id=facture_individual_db.id,
+        facture_number=facture_individual_db.facture_number,
+        member_id=facture_individual_db.member_id,
+        individual_order=facture_individual_db.individual_order,
+        individual_category=facture_individual_db.individual_category,
+        price=facture_individual_db.price,
+        facture_date=facture_individual_db.facture_date,
+        firstname=facture_individual_db.firstname,
+        lastname=facture_individual_db.lastname,
+        adresse=facture_individual_db.adresse,
+        postal_code=facture_individual_db.postal_code,
+        city=facture_individual_db.city,
+        country=facture_individual_db.country,
+        valid=facture_individual_db.valid,
+        paid=facture_individual_db.paid,
+        payment_date=facture_individual_db.payment_date,
     )
 
 
-async def up_date_facture_particulier(
-    facture_particulier_id: uuid.UUID,
-    facture_particulier_edit: schemas_sdec_facturation.FactureIndividualBase,
+async def update_facture_individual(
+    facture_individual_id: uuid.UUID,
+    facture_individual_edit: schemas_sdec_facturation.FactureIndividualUpdate,
     db: AsyncSession,
 ):
     """Update an individual invoice in the database"""
+    current_date: datetime | None = datetime.now(tz=UTC)
+    if not facture_individual_edit.paid:
+        current_date = None
 
     await db.execute(
         update(models_sdec_facturation.FactureIndividual)
-        .where(models_sdec_facturation.FactureIndividual.id == facture_particulier_id)
+        .where(models_sdec_facturation.FactureIndividual.id == facture_individual_id)
         .values(
-            firstname=facture_particulier_edit.firstname,
-            lastname=facture_particulier_edit.lastname,
-            adresse=facture_particulier_edit.adresse,
-            postal_code=facture_particulier_edit.postal_code,
-            city=facture_particulier_edit.city,
-            valid=facture_particulier_edit.valid,
-            paid=facture_particulier_edit.paid,
-            payment_date=facture_particulier_edit.payment_date,
+            firstname=facture_individual_edit.firstname,
+            lastname=facture_individual_edit.lastname,
+            adresse=facture_individual_edit.adresse,
+            postal_code=facture_individual_edit.postal_code,
+            city=facture_individual_edit.city,
+            paid=facture_individual_edit.paid,
+            payment_date=current_date,
         ),
     )
     await db.flush()
 
 
-async def get_all_factures_particulier(
+async def delete_facture_individual(
+    facture_individual_id: uuid.UUID,
+    db: AsyncSession,
+):
+    """Delete an individual invoice from the database"""
+
+    await db.execute(
+        update(models_sdec_facturation.FactureIndividual)
+        .where(models_sdec_facturation.FactureIndividual.id == facture_individual_id)
+        .values(valid=False),
+    )
+    await db.flush()
+
+
+async def get_all_factures_individual(
     db: AsyncSession,
 ) -> Sequence[schemas_sdec_facturation.FactureIndividualComplete]:
     """Get all individual invoices from the database"""
     result = await db.execute(select(models_sdec_facturation.FactureIndividual))
-    factures_particulier = result.scalars().all()
+    factures_individual = result.scalars().all()
     return [
         schemas_sdec_facturation.FactureIndividualComplete(
-            id=facture_particulier.id,
-            facture_number=facture_particulier.facture_number,
-            member_id=facture_particulier.member_id,
-            individual_order=facture_particulier.individual_order,
-            individual_category=facture_particulier.individual_category,
-            price=facture_particulier.price,
-            facture_date=facture_particulier.facture_date,
-            firstname=facture_particulier.firstname,
-            lastname=facture_particulier.lastname,
-            adresse=facture_particulier.adresse,
-            postal_code=facture_particulier.postal_code,
-            city=facture_particulier.city,
-            country=facture_particulier.country,
-            valid=facture_particulier.valid,
-            paid=facture_particulier.paid,
-            payment_date=facture_particulier.payment_date,
+            id=facture_individual.id,
+            facture_number=facture_individual.facture_number,
+            member_id=facture_individual.member_id,
+            individual_order=facture_individual.individual_order,
+            individual_category=facture_individual.individual_category,
+            price=facture_individual.price,
+            facture_date=facture_individual.facture_date,
+            firstname=facture_individual.firstname,
+            lastname=facture_individual.lastname,
+            adresse=facture_individual.adresse,
+            postal_code=facture_individual.postal_code,
+            city=facture_individual.city,
+            country=facture_individual.country,
+            valid=facture_individual.valid,
+            paid=facture_individual.paid,
+            payment_date=facture_individual.payment_date,
         )
-        for facture_particulier in factures_particulier
+        for facture_individual in factures_individual
     ]
 
 
-async def get_facture_particulier_by_id(
-    facture_particulier_id: uuid.UUID,
+async def get_facture_individual_by_id(
+    facture_individual_id: uuid.UUID,
     db: AsyncSession,
 ) -> schemas_sdec_facturation.FactureIndividualComplete | None:
     """Get a specific individual invoice by its ID from the database"""
@@ -946,7 +1093,48 @@ async def get_facture_particulier_by_id(
             await db.execute(
                 select(models_sdec_facturation.FactureIndividual).where(
                     models_sdec_facturation.FactureIndividual.id
-                    == facture_particulier_id,
+                    == facture_individual_id,
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return (
+        schemas_sdec_facturation.FactureIndividualComplete(
+            id=result.id,
+            facture_number=result.facture_number,
+            member_id=result.member_id,
+            individual_order=result.individual_order,
+            individual_category=result.individual_category,
+            price=result.price,
+            facture_date=result.facture_date,
+            firstname=result.firstname,
+            lastname=result.lastname,
+            adresse=result.adresse,
+            postal_code=result.postal_code,
+            city=result.city,
+            country=result.country,
+            valid=result.valid,
+            paid=result.paid,
+            payment_date=result.payment_date,
+        )
+        if result
+        else None
+    )
+
+
+async def get_facture_individual_by_number(
+    facture_number: str,
+    db: AsyncSession,
+) -> schemas_sdec_facturation.FactureIndividualComplete | None:
+    """Get specific individual invoices by their facture number from the database"""
+    result = (
+        (
+            await db.execute(
+                select(models_sdec_facturation.FactureIndividual).where(
+                    models_sdec_facturation.FactureIndividual.facture_number
+                    == facture_number,
                 ),
             )
         )
