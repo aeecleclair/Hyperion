@@ -67,7 +67,7 @@ class Transaction(Base):
     store_note: Mapped[str | None]
 
     qr_code_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("mypayment_used_qrcode.qr_code_id"),
+        ForeignKey("mypayment_used_transaction_request.id"),
     )
 
     debited_wallet: Mapped[Wallet] = relationship(
@@ -241,28 +241,19 @@ class UserPayment(Base):
     accepted_tos_version: Mapped[int]
 
 
-class UsedQRCode(Base):
-    __tablename__ = "mypayment_used_qrcode"
+class UsedTransactionRequest(Base):
+    __tablename__ = "mypayment_used_transaction_request"
 
-    qr_code_id: Mapped[PrimaryKey]
-    qr_code_tot: Mapped[int | None]
-    qr_code_iat: Mapped[datetime | None]
-    qr_code_key: Mapped[UUID | None]
-    qr_code_store: Mapped[bool | None]
-    signature: Mapped[str | None]
-
-
-# TODO: merge these two tables into UsedTransactionRequest, with the direct-ness of the request
-# Then merge the cruds, and stop there
-
-
-class UsedPurchase(Base):
-    __tablename__ = "myeclpay_used_payment"
-
-    payment_id: Mapped[PrimaryKey]
-    payment_tot: Mapped[int | None]
-    payment_iat: Mapped[datetime | None]
-    payment_key: Mapped[UUID | None]
+    id: Mapped[PrimaryKey]
+    tot: Mapped[int | None]
+    iat: Mapped[datetime | None]
+    key: Mapped[UUID | None]
+    transaction_type: Mapped[TransactionType.DIRECT | TransactionType.INDIRECT]
+    store: Mapped[bool | None]
+    store_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("myeclpay_store.id"),
+        nullable=True,
+    )
     signature: Mapped[str | None]
 
 class Invoice(Base):
