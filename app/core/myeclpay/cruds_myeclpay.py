@@ -10,6 +10,7 @@ from app.core.myeclpay import models_myeclpay, schemas_myeclpay
 from app.core.myeclpay.exceptions_myeclpay import WalletNotFoundOnUpdateError
 from app.core.myeclpay.types_myeclpay import (
     TransactionStatus,
+    TransactionType,
     WalletDeviceStatus,
     WalletType,
 )
@@ -834,40 +835,43 @@ async def get_store(
     return result.scalars().first()
 
 
-async def create_used_qrcode(
-    qr_code: schemas_myeclpay.ScanInfo,
+async def create_used_transaction_request(
+    transaction_request: schemas_myeclpay.TransactionRequestInfo,
+    transaction_type: TransactionType,
     db: AsyncSession,
 ) -> None:
-    wallet = models_myeclpay.UsedQRCode(
-        qr_code_id=qr_code.id,
-        qr_code_tot=qr_code.tot,
-        qr_code_iat=qr_code.iat,
-        qr_code_key=qr_code.key,
-        qr_code_store=qr_code.store,
-        signature=qr_code.signature,
+    used_transaction_request = models_myeclpay.UsedTransactionRequest(
+        id=transaction_request.id,
+        tot=transaction_request.tot,
+        iat=transaction_request.iat,
+        key=transaction_request.key,
+        signature=transaction_request.signature,
+        transaction_type=transaction_type,
+        store=transaction_request.store if transaction_request.store else None,
+        store_id=transaction_request.store_id if transaction_request.store_id else None,
     )
-    db.add(wallet)
+    db.add(used_transaction_request)
 
 
-async def get_used_qrcode(
-    qr_code_id: UUID,
+async def get_used_transaction_request(
+    transaction_request_id: UUID,
     db: AsyncSession,
-) -> models_myeclpay.UsedQRCode | None:
+) -> models_myeclpay.UsedTransactionRequest | None:
     result = await db.execute(
-        select(models_myeclpay.UsedQRCode).where(
-            models_myeclpay.UsedQRCode.qr_code_id == qr_code_id,
+        select(models_myeclpay.UsedTransactionRequest).where(
+            models_myeclpay.UsedTransactionRequest.id == transaction_request_id,
         ),
     )
     return result.scalars().first()
 
 
-async def delete_used_qrcode(
-    qr_code_id: UUID,
+async def delete_used_transaction_request(
+    transaction_request_id: UUID,
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        delete(models_myeclpay.UsedQRCode).where(
-            models_myeclpay.UsedQRCode.qr_code_id == qr_code_id,
+        delete(models_myeclpay.UsedTransactionRequest).where(
+            models_myeclpay.UsedTransactionRequest.id == transaction_request_id,
         ),
     )
 
