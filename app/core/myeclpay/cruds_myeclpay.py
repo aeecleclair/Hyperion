@@ -875,6 +875,7 @@ async def delete_used_transaction_request(
         ),
     )
 
+
 async def get_invoices(
     db: AsyncSession,
     skip: int | None = None,
