@@ -256,6 +256,7 @@ class UsedTransactionRequest(Base):
     )
     signature: Mapped[str | None]
 
+
 class Invoice(Base):
     __tablename__ = "mypayment_invoice"
 
