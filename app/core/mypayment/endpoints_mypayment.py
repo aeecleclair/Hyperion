@@ -2445,6 +2445,14 @@ async def user_purchase_store(
                 detail="Could not find wallet associated with the debited wallet device",
             )
 
+        if debited_wallet.user is None:
+            hyperion_error_logger.error(
+                f"MyECLPay: No UserPayment for debited wallet {debited_wallet.id}, this should never happen",
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="MyECLPay: The debited wallet is not associated to a user",
+            )
         if debited_wallet.user.id != user.id:
             hyperion_error_logger.error(
                 f"MyPayment: Mismatch between the user {user.id} who sent the request and the user {debited_wallet.user.id} owning the signatory device, this should never happen",

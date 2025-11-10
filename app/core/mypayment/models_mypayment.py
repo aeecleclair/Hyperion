@@ -248,7 +248,7 @@ class UsedTransactionRequest(Base):
     tot: Mapped[int | None]
     iat: Mapped[datetime | None]
     key: Mapped[UUID | None]
-    transaction_type: Mapped[TransactionType.DIRECT | TransactionType.INDIRECT]
+    transaction_type: Mapped[TransactionType]  # Should be DIRECT or DIRECTED
     store: Mapped[bool | None]
     store_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("myeclpay_store.id"),
