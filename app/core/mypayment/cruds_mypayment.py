@@ -999,6 +999,42 @@ async def delete_used_qrcode(
     )
 
 
+async def create_used_payment(
+    payment: schemas_myeclpay.PurchaseInfo,
+    db: AsyncSession,
+) -> None:
+    wallet = models_myeclpay.UsedPurchase(
+        payment_id=payment.id,
+        payment_tot=payment.tot,
+        payment_iat=payment.iat,
+        payment_key=payment.key,
+        signature=payment.signature,
+    )
+    db.add(wallet)
+
+
+async def get_used_payment(
+    payment_id: UUID,
+    db: AsyncSession,
+) -> models_myeclpay.UsedPurchase | None:
+    result = await db.execute(
+        select(models_myeclpay.UsedPurchase).where(
+            models_myeclpay.UsedPurchase.payment_id == payment_id,
+        ),
+    )
+    return result.scalars().first()
+
+
+async def delete_used_payment(
+    payment_id: UUID,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        delete(models_myeclpay.UsedPurchase).where(
+            models_myeclpay.UsedPurchase.payment_id == payment_id,
+        ),
+    )
+
 async def get_invoices(
     db: AsyncSession,
     skip: int | None = None,

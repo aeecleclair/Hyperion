@@ -11,7 +11,7 @@ from app.core.mypayment import cruds_mypayment, models_mypayment, schemas_mypaym
 from app.core.mypayment.integrity_mypayment import format_transfer_log
 from app.core.mypayment.models_mypayment import UserPayment
 from app.core.mypayment.schemas_mypayment import (
-    QRCodeContentData,
+    TransactionRequestInfo,
 )
 from app.core.mypayment.types_mypayment import (
     TransferAlreadyConfirmedInCallbackError,
@@ -34,7 +34,7 @@ RETENTION_DURATION = 10 * 365  # 10 years in days
 def verify_signature(
     public_key_bytes: bytes,
     signature: str,
-    data: QRCodeContentData,
+    data: TransactionRequestInfo,
     wallet_device_id: UUID,
     request_id: str,
 ) -> bool:

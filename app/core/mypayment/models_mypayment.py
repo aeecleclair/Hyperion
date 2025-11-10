@@ -252,6 +252,19 @@ class UsedQRCode(Base):
     signature: Mapped[str | None]
 
 
+# TODO: merge these two tables into UsedTransactionRequest, with the direct-ness of the request
+# Then merge the cruds, and stop there
+
+
+class UsedPurchase(Base):
+    __tablename__ = "myeclpay_used_payment"
+
+    payment_id: Mapped[PrimaryKey]
+    payment_tot: Mapped[int | None]
+    payment_iat: Mapped[datetime | None]
+    payment_key: Mapped[UUID | None]
+    signature: Mapped[str | None]
+
 class Invoice(Base):
     __tablename__ = "mypayment_invoice"
 
