@@ -1,6 +1,6 @@
-import datetime
 import shutil
 import uuid
+from datetime import UTC, date, datetime
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -47,12 +47,21 @@ simple_user_without_team: models_users.CoreUser
 validated_team_captain: models_users.CoreUser
 validated_team_second: models_users.CoreUser
 
+raid_volunteer_user: models_users.CoreUser
+
 token_raid_admin: str
 token_simple: str
 token_simple_without_participant: str
 token_simple_without_team: str
 
 token_validated_team_captain: str
+token_raid_volunteer: str
+
+
+# Chrono RAID
+temps: models_raid.Temps
+temps2: models_raid.Temps
+remark: models_raid.Remark
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -88,10 +97,14 @@ async def init_objects() -> None:
     global validated_team_second
     validated_team_second = await create_user_with_groups([])
 
+    global raid_volunteer_user, token_raid_volunteer
+    raid_volunteer_user = await create_user_with_groups([GroupType.raid_volunteer])
+    token_raid_volunteer = create_api_access_token(raid_volunteer_user)
+
     document = models_raid.Document(
         id="some_document_id",
         name="test.pdf",
-        uploaded_at=datetime.datetime.now(tz=datetime.UTC),
+        uploaded_at=datetime.now(tz=UTC),
         validation=DocumentValidation.pending,
         type=DocumentType.idCard,
     )
@@ -100,7 +113,7 @@ async def init_objects() -> None:
     validated_document = models_raid.Document(
         id="6e9736ab-5ceb-42a8-a252-e8c66696f7b1",
         name="validated.pdf",
-        uploaded_at=datetime.datetime.now(tz=datetime.UTC),
+        uploaded_at=datetime.now(tz=UTC),
         validation=DocumentValidation.accepted,
         type=DocumentType.idCard,
     )
@@ -112,7 +125,7 @@ async def init_objects() -> None:
         id=simple_user.id,
         firstname="TestFirstname",
         name="TestName",
-        birthday=datetime.date(2001, 1, 1),
+        birthday=date(2001, 1, 1),
         phone="0606060606",
         email="test@email.fr",
         t_shirt_size=Size.M,
@@ -133,7 +146,7 @@ async def init_objects() -> None:
         id=simple_user_without_team.id,
         firstname="NoTeam",
         name="NoTeam",
-        birthday=datetime.date(2001, 1, 1),
+        birthday=date(2001, 1, 1),
         phone="0606060606",
         email="test@no_team.fr",
     )
@@ -144,7 +157,7 @@ async def init_objects() -> None:
         firstname="Validated",
         name="Captain",
         address="123 rue de la rue",
-        birthday=datetime.date(2001, 1, 1),
+        birthday=date(2001, 1, 1),
         phone="0606060606",
         email="test@validated.fr",
         t_shirt_size=Size.M,
@@ -166,7 +179,7 @@ async def init_objects() -> None:
         firstname="Validated",
         name="Second",
         address="123 rue de la rue",
-        birthday=datetime.date(2001, 1, 1),
+        birthday=date(2001, 1, 1),
         phone="0606060606",
         email="test2@validated.fr",
         t_shirt_size=Size.M,
@@ -215,6 +228,41 @@ async def init_objects() -> None:
             external_price=90,
         ),
     )
+
+    # Chrono RAID
+
+    global temps
+    temps = models_raid.Temps(
+        id="1",
+        dossard=1,
+        date=datetime.now(tz=UTC),
+        parcours="Sportif",
+        ravito="2",
+        status=True,
+        last_modification_date=datetime.now(tz=UTC),
+    )
+    await add_object_to_db(temps)
+
+    global temps2
+    temps2 = models_raid.Temps(
+        id="2",
+        dossard=1,
+        date=datetime.now(tz=UTC),
+        parcours="Sportif",
+        ravito="2",
+        status=True,
+        last_modification_date=datetime.now(tz=UTC),
+    )
+    await add_object_to_db(temps2)
+
+    global remark
+    remark = models_raid.Remark(
+        id="3",
+        date=datetime.now(tz=UTC),
+        ravito="2",
+        text="Remarque",
+    )
+    await add_object_to_db(remark)
 
 
 def test_get_participant_by_id(client: TestClient):
@@ -650,7 +698,7 @@ def mock_team():
             spec=RaidParticipant,
             name="Doe",
             firstname="John",
-            birthday=datetime.datetime(1990, 1, 1, tzinfo=datetime.UTC),
+            birthday=datetime(1990, 1, 1, tzinfo=UTC),
             phone="0606060606",
             email="test@email.fr",
             id=str(uuid.uuid4()),
@@ -690,7 +738,7 @@ def mock_participant():
         spec=RaidParticipant,
         name="Doe",
         firstname="John",
-        birthday=datetime.datetime(1990, 1, 1, tzinfo=datetime.UTC),
+        birthday=datetime(1990, 1, 1, tzinfo=UTC),
         phone="0606060606",
         email="test@email.fr",
         id=str(uuid.uuid4()),
@@ -975,7 +1023,7 @@ def test_calculate_raid_payment_price_only(participant_kwargs, expected_price):
         id=str(uuid.uuid4()),
         name="Name",
         firstname="Firstname",
-        birthday=datetime.date(2000, 1, 1),
+        birthday=date(2000, 1, 1),
         phone="0123456789",
         email="name@example.com",
         payment=participant_kwargs["payment"],
@@ -1033,3 +1081,135 @@ def test_download_team_files_zip_with_no_teams(client: TestClient):
         headers={"Authorization": f"Bearer {token_raid_admin}"},
     )
     assert response.status_code == 400
+
+
+# Chrono RAID
+
+
+def test_get_temps(client: TestClient) -> None:
+    response = client.get(
+        "/chrono_raid/temps",
+        headers={"Authorization": f"Bearer {token_raid_volunteer}"},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+    assert response.json()[0]["id"] in [temps.id, temps2.id]
+    assert response.json()[1]["id"] in [temps.id, temps2.id]
+
+
+def test_get_temps_by_date(client: TestClient) -> None:
+    response = client.get(
+        "/chrono_raid/temps/2025-02-22T20:00:00Z",
+        headers={"Authorization": f"Bearer {token_raid_volunteer}"},
+    )
+    assert response.status_code == 200
+
+
+def test_add_temps(client: TestClient) -> None:
+    response = client.post(
+        "/chrono_raid/temps/2025-02-22T20:00:00Z",
+        json=[
+            {
+                "id": "3",
+                "dossard": 42,
+                "date": "2025-02-22T20:00:00Z",
+                "parcours": "Sportif",
+                "ravito": "2",
+                "status": True,
+                "last_modification_date": "2025-02-22T20:00:00Z",
+            },
+            {
+                "id": "4",
+                "dossard": 43,
+                "date": "2025-02-22T20:00:00Z",
+                "parcours": "Sportif",
+                "ravito": "2",
+                "status": True,
+                "last_modification_date": "2025-02-22T20:00:00Z",
+            },
+            {
+                "id": "5",
+                "dossard": 12,
+                "date": "2025-02-22T20:00:00Z",
+                "parcours": "Sportif",
+                "ravito": "2",
+                "status": True,
+                "last_modification_date": "2025-02-22T20:00:00Z",
+            },
+        ],
+        headers={"Authorization": f"Bearer {token_raid_volunteer}"},
+    )
+    assert response.status_code == 201
+
+
+def test_get_csv_temps(client: TestClient) -> None:
+    response = client.get(
+        "/chrono_raid/csv_temps/Sportif",
+        headers={"Authorization": f"Bearer {token_raid_volunteer}"},
+    )
+    assert response.status_code == 200
+    assert response.headers["Content-Type"] == "text/csv; charset=utf-8"
+
+
+def test_delete_all_times(client: TestClient) -> None:
+    response = client.delete(
+        "/chrono_raid/temps",
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
+    )
+    assert response.status_code == 204
+
+
+def test_get_remarks(client: TestClient) -> None:
+    response = client.get(
+        "/chrono_raid/remarks",
+        headers={"Authorization": f"Bearer {token_raid_volunteer}"},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["id"] == remark.id
+
+
+def test_add_remarks(client: TestClient) -> None:
+    response = client.post(
+        "/chrono_raid/remarks",
+        json=[
+            {
+                "id": "4",
+                "date": "2025-02-22T20:00:00Z",
+                "ravito": "2",
+                "text": "Remarque",
+            },
+        ],
+        headers={"Authorization": f"Bearer {token_raid_volunteer}"},
+    )
+    assert response.status_code == 200
+
+
+def test_delete_all_remarks(client: TestClient) -> None:
+    response = client.delete(
+        "/chrono_raid/remarks",
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
+    )
+    assert response.status_code == 204
+
+
+def test_save_json_file(client: TestClient) -> None:
+    response = client.post(
+        "/chrono_raid/json",
+        json={"name": "file", "content": {"key": "value"}},
+        headers={"Authorization": f"Bearer {token_raid_admin}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == "file"
+
+
+def test_get_json_file(client: TestClient) -> None:
+    response = client.get(
+        "/chrono_raid/json/file",
+        headers={"Authorization": f"Bearer {token_raid_volunteer}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == "file"
+    assert data["content"] == {"key": "value"}

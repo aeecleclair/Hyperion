@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import BaseModel
 
@@ -164,3 +164,28 @@ class PaymentUrl(BaseModel):
 class RaidParticipantCheckout(BaseModel):
     participant_id: str
     checkout_id: str
+
+
+#################################### SCHEMAS FOR CHRONO RAID ####################################
+
+
+class Temps(BaseModel):
+    id: str
+    dossard: int
+    date: datetime
+    parcours: str
+    ravito: str
+    status: bool
+    last_modification_date: datetime
+
+
+class Remark(BaseModel):
+    id: str
+    date: datetime
+    ravito: str
+    text: str
+
+
+class JsonFileResponse(BaseModel):
+    name: str
+    content: dict
