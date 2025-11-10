@@ -128,10 +128,6 @@ class FactureAssociationComplete(FactureAssociationBase):
     id: UUID
 
 
-class FactureAssociationUpdate(BaseModel):
-    paid: bool | None = None
-
-
 class FactureIndividualBase(BaseModel):
     facture_number: str
     member_id: UUID
@@ -154,11 +150,5 @@ class FactureIndividualComplete(FactureIndividualBase):
     id: UUID
 
 
-class FactureIndividualUpdate(BaseModel):
-    firstname: str | None = None
-    lastname: str | None = None
-    adresse: str | None = None
-    postal_code: str | None = None
-    city: str | None = None
-    country: str | None = None
+class FactureUpdate(BaseModel):
     paid: bool | None = None

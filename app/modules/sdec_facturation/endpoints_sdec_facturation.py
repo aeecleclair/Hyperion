@@ -81,7 +81,7 @@ async def create_member(
 
 @module.router.patch(
     "/sdec_facturation/member/{member_id}",
-    status_code=200,
+    status_code=204,
 )
 async def update_member(
     member_id: uuid.UUID,
@@ -202,7 +202,7 @@ async def create_mandate(
 
 @module.router.patch(
     "/sdec_facturation/mandate/{mandate_year}",
-    status_code=200,
+    status_code=204,
 )
 async def update_mandate(
     mandate_year: int,
@@ -303,7 +303,7 @@ async def create_association(
 
 @module.router.patch(
     "/sdec_facturation/association/{association_id}",
-    status_code=200,
+    status_code=204,
 )
 async def update_association(
     association_id: uuid.UUID,
@@ -423,7 +423,7 @@ async def create_product(
 
 @module.router.patch(
     "/sdec_facturation/product/{product_id}",
-    status_code=200,
+    status_code=204,
 )
 async def update_product(
     product_id: uuid.UUID,
@@ -466,7 +466,7 @@ async def update_product(
 
 @module.router.patch(
     "/sdec_facturation/product/price/{product_id}",
-    status_code=200,
+    status_code=204,
 )
 async def update_price(
     product_id: uuid.UUID,
@@ -478,6 +478,16 @@ async def update_price(
     Minor update a product item in the database
     **This endpoint is only usable by SDEC Facturation admins**
     """
+
+    if (
+        price_edit.individual_price < 0
+        or price_edit.association_price < 0
+        or price_edit.ae_price < 0
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Product item prices must be positive",
+        )
 
     product_db = await cruds_sdec_facturation.get_product_by_id(
         product_id,
@@ -494,7 +504,7 @@ async def update_price(
         db,
     )
     current_date = datetime.now(tz=UTC)
-    if price_db is not None and current_date <= price_db.effective_date:
+    if price_db is not None and current_date < price_db.effective_date:
         raise HTTPException(
             status_code=400,
             detail="New price effective date must be after the current one",
@@ -540,7 +550,7 @@ async def delete_product(
 
 
 # ---------------------------------------------------------------------------- #
-#                                   Order                                   #
+#                                   Order                                      #
 # ---------------------------------------------------------------------------- #
 
 
@@ -597,7 +607,7 @@ async def create_order(
 
 @module.router.patch(
     "/sdec_facturation/order/{order_id}",
-    status_code=200,
+    status_code=204,
 )
 async def update_order(
     order_id: uuid.UUID,
@@ -736,11 +746,11 @@ async def create_facture_association(
 
 @module.router.patch(
     "/sdec_facturation/facture_association/{facture_association_id}",
-    status_code=200,
+    status_code=204,
 )
 async def update_facture_association(
     facture_association_id: uuid.UUID,
-    facture_association_edit: schemas_sdec_facturation.FactureAssociationUpdate,
+    facture_association_edit: schemas_sdec_facturation.FactureUpdate,
     db: AsyncSession = Depends(get_db),
     _=Depends(is_user_in([GroupType.sdec_facturation_admin])),
 ) -> None:
@@ -850,6 +860,11 @@ async def create_facture_individual(
             status_code=400,
             detail="City cannot be empty",
         )
+    if facture_individual.country.strip() == "":
+        raise HTTPException(
+            status_code=400,
+            detail="Country cannot be empty",
+        )
 
     if (
         await cruds_sdec_facturation.get_facture_individual_by_number(
@@ -887,11 +902,11 @@ async def create_facture_individual(
 
 @module.router.patch(
     "/sdec_facturation/facture_individual/{facture_individual_id}",
-    status_code=200,
+    status_code=204,
 )
 async def update_facture_individual(
     facture_individual_id: uuid.UUID,
-    facture_individual_edit: schemas_sdec_facturation.FactureIndividualUpdate,
+    facture_individual_edit: schemas_sdec_facturation.FactureUpdate,
     db: AsyncSession = Depends(get_db),
     _=Depends(is_user_in([GroupType.sdec_facturation_admin])),
 ) -> None:
@@ -899,7 +914,6 @@ async def update_facture_individual(
     Update a facture individual in the database
     **This endpoint is only usable by SDEC Facturation admins**
     """
-
     facture_individual_db = await cruds_sdec_facturation.get_facture_individual_by_id(
         facture_individual_id,
         db,

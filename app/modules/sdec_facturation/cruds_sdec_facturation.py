@@ -839,7 +839,7 @@ async def create_facture_association(
 
 async def update_facture_association(
     facture_association_id: uuid.UUID,
-    facture_association_edit: schemas_sdec_facturation.FactureAssociationUpdate,
+    facture_association_edit: schemas_sdec_facturation.FactureUpdate,
     db: AsyncSession,
 ):
     """Update an associationciation invoice in the database"""
@@ -1016,7 +1016,7 @@ async def create_facture_individual(
 
 async def update_facture_individual(
     facture_individual_id: uuid.UUID,
-    facture_individual_edit: schemas_sdec_facturation.FactureIndividualUpdate,
+    facture_individual_edit: schemas_sdec_facturation.FactureUpdate,
     db: AsyncSession,
 ):
     """Update an individual invoice in the database"""
@@ -1028,11 +1028,6 @@ async def update_facture_individual(
         update(models_sdec_facturation.FactureIndividual)
         .where(models_sdec_facturation.FactureIndividual.id == facture_individual_id)
         .values(
-            firstname=facture_individual_edit.firstname,
-            lastname=facture_individual_edit.lastname,
-            adresse=facture_individual_edit.adresse,
-            postal_code=facture_individual_edit.postal_code,
-            city=facture_individual_edit.city,
             paid=facture_individual_edit.paid,
             payment_date=current_date,
         ),
