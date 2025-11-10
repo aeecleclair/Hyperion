@@ -10,9 +10,7 @@ from app.core.memberships import schemas_memberships
 from app.core.myeclpay import cruds_myeclpay, models_myeclpay, schemas_myeclpay
 from app.core.myeclpay.integrity_myeclpay import format_transfer_log
 from app.core.myeclpay.models_myeclpay import UserPayment
-from app.core.myeclpay.schemas_myeclpay import (
-    QRCodeContentData,
-)
+from app.core.myeclpay.schemas_myeclpay import TransactionRequestInfo
 from app.core.myeclpay.types_myeclpay import (
     TransferAlreadyConfirmedInCallbackError,
     TransferNotFoundByCallbackError,
@@ -34,7 +32,7 @@ RETENTION_DURATION = 10 * 365  # 10 years in days
 def verify_signature(
     public_key_bytes: bytes,
     signature: str,
-    data: QRCodeContentData,
+    data: TransactionRequestInfo,
     wallet_device_id: UUID,
     request_id: str,
 ) -> bool:

@@ -163,29 +163,39 @@ class History(BaseModel):
     refund: HistoryRefund | None = None
 
 
-class QRCodeContentData(BaseModel):
+class TransactionRequestInfo(BaseModel):
     """
-    Format of the data stored in the QR code.
-
-    This data will be signed using ed25519 and the private key of the WalletDevice that generated the QR Code.
+    Format of the data stored in a transaction request, either to pay directly of have a QR code scanned.
+    This data will be signed using ed25519 and the private key of the WalletDevice that allowed to be debited.
 
     id: Unique identifier of the QR Code
     tot: Total amount of the transaction, in cents
     iat: Generation datetime of the QR Code
     key: Id of the WalletDevice that generated the QR Code, will be used to verify the signature
-    store: If the QR Code is intended to be scanned for a Store Wallet, or for an other user Wallet
     """
 
     id: UUID
     tot: int
     iat: datetime
-    key: UUID
-    store: bool
-
-
-class ScanInfo(QRCodeContentData):
+    key: UUID  # debited wallet id
     signature: str
+
+
+class ScanInfo(TransactionRequestInfo):
+    """
+    Information encoded in a QR code, the seller sends a request
+    store: If the QR Code is intended to be scanned for a Store Wallet, or for an other user Wallet
+    """
+
+    store: bool
     bypass_membership: bool = False
+
+
+class PurchaseInfo(TransactionRequestInfo):
+    """
+    Information for a classical payment, the buyer sends a request.
+    There is nothing to add.
+    """
 
 
 class WalletBase(BaseModel):
