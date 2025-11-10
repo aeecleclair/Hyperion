@@ -16,7 +16,6 @@ from fastapi import (
     Query,
 )
 from fastapi.responses import FileResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
@@ -51,6 +50,7 @@ from app.core.myeclpay.types_myeclpay import (
 )
 from app.core.myeclpay.utils_myeclpay import (
     LATEST_TOS,
+    PURCHASE_EXPIRATION,
     QRCODE_EXPIRATION,
     is_user_latest_tos_signed,
     structure_model_to_schema,
@@ -1998,8 +1998,8 @@ async def store_scan_qrcode(
     **The user must have the `can_bank` permission for this store**
     """
     # If the QR Code is already used, we return an error
-    already_existing_used_qrcode = await cruds_myeclpay.get_used_qrcode(
-        qr_code_id=scan_info.id,
+    already_existing_used_qrcode = await cruds_myeclpay.get_used_transaction_request(
+        transaction_request_id=scan_info.id,
         db=db,
     )
     if already_existing_used_qrcode is not None:
@@ -2010,15 +2010,16 @@ async def store_scan_qrcode(
 
     # After scanning a QR Code, we want to add it to the list of already scanned QR Code
     # even if it fail to be banked
-    await cruds_myeclpay.create_used_qrcode(
-        qr_code=scan_info,
+    await cruds_myeclpay.create_used_transaction_request(
+        transaction_request=scan_info,
+        transaction_type=TransactionType.DIRECT,
         db=db,
     )
 
     await db.flush()
 
     # We start a SAVEPOINT to ensure that even if the following code fails due to a database exception,
-    # after roleback the `used_qrcode` will still be created and committed in db.
+    # after roleback the used QR Code will still be created and committed in db.
     async with db.begin_nested():
         store = await cruds_myeclpay.get_store(
             store_id=store_id,
@@ -2212,7 +2213,7 @@ async def user_purchase_store(
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
-    Bank a transation to a store at the user's request (whereas a scan is performed by a seller)
+    Bank a transaction to a store at the user's request (whereas a scan is performed by a seller)
 
     `signature` should be a base64 encoded string
      - signed using *ed25519*,
@@ -2227,9 +2228,9 @@ async def user_purchase_store(
         ```
 
     The provided content is checked to ensure:
-        - the payment information has not already been used to bank a transfer
-        - the transfer information is not expired
-        - the transfer is intended for an existing store
+        - the purchase information has not already been used to bank a transfer
+        - the purchase request is very recent (that is, the information is not expired)
+        - the purchase is intended for an existing store
         - the signature is valid and correspond to `wallet_device_id` public key
         - the debited's wallet device is active
         - the debited's Wallet balance greater than the total
@@ -2237,8 +2238,8 @@ async def user_purchase_store(
     **The user must be authenticated to use this endpoint**
     """
     # If the payment is already done, we return an error
-    already_existing_used_payment = await cruds_myeclpay.get_used_payment(
-        payment_id=purchase_info.id,
+    already_existing_used_payment = await cruds_myeclpay.get_used_transaction_request(
+        transaction_request_id=purchase_info.id,
         db=db,
     )
     if already_existing_used_payment is not None:
@@ -2249,15 +2250,16 @@ async def user_purchase_store(
 
     # After paying, we want to add it to the list of already made payments
     # even if it fail to be banked
-    await cruds_myeclpay.create_used_payment(
-        payment=purchase_info,
+    await cruds_myeclpay.create_used_transaction_request(
+        transaction_request=purchase_info,
+        transaction_type=TransactionType.INDIRECT,
         db=db,
     )
 
     await db.flush()
 
     # We start a SAVEPOINT to ensure that even if the following code fails due to a database exception,
-    # after rollback the `UsedPayment` will still be created and committed in db.
+    # after rollback the used purchase will still be created and committed in db.
     async with db.begin_nested():
         store = await cruds_myeclpay.get_store(
             store_id=store_id,
@@ -2287,7 +2289,6 @@ async def user_purchase_store(
                 detail="Wallet device is not active",
             )
 
-        # TODO: it's not a QRCodeContent but a Payment-related thingy
         if not verify_signature(
             public_key_bytes=debited_wallet_device.ed25519_public_key,
             signature=purchase_info.signature,
@@ -2300,8 +2301,6 @@ async def user_purchase_store(
                 detail="Invalid signature",
             )
 
-        # TODO: check the credited wallet exists
-
         # We verify the content respect some rules
         if purchase_info.tot <= 0:
             raise HTTPException(
@@ -2310,11 +2309,11 @@ async def user_purchase_store(
             )
 
         if purchase_info.iat < datetime.now(UTC) - timedelta(
-            minutes=QRCODE_EXPIRATION,  # TODO: is it relevant?
+            seconds=PURCHASE_EXPIRATION,
         ):
             raise HTTPException(
                 status_code=400,
-                detail="Payment information is expired",
+                detail="Purchase information is expired",
             )
 
         # We verify that the debited walled contains enough money
@@ -2358,8 +2357,9 @@ async def user_purchase_store(
                 detail="Insufficient balance in the debited wallet",
             )
 
-        # We check if the user is a member of the association
-        # and raise an error if not
+        # In case the store's structure requires a membership,
+        # we check if the user has it, and raise an error if not.
+        # Note: unlike the scan method, bypassing the membership is NOT allowed
         if store.structure.association_membership_id is not None:
             current_membership = (
                 await get_user_active_membership_to_association_membership(
