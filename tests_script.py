@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
 # We ignore .md files and GitHub workflows and app/modules to detect the scope of the changes
-IGNORE_PATHS_START = ("app/modules/", ".github/")
+IGNORE_PATHS_START = ("app/modules/", "tests/modules/", ".github/")
 IGNORE_EXTENSIONS = (".md",)
 
 
@@ -30,8 +30,17 @@ def detect_modules(changed_files):
     modules = set()
     for f in changed_files:
         logger.info(f"Changed file: {f}")
+        # We want to detect changes in app/modules/<module_name>/...
         if f.startswith("app/modules/"):
             module = f.split("/")[2]
+            modules.add(module)
+        # Or the modification of tests in tests/modules/<module_name>/... or tests/modules/test_<module_name>*.py
+        elif f.startswith("tests/modules/"):
+            parts = f.split("/")
+            if parts[2].startswith("test_"):
+                module = parts[2][5:].split(".")[0].split("_")[0]
+            else:
+                module = parts[2]
             modules.add(module)
     return sorted(modules)
 
