@@ -44,14 +44,28 @@ def is_module_scope_only(changed_files):
     )
 
 
-def get_modules_tests_patterns(modules, coverage=True, run_all=False):
+def get_modules_tests_patterns(modules):
     """Run pytest with coverage on core + modified modules."""
     patterns = []
     for mod in modules:
-        path = f"tests/test_{mod}*.py"
-        if Path(path).exists():
-            patterns.append(path)
-        else:
+        # Check for tests/modules/test_mod*.py pattern
+        path1 = f"tests/modules/test_{mod}*.py"
+        # Check for tests/modules/mod/ directory pattern
+        path2 = f"tests/modules/{mod}/"
+
+        found_tests = False
+
+        # Check if direct test files exist
+        if list(Path(".").glob(path1)):
+            patterns.append(path1)
+            found_tests = True
+
+        # Check if module directory with tests exists
+        if Path(path2).exists() and Path(path2).is_dir():
+            patterns.append(path2)
+            found_tests = True
+
+        if not found_tests:
             logger.warning(f"No tests found for module: {mod}")
 
     return patterns
@@ -83,9 +97,7 @@ def run_tests(modules, changed_files, coverage=True, run_all=False):
         logger.info("Running all tests.")
         return sys.exit(subprocess.call(base_cmd))  # noqa: S603
 
-    module_patterns = get_modules_tests_patterns(
-        modules, coverage=coverage, run_all=run_all,
-    )
+    module_patterns = get_modules_tests_patterns(modules)
     if not module_patterns:
         logger.warning("No tests found for the changed modules.")
     else:
