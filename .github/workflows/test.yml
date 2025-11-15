@@ -84,11 +84,11 @@ jobs:
 
       # Run unit tests, run them all when push to main branch
       - name: Run all unit tests
-        run: python test_script.py --cov --all
+        run: python tests_script.py --cov --all
         if: github.event_name == 'push'
 
       - name: Run unit tests for changed files
-        run: python test_script.py --cov
+        run: python tests_script.py --cov
         if: github.event_name == 'pull_request'
 
       - name: Upload coverage reports to Codecov
