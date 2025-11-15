@@ -55,9 +55,7 @@ async def read_information(
     status_code=200,
 )
 async def read_privacy():
-    """
-    Return Hyperion privacy
-    """
+    """Return Hyperion privacy"""
 
     return FileResponse("assets/privacy.txt")
 

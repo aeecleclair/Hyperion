@@ -8,6 +8,7 @@ pytest-alembic==0.12.1
 pytest-asyncio==0.26.0
 pytest-cov==6.1.1
 pytest-mock==3.14.1
+pytest-xdist==3.8.0   # to run tests in parallel
 pytest==8.3.5
 ruff==0.11.8
 types-aiofiles==24.1.0.20250516

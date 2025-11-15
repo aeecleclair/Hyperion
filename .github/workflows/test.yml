@@ -80,7 +80,7 @@ jobs:
           key: pytest_cache-${{ github.head_ref }}
 
       - name: Run unit tests with Postgresql
-        run: python -m pytest --cov
+        run: python -m pytest --cov -n auto
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5.5.1
