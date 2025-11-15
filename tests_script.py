@@ -1,0 +1,121 @@
+#!/usr/bin/env python3
+import logging
+import subprocess
+import sys
+from pathlib import Path
+
+# Configure logging for GitHub Actions
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger(__name__)
+
+# We ignore .md files and GitHub workflows and app/modules to detect the scope of the changes
+IGNORE_PATHS_START = ("app/modules/", ".github/")
+IGNORE_EXTENSIONS = (".md",)
+
+
+def get_changed_files():
+    """Enumerate files changed compared to main branch."""
+    try:
+        diff = subprocess.check_output(  # noqa: S603
+            ["git", "diff", "--name-only", "origin/main..."],  # noqa: S607
+            text=True,
+        ).strip()
+        return diff.splitlines()
+    except subprocess.CalledProcessError:
+        return []
+
+
+def detect_modules(changed_files):
+    """DDetect impacted modules based on file paths."""
+    modules = set()
+    for f in changed_files:
+        logger.info(f"Changed file: {f}")
+        if f.startswith("app/modules/"):
+            module = f.split("/")[2]
+            modules.add(module)
+    return sorted(modules)
+
+
+def is_module_scope_only(changed_files):
+    """Check if the changes are only within module scopes."""
+    return all(
+        f.startswith(IGNORE_PATHS_START) or f.endswith(IGNORE_EXTENSIONS)
+        for f in changed_files
+    )
+
+
+def get_modules_tests_patterns(modules, coverage=True, run_all=False):
+    """Run pytest with coverage on core + modified modules."""
+    patterns = []
+    for mod in modules:
+        path = f"tests/test_{mod}*.py"
+        if Path(path).exists():
+            patterns.append(path)
+        else:
+            logger.warning(f"No tests found for module: {mod}")
+
+    return patterns
+
+
+def get_other_tests_patterns(changed_files: list[str]) -> list[str]:
+    """Get patterns for other tests based on changed files."""
+    patterns = []
+    # If a database model changed, run migrations
+    if any("models" in f for f in changed_files):
+        patterns.append("tests/test_migrations.py")
+    # If a factory changed, run factories tests
+    if any("factory" in f for f in changed_files):
+        patterns.append("tests/test_factories.py")
+    return patterns
+
+
+def run_tests(modules, changed_files, coverage=True, run_all=False):
+    """Run tests based on changed modules."""
+    base_cmd = [
+        "pytest",
+    ]
+    if coverage:
+        base_cmd += [
+            "--cov",
+        ]
+
+    if run_all:
+        logger.info("Running all tests.")
+        return sys.exit(subprocess.call(base_cmd))  # noqa: S603
+
+    module_patterns = get_modules_tests_patterns(
+        modules, coverage=coverage, run_all=run_all,
+    )
+    if not module_patterns:
+        logger.warning("No tests found for the changed modules.")
+    else:
+        logger.info(f"Impacted modules tests: {', '.join(module_patterns)}")
+        base_cmd += module_patterns
+
+    get_other_tests = get_other_tests_patterns(changed_files)
+    if get_other_tests:
+        logger.info(f"Additional tests to run: {', '.join(get_other_tests)}")
+        base_cmd += get_other_tests
+
+    logger.info(f"Running tests with command: {' '.join(base_cmd)}")
+    sys.exit(subprocess.call(base_cmd))  # noqa: S603
+
+
+if __name__ == "__main__":
+    changed_files = get_changed_files()
+    modules = detect_modules(changed_files)
+    scope_only = is_module_scope_only(changed_files)
+
+    # Detect arg --cov
+    coverage = "--cov" in sys.argv
+    run_all = "--all" in sys.argv
+
+    # First we check if changes are module-scoped only
+    # If so, we run tests only for those modules
+    if scope_only and not run_all:
+        logger.info("Changes are module-scoped only.")
+        run_tests(modules, changed_files, coverage=coverage)
+    # Else
+    else:
+        logger.info("Changes affect broader scope, running all tests.")
+        run_tests(modules, changed_files, coverage=coverage, run_all=True)
