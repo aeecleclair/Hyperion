@@ -17,6 +17,7 @@ IGNORE_EXTENSIONS = (".md",)
 def get_changed_files():
     """Enumerate files changed compared to main branch."""
     try:
+        # We use git diff to get the list of changed files with Three dots (...) to compare with the base commit of the PR in the main branch
         diff = subprocess.check_output(  # noqa: S603
             ["git", "diff", "--name-only", "origin/main..."],  # noqa: S607
             text=True,
