@@ -120,8 +120,17 @@ class Structure(Base):
     __tablename__ = "myeclpay_structure"
 
     id: Mapped[PrimaryKey]
+    short_id: Mapped[str] = mapped_column(unique=True)
     name: Mapped[str] = mapped_column(unique=True)
+    siege_address_street: Mapped[str]
+    siege_address_city: Mapped[str]
+    siege_address_zipcode: Mapped[str]
+    siege_address_country: Mapped[str]
+    siret: Mapped[str | None]
+    iban: Mapped[str]
+    bic: Mapped[str]
     manager_user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
+    creation: Mapped[datetime]
     association_membership_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("core_association_membership.id"),
         default=None,
@@ -159,6 +168,7 @@ class Store(Base):
         ForeignKey("myeclpay_wallet.id"),
         unique=True,
     )
+    creation: Mapped[datetime]
 
     structure: Mapped[Structure] = relationship(init=False, lazy="joined")
 
@@ -240,3 +250,51 @@ class UsedQRCode(Base):
     qr_code_key: Mapped[UUID | None]
     qr_code_store: Mapped[bool | None]
     signature: Mapped[str | None]
+
+
+class Invoice(Base):
+    __tablename__ = "myeclpay_invoice"
+
+    id: Mapped[PrimaryKey]
+    reference: Mapped[str] = mapped_column(unique=True)
+    creation: Mapped[datetime]
+    start_date: Mapped[datetime]
+    end_date: Mapped[datetime]
+    total: Mapped[int]  # Stored in cents
+    structure_id: Mapped[UUID] = mapped_column(ForeignKey("myeclpay_structure.id"))
+    paid: Mapped[bool] = mapped_column(default=False)
+    received: Mapped[bool] = mapped_column(default=False)
+
+    details: Mapped[list["InvoiceDetail"]] = relationship(
+        init=False,
+        lazy="selectin",
+    )
+    structure: Mapped[Structure] = relationship(
+        init=False,
+        lazy="joined",
+    )
+
+
+class InvoiceDetail(Base):
+    __tablename__ = "myeclpay_invoice_detail"
+
+    invoice_id: Mapped[UUID] = mapped_column(
+        ForeignKey("myeclpay_invoice.id"),
+        primary_key=True,
+    )
+    store_id: Mapped[UUID] = mapped_column(
+        ForeignKey("myeclpay_store.id"),
+        primary_key=True,
+    )
+    total: Mapped[int]  # Stored in cents
+
+    store: Mapped[Store] = relationship(init=False, lazy="joined")
+
+
+class Withdrawal(Base):
+    __tablename__ = "myeclpay_withdrawal"
+
+    id: Mapped[PrimaryKey]
+    wallet_id: Mapped[UUID] = mapped_column(ForeignKey("myeclpay_wallet.id"))
+    total: Mapped[int]  # Stored in cents
+    creation: Mapped[datetime]

@@ -1,4 +1,4 @@
-name: Build and Publish Hyperion Docker Images
+name: Build and Publish Hyperion Prod Image
 on:
   workflow_dispatch:
   push:
@@ -6,7 +6,7 @@ on:
       - "v*.*.*"
 
 jobs:
-  docker:
+  build-and-deploy-prod:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
