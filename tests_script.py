@@ -26,7 +26,7 @@ def get_changed_files():
 
 
 def detect_modules(changed_files):
-    """DDetect impacted modules based on file paths."""
+    """Detect impacted modules based on file paths."""
     modules = set()
     for f in changed_files:
         logger.info(f"Changed file: {f}")
@@ -104,6 +104,7 @@ def run_tests(modules, changed_files, coverage=True, run_all=False):
 
     if run_all:
         logger.info("Running all tests.")
+        base_cmd += ["tests/"]
         return sys.exit(subprocess.call(base_cmd))  # noqa: S603
 
     module_patterns = get_modules_tests_patterns(modules)
@@ -113,30 +114,32 @@ def run_tests(modules, changed_files, coverage=True, run_all=False):
         logger.info(f"Impacted modules tests: {', '.join(module_patterns)}")
         base_cmd += module_patterns
 
-    get_other_tests = get_other_tests_patterns(changed_files)
-    if get_other_tests:
-        logger.info(f"Additional tests to run: {', '.join(get_other_tests)}")
-        base_cmd += get_other_tests
+    other_tests = get_other_tests_patterns(changed_files)
+    if other_tests:
+        logger.info(f"Additional tests to run: {', '.join(other_tests)}")
+        base_cmd += other_tests
 
     logger.info(f"Running tests with command: {' '.join(base_cmd)}")
     sys.exit(subprocess.call(base_cmd))  # noqa: S603
 
 
 if __name__ == "__main__":
-    changed_files = get_changed_files()
-    modules = detect_modules(changed_files)
-    scope_only = is_module_scope_only(changed_files)
-
-    # Detect arg --cov
+    # Detect arg --cov and --all
     coverage = "--cov" in sys.argv
     run_all = "--all" in sys.argv
 
+    changed_files = get_changed_files()
+    # First detect if the --all flag is set or if there are no changed files outside module scope
+    scope_only = not run_all and is_module_scope_only(changed_files)
+
     # First we check if changes are module-scoped only
     # If so, we run tests only for those modules
-    if scope_only and not run_all:
+    if scope_only:
         logger.info("Changes are module-scoped only.")
+        modules = detect_modules(changed_files)
         run_tests(modules, changed_files, coverage=coverage)
     # Else
     else:
         logger.info("Changes affect broader scope, running all tests.")
+        modules = []
         run_tests(modules, changed_files, coverage=coverage, run_all=True)
