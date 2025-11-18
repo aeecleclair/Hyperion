@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import logging
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -28,20 +29,25 @@ def get_changed_files():
 def detect_modules(changed_files):
     """Detect impacted modules based on file paths."""
     modules = set()
+
+    # Regex patterns for module detection
+    app_module_pattern = re.compile(r"^app/modules/([^/]+)/")
+    test_module_pattern = re.compile(r"^tests/modules/(?:test_)?([^/_.]+)")
+
     for f in changed_files:
         logger.info(f"Changed file: {f}")
-        # We want to detect changes in app/modules/<module_name>/...
-        if f.startswith("app/modules/"):
-            module = f.split("/")[2]
-            modules.add(module)
-        # Or the modification of tests in tests/modules/<module_name>/... or tests/modules/test_<module_name>*.py
-        elif f.startswith("tests/modules/"):
-            parts = f.split("/")
-            if parts[2].startswith("test_"):
-                module = parts[2][5:].split(".")[0].split("_")[0]
-            else:
-                module = parts[2]
-            modules.add(module)
+
+        # Check for app/modules/<module_name>/...
+        app_match = app_module_pattern.match(f)
+        if app_match:
+            modules.add(app_match.group(1))
+            continue
+
+        # Check for tests/modules/<module_name>/... or tests/modules/test_<module_name>*.py
+        test_match = test_module_pattern.match(f)
+        if test_match:
+            modules.add(test_match.group(1))
+
     return sorted(modules)
 
 
