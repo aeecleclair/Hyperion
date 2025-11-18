@@ -72,7 +72,7 @@ def get_modules_tests_patterns(modules):
         found_tests = False
 
         # Check if direct test files exist
-        if list(Path().glob(path1)):
+        if any(Path().glob(path1)):
             patterns.append(path1)
             found_tests = True
 
