@@ -180,7 +180,6 @@ async def init_objects() -> None:
         sport_category=SportCategory.masculine,
         edition_id=active_edition.id,
         is_athlete=True,
-        is_volunteer=True,
         validated=True,
         created_at=datetime.now(UTC),
     )
@@ -518,6 +517,7 @@ async def init_objects() -> None:
         id=uuid4(),
         edition_id=active_edition.id,
         name="Morning Shift",
+        manager_id=admin_user.id,
         description="Help with setup and registration",
         value=2,
         start_time=datetime(2024, 6, 15, 8, 0, tzinfo=UTC),
@@ -3104,6 +3104,7 @@ async def test_create_volunteer_shift_as_random(
 ) -> None:
     shift_info = VolunteerShiftBase(
         name="New Shift",
+        manager_id=admin_user.id,
         description="A new shift for testing",
         value=1,
         start_time=datetime.now(UTC),
@@ -3136,6 +3137,7 @@ async def test_create_volunteer_shift_as_admin(
 ) -> None:
     shift_info = VolunteerShiftBase(
         name="New Shift",
+        manager_id=admin_user.id,
         description="A new shift for testing",
         value=1,
         start_time=datetime.now(UTC),
@@ -3244,6 +3246,7 @@ async def test_delete_volunteer_shift_as_admin(
     new_shift = models_sport_competition.VolunteerShift(
         id=uuid4(),
         name="Shift to Delete",
+        manager_id=admin_user.id,
         description="A shift to delete",
         value=1,
         start_time=datetime.now(UTC),
@@ -3310,32 +3313,6 @@ async def test_get_own_volunteer_registrations(
     assert registrations[0]["shift_id"] == str(volunteer_shift.id)
 
 
-async def test_register_to_shift_as_non_volunteer(
-    client: TestClient,
-) -> None:
-    response = client.post(
-        f"/competition/volunteers/shifts/{volunteer_shift.id}/register",
-        headers={"Authorization": f"Bearer {user3_token}"},
-    )
-    assert response.status_code == 403, response.json()
-    assert (
-        "You must be registered for the competition as a volunteer to register for a volunteer shift"
-        in response.json()["detail"]
-    )
-
-    registrations = client.get(
-        "/competition/volunteers/me",
-        headers={"Authorization": f"Bearer {user3_token}"},
-    )
-    assert registrations.status_code == 200, registrations.json()
-    registrations_json = registrations.json()
-    registration_check = next(
-        (r for r in registrations_json if r["shift_id"] == str(volunteer_shift.id)),
-        None,
-    )
-    assert registration_check is None, registrations_json
-
-
 async def test_register_already_registered_to_shift(
     client: TestClient,
 ) -> None:
@@ -3353,14 +3330,6 @@ async def test_register_already_registered_to_shift(
 async def test_register_to_full_shift(
     client: TestClient,
 ) -> None:
-    async with get_TestingSessionLocal()() as db:
-        await db.execute(
-            update(models_sport_competition.CompetitionUser)
-            .where(models_sport_competition.CompetitionUser.user_id == user3.id)
-            .values(is_volunteer=True),
-        )
-        await db.commit()
-
     response = client.post(
         f"/competition/volunteers/shifts/{volunteer_shift.id}/register",
         headers={"Authorization": f"Bearer {user3_token}"},
@@ -3387,6 +3356,7 @@ async def test_register_to_volunteer_shift(
     new_shift = models_sport_competition.VolunteerShift(
         id=uuid4(),
         name="Another Shift",
+        manager_id=admin_user.id,
         description="Another shift for testing",
         value=1,
         start_time=datetime.now(UTC) + timedelta(days=1),
