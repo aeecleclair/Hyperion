@@ -467,14 +467,6 @@ async def create_competition_user(
     Create a competition user for the current edition.
     The user must exist in the core users database.
     """
-    if (
-        competition_user.is_volunteer
-        and user.school_id != SchoolType.centrale_lyon.value
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="Only Centrale Lyon students can register as volunteers",
-        )
     if not edition.inscription_enabled:
         raise HTTPException(
             status_code=400,
@@ -513,7 +505,6 @@ async def create_competition_user(
         is_cameraman=competition_user.is_cameraman,
         is_pompom=competition_user.is_pompom,
         is_fanfare=competition_user.is_fanfare,
-        is_volunteer=competition_user.is_volunteer,
         sport_category=competition_user.sport_category,
         created_at=datetime.now(UTC),
         validated=False,
@@ -548,11 +539,6 @@ async def edit_current_user_competition(
             status_code=404,
             detail="Competition user not found",
         )
-    if user_edit.is_volunteer and user.school_id != SchoolType.centrale_lyon.value:
-        raise HTTPException(
-            status_code=403,
-            detail="Only Centrale Lyon students can register as volunteers",
-        )
     if stored.validated:
         user_edit.validated = False
     user_edit.is_athlete = (
@@ -568,11 +554,6 @@ async def edit_current_user_competition(
     )
     user_edit.is_fanfare = (
         user_edit.is_fanfare if user_edit.is_fanfare is not None else stored.is_fanfare
-    )
-    user_edit.is_volunteer = (
-        user_edit.is_volunteer
-        if user_edit.is_volunteer is not None
-        else stored.is_volunteer
     )
     if (
         sum(
@@ -594,12 +575,11 @@ async def edit_current_user_competition(
             user_edit.is_fanfare,
             user_edit.is_cameraman,
             user_edit.is_athlete,
-            user_edit.is_volunteer,
         ],
     ):
         raise HTTPException(
             status_code=400,
-            detail="A user must be at least in one of the following categories: pompoms, fanfares, cameramen, athletes, volunteers",
+            detail="A user must be at least in one of the following categories: pompoms, fanfares, cameramen, athletes",
         )
     await cruds_sport_competition.update_competition_user(
         user.id,
@@ -650,9 +630,6 @@ async def edit_competition_user(
     user.is_fanfare = (
         user.is_fanfare if user.is_fanfare is not None else stored.is_fanfare
     )
-    user.is_volunteer = (
-        user.is_volunteer if user.is_volunteer is not None else stored.is_volunteer
-    )
     if (
         sum(
             [
@@ -673,12 +650,11 @@ async def edit_competition_user(
             user.is_fanfare,
             user.is_cameraman,
             user.is_athlete,
-            user.is_volunteer,
         ],
     ):
         raise HTTPException(
             status_code=400,
-            detail="A user must be at least in one of the following categories: pompoms, fanfares, cameramen, athletes, volunteers",
+            detail="A user must be at least in one of the following categories: pompoms, fanfares, cameramen, athletes",
         )
     await cruds_sport_competition.update_competition_user(user_id, edition.id, user, db)
 
@@ -806,6 +782,38 @@ async def invalidate_competition_user(
         edition.id,
         db,
     )
+
+
+@module.router.delete(
+    "/competition/users/{user_id}",
+    status_code=204,
+)
+async def delete_competition_user(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+    user: schemas_sport_competition.CompetitionUser = Depends(
+        is_user_in(group_id=GroupType.competition_admin),
+    ),
+) -> None:
+    stored = await cruds_sport_competition.load_competition_user_by_id(
+        db=db,
+        user_id=user_id,
+        edition_id=edition.id,
+    )
+    if stored is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Competition user not found",
+        )
+    if stored.validated:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete a validated competition user",
+        )
+    await cruds_sport_competition.delete_competition_user_by_id(user_id, edition.id, db)
 
 
 # endregion: Competition User
@@ -2834,6 +2842,24 @@ async def get_sport_podiums(
 
 
 @module.router.get(
+    "/competition/podiums/pompoms",
+    response_model=list[schemas_sport_competition.SchoolResult],
+    status_code=200,
+)
+async def get_pompom_podiums(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> list[schemas_sport_competition.SchoolResult]:
+    """
+    Get the pompoms podiums in the current edition.
+    """
+    return await cruds_sport_competition.load_pompom_podiums(edition.id, db)
+
+
+@module.router.get(
     "/competition/podiums/schools/{school_id}",
     response_model=list[schemas_sport_competition.TeamSportResultComplete],
     status_code=200,
@@ -2908,6 +2934,38 @@ async def create_sport_podium(
     return ranking_complete
 
 
+@module.router.post(
+    "/competition/podiums/pompoms",
+    response_model=list[schemas_sport_competition.SchoolResult],
+    status_code=201,
+)
+async def create_pompom_podium(
+    rankings: list[schemas_sport_competition.SchoolResult],
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        has_user_competition_access(
+            competition_group=CompetitionGroupType.sport_manager,
+        ),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> list[schemas_sport_competition.SchoolResult]:
+    """
+    Create or update the pompoms podium in the current edition.
+    """
+    await cruds_sport_competition.delete_pompom_ranking(
+        edition.id,
+        db,
+    )
+    await cruds_sport_competition.add_pompom_ranking(
+        rankings,
+        edition.id,
+        db,
+    )
+    return rankings
+
+
 @module.router.delete(
     "/competition/podiums/sports/{sport_id}",
     status_code=204,
@@ -2935,6 +2993,30 @@ async def delete_sport_podium(
         )
     await cruds_sport_competition.delete_sport_ranking(
         sport_id,
+        edition.id,
+        db,
+    )
+
+
+@module.router.delete(
+    "/competition/podiums/pompoms",
+    status_code=204,
+)
+async def delete_pompom_podium(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        has_user_competition_access(
+            competition_group=CompetitionGroupType.sport_manager,
+        ),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> None:
+    """
+    Delete the pompoms podium in the current edition.
+    """
+    await cruds_sport_competition.delete_pompom_ranking(
         edition.id,
         db,
     )
@@ -3878,10 +3960,17 @@ async def create_volunteer_shift(
     """
     Create a volunteer shift.
     """
+    manager = await cruds_users.get_user_by_id(db, shift.manager_id)
+    if manager is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Manager user not found.",
+        )
     db_shift = schemas_sport_competition.VolunteerShift(
         id=uuid4(),
         edition_id=edition.id,
         name=shift.name,
+        manager_id=shift.manager_id,
         description=shift.description,
         value=shift.value,
         start_time=shift.start_time,
@@ -4004,9 +4093,7 @@ async def get_my_volunteer_registrations(
 async def register_to_volunteer_shift(
     shift_id: UUID,
     db: AsyncSession = Depends(get_db),
-    competition_user: schemas_sport_competition.CompetitionUser = Depends(
-        is_competition_user(),
-    ),
+    user: models_users.CoreUser = Depends(is_user()),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -4014,10 +4101,10 @@ async def register_to_volunteer_shift(
     """
     Register to a volunteer shift.
     """
-    if not competition_user.is_volunteer:
+    if not user.school_id == SchoolType.centrale_lyon.value:
         raise HTTPException(
             status_code=403,
-            detail="You must be registered for the competition as a volunteer to register for a volunteer shift",
+            detail="You must be a Centrale Lyon student to register to a volunteer shift.",
         )
     db_shift = await cruds_sport_competition.load_volunteer_shift_by_id(
         shift_id,
@@ -4028,10 +4115,7 @@ async def register_to_volunteer_shift(
             status_code=404,
             detail="Volunteer shift not found.",
         )
-    if any(
-        registration.user_id == competition_user.user.id
-        for registration in db_shift.registrations
-    ):
+    if any(registration.user_id == user.id for registration in db_shift.registrations):
         raise HTTPException(
             status_code=400,
             detail="You are already registered to this volunteer shift.",
@@ -4043,7 +4127,7 @@ async def register_to_volunteer_shift(
         )
 
     db_registration = schemas_sport_competition.VolunteerRegistration(
-        user_id=competition_user.user.id,
+        user_id=user.id,
         shift_id=shift_id,
         edition_id=edition.id,
         validated=False,
