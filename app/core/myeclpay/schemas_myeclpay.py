@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import (
     BaseModel,
     Field,
+    model_validator,
 )
 
 from app.core.memberships import schemas_memberships
@@ -19,20 +20,44 @@ from app.core.users import schemas_users
 
 
 class StructureBase(BaseModel):
+    short_id: str = Field(
+        min_length=3,
+        max_length=3,
+        description="Short ID of the structure, used for invoices",
+    )
     name: str
     association_membership_id: UUID | None = None
     manager_user_id: str
+    siege_address_street: str
+    siege_address_city: str
+    siege_address_zipcode: str
+    siege_address_country: str
+    siret: str | None = None
+    iban: str
+    bic: str
 
 
-class Structure(StructureBase):
+class StructureSimple(StructureBase):
     id: UUID
+    creation: datetime
+
+
+class Structure(StructureSimple):
     manager_user: schemas_users.CoreUserSimple
     association_membership: schemas_memberships.MembershipSimple | None
 
 
 class StructureUpdate(BaseModel):
     name: str | None = None
+    short_id: str | None = None
     association_membership_id: UUID | None = None
+    siret: str | None = None
+    siege_address_street: str | None = None
+    siege_address_city: str | None = None
+    siege_address_zipcode: str | None = None
+    siege_address_country: str | None = None
+    iban: str | None = None
+    bic: str | None = None
 
 
 class StructureTranfert(BaseModel):
@@ -43,10 +68,14 @@ class StoreBase(BaseModel):
     name: str
 
 
-class Store(StoreBase):
+class StoreSimple(StoreBase):
     id: UUID
     structure_id: UUID
     wallet_id: UUID
+    creation: datetime
+
+
+class Store(StoreSimple):
     structure: Structure
 
 
@@ -259,3 +288,57 @@ class IntegrityCheckData(BaseModel):
     transactions: list[TransactionBase]
     transfers: list[Transfer]
     refunds: list[RefundBase]
+
+
+class BankAccountHolderEdit(BaseModel):
+    holder_user_id: str
+
+
+class InvoiceDetailBase(BaseModel):
+    invoice_id: UUID
+    store_id: UUID
+    total: int  # Stored in cents
+
+
+class InvoiceDetail(InvoiceDetailBase):
+    store: StoreSimple
+
+
+class InvoiceBase(BaseModel):
+    id: UUID
+    reference: str
+    structure_id: UUID
+    creation: datetime
+    start_date: datetime
+    end_date: datetime
+    total: int  # Stored in cents
+    paid: bool = False
+    received: bool = False
+
+
+class InvoiceInfo(InvoiceBase):
+    details: list[InvoiceDetailBase]
+
+    @model_validator(mode="after")
+    def validate_sum(self):
+        if sum(detail.total for detail in self.details) != self.total:
+            raise ValueError
+        return self
+
+
+class Invoice(InvoiceBase):
+    structure: Structure
+    details: list[InvoiceDetail]
+
+    @model_validator(mode="after")
+    def validate_details(self):
+        if sum(detail.total for detail in self.details) != self.total:
+            raise ValueError
+        return self
+
+
+class Withdrawal(BaseModel):
+    id: UUID
+    wallet_id: UUID
+    total: int  # Stored in cents
+    creation: datetime
