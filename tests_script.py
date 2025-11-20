@@ -29,7 +29,7 @@ def detect_modules(changed_files):
 
     # Regex patterns for module detection
     app_module_pattern = re.compile(r"^app/modules/([^/]+)/")
-    test_module_pattern = re.compile(r"^tests/modules/(?:test_)?([^/_.]+)")
+    test_module_pattern = re.compile(r"^tests/modules/(?:test_)?([^/.]+)")
 
     for f in changed_files:
         logger.info(f"Changed file: {f}")
