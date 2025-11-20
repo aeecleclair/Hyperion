@@ -3,7 +3,7 @@ name: Test
 
 on:
   pull_request:
-    types: [opened, edited, ready_for_review, synchronize]
+    types: [opened, ready_for_review, synchronize]
   push:
     branches:
       - main
