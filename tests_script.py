@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import logging
 import re
 import subprocess
@@ -10,21 +9,18 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
 # We ignore .md files and GitHub workflows and app/modules to detect the scope of the changes
-IGNORE_PATHS_START = ("app/modules/", "tests/modules/", ".github/")
+IGNORE_PATHS_START = ("app/modules/", "tests/modules/", ".github/", ".vscode/")
 IGNORE_EXTENSIONS = (".md",)
 
 
 def get_changed_files():
     """Enumerate files changed compared to main branch."""
-    try:
-        # We use git diff to get the list of changed files with Three dots (...) to compare with the base commit of the PR in the main branch
-        diff = subprocess.check_output(  # noqa: S603
-            ["git", "diff", "--name-only", "origin/main..."],  # noqa: S607
-            text=True,
-        ).strip()
-        return diff.splitlines()
-    except subprocess.CalledProcessError:
-        return []
+    # We use git diff to get the list of changed files with three dots (...) to compare with the base commit of the PR in the main branch
+    diff = subprocess.check_output(  # noqa: S603
+        ["git", "diff", "--name-only", "origin/main..."],  # noqa: S607
+        text=True,
+    ).strip()
+    return diff.splitlines()
 
 
 def detect_modules(changed_files):
