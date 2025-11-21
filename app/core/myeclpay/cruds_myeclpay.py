@@ -802,7 +802,8 @@ async def get_refunds_by_wallet_id(
     result = (
         (
             await db.execute(
-                select(models_myeclpay.Refund).where(
+                select(models_myeclpay.Refund)
+                .where(
                     or_(
                         models_myeclpay.Refund.debited_wallet_id == wallet_id,
                         models_myeclpay.Refund.credited_wallet_id == wallet_id,
@@ -813,6 +814,10 @@ async def get_refunds_by_wallet_id(
                     models_myeclpay.Refund.creation <= end_datetime
                     if end_datetime
                     else and_(True),
+                )
+                .options(
+                    selectinload(models_myeclpay.Refund.debited_wallet),
+                    selectinload(models_myeclpay.Refund.credited_wallet),
                 ),
             )
         )
