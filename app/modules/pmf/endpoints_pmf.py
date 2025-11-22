@@ -76,7 +76,7 @@ async def get_offers(
 
 @router.post(
     "/pmf/offer/",
-    response_model=list[schemas_pmf.OfferComplete],
+    response_model=schemas_pmf.OfferComplete,
     status_code=200,
 )
 async def create_offer(
@@ -102,9 +102,10 @@ async def create_offer(
     offer_db = schemas_pmf.OfferSimple(
         **offer.model_dump(),
         id=uuid.uuid4(),
-        author_id=user.id,
     )
-    return await cruds_pmf.create_offer(db=db, offer=offer_db)
+    await cruds_pmf.create_offer(db=db, offer=offer_db)
+    await db.flush()
+    return await cruds_pmf.get_offer_by_id(offer_id=offer_db.id, db=db)
 
 
 @router.put(
@@ -195,12 +196,15 @@ async def get_all_tags(
 async def get_tag(
     tag_id: UUID,
     db: AsyncSession = Depends(get_db),
-) -> schemas_pmf.TagComplete | None:
-    tags = await cruds_pmf.get_all_tags(db=db)
-    for tag in tags:
-        if tag.id == tag_id:
-            return tag
-    return None
+) -> schemas_pmf.TagComplete:
+    tag = await cruds_pmf.get_tag_by_id(tag_id=tag_id, db=db)
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+    return schemas_pmf.TagComplete(
+        tag=tag.tag,
+        id=tag.id,
+        created_at=tag.created_at,
+    )
 
 
 @router.post(
