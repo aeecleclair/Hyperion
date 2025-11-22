@@ -9,7 +9,13 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
 # We ignore .md files and GitHub workflows and app/modules to detect the scope of the changes
-IGNORE_PATHS_START = ("app/modules/", "tests/modules/", "migrations/", ".github/", ".vscode/")
+IGNORE_PATHS_START = (
+    "app/modules/",
+    "tests/modules/",
+    "migrations/",
+    ".github/",
+    ".vscode/",
+)
 IGNORE_EXTENSIONS = (".md",)
 
 
