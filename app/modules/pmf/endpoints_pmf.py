@@ -88,7 +88,9 @@ async def create_offer(
             GroupType.admin,
         ],
     ):
-        raise HTTPException(status_code=403, detail="Forbidden, you are not the author of this offer")
+        raise HTTPException(
+            status_code=403, detail="Forbidden, you are not the author of this offer"
+        )
 
     offer_db = schemas_pmf.OfferSimple(
         **offer.model_dump(),
@@ -96,6 +98,7 @@ async def create_offer(
         author_id=user.id,
     )
     return await cruds_pmf.create_offer(db=db, offer=offer_db)
+
 
 @router.put(
     "/pmf/offer/{offer_id}",
@@ -116,22 +119,22 @@ async def update_offer(
         raise HTTPException(status_code=404, detail="Offer not found")
 
     # Only the author or admin can update the offer
-    if (
-        offer_db.author_id != user.id
-        and not is_user_member_of_any_group(
-            user,
-            [
-                GroupType.admin,
-            ],
-        )
+    if offer_db.author_id != user.id and not is_user_member_of_any_group(
+        user,
+        [
+            GroupType.admin,
+        ],
     ):
-        raise HTTPException(status_code=403, detail="Forbidden, you are not the author of this offer")
+        raise HTTPException(
+            status_code=403, detail="Forbidden, you are not the author of this offer"
+        )
 
     await cruds_pmf.update_offer(
         offer_id=offer_id,
         structure_update=offer_update,
         db=db,
     )
+
 
 @router.delete(
     "/pmf/offer/{offer_id}",
@@ -151,18 +154,18 @@ async def delete_offer(
         raise HTTPException(status_code=404, detail="Offer not found")
 
     # Only the author or admin can delete the offer
-    if (
-        offer_db.author_id != user.id
-        and not is_user_member_of_any_group(
-            user,
-            [
-                GroupType.admin,
-            ],
-        )
+    if offer_db.author_id != user.id and not is_user_member_of_any_group(
+        user,
+        [
+            GroupType.admin,
+        ],
     ):
-        raise HTTPException(status_code=403, detail="Forbidden, you are not the author of this offer")
+        raise HTTPException(
+            status_code=403, detail="Forbidden, you are not the author of this offer"
+        )
 
     await cruds_pmf.delete_offer(offer_id=offer_id, db=db)
+
 
 @router.get(
     "/pmf/tags/",
@@ -173,6 +176,7 @@ async def get_all_tags(
     db: AsyncSession,
 ) -> list[schemas_pmf.TagComplete]:
     return await cruds_pmf.get_all_tags(db=db)
+
 
 @router.get(
     "/pmf/tag/{tag_id}",
@@ -188,6 +192,7 @@ async def get_tag(
         if tag.id == tag_id:
             return tag
     return None
+
 
 @router.post(
     "/pmf/tag/",
@@ -213,6 +218,7 @@ async def create_tag(
     await cruds_pmf.create_tag(tag=tag_db, db=db)
     return tag_db
 
+
 @router.put(
     "/pmf/tag/{tag_id}",
     response_model=None,
@@ -232,6 +238,7 @@ async def update_tag(
         raise HTTPException(status_code=404, detail="Tag not found")
 
     await cruds_pmf.update_tag(tag_id=tag_id, tag_update=tag_update, db=db)
+
 
 @router.delete(
     "/pmf/tag/{tag_id}",

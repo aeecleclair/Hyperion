@@ -16,7 +16,8 @@ class OfferTags(Base):
     __tablename__ = "pmf_offer_tags"
 
     offer_id: Mapped[UUID] = mapped_column(
-        ForeignKey("pmf_offers.id"), primary_key=True,
+        ForeignKey("pmf_offers.id"),
+        primary_key=True,
     )
     tag_id: Mapped[UUID] = mapped_column(ForeignKey("pmf_tags.id"), primary_key=True)
 
