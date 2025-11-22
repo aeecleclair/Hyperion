@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -16,6 +17,7 @@ router = APIRouter(tags=["pmf"])
 module = Module(
     root="pmf",
     tag="Pmf",
+    router=router,
     default_allowed_account_types=[
         AccountType.student,
         AccountType.staff,
@@ -41,7 +43,7 @@ async def get_offer(
         db=db,
     )
 
-    if not offer:
+    if offer is None:
         raise HTTPException(status_code=404, detail="Offer not found")
 
     return offer
@@ -221,6 +223,7 @@ async def create_tag(
     tag_db = schemas_pmf.TagComplete(
         **tag.model_dump(),
         id=uuid.uuid4(),
+        created_at=date.today(),
     )
     await cruds_pmf.create_tag(tag=tag_db, db=db)
     return tag_db

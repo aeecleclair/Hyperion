@@ -22,7 +22,9 @@ student_user: models_users.CoreUser
 alumni_user: models_users.CoreUser
 
 tag1_id = uuid.UUID("0b7dc7bf-0ab4-421a-bbe7-7ec064fcec8d")
+tag1: models_pmf.Tags
 tag2_id = uuid.UUID("1c8dc7bf-1ab4-421a-bbe7-7ec064fcec8d")
+tag2: models_pmf.Tags
 tag_fake_id = uuid.UUID("5e8ec7bf-4ab4-421a-bbe7-7ec064fcec8d")
 
 offer1_id = uuid.UUID("2b7dc7bf-2ab4-421a-bbe7-7ec064fcec8d")
@@ -30,6 +32,9 @@ offer2_id = uuid.UUID("3c8dc7bf-3ab4-421a-bbe7-7ec064fcec8d")
 offer3_id = uuid.UUID("4d9ec7bf-4ab4-421a-bbe7-7ec064fcec8d")
 offer_fake_id = uuid.UUID("5e9ec7bf-0ab4-421a-bbe7-7ec064fcec8d")
 
+not_alumni_token: str
+student_token: str
+alumni_token: str
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
@@ -49,18 +54,24 @@ async def init_objects():
         account_type=AccountType.former_student,
     )
 
-    tag_aero = models_pmf.Tags(
+    global not_alumni_token, student_token, alumni_token
+    not_alumni_token = create_api_access_token(not_alumni_user)
+    student_token = create_api_access_token(student_user)
+    alumni_token = create_api_access_token(alumni_user)
+
+    global tag1, tag2
+    tag1 = models_pmf.Tags(
         tag="Aeronautics",
         id=tag1_id,
         created_at=date(2023, 5, 1),
     )
-    tag_ai = models_pmf.Tags(
+    tag2 = models_pmf.Tags(
         tag="Artificial Intelligence",
         id=tag2_id,
         created_at=date(2023, 5, 1),
     )
-    await add_object_to_db(tag_aero)
-    await add_object_to_db(tag_ai)
+    await add_object_to_db(tag1)
+    await add_object_to_db(tag2)
 
     # Creat 5 offers
     offer_1 = models_pmf.PmfOffer(
@@ -78,7 +89,7 @@ async def init_objects():
         duration=92,
     )
     await add_object_to_db(offer_1)
-    offer_tag = models_pmf.OfferTags(offer_id=offer_1.id, tag_id=tag_aero.id)
+    offer_tag = models_pmf.OfferTags(offer_id=offer_1.id, tag_id=tag1.id)
     await add_object_to_db(offer_tag)
 
     offer_2 = models_pmf.PmfOffer(
@@ -96,7 +107,7 @@ async def init_objects():
         duration=92,
     )
     await add_object_to_db(offer_2)
-    offer_tag = models_pmf.OfferTags(offer_id=offer_2.id, tag_id=tag_ai.id)
+    offer_tag = models_pmf.OfferTags(offer_id=offer_2.id, tag_id=tag2.id)
     await add_object_to_db(offer_tag)
 
     # A 3rd offer with the two tags
@@ -115,8 +126,8 @@ async def init_objects():
         duration=92,
     )
     await add_object_to_db(offer_3)
-    offer_tag1 = models_pmf.OfferTags(offer_id=offer_3.id, tag_id=tag_aero.id)
-    offer_tag2 = models_pmf.OfferTags(offer_id=offer_3.id, tag_id=tag_ai.id)
+    offer_tag1 = models_pmf.OfferTags(offer_id=offer_3.id, tag_id=tag1.id)
+    offer_tag2 = models_pmf.OfferTags(offer_id=offer_3.id, tag_id=tag2.id)
     await add_object_to_db(offer_tag1)
     await add_object_to_db(offer_tag2)
 
@@ -132,7 +143,8 @@ async def init_objects():
 )
 def test_get_offer(offer_id: uuid.UUID, expected_code: int, client: TestClient):
     response = client.get(
-        f"/offers/{offer_id}",
+        f"/pmf/offers/{offer_id}",
+        headers={"Authorization": f"Bearer {student_token}"},
     )
     assert response.status_code == expected_code
 
@@ -141,23 +153,27 @@ def test_get_offer(offer_id: uuid.UUID, expected_code: int, client: TestClient):
     ("query", "expected_code", "expected_length"),
     [
         ("", 200, 3),
-        (f"?tag={tag1_id}", 200, 2),
-        (f"?tag={tag2_id}", 200, 2),
-        (f"?tag={tag1_id}&tag={tag2_id}", 200, 1),
-        (f"?tag={tag_fake_id}", 200, 0),
-        (f"?offer_type={OfferType.TFE}", 200, 2),
-        (f"?offer_type={OfferType.S_APP}", 200, 1),
-        (f"?location_type={LocationType.On_site}", 200, 1),
-        (f"?location_type={LocationType.Remote}", 200, 1),
-        ("?location_type=Fake", 200, 1),
-        (f"?tag={tag1_id}&offer_type={OfferType.TFE}", 200, 2),
+        ("?includedTags=Aeronautics", 200, 2),
+        ("?includedTags=Artificial+Intelligence", 200, 2),
+        ("?includedTags=Aeronautics&includedTags=Artificial+Intelligence", 200, 3),
+        ("?includedTags=Fake", 200, 0),
+        (f"?includedOfferTypes={OfferType.TFE.value}", 200, 2),
+        (f"?includedOfferTypes={OfferType.S_APP.value}", 200, 1),
+        (f"?includedLocationTypes={LocationType.On_site.value}", 200, 1),
+        (f"?includedLocationTypes={LocationType.Remote.value}", 200, 1),
+        ("?includedLocationTypes=FakeLocation", 422, 0),
+        (f"?includedTags=Aeronautics&includedOfferTypes={OfferType.TFE.value}", 200, 2),
+        ("?limit=2", 200, 2),
+        ("?offset=1", 200, 2),
+        ("?limit=2&offset=2", 200, 1),
     ],
 )
 def test_get_offers(
     query: uuid.UUID, expected_code: int, expected_length: int, client: TestClient
 ):
     response = client.get(
-        f"/offers{query}",
+        f"/pmf/offers/{query}",
     )
     assert response.status_code == expected_code
-    assert len(response.json()) == expected_length
+    if expected_code == 200:
+        assert len(response.json()) == expected_length
