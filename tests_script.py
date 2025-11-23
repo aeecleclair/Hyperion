@@ -129,7 +129,6 @@ def run_tests(modules, changed_files, coverage=True, run_all=False):
         logger.info("No tests to run.")
         return None
 
-    logger.info(f"Running tests with command: {' '.join(base_cmd)}")
     return run_command(base_cmd, coverage=coverage)
 
 
@@ -138,6 +137,7 @@ def run_command(base_cmd, coverage):
         base_cmd += [
             "--cov",
         ]
+    logger.info(f"Running command: {' '.join(base_cmd)}")
     sys.exit(subprocess.call(base_cmd))  # noqa: S603
 
 
