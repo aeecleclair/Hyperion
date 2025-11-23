@@ -9,7 +9,13 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
 # We ignore .md files and GitHub workflows and app/modules to detect the scope of the changes
-IGNORE_PATHS_START = ("app/modules/", "tests/modules/", ".github/", ".vscode/")
+IGNORE_PATHS_START = (
+    "app/modules/",
+    "tests/modules/",
+    "migrations/",
+    ".github/",
+    ".vscode/",
+)
 IGNORE_EXTENSIONS = (".md",)
 
 
@@ -60,8 +66,8 @@ def get_modules_tests_patterns(modules):
     """Run pytest with coverage on core + modified modules."""
     patterns = []
     for mod in modules:
-        # Check for tests/modules/test_mod*.py pattern
-        path1 = f"tests/modules/test_{mod}*.py"
+        # Check for tests/modules/test_mod.py pattern
+        path1 = f"tests/modules/test_{mod}.py"
         # Check for tests/modules/mod/ directory pattern
         path2 = f"tests/modules/{mod}/"
 
@@ -87,7 +93,7 @@ def get_other_tests_patterns(changed_files: list[str]) -> list[str]:
     """Get patterns for other tests based on changed files."""
     patterns = []
     # If a database model changed, run migrations
-    if any("models" in f for f in changed_files):
+    if any("models" in f or "migrations/" in f for f in changed_files):
         patterns.append("tests/test_migrations.py")
     # If a factory changed, run factories tests
     if any("factory" in f for f in changed_files):
@@ -105,6 +111,8 @@ def run_tests(modules, changed_files, coverage=True, run_all=False):
             "--cov",
         ]
 
+    intial_cmd_length = len(base_cmd)
+
     if run_all:
         logger.info("Running all tests.")
         base_cmd += ["tests/"]
@@ -121,6 +129,11 @@ def run_tests(modules, changed_files, coverage=True, run_all=False):
     if other_tests:
         logger.info(f"Additional tests to run: {', '.join(other_tests)}")
         base_cmd += other_tests
+
+    # Do not run if no tests have been added to the base_cmd
+    if len(base_cmd) == intial_cmd_length:
+        logger.info("No tests to run.")
+        return None
 
     logger.info(f"Running tests with command: {' '.join(base_cmd)}")
     sys.exit(subprocess.call(base_cmd))  # noqa: S603
