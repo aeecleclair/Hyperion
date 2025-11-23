@@ -106,17 +106,11 @@ def run_tests(modules, changed_files, coverage=True, run_all=False):
     base_cmd = [
         "pytest",
     ]
-    if coverage:
-        base_cmd += [
-            "--cov",
-        ]
-
-    intial_cmd_length = len(base_cmd)
 
     if run_all:
         logger.info("Running all tests.")
         base_cmd += ["tests/"]
-        return sys.exit(subprocess.call(base_cmd))  # noqa: S603
+        return run_command(base_cmd, coverage=coverage)
 
     module_patterns = get_modules_tests_patterns(modules)
     if not module_patterns:
@@ -131,11 +125,19 @@ def run_tests(modules, changed_files, coverage=True, run_all=False):
         base_cmd += other_tests
 
     # Do not run if no tests have been added to the base_cmd
-    if len(base_cmd) == intial_cmd_length:
+    if len(base_cmd) == 1:
         logger.info("No tests to run.")
         return None
 
-    logger.info(f"Running tests with command: {' '.join(base_cmd)}")
+    return run_command(base_cmd, coverage=coverage)
+
+
+def run_command(base_cmd, coverage):
+    if coverage:
+        base_cmd += [
+            "--cov",
+        ]
+    logger.info(f"Running command: {' '.join(base_cmd)}")
     sys.exit(subprocess.call(base_cmd))  # noqa: S603
 
 
