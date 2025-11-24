@@ -1,6 +1,5 @@
 from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
-from zoneinfo import ZoneInfo
 
 import aiofiles
 from icalendar import Calendar, Event, vRecur
@@ -102,6 +101,11 @@ async def confirm_event(db: AsyncSession, decision: Decision, event_id: str):
 
 
 def date_all_day(dt: datetime, all_day: bool) -> date:
+    """
+    RFC 5545 3.6.1 :
+    * The DTEND name is exclusive, so we add one day on the iCalendar file.
+    * The DTSTART is inclusive, but midnight in "Europe/Paris" is one day after 11PM in UTC, so we add one day as well.
+    """
     return (dt + timedelta(1)).date() if all_day else dt
 
 
