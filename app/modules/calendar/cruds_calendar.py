@@ -1,5 +1,6 @@
 from collections.abc import Sequence
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import aiofiles
 from icalendar import Calendar, Event, vRecur
@@ -14,7 +15,7 @@ calendar_file_path = "data/ics/ae_calendar.ics"
 
 
 async def get_all_events(db: AsyncSession) -> Sequence[models_calendar.Event]:
-    """Retriveve all the events in the database."""
+    """Retrieve all the events in the database."""
     result = await db.execute(
         select(models_calendar.Event).options(
             selectinload(models_calendar.Event.applicant),
@@ -100,13 +101,17 @@ async def confirm_event(db: AsyncSession, decision: Decision, event_id: str):
         await create_icalendar_file(db)
 
 
+def date_all_day(dt: datetime, all_day: bool) -> date:
+    return (dt + timedelta(1)).date() if all_day else dt
+
+
 async def create_icalendar_file(db: AsyncSession) -> None:
     """Create the ics file corresponding to the database. The calendar is entirely recreated each time an event is added or deleted in the db."""
     events = await get_all_events(db)
 
     calendar = Calendar()
     calendar.add("version", "2.0")  # Required field
-    calendar.add("proid", "myecl.fr")  # Required field
+    calendar.add("prodid", "-//AEECL//myecl.fr//fr-FR")  # Required field
 
     for event in events:
         if event.decision == Decision.approved:
@@ -114,8 +119,14 @@ async def create_icalendar_file(db: AsyncSession) -> None:
             ical_event.add("uid", f"{event.id}@myecl.fr")
             ical_event.add("summary", event.name)
             ical_event.add("description", event.description)
-            ical_event.add("dtstart", event.start)
-            ical_event.add("dtend", event.end)
+            ical_event.add(
+                "dtstart",
+                date_all_day(event.start, event.all_day),
+            )
+            ical_event.add(
+                "dtend",
+                date_all_day(event.end, event.all_day),
+            )
             ical_event.add("dtstamp", datetime.now(UTC))
             ical_event.add("class", "public")
             ical_event.add("organizer", event.organizer)
