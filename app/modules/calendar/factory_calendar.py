@@ -26,7 +26,7 @@ class CalendarFactory(Factory):
             location="Test location",
             type=CalendarEventType.eventAE,
             description="Test description",
-            decision=Decision.approved,
+            decision=Decision.approved.value,
             recurrence_rule=None,
         )
         await cruds_calendar.add_event(db, event)
