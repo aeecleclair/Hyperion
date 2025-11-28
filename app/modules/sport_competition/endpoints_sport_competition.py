@@ -813,6 +813,41 @@ async def delete_competition_user(
             status_code=400,
             detail="Cannot delete a validated competition user",
         )
+    captain_team = await cruds_sport_competition.load_team_by_captain_id(
+        user_id,
+        edition.id,
+        db,
+    )
+    if captain_team is not None:
+        next_user = next(
+            (user for user in captain_team.participants if user.user_id != user_id),
+            None,
+        )
+        if next_user is None:
+            hyperion_error_logger.error(
+                f"Team {captain_team.id} in edition {edition.id} has no participants other than the captain {user_id}",
+            )
+            await cruds_sport_competition.delete_team_by_id(
+                captain_team.id,
+                db,
+            )
+        else:
+            await cruds_sport_competition.update_team(
+                captain_team.id,
+                schemas_sport_competition.TeamEdit(captain_id=next_user.user_id),
+                db,
+            )
+
+    await cruds_sport_competition.delete_participant_by_user_id(
+        user_id,
+        edition.id,
+        db,
+    )
+    await cruds_sport_competition.delete_purchases_by_user_id(
+        user_id,
+        edition.id,
+        db,
+    )
     await cruds_sport_competition.delete_competition_user_by_id(user_id, edition.id, db)
 
 
@@ -2136,7 +2171,7 @@ async def join_sport(
             sport_id=sport_id,
             captain_id=user.user_id,
             created_at=datetime.now(UTC),
-            name=f"{user.user.firstname} {user.user.name} - {school.school.name}",
+            name=f"{user.user.firstname} {user.user.name}",
         )
         await cruds_sport_competition.add_team(new_team, db)
 

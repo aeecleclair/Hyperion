@@ -683,6 +683,20 @@ async def invalidate_competition_user(
     await db.flush()
 
 
+async def delete_participant_by_user_id(
+    user_id: str,
+    edition_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_sport_competition.CompetitionParticipant).where(
+            models_sport_competition.CompetitionParticipant.user_id == user_id,
+            models_sport_competition.CompetitionParticipant.edition_id == edition_id,
+        ),
+    )
+    await db.flush()
+
+
 async def delete_participant_by_ids(
     user_id: str,
     sport_id: UUID,
@@ -2524,6 +2538,20 @@ async def delete_purchase(
             models_sport_competition.CompetitionPurchase.user_id == user_id,
             models_sport_competition.CompetitionPurchase.product_variant_id
             == product_variant_id,
+        ),
+    )
+    await db.flush()
+
+
+async def delete_purchases_by_user_id(
+    user_id: str,
+    edition_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_sport_competition.CompetitionPurchase).where(
+            models_sport_competition.CompetitionPurchase.user_id == user_id,
+            models_sport_competition.CompetitionPurchase.edition_id == edition_id,
         ),
     )
     await db.flush()
