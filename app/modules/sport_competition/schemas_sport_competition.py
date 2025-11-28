@@ -85,6 +85,7 @@ class CompetitionUserBase(BaseModel):
     is_fanfare: bool = False
     is_cameraman: bool = False
     is_athlete: bool = False
+    allow_pictures: bool = True
 
     @model_validator(mode="after")
     def validate_sport_category(self) -> "CompetitionUserBase":
@@ -135,6 +136,7 @@ class CompetitionUserEdit(BaseModel):
     is_fanfare: bool | None = None
     is_cameraman: bool | None = None
     is_athlete: bool | None = None
+    allow_pictures: bool | None = None
 
 
 class SportBase(BaseModel):
@@ -325,13 +327,18 @@ class ProductVariantBase(BaseModel):
     price: int
     enabled: bool = True
     unique: bool
-    school_type: ProductSchoolType
+    school_type: ProductSchoolType | None = None
     public_type: ProductPublicType | None = None
 
 
 class ProductVariant(ProductVariantBase):
     edition_id: UUID
     id: UUID
+
+
+class ProductVariantStats(ProductVariant):
+    booked: NonNegativeInt
+    paid: NonNegativeInt
 
 
 class ProductVariantEdit(BaseModel):
@@ -356,7 +363,7 @@ class Product(ProductBase):
 
 
 class ProductComplete(Product):
-    variants: list[ProductVariant] = []
+    variants: list[ProductVariantStats] = []
 
 
 class ProductVariantComplete(ProductVariant):

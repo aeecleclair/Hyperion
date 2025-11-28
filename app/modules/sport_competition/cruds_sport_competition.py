@@ -433,6 +433,7 @@ async def add_competition_user(
             is_cameraman=user.is_cameraman,
             is_pompom=user.is_pompom,
             is_fanfare=user.is_fanfare,
+            allow_pictures=user.allow_pictures,
             validated=user.validated,
             created_at=user.created_at,
         ),
@@ -2062,7 +2063,11 @@ async def load_products(
             models_sport_competition.CompetitionProduct.edition_id == edition_id,
         )
         .options(
-            selectinload(models_sport_competition.CompetitionProduct.variants),
+            selectinload(
+                models_sport_competition.CompetitionProduct.variants,
+            ).selectinload(
+                models_sport_competition.CompetitionProductVariant.purchases,
+            ),
         ),
     )
     return [
@@ -2073,7 +2078,7 @@ async def load_products(
             required=product.required,
             description=product.description,
             variants=[
-                schemas_sport_competition.ProductVariant(
+                schemas_sport_competition.ProductVariantStats(
                     id=variant.id,
                     edition_id=variant.edition_id,
                     product_id=variant.product_id,
@@ -2084,6 +2089,8 @@ async def load_products(
                     unique=variant.unique,
                     school_type=variant.school_type,
                     public_type=variant.public_type,
+                    booked=len(variant.purchases),
+                    paid=sum(purchase.validated for purchase in variant.purchases),
                 )
                 for variant in product.variants
             ],
