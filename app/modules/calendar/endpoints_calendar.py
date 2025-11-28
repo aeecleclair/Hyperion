@@ -577,7 +577,7 @@ async def get_ical_url(
         secret = secret_db.secret
 
     return schemas_calendar.IcalSecret(
-        secret=f"https://{settings.CLIENT_URL}calendar/ical?secret={secret}",
+        secret=f"{settings.CLIENT_URL}calendar/ical?secret={secret}",
     )
 
 
