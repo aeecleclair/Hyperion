@@ -888,7 +888,7 @@ async def create_cash_of_user(
 
     message = Message(
         title="AMAP - Solde mis à jour",
-        content=f"Votre nouveau solde est de {cash.balance//100}€{cash.balance%100}.",
+        content=f"Votre nouveau solde est de {cash.balance // 100}€{cash.balance % 100}.",
         action_module="amap",
     )
     await notification_tool.send_notification_to_user(
