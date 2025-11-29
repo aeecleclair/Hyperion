@@ -50,7 +50,7 @@ jobs:
 
     steps:
       - name: Check out the code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Fetch full main branch history # We don't known the the base commit of the PR
         run: git fetch origin main --unshallow

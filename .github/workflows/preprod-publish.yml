@@ -29,13 +29,13 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.inputs.branch }}
 
       - name: Docker metadata
         id: meta
-        uses: docker/metadata-action@v5.8.0
+        uses: docker/metadata-action@v5.10.0
         with:
           images: ${{ secrets.DOCKER_REGISTRY_IDENTIFER }}/hyperion
           tags: |
