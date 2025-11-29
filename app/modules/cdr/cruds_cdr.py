@@ -455,9 +455,15 @@ async def get_all_purchases_by_user_id(
     user_id: str,
 ) -> Sequence[models_cdr.Purchase]:
     result = await db.execute(
-        select(models_cdr.Purchase).where(
+        select(models_cdr.Purchase)
+        .join(
+            models_cdr.ProductVariant,
+            models_cdr.Purchase.product_variant_id == models_cdr.ProductVariant.id,
+        )
+        .where(
             models_cdr.Purchase.user_id == user_id,
-        ),
+        )
+        .options(selectinload("*")),
     )
     return result.scalars().all()
 
