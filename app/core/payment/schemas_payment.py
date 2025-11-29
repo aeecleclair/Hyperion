@@ -24,7 +24,7 @@ class CheckoutComplete(BaseModel):
 
     payments: list[CheckoutPayment]
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator] # Current issue with mypy, see https://docs.pydantic.dev/2.0/usage/computed_fields/ and https://github.com/python/mypy/issues/1362
     @property
     def payment_completed(self) -> bool:
         total_paid = sum([payment.paid_amount for payment in self.payments])
@@ -34,3 +34,7 @@ class CheckoutComplete(BaseModel):
 class HelloAssoCheckoutMetadata(BaseModel):
     hyperion_checkout_id: str
     secret: str
+
+
+class PaymentUrl(BaseModel):
+    url: str

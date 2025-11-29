@@ -17,7 +17,12 @@ from app.dependencies import (
     is_user_a_member,
     is_user_in,
 )
-from app.modules.campaign import cruds_campaign, models_campaign, schemas_campaign
+from app.modules.campaign import (
+    cruds_campaign,
+    models_campaign,
+    schemas_campaign,
+)
+from app.modules.campaign.factory_campaign import CampaignFactory
 from app.modules.campaign.types_campaign import ListType, StatusType
 from app.types import standard_responses
 from app.types.content_type import ContentType
@@ -32,6 +37,7 @@ module = Module(
     root="vote",
     tag="Campaign",
     default_allowed_groups_ids=[GroupType.AE],
+    factory=CampaignFactory(),
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -60,8 +66,7 @@ async def get_sections(
             detail="Access forbidden : you are not a poll member",
         )
 
-    sections = await cruds_campaign.get_sections(db)
-    return sections
+    return await cruds_campaign.get_sections(db)
 
 
 @module.router.post(
@@ -148,8 +153,7 @@ async def get_lists(
             detail="Access forbidden : you are not a poll member",
         )
 
-    lists = await cruds_campaign.get_lists(db=db)
-    return lists
+    return await cruds_campaign.get_lists(db=db)
 
 
 @module.router.post(
@@ -218,12 +222,10 @@ async def add_list(
         members=members,
         program=campaign_list.program,
     )
-    try:
-        await cruds_campaign.add_list(campaign_list=model_list, db=db)
-        # We can't directly return the model_list because it doesn't have the relationships loaded
-        return await cruds_campaign.get_list_by_id(db=db, list_id=list_id)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+
+    await cruds_campaign.add_list(campaign_list=model_list, db=db)
+    # We can't directly return the model_list because it doesn't have the relationships loaded
+    return await cruds_campaign.get_list_by_id(db=db, list_id=list_id)
 
 
 @module.router.delete(
@@ -250,10 +252,7 @@ async def delete_list(
             detail=f"You can't delete a list if the vote has already begun. The module status is {status} but should be 'waiting'",
         )
 
-    try:
-        await cruds_campaign.delete_list(list_id=list_id, db=db)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    await cruds_campaign.delete_list(list_id=list_id, db=db)
 
 
 @module.router.delete(
@@ -280,14 +279,11 @@ async def delete_lists_by_type(
             detail=f"You can't delete a list if the vote has already begun. The module status is {status} but should be 'waiting'",
         )
 
-    try:
-        if list_type is None:
-            for type_obj in ListType:
-                await cruds_campaign.delete_list_by_type(list_type=type_obj, db=db)
-        else:
-            await cruds_campaign.delete_list_by_type(list_type=list_type, db=db)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    if list_type is None:
+        for type_obj in ListType:
+            await cruds_campaign.delete_list_by_type(list_type=type_obj, db=db)
+    else:
+        await cruds_campaign.delete_list_by_type(list_type=list_type, db=db)
 
 
 @module.router.patch(
@@ -327,14 +323,11 @@ async def update_list(
                     detail=f"User with id {member.user_id} doesn't exist.",
                 )
 
-    try:
-        await cruds_campaign.update_list(
-            list_id=list_id,
-            campaign_list=campaign_list,
-            db=db,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    await cruds_campaign.update_list(
+        list_id=list_id,
+        campaign_list=campaign_list,
+        db=db,
+    )
 
 
 @module.router.get(
@@ -349,8 +342,7 @@ async def get_voters(
     """
     Return the voters (groups allowed to vote) for the current campaign.
     """
-    voters = await cruds_campaign.get_voters(db=db)
-    return voters
+    return await cruds_campaign.get_voters(db=db)
 
 
 @module.router.post(
@@ -567,26 +559,23 @@ async def reset_vote(
             detail=f"The vote can only be reset in Published or Counting. The current status is {status}",
         )
 
-    try:
-        # Archive results to a json file
-        results = await get_results(db=db, user=user)
-        async with aiofiles.open(
-            f"data/campaigns/results-{datetime.now(UTC).date().isoformat()}.json",
-            mode="w",
-        ) as file:
-            await file.write(
-                json.dumps(
-                    [{"list_id": res.list_id, "count": res.count} for res in results],
-                ),
-            )
-
-        await cruds_campaign.reset_campaign(db=db)
-        await cruds_campaign.set_status(
-            db=db,
-            new_status=StatusType.waiting,
+    # Archive results to a json file
+    results = await get_results(db=db, user=user)
+    async with aiofiles.open(
+        f"data/campaigns/results-{datetime.now(UTC).date().isoformat()}.json",
+        mode="w",
+    ) as file:
+        await file.write(
+            json.dumps(
+                [{"list_id": res.list_id, "count": res.count} for res in results],
+            ),
         )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+
+    await cruds_campaign.reset_campaign(db=db)
+    await cruds_campaign.set_status(
+        db=db,
+        new_status=StatusType.waiting,
+    )
 
 
 @module.router.post(
@@ -643,19 +632,17 @@ async def vote(
         id=str(uuid.uuid4()),
         list_id=vote.list_id,
     )
-    try:
-        # Mark user has voted for the given section.
-        await cruds_campaign.mark_has_voted(
-            db=db,
-            user_id=user.id,
-            section_id=campaign_list.section_id,
-        )
-        await cruds_campaign.add_vote(
-            db=db,
-            vote=model_vote,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+
+    # Mark user has voted for the given section.
+    await cruds_campaign.mark_has_voted(
+        db=db,
+        user_id=user.id,
+        section_id=campaign_list.section_id,
+    )
+    await cruds_campaign.add_vote(
+        db=db,
+        vote=model_vote,
+    )
 
 
 @module.router.get(
@@ -688,8 +675,7 @@ async def get_sections_already_voted(
         )
 
     has_voted = await cruds_campaign.get_has_voted(db=db, user_id=user.id)
-    sections_ids = [section.section_id for section in has_voted]
-    return sections_ids
+    return [section.section_id for section in has_voted]
 
 
 @module.router.get(
@@ -740,11 +726,10 @@ async def get_results(
                 ),
             )
         return results
-    else:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Results can only be acceded by admins in counting mode or by everyone in published mode. The current status is {status}",
-        )
+    raise HTTPException(
+        status_code=400,
+        detail=f"Results can only be acceded by admins in counting mode or by everyone in published mode. The current status is {status}",
+    )
 
 
 @module.router.get(
@@ -835,7 +820,6 @@ async def create_campaigns_logo(
         upload_file=image,
         directory="campaigns",
         filename=str(list_id),
-        request_id=request_id,
         max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,

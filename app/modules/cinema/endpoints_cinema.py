@@ -8,20 +8,19 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import AccountType, GroupType
-from app.core.notification.notification_types import CustomTopic, Topic
-from app.core.notification.schemas_notification import Message
+from app.core.notification.schemas_notification import Message, Topic
 from app.core.users import models_users
 from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
     get_notification_tool,
-    get_request_id,
     get_scheduler,
     get_settings,
     is_user_a_member,
     is_user_in,
 )
 from app.modules.cinema import cruds_cinema, schemas_cinema
+from app.modules.cinema.factory_cinema import CinemaFactory
 from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
@@ -34,10 +33,21 @@ from app.utils.communication.date_manager import (
 from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import get_file_from_data, save_file_as_data
 
+root = "cinema"
+cinema_topic = Topic(
+    id=uuid.UUID("9a2b2a81-63e3-42b0-8edc-83cd57a003ec"),
+    module_root=root,
+    name="🎬 Cinema",
+    topic_identifier=None,
+    restrict_to_group_id=None,
+    restrict_to_members=True,
+)
 module = Module(
-    root="cinema",
+    root=root,
     tag="Cinema",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    registred_topics=[cinema_topic],
+    factory=CinemaFactory(),
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -109,8 +119,7 @@ async def get_sessions(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
 ):
-    result = await cruds_cinema.get_sessions(db=db)
-    return result
+    return await cruds_cinema.get_sessions(db=db)
 
 
 @module.router.post(
@@ -129,10 +138,9 @@ async def create_session(
         id=str(uuid.uuid4()),
         **session.model_dump(),
     )
-    try:
-        result = await cruds_cinema.create_session(session=db_session, db=db)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+
+    result = await cruds_cinema.create_session(session=db_session, db=db)
+
     session_date = result.start
     sunday = get_previous_sunday(session_date)
     if sunday > datetime.now(UTC):
@@ -156,7 +164,7 @@ async def create_session(
         )
 
         await notification_tool.send_notification_to_topic(
-            custom_topic=CustomTopic(topic=Topic.cinema),
+            topic_id=cinema_topic.id,
             message=message,
             scheduler=scheduler,
             defer_date=sunday,
@@ -197,7 +205,6 @@ async def create_campaigns_logo(
     session_id: str,
     image: UploadFile = File(...),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.cinema)),
-    request_id: str = Depends(get_request_id),
     db: AsyncSession = Depends(get_db),
 ):
     session = await cruds_cinema.get_session_by_id(db=db, session_id=session_id)
@@ -211,7 +218,6 @@ async def create_campaigns_logo(
         upload_file=image,
         directory="cinemasessions",
         filename=str(session_id),
-        request_id=request_id,
         max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,

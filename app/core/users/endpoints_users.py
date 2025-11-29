@@ -15,20 +15,24 @@ from fastapi import (
     Query,
     UploadFile,
 )
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import cruds_auth
 from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import AccountType, GroupType
+from app.core.notification.utils_notification import get_user_notification_topics
 from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users, models_users, schemas_users
+from app.core.users.factory_users import CoreUsersFactory
 from app.core.users.tools_users import get_account_type_and_school_id_from_email
 from app.core.utils import security
 from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
+    get_mail_templates,
+    get_notification_manager,
     get_request_id,
     get_settings,
     is_user,
@@ -39,6 +43,8 @@ from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.exceptions import UserWithEmailAlreadyExistError
 from app.types.module import CoreModule
+from app.types.s3_access import S3Access
+from app.utils.communication.notifications import NotificationManager
 from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
     create_and_send_email_migration,
@@ -53,12 +59,15 @@ core_module = CoreModule(
     root="users",
     tag="Users",
     router=router,
+    factory=CoreUsersFactory(),
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 hyperion_security_logger = logging.getLogger("hyperion.security")
-
+hyperion_s3_logger = logging.getLogger("hyperion.s3")
 templates = Jinja2Templates(directory="assets/templates")
+
+S3_USER_SUBFOLDER = "users"
 
 
 @router.get(
@@ -78,8 +87,7 @@ async def read_users(
     """
     accountTypes = accountTypes if len(accountTypes) != 0 else list(AccountType)
 
-    users = await cruds_users.get_users(db, included_account_types=accountTypes)
-    return users
+    return await cruds_users.get_users(db, included_account_types=accountTypes)
 
 
 @router.get(
@@ -97,8 +105,7 @@ async def count_users(
     **This endpoint is only usable by administrators**
     """
 
-    count = await cruds_users.count_users(db)
-    return count
+    return await cruds_users.count_users(db)
 
 
 @router.get(
@@ -135,7 +142,7 @@ async def search_users(
 
 
 @router.get(
-    "/users/account-types",
+    "/users/account-types/",
     response_model=list[AccountType],
     status_code=200,
 )
@@ -178,6 +185,7 @@ async def create_user_by_user(
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
     request_id: str = Depends(get_request_id),
+    mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
 ):
     """
     Start the user account creation process. The user will be sent an email with a link to activate his account.
@@ -197,14 +205,12 @@ async def create_user_by_user(
         )
         # We will send to the email a message explaining they already have an account and can reset their password if they want.
         if settings.SMTP_ACTIVE:
-            account_exists_content = templates.get_template(
-                "account_exists_mail.html",
-            ).render()
+            mail = mail_templates.get_mail_account_exist()
             background_tasks.add_task(
                 send_email,
                 recipient=user_create.email,
                 subject="MyECL - your account already exists",
-                content=account_exists_content,
+                content=mail,
                 settings=settings,
             )
 
@@ -219,6 +225,7 @@ async def create_user_by_user(
         db=db,
         settings=settings,
         request_id=request_id,
+        mail_templates=mail_templates,
     )
 
     return standard_responses.Result(success=True)
@@ -235,6 +242,7 @@ async def batch_create_users(
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
     request_id: str = Depends(get_request_id),
+    mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
     """
@@ -258,6 +266,7 @@ async def batch_create_users(
                 db=db,
                 settings=settings,
                 request_id=request_id,
+                mail_templates=mail_templates,
             )
         except Exception as error:
             failed[user_create.email] = str(error)
@@ -271,6 +280,7 @@ async def create_user(
     db: AsyncSession,
     settings: Settings,
     request_id: str,
+    mail_templates: calypsso.MailTemplates,
 ) -> None:
     """
     User creation process. This function is used by both `/users/create` and `/users/admin/create` endpoints
@@ -314,14 +324,15 @@ async def create_user(
     )
 
     if settings.SMTP_ACTIVE:
-        activation_content = templates.get_template("activation_mail.html").render(
-            {"calypsso_activate_url": calypsso_activate_url},
+        mail = mail_templates.get_mail_account_activation(
+            calypsso_activate_url,
         )
+
         background_tasks.add_task(
             send_email,
             recipient=email,
             subject="MyECL - confirm your email",
-            content=activation_content,
+            content=mail,
             settings=settings,
         )
         hyperion_security_logger.info(
@@ -342,6 +353,8 @@ async def activate_user(
     user: schemas_users.CoreUserActivateRequest,
     db: AsyncSession = Depends(get_db),
     request_id: str = Depends(get_request_id),
+    settings: Settings = Depends(get_settings),
+    notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
     Activate the previously created account.
@@ -360,7 +373,12 @@ async def activate_user(
 
     # We need to make sure the unconfirmed user is still valid
     if unconfirmed_user.expire_on < datetime.now(UTC):
-        raise HTTPException(status_code=400, detail="Expired activation token")
+        return RedirectResponse(
+            url=settings.CLIENT_URL
+            + calypsso.get_message_relative_url(
+                message_type=calypsso.TypeMessage.token_expired,
+            ),
+        )
 
     # An account with the same email may exist if:
     # - the user called two times the user creation endpoints and got two activation token
@@ -406,11 +424,71 @@ async def activate_user(
         email=unconfirmed_user.email,
     )
 
+    await db.flush()
+
     hyperion_security_logger.info(
         f"Activate_user: Activated user {confirmed_user.id} (email: {confirmed_user.email}) ({request_id})",
     )
+    # We need to create a file for the user in S3
+    # It will only contain the user email address as it is all we need to identify the person
+    hyperion_s3_logger.info(
+        confirmed_user.email,
+        {"s3_filename": confirmed_user.id, "s3_subfolder": S3_USER_SUBFOLDER},
+    )
+
+    # We want to subscribe the user to all topics by default
+    topics = await get_user_notification_topics(user=confirmed_user, db=db)
+    for topic in topics:
+        await notification_manager.subscribe_user_to_topic(
+            topic_id=topic.id,
+            user_id=confirmed_user.id,
+            db=db,
+        )
 
     return standard_responses.Result()
+
+
+@router.post(
+    "/users/s3-init",
+    status_code=201,
+)
+async def init_s3_for_users(
+    db: AsyncSession = Depends(get_db),
+    _: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    settings: Settings = Depends(get_settings),
+):
+    """
+    This endpoint is used to initialize the S3 bucket for users.
+    It will create a file for each existing user in the S3 bucket.
+    It should be used only once, when the S3 bucket is created.
+    """
+
+    # Get all users
+    users = await cruds_users.get_users(db=db)
+
+    # Get all files in the S3 bucket
+    # We need to use the S3Access class to get the files in the bucket
+    s3_access = S3Access(
+        failure_logger="hyperion.error",
+        folder="users",
+        s3_bucket_name=settings.S3_BUCKET_NAME,
+        s3_access_key_id=settings.S3_ACCESS_KEY_ID,
+        s3_secret_access_key=settings.S3_SECRET_ACCESS_KEY,
+    )
+    stored_files = await s3_access.list_object("")
+    file_names = [obj["Key"].split("/")[-1] for obj in stored_files["Contents"]]
+    count = 0
+    for user in users:
+        if user.id not in file_names:
+            # Create a file for each user
+            s3_access.write_file(
+                message=user.email,
+                filename=user.id,
+            )
+            count += 1
+    hyperion_error_logger.info(
+        f"Created {count} files in S3 bucket for users",
+    )
 
 
 @router.post(
@@ -460,6 +538,7 @@ async def recover_user(
     # We use embed for email parameter: https://fastapi.tiangolo.com/tutorial/body-multiple-params/#embed-a-single-body-parameter
     email: str = Body(..., embed=True),
     db: AsyncSession = Depends(get_db),
+    mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -479,17 +558,13 @@ async def recover_user(
                 )
             )
 
-            reset_content = templates.get_template(
-                "reset_mail_does_not_exist.html",
-            ).render(
-                {
-                    "calypsso_register_url": calypsso_register_url,
-                },
+            mail = mail_templates.get_mail_reset_password_account_does_not_exist(
+                register_url=calypsso_register_url,
             )
             send_email(
                 recipient=email,
                 subject="MyECL - reset your password",
-                content=reset_content,
+                content=mail,
                 settings=settings,
             )
         else:
@@ -521,15 +596,13 @@ async def recover_user(
         )
 
         if settings.SMTP_ACTIVE:
-            reset_content = templates.get_template("reset_mail.html").render(
-                {
-                    "calypsso_reset_url": calypsso_reset_url,
-                },
+            mail = mail_templates.get_mail_reset_password(
+                confirmation_url=calypsso_reset_url,
             )
             send_email(
                 recipient=db_user.email,
                 subject="MyECL - reset your password",
-                content=reset_content,
+                content=mail,
                 settings=settings,
             )
         else:
@@ -548,6 +621,7 @@ async def recover_user(
 async def reset_password(
     reset_password_request: schemas_users.ResetPasswordRequest,
     db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Reset the user password, using a **reset_token** provided by `/users/recover` endpoint.
@@ -561,7 +635,12 @@ async def reset_password(
 
     # We need to make sure the unconfirmed user is still valid
     if recover_request.expire_on < datetime.now(UTC):
-        raise HTTPException(status_code=400, detail="Expired reset token")
+        return RedirectResponse(
+            url=settings.CLIENT_URL
+            + calypsso.get_message_relative_url(
+                message_type=calypsso.TypeMessage.token_expired,
+            ),
+        )
 
     new_password_hash = security.get_password_hash(reset_password_request.new_password)
     await cruds_users.update_user_password_by_id(
@@ -576,6 +655,14 @@ async def reset_password(
         email=recover_request.email,
     )
 
+    # Revoke existing auth refresh tokens
+    # to force the user to reauthenticate on all services and devices
+    # when their token expire
+    await cruds_auth.revoke_refresh_token_by_user_id(
+        db=db,
+        user_id=recover_request.user_id,
+    )
+
     return standard_responses.Result()
 
 
@@ -587,6 +674,7 @@ async def migrate_mail(
     mail_migration: schemas_users.MailMigrationRequest,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -602,13 +690,11 @@ async def migrate_mail(
             f"Email migration: There is already an account with the email {mail_migration.new_email}",
         )
         if settings.SMTP_ACTIVE:
-            migration_content = templates.get_template(
-                "migration_mail_already_used.html",
-            ).render({})
+            mail = mail_templates.get_mail_mail_migration_already_exist()
             send_email(
                 recipient=mail_migration.new_email,
-                subject="MyECL - Confirm your new email adresse",
-                content=migration_content,
+                subject="MyECL - Confirm your new email address",
+                content=mail,
                 settings=settings,
             )
         return
@@ -618,7 +704,7 @@ async def migrate_mail(
         email=mail_migration.new_email,
         db=db,
     )
-    if user.school_id is not SchoolType.no_school and user.school_id != new_school_id:
+    if user.school_id not in (SchoolType.no_school.value, new_school_id):
         raise HTTPException(
             status_code=400,
             detail="New email address is not compatible with the current school",
@@ -629,6 +715,7 @@ async def migrate_mail(
         new_email=mail_migration.new_email,
         old_email=user.email,
         db=db,
+        mail_templates=mail_templates,
         settings=settings,
         make_user_external=False,
     )
@@ -685,27 +772,18 @@ async def migrate_mail_confirm(
         email=migration_object.new_email,
         db=db,
     )
-    try:
-        await cruds_users.update_user(
-            db=db,
-            user_id=migration_object.user_id,
-            user_update=schemas_users.CoreUserUpdateAdmin(
-                email=migration_object.new_email,
-                account_type=account,
-                school_id=new_school_id,
-            ),
-        )
-        await db.commit()
 
-    except Exception as error:
-        await db.rollback()
-        raise HTTPException(status_code=400, detail=str(error))
-    except IntegrityError:
-        await db.rollback()
-        raise HTTPException(
-            status_code=400,
-            detail="Email migration failed due to database integrity error",
-        )
+    await cruds_users.update_user(
+        db=db,
+        user_id=migration_object.user_id,
+        user_update=schemas_users.CoreUserUpdateAdmin(
+            email=migration_object.new_email,
+            account_type=account,
+            school_id=new_school_id,
+        ),
+    )
+
+    await db.flush()
 
     await cruds_users.delete_email_migration_code_by_token(
         confirmation_token=token,
@@ -751,6 +829,14 @@ async def change_password(
         db=db,
         user_id=user.id,
         new_password_hash=new_password_hash,
+    )
+
+    # Revoke existing auth refresh tokens
+    # to force the user to reauthenticate on all services and devices
+    # when their token expire
+    await cruds_auth.revoke_refresh_token_by_user_id(
+        db=db,
+        user_id=user.id,
     )
 
     return standard_responses.Result()
@@ -827,14 +913,6 @@ async def update_current_user(
     """
 
     await cruds_users.update_user(db=db, user_id=user.id, user_update=user_update)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise HTTPException(
-            status_code=400,
-            detail="Update failed due to database integrity error",
-        )
 
 
 @router.post(
@@ -847,6 +925,7 @@ async def merge_users(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
     settings: Settings = Depends(get_settings),
+    mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
 ):
     """
     Fusion two users into one. The first user will be deleted and its data will be transferred to the second user.
@@ -873,11 +952,17 @@ async def merge_users(
         user_kept_id=user_kept.id,
         user_deleted_id=user_deleted.id,
     )
+
+    mail = mail_templates.get_mail_account_merged(
+        deleted_mail=user_deleted.email,
+        kept_mail=user_kept.email,
+    )
+
     background_tasks.add_task(
         send_email,
         recipient=[user_kept.email, user_deleted.email],
-        subject="MyECL - Fusion de compte",
-        content=f"Le compte {user_deleted.email} a été fusionné avec le compte {user_kept.email}. Tout le contenu du compte {user_deleted.email} a été transféré sur le compte {user_kept.email}.\nMerci de vous connecter avec le compte {user_kept.email} pour accéder à vos données.",
+        subject="MyECL - Accounts merged",
+        content=mail,
         settings=settings,
     )
     hyperion_security_logger.info(
@@ -905,14 +990,6 @@ async def update_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     await cruds_users.update_user(db=db, user_id=user_id, user_update=user_update)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise HTTPException(
-            status_code=400,
-            detail="Update failed due to database integrity error",
-        )
 
 
 @router.post(
@@ -935,7 +1012,6 @@ async def create_current_user_profile_picture(
         upload_file=image,
         directory="profile-pictures",
         filename=str(user.id),
-        request_id=request_id,
         max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,

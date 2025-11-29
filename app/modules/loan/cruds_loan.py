@@ -2,7 +2,6 @@ from collections.abc import Sequence
 from datetime import datetime
 
 from sqlalchemy import delete, func, select, update
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -28,13 +27,8 @@ async def create_loaner(
     """Create a new loaner in database and return it"""
 
     db.add(loaner)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return loaner
+    await db.flush()
+    return loaner
 
 
 async def update_loaner(
@@ -47,7 +41,7 @@ async def update_loaner(
         .where(models_loan.Loaner.id == loaner_id)
         .values(**loaner_update.model_dump(exclude_none=True)),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def get_loaner_by_id(
@@ -71,7 +65,7 @@ async def delete_loaner_by_id(
     await db.execute(
         delete(models_loan.Loaner).where(models_loan.Loaner.id == loaner_id),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def create_item(
@@ -79,13 +73,8 @@ async def create_item(
     db: AsyncSession,
 ) -> models_loan.Item:
     db.add(item)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return item
+    await db.flush()
+    return item
 
 
 async def get_loaner_item_by_id(
@@ -126,7 +115,7 @@ async def update_loaner_item(
         .where(models_loan.Item.id == item_id)
         .values(**item_update.model_dump(exclude_none=True)),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def delete_loaner_items_by_loaner_id(
@@ -136,7 +125,7 @@ async def delete_loaner_items_by_loaner_id(
     await db.execute(
         delete(models_loan.Item).where(models_loan.Item.loaner_id == loaner_id),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def delete_loaner_item_by_id(
@@ -144,7 +133,7 @@ async def delete_loaner_item_by_id(
     db: AsyncSession,
 ):
     await db.execute(delete(models_loan.Item).where(models_loan.Item.id == item_id))
-    await db.commit()
+    await db.flush()
 
 
 async def get_loans_by_borrower(
@@ -170,13 +159,8 @@ async def create_loan(
     loan: models_loan.Loan,
 ) -> models_loan.Loan:
     db.add(loan)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return loan
+    await db.flush()
+    return loan
 
 
 async def update_loan(
@@ -189,7 +173,7 @@ async def update_loan(
         .where(models_loan.Loan.id == loan_id)
         .values(**loan_update.model_dump(exclude_none=True)),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def update_loan_returned_status(
@@ -208,7 +192,7 @@ async def update_loan_returned_status(
             },
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def get_loan_by_id(
@@ -228,7 +212,7 @@ async def delete_loan_by_id(
     db: AsyncSession,
 ):
     await db.execute(delete(models_loan.Loan).where(models_loan.Loan.id == loan_id))
-    await db.commit()
+    await db.flush()
 
 
 async def create_loan_content(
@@ -240,11 +224,7 @@ async def create_loan_content(
     """
 
     db.add(loan_content)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
+    await db.flush()
 
 
 async def get_loan_content_by_loan_id_item_id(
@@ -296,7 +276,7 @@ async def delete_loan_content_by_loan_id(
             models_loan.LoanContent.loan_id == loan_id,
         ),
     )
-    await db.commit()
+    await db.flush()
 
 
 async def delete_loan_content_by_item_id(
@@ -308,4 +288,4 @@ async def delete_loan_content_by_item_id(
             models_loan.LoanContent.item_id == item_id,
         ),
     )
-    await db.commit()
+    await db.flush()

@@ -7,21 +7,26 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import AccountType, GroupType
-from app.core.notification.notification_types import CustomTopic, Topic
 from app.core.notification.schemas_notification import Message
+from app.core.notification.utils_notification import get_topic_by_root_and_identifier
 from app.core.users import models_users
 from app.dependencies import (
     get_db,
+    get_notification_manager,
     get_notification_tool,
-    get_request_id,
     is_user_an_ecl_member,
     is_user_in,
 )
-from app.modules.advert import cruds_advert, models_advert, schemas_advert
+from app.modules.advert import (
+    cruds_advert,
+    models_advert,
+    schemas_advert,
+)
+from app.modules.advert.factory_advert import AdvertFactory
 from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
-from app.utils.communication.notifications import NotificationTool
+from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.tools import (
     get_file_from_data,
     is_group_id_valid,
@@ -29,10 +34,12 @@ from app.utils.tools import (
     save_file_as_data,
 )
 
+root = "advert"
 module = Module(
-    root="advert",
+    root=root,
     tag="Advert",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    factory=AdvertFactory(),
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -65,6 +72,7 @@ async def create_advertiser(
     advertiser: schemas_advert.AdvertiserBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
     Create a new advertiser.
@@ -81,16 +89,25 @@ async def create_advertiser(
             detail="Invalid id, group_manager_id must be a valid group id",
         )
 
-    try:
-        db_advertiser = models_advert.Advertiser(
-            id=str(uuid.uuid4()),
-            name=advertiser.name,
-            group_manager_id=advertiser.group_manager_id,
-        )
+    db_advertiser = models_advert.Advertiser(
+        id=str(uuid.uuid4()),
+        name=advertiser.name,
+        group_manager_id=advertiser.group_manager_id,
+    )
 
-        return await cruds_advert.create_advertiser(db_advertiser=db_advertiser, db=db)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+    result = await cruds_advert.create_advertiser(db_advertiser=db_advertiser, db=db)
+
+    await notification_manager.register_new_topic(
+        topic_id=uuid.uuid4(),
+        name=f"📣 Annonce - {db_advertiser.name}",
+        module_root=root,
+        topic_identifier=db_advertiser.id,
+        restrict_to_group_id=None,
+        restrict_to_members=True,
+        db=db,
+    )
+
+    return result
 
 
 @module.router.delete(
@@ -198,8 +215,7 @@ async def read_adverts(
             advertisers=advertisers,
             db=db,
         )
-    else:
-        return await cruds_advert.get_adverts(db=db)
+    return await cruds_advert.get_adverts(db=db)
 
 
 @module.router.get(
@@ -262,20 +278,24 @@ async def create_advert(
         **advert_params,
     )
 
-    try:
-        result = await cruds_advert.create_advert(db_advert=db_advert, db=db)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    result = await cruds_advert.create_advert(db_advert=db_advert, db=db)
+
     message = Message(
         title=f"📣 Annonce - {result.title}",
         content=result.content,
         action_module=module.root,
     )
 
-    await notification_tool.send_notification_to_topic(
-        custom_topic=CustomTopic(Topic.advert),
-        message=message,
+    topic = await get_topic_by_root_and_identifier(
+        module_root=root,
+        topic_identifier=advertiser.id,
+        db=db,
     )
+    if topic is not None:
+        await notification_tool.send_notification_to_topic(
+            topic_id=topic.id,
+            message=message,
+        )
 
     return result
 
@@ -389,7 +409,6 @@ async def create_advert_image(
     advert_id: str,
     image: UploadFile = File(...),
     user: models_users.CoreUser = Depends(is_user_an_ecl_member),
-    request_id: str = Depends(get_request_id),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -404,11 +423,19 @@ async def create_advert_image(
             detail="The advert does not exist",
         )
 
+    if not is_user_member_of_any_group(
+        user,
+        [GroupType.admin, advert.advertiser.group_manager_id],
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Unauthorized to manage {advert.advertiser.name} adverts",
+        )
+
     await save_file_as_data(
         upload_file=image,
         directory="adverts",
         filename=str(advert_id),
-        request_id=request_id,
         max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,

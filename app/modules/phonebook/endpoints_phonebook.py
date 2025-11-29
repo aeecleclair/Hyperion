@@ -10,11 +10,15 @@ from app.core.groups.groups_type import AccountType, GroupType
 from app.core.users import cruds_users, models_users
 from app.dependencies import (
     get_db,
-    get_request_id,
     is_user_an_ecl_member,
     is_user_in,
 )
-from app.modules.phonebook import cruds_phonebook, models_phonebook, schemas_phonebook
+from app.modules.phonebook import (
+    cruds_phonebook,
+    models_phonebook,
+    schemas_phonebook,
+)
+from app.modules.phonebook.factory_phonebook import PhonebookFactory
 from app.modules.phonebook.types_phonebook import RoleTags
 from app.types import standard_responses
 from app.types.content_type import ContentType
@@ -29,6 +33,7 @@ module = Module(
     root="phonebook",
     tag="Phonebook",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    factory=PhonebookFactory(),
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -47,7 +52,7 @@ async def get_all_associations(
     Return all associations from database as a list of AssociationComplete schemas
     """
     associations = await cruds_phonebook.get_all_associations(db)
-    associations_complete = [
+    return [
         schemas_phonebook.AssociationComplete(
             id=association.id,
             name=association.name,
@@ -59,7 +64,6 @@ async def get_all_associations(
         )
         for association in associations
     ]
-    return associations_complete
 
 
 @module.router.get(
@@ -594,7 +598,6 @@ async def delete_membership(
 async def create_association_logo(
     association_id: str,
     image: UploadFile = File(),
-    request_id: str = Depends(get_request_id),
     user: models_users.CoreUser = Depends(is_user_an_ecl_member),
     db: AsyncSession = Depends(get_db),
 ):
@@ -627,7 +630,6 @@ async def create_association_logo(
         upload_file=image,
         directory="associations",
         filename=association_id,
-        request_id=request_id,
         max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,

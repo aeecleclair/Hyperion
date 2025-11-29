@@ -2,13 +2,14 @@ import logging
 import re
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
-from pathlib import Path
+from io import BytesIO
 from uuid import UUID, uuid4
 
+import calypsso
 from fastapi import (
-    BackgroundTasks,
     Depends,
     HTTPException,
+    Response,
     WebSocket,
 )
 from fastapi.responses import FileResponse
@@ -18,11 +19,13 @@ from app.core.groups import cruds_groups, schemas_groups
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import cruds_memberships, schemas_memberships
 from app.core.payment.payment_tool import PaymentTool
+from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.users import cruds_users, models_users, schemas_users
 from app.core.users.cruds_users import get_user_by_id, get_users
 from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
+    get_mail_templates,
     get_payment_tool,
     get_settings,
     get_unsafe_db,
@@ -31,7 +34,8 @@ from app.dependencies import (
     is_user_a_member,
     is_user_in,
 )
-from app.modules.cdr import cruds_cdr, models_cdr, schemas_cdr
+from app.modules.cdr import coredata_cdr, cruds_cdr, models_cdr, schemas_cdr
+from app.modules.cdr.dependencies_cdr import get_current_cdr_year
 from app.modules.cdr.types_cdr import (
     CdrLogActionType,
     CdrStatus,
@@ -43,6 +47,7 @@ from app.modules.cdr.utils_cdr import (
     is_user_in_a_seller_group,
     validate_payment,
 )
+from app.types.exceptions import ObjectExpectedInDbNotFoundError
 from app.types.module import Module
 from app.types.websocket import (
     HyperionWebsocketsRoom,
@@ -62,6 +67,7 @@ module = Module(
     tag="Cdr",
     payment_callback=validate_payment,
     default_allowed_groups_ids=[GroupType.admin_cdr],
+    factory=None,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -139,7 +145,7 @@ async def get_cdr_users_pending_validation(
     }
 
     return [
-        schemas_cdr.CdrUser(
+        schemas_cdr.CdrUserPreview(
             account_type=user.account_type,
             school_id=user.school_id,
             curriculum=schemas_cdr.CurriculumComplete(
@@ -149,10 +155,6 @@ async def get_cdr_users_pending_validation(
             if user.id in curriculum_memberships_mapping
             else None,
             promo=user.promo,
-            email=user.email,
-            birthday=user.birthday,
-            phone=user.phone,
-            floor=user.floor,
             id=user.id,
             name=user.name,
             firstname=user.firstname,
@@ -231,6 +233,7 @@ async def update_cdr_user(
         is_user_in(GroupType.admin_cdr),
     ),
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
+    mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -276,23 +279,20 @@ async def update_cdr_user(
                 # We make the user non external with this migration
                 make_user_external=False,
                 db=db,
+                mail_templates=mail_templates,
                 settings=settings,
             )
 
-    try:
-        if user_update.floor or user_update.nickname:
-            await cruds_users.update_user(
-                db=db,
-                user_id=user_id,
-                user_update=schemas_users.CoreUserUpdate(
-                    nickname=user_update.nickname,
-                    floor=user_update.floor,
-                ),
-            )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+    if user_update.floor or user_update.nickname:
+        await cruds_users.update_user(
+            db=db,
+            user_id=user_id,
+            user_update=schemas_users.CoreUserUpdate(
+                nickname=user_update.nickname,
+                floor=user_update.floor,
+            ),
+        )
+    await db.flush()
 
     user_db = await get_user_by_id(db, user_id)
     if not user_db:
@@ -301,17 +301,30 @@ async def update_cdr_user(
             detail="User not found.",
         )
 
-    curriculum = await cruds_cdr.get_cdr_user_curriculum(db, user_id)
+    curriculum_membership = await cruds_cdr.get_cdr_user_curriculum(db, user_id)
+    curriculum: schemas_cdr.CurriculumComplete | None = None
+    if curriculum_membership:
+        curriculum_db = await cruds_cdr.get_curriculum_by_id(
+            db=db,
+            curriculum_id=curriculum_membership.curriculum_id,
+        )
+        if curriculum_db is None:
+            raise ObjectExpectedInDbNotFoundError(
+                object_name="curriculum",
+                object_id=curriculum_membership.curriculum_id,
+            )
+        curriculum = schemas_cdr.CurriculumComplete(
+            id=curriculum_db.id,
+            name=curriculum_db.name,
+        )
 
-    cdr_status = await get_core_data(schemas_cdr.Status, db)
+    cdr_status = await get_core_data(coredata_cdr.Status, db)
     if cdr_status.status == CdrStatus.onsite:
         try:
             await ws_manager.send_message_to_room(
                 message=schemas_cdr.UpdateUserWSMessageModel(
                     data=schemas_cdr.CdrUser(
-                        curriculum=schemas_cdr.CurriculumComplete(
-                            **curriculum.__dict__,
-                        ),
+                        curriculum=curriculum,
                         school_id=user_db.school_id,
                         account_type=user_db.account_type,
                         name=user_db.name,
@@ -384,13 +397,17 @@ async def get_sellers_by_user_id(
 async def get_online_sellers(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get all sellers that has online available products.
 
     **User must be authenticated to use this endpoint**
     """
-    return await cruds_cdr.get_online_sellers(db)
+    return await cruds_cdr.get_online_sellers(
+        db=db,
+        cdr_year=cdr_year.year,
+    )
 
 
 async def generate_and_send_results(
@@ -398,7 +415,8 @@ async def generate_and_send_results(
     # emails: schemas_cdr.ResultRequest,
     db: AsyncSession,
     # settings: Settings,
-) -> Path:
+) -> bytes:
+    cdr_year = await get_core_data(coredata_cdr.CdrYear, db)
     seller = await cruds_cdr.get_seller_by_id(db, seller_id)
     if not seller:
         raise HTTPException(
@@ -411,7 +429,11 @@ async def generate_and_send_results(
             status_code=404,
             detail="Seller group not found.",
         )
-    products = await cruds_cdr.get_products_by_seller_id(db, seller_id)
+    products = await cruds_cdr.get_products_by_seller_id(
+        db,
+        seller_id,
+        cdr_year.year,
+    )
     if len(products) == 0:
         raise HTTPException(
             status_code=400,
@@ -420,7 +442,10 @@ async def generate_and_send_results(
     variants: list[models_cdr.ProductVariant] = []
     product_fields: dict[UUID, list[models_cdr.CustomDataField]] = {}
     for product in products:
-        product_variants = await cruds_cdr.get_product_variants(db, product.id)
+        product_variants = await cruds_cdr.get_product_variants(
+            db,
+            product.id,
+        )
         variants.extend(product_variants)
         product_fields[product.id] = list(
             await cruds_cdr.get_product_customdata_fields(
@@ -450,33 +475,28 @@ async def generate_and_send_results(
                 each_user.id,
             ),
         )
+
     hyperion_error_logger.info(
-        f"Data for seller {seller.name} fetched. Starting to construct the dataframe.",
+        f"Data for seller {seller.name} fetched. Generating the Excel file.",
     )
-    df = construct_dataframe_from_users_purchases(
+
+    excel_io = BytesIO()
+
+    construct_dataframe_from_users_purchases(
         users_purchases=purchases_by_users,
         users=list(users),
         products=list(products),
         variants=variants,
         data_fields=product_fields,
         users_answers=users_answers,
-    )
-    hyperion_error_logger.info(
-        f"Dataframe for seller {seller.name} constructed. Generating the Excel file.",
+        export_io=excel_io,
     )
 
-    file_directory = "/app/data/cdr"
-    file_uuid = uuid4()
-    # file_name = f"CdR {datetime.now(tz=UTC).year} ventes {seller.name}.xlsx"
+    res = excel_io.getvalue()
 
-    Path.mkdir(Path(file_directory), parents=True, exist_ok=True)
-    df.to_excel(
-        Path(file_directory, str(file_uuid)),
-        index=False,
-        freeze_panes=(2, 3),
-        engine="xlsxwriter",
-    )
-    return Path(file_directory, str(file_uuid))
+    excel_io.close()
+
+    return res
 
     # Not working, we have to keep the file in the server
     # hyperion_error_logger.debug(
@@ -506,28 +526,27 @@ async def generate_and_send_results(
 )
 async def send_seller_results(
     seller_id: UUID,
-    # emails: schemas_cdr.ResultRequest,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
-    # settings: Settings = Depends(get_settings),
+    user: models_users.CoreUser = Depends(is_user_a_member),
 ):
     """
     Get a seller's results.
 
     **User must be CDR Admin to use this endpoint**
     """
-    # We don't use the emails parameter for now
-    # background_tasks.add_task(
-    #     generate_and_send_results,
-    #     seller_id=seller_id,
-    #     # emails=emails,
-    #     db=db,
-    #     # settings=settings,
-    # )
 
-    path = await generate_and_send_results(seller_id=seller_id, db=db)
-    return FileResponse(path)
+    await is_user_in_a_seller_group(seller_id, user=user, db=db)
+
+    res = await generate_and_send_results(seller_id=seller_id, db=db)
+
+    headers = {
+        "Content-Disposition": f'attachment; filename="results_{seller_id}.xlsx"',
+    }
+    return Response(
+        res,
+        headers=headers,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
 
 @module.router.get(
@@ -538,13 +557,17 @@ async def send_seller_results(
 async def get_all_available_online_products(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get a seller's online available products.
 
     **User must be authenticated to use this endpoint**
     """
-    return await cruds_cdr.get_online_products(db)
+    return await cruds_cdr.get_online_products(
+        db,
+        cdr_year.year,
+    )
 
 
 @module.router.get(
@@ -555,6 +578,7 @@ async def get_all_available_online_products(
 async def get_all_products(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get a seller's online available products.
@@ -570,7 +594,10 @@ async def get_all_products(
             status_code=403,
             detail="You must be a seller to get all documents.",
         )
-    return await cruds_cdr.get_products(db)
+    return await cruds_cdr.get_products(
+        db,
+        cdr_year.year,
+    )
 
 
 @module.router.post(
@@ -602,13 +629,10 @@ async def create_seller(
         group_id=seller.group_id,
         order=seller.order,
     )
-    try:
-        cruds_cdr.create_seller(db, db_seller)
-        await db.commit()
-        return await cruds_cdr.get_seller_by_id(db=db, seller_id=db_seller.id)
-    except Exception:
-        await db.rollback()
-        raise
+
+    cruds_cdr.create_seller(db, db_seller)
+    await db.flush()
+    return await cruds_cdr.get_seller_by_id(db=db, seller_id=db_seller.id)
 
 
 @module.router.patch(
@@ -634,16 +658,11 @@ async def update_seller(
             detail="You must specify at least one field to update",
         )
 
-    try:
-        await cruds_cdr.update_seller(
-            seller_id=seller_id,
-            seller=seller,
-            db=db,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+    await cruds_cdr.update_seller(
+        seller_id=seller_id,
+        seller=seller,
+        db=db,
+    )
 
 
 @module.router.delete(
@@ -654,6 +673,7 @@ async def delete_seller(
     seller_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Delete a seller.
@@ -661,7 +681,7 @@ async def delete_seller(
     **User must be CDR Admin to use this endpoint**
     """
     await check_request_consistency(db=db, seller_id=seller_id)
-    if await cruds_cdr.get_products_by_seller_id(
+    if await cruds_cdr.get_all_products_by_seller_id(
         db=db,
         seller_id=seller_id,
     ) or await cruds_cdr.get_documents_by_seller_id(db=db, seller_id=seller_id):
@@ -669,15 +689,11 @@ async def delete_seller(
             status_code=403,
             detail="Please delete all this seller products and documents first.",
         )
-    try:
-        await cruds_cdr.delete_seller(
-            seller_id=seller_id,
-            db=db,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.delete_seller(
+        seller_id=seller_id,
+        db=db,
+    )
 
 
 @module.router.get(
@@ -689,6 +705,7 @@ async def get_products_by_seller_id(
     seller_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get a seller's products.
@@ -696,7 +713,11 @@ async def get_products_by_seller_id(
     **User must be part of the seller's group to use this endpoint**
     """
     await is_user_in_a_seller_group(seller_id, user=user, db=db)
-    return await cruds_cdr.get_products_by_seller_id(db, seller_id)
+    return await cruds_cdr.get_products_by_seller_id(
+        db,
+        seller_id,
+        cdr_year.year,
+    )
 
 
 @module.router.get(
@@ -708,13 +729,18 @@ async def get_available_online_products(
     seller_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get a seller's online available products.
 
     **User must be authenticated to use this endpoint**
     """
-    return await cruds_cdr.get_online_products_by_seller_id(db, seller_id)
+    return await cruds_cdr.get_online_products_by_seller_id(
+        db,
+        seller_id,
+        cdr_year.year,
+    )
 
 
 @module.router.post(
@@ -727,6 +753,7 @@ async def create_product(
     product: schemas_cdr.ProductBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Create a product.
@@ -738,7 +765,7 @@ async def create_product(
         user=user,
         db=db,
     )
-    status = await get_core_data(schemas_cdr.Status, db)
+    status = await get_core_data(coredata_cdr.Status, db)
     if status.status == CdrStatus.closed:
         raise HTTPException(
             status_code=403,
@@ -750,46 +777,48 @@ async def create_product(
         name_fr=product.name_fr,
         name_en=product.name_en,
         available_online=product.available_online,
+        needs_validation=product.needs_validation,
         description_fr=product.description_fr,
         description_en=product.description_en,
         related_membership_id=product.related_membership.id
         if product.related_membership
         else None,
+        year=cdr_year.year,
     )
-    try:
-        cruds_cdr.create_product(db, db_product)
-        for constraint_id in product.product_constraints:
-            cruds_cdr.create_product_constraint(
-                db,
-                models_cdr.ProductConstraint(
-                    product_id=db_product.id,
-                    product_constraint_id=constraint_id,
-                ),
-            )
-        for constraint_id in product.document_constraints:
-            cruds_cdr.create_document_constraint(
-                db,
-                models_cdr.DocumentConstraint(
-                    product_id=db_product.id,
-                    document_id=constraint_id,
-                ),
-            )
-        for ticket in product.tickets:
-            cruds_cdr.create_ticket_generator(
-                db,
-                models_cdr.TicketGenerator(
-                    id=uuid4(),
-                    product_id=db_product.id,
-                    name=ticket.name,
-                    max_use=ticket.max_use,
-                    expiration=ticket.expiration,
-                ),
-            )
-        await db.commit()
-        return await cruds_cdr.get_product_by_id(db, db_product.id)
-    except Exception:
-        await db.rollback()
-        raise
+
+    cruds_cdr.create_product(db, db_product)
+    for constraint_id in product.product_constraints:
+        cruds_cdr.create_product_constraint(
+            db,
+            models_cdr.ProductConstraint(
+                product_id=db_product.id,
+                product_constraint_id=constraint_id,
+            ),
+        )
+    for constraint_id in product.document_constraints:
+        cruds_cdr.create_document_constraint(
+            db,
+            models_cdr.DocumentConstraint(
+                product_id=db_product.id,
+                document_id=constraint_id,
+            ),
+        )
+    for ticket in product.tickets:
+        cruds_cdr.create_ticket_generator(
+            db,
+            models_cdr.TicketGenerator(
+                id=uuid4(),
+                product_id=db_product.id,
+                name=ticket.name,
+                max_use=ticket.max_use,
+                expiration=ticket.expiration,
+            ),
+        )
+    await db.flush()
+    return await cruds_cdr.get_product_by_id(
+        db,
+        db_product.id,
+    )
 
 
 @module.router.patch(
@@ -822,52 +851,46 @@ async def update_product(
         user,
         db=db,
     )
-    status = await get_core_data(schemas_cdr.Status, db)
-    db_product = await check_request_consistency(
+    await check_request_consistency(
         db=db,
         seller_id=seller_id,
         product_id=product_id,
     )
-    if status.status in [
-        CdrStatus.onsite,
-        CdrStatus.closed,
-    ] or (
-        db_product and status.status == CdrStatus.online and db_product.available_online
-    ):
+    variants = await cruds_cdr.get_product_variants(
+        db=db,
+        product_id=product_id,
+    )
+    if variants and product.related_membership:
         raise HTTPException(
             status_code=403,
-            detail="This product can't be edited now. Please try creating a new product.",
+            detail="You can't link or unlink this product to a membership if it has variant in it.",
         )
-    try:
-        await cruds_cdr.update_product(
-            product_id=product_id,
-            product=product,
-            db=db,
-        )
-        if product.product_constraints is not None:
-            await cruds_cdr.delete_product_constraints(db=db, product_id=product_id)
-            for constraint_id in product.product_constraints:
-                cruds_cdr.create_product_constraint(
-                    db,
-                    models_cdr.ProductConstraint(
-                        product_id=product_id,
-                        product_constraint_id=constraint_id,
-                    ),
-                )
-        if product.document_constraints is not None:
-            await cruds_cdr.delete_document_constraints(db=db, product_id=product_id)
-            for constraint_id in product.document_constraints:
-                cruds_cdr.create_document_constraint(
-                    db,
-                    models_cdr.DocumentConstraint(
-                        product_id=product_id,
-                        document_id=constraint_id,
-                    ),
-                )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.update_product(
+        product_id=product_id,
+        product=product,
+        db=db,
+    )
+    if product.product_constraints is not None:
+        await cruds_cdr.delete_product_constraints(db=db, product_id=product_id)
+        for constraint_id in product.product_constraints:
+            cruds_cdr.create_product_constraint(
+                db,
+                models_cdr.ProductConstraint(
+                    product_id=product_id,
+                    product_constraint_id=constraint_id,
+                ),
+            )
+    if product.document_constraints is not None:
+        await cruds_cdr.delete_document_constraints(db=db, product_id=product_id)
+        for constraint_id in product.document_constraints:
+            cruds_cdr.create_document_constraint(
+                db,
+                models_cdr.DocumentConstraint(
+                    product_id=product_id,
+                    document_id=constraint_id,
+                ),
+            )
 
 
 @module.router.delete(
@@ -890,37 +913,27 @@ async def delete_product(
         user,
         db=db,
     )
-    status = await get_core_data(schemas_cdr.Status, db)
-    db_product = await check_request_consistency(
+
+    await check_request_consistency(
         db=db,
         seller_id=seller_id,
         product_id=product_id,
     )
-    if status.status in [
-        CdrStatus.onsite,
-        CdrStatus.closed,
-    ] or (
-        db_product and status.status == CdrStatus.online and db_product.available_online
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You can't delete a product once CDR has started.",
-        )
-    variants = await cruds_cdr.get_product_variants(db=db, product_id=product_id)
+
+    variants = await cruds_cdr.get_product_variants(
+        db=db,
+        product_id=product_id,
+    )
     if variants:
         raise HTTPException(
             status_code=403,
             detail="You can't delete this product because some variants are related to it.",
         )
-    try:
-        await cruds_cdr.delete_product(
-            product_id=product_id,
-            db=db,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.delete_product(
+        product_id=product_id,
+        db=db,
+    )
 
 
 @module.router.post(
@@ -934,6 +947,7 @@ async def create_product_variant(
     product_variant: schemas_cdr.ProductVariantBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Create a product variant.
@@ -950,11 +964,16 @@ async def create_product_variant(
         seller_id=seller_id,
         product_id=product_id,
     )
-    status = await get_core_data(schemas_cdr.Status, db)
+    status = await get_core_data(coredata_cdr.Status, db)
     if status.status == CdrStatus.closed:
         raise HTTPException(
             status_code=403,
             detail="CDR is closed. You cant add a new product.",
+        )
+    if product and not product.needs_validation and product_variant.price != 0:
+        raise HTTPException(
+            status_code=403,
+            detail="A product that does not need validation must be free.",
         )
     db_product_variant = models_cdr.ProductVariant(
         id=uuid4(),
@@ -967,6 +986,7 @@ async def create_product_variant(
         related_membership_added_duration=product_variant.related_membership_added_duration,
         description_fr=product_variant.description_fr,
         description_en=product_variant.description_en,
+        year=cdr_year.year,
     )
     if (
         product
@@ -986,25 +1006,22 @@ async def create_product_variant(
             status_code=403,
             detail="This product has no related membership. You can't specify a membership duration.",
         )
-    try:
-        cruds_cdr.create_product_variant(db, db_product_variant)
-        await db.commit()
-        for c in product_variant.allowed_curriculum:
-            cruds_cdr.create_allowed_curriculum(
-                db,
-                models_cdr.AllowedCurriculum(
-                    product_variant_id=db_product_variant.id,
-                    curriculum_id=c,
-                ),
-            )
-        await db.commit()
-        return await cruds_cdr.get_product_variant_by_id(
-            db=db,
-            variant_id=db_product_variant.id,
+
+    cruds_cdr.create_product_variant(db, db_product_variant)
+    await db.flush()
+    for c in product_variant.allowed_curriculum:
+        cruds_cdr.create_allowed_curriculum(
+            db,
+            models_cdr.AllowedCurriculum(
+                product_variant_id=db_product_variant.id,
+                curriculum_id=c,
+            ),
         )
-    except Exception:
-        await db.rollback()
-        raise
+    await db.flush()
+    return await cruds_cdr.get_product_variant_by_id(
+        db=db,
+        variant_id=db_product_variant.id,
+    )
 
 
 @module.router.patch(
@@ -1036,29 +1053,31 @@ async def update_product_variant(
         user,
         db=db,
     )
-    status = await get_core_data(schemas_cdr.Status, db)
+
     db_product = await check_request_consistency(
         db=db,
         seller_id=seller_id,
         product_id=product_id,
         variant_id=variant_id,
     )
-    if product_variant.model_fields_set != {
-        "enabled",
-    }:
-        if status.status in [
-            CdrStatus.onsite,
-            CdrStatus.closed,
-        ] or (
-            db_product
-            and status.status == CdrStatus.online
-            and db_product.available_online
-        ):
-            # We allow to update the enabled field even if CDR is onsite or closed
-            raise HTTPException(
-                status_code=403,
-                detail="This product can't be edited now. Please try creating a new product.",
-            )
+    purchases = await cruds_cdr.get_purchases_by_variant_id(
+        db=db,
+        product_variant_id=variant_id,
+    )
+    if purchases and "price" in product_variant.model_fields_set:
+        raise HTTPException(
+            status_code=403,
+            detail="You can't edit the price of this variant because it has already been purchased.",
+        )
+    if (
+        purchases
+        and "related_membership_added_duration" in product_variant.model_fields_set
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You can't edit the membership added duration of this variant because it has already been purchased.",
+        )
+
     if (
         db_product
         and not db_product.related_membership
@@ -1068,26 +1087,31 @@ async def update_product_variant(
             status_code=403,
             detail="This product has no related membership. You can't specify a membership duration.",
         )
-    try:
-        await cruds_cdr.update_product_variant(
-            variant_id=variant_id,
-            product_variant=product_variant,
-            db=db,
+    if (
+        product_variant.price is not None
+        and db_product
+        and (not db_product.needs_validation and product_variant.price != 0)
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="A product that does not need validation must be free.",
         )
-        if product_variant.allowed_curriculum is not None:
-            await cruds_cdr.delete_allowed_curriculums(db=db, variant_id=variant_id)
-            for c in product_variant.allowed_curriculum:
-                cruds_cdr.create_allowed_curriculum(
-                    db,
-                    models_cdr.AllowedCurriculum(
-                        product_variant_id=variant_id,
-                        curriculum_id=c,
-                    ),
-                )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.update_product_variant(
+        variant_id=variant_id,
+        product_variant=product_variant,
+        db=db,
+    )
+    if product_variant.allowed_curriculum is not None:
+        await cruds_cdr.delete_allowed_curriculums(db=db, variant_id=variant_id)
+        for c in product_variant.allowed_curriculum:
+            cruds_cdr.create_allowed_curriculum(
+                db,
+                models_cdr.AllowedCurriculum(
+                    product_variant_id=variant_id,
+                    curriculum_id=c,
+                ),
+            )
 
 
 @module.router.delete(
@@ -1111,32 +1135,27 @@ async def delete_product_variant(
         user,
         db=db,
     )
-    status = await get_core_data(schemas_cdr.Status, db)
-    db_product = await check_request_consistency(
+    await check_request_consistency(
         db=db,
         seller_id=seller_id,
         product_id=product_id,
         variant_id=variant_id,
     )
-    if status.status in [
-        CdrStatus.onsite,
-        CdrStatus.closed,
-    ] or (
-        db_product and status.status == CdrStatus.online and db_product.available_online
-    ):
+
+    purchases = await cruds_cdr.get_purchases_by_variant_id(
+        db=db,
+        product_variant_id=variant_id,
+    )
+    if purchases:
         raise HTTPException(
             status_code=403,
-            detail="You can't delete a product once CDR has started.",
+            detail="You can't delete this variant because it has been purchased.",
         )
-    try:
-        await cruds_cdr.delete_product_variant(
-            variant_id=variant_id,
-            db=db,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+    await cruds_cdr.delete_allowed_curriculums(db=db, variant_id=variant_id)
+    await cruds_cdr.delete_product_variant(
+        variant_id=variant_id,
+        db=db,
+    )
 
 
 @module.router.get(
@@ -1206,7 +1225,7 @@ async def create_document(
     **User must be part of the seller's group to use this endpoint**
     """
     await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
-    status = await get_core_data(schemas_cdr.Status, db)
+    status = await get_core_data(coredata_cdr.Status, db)
     if status.status == CdrStatus.closed:
         raise HTTPException(
             status_code=403,
@@ -1218,14 +1237,10 @@ async def create_document(
         seller_id=seller_id,
         name=document.name,
     )
-    try:
-        cruds_cdr.create_document(db, db_document)
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-    else:
-        return db_document
+
+    cruds_cdr.create_document(db, db_document)
+
+    return db_document
 
 
 @module.router.delete(
@@ -1253,15 +1268,11 @@ async def delete_document(
             status_code=403,
             detail="You can't delete a document that is a constraint for a product.",
         )
-    try:
-        await cruds_cdr.delete_document(
-            document_id=document_id,
-            db=db,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.delete_document(
+        document_id=document_id,
+        db=db,
+    )
 
 
 @module.router.get(
@@ -1273,6 +1284,7 @@ async def get_purchases_by_user_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get a user's purchases.
@@ -1286,7 +1298,11 @@ async def get_purchases_by_user_id(
             status_code=403,
             detail="You're not allowed to see other users purchases.",
         )
-    purchases = await cruds_cdr.get_purchases_by_user_id(db=db, user_id=user_id)
+    purchases = await cruds_cdr.get_purchases_by_user_id(
+        db=db,
+        user_id=user_id,
+        cdr_year=cdr_year.year,
+    )
     result = []
     for purchase in purchases:
         product_variant = await cruds_cdr.get_product_variant_by_id(
@@ -1314,10 +1330,12 @@ async def get_purchases_by_user_id(
                             price=product_variant.price,
                             product=schemas_cdr.ProductComplete(
                                 id=product.id,
+                                year=product.year,
                                 seller_id=product.seller_id,
                                 name_fr=product.name_fr,
                                 name_en=product.name_en,
                                 available_online=product.available_online,
+                                needs_validation=product.needs_validation,
                                 description_fr=product.description_fr,
                                 description_en=product.description_en,
                                 related_membership=schemas_memberships.MembershipSimple(
@@ -1347,8 +1365,9 @@ async def get_purchases_by_user_id(
 async def get_my_purchases(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
-    return await get_purchases_by_user_id(user.id, db, user)
+    return await get_purchases_by_user_id(user.id, db, user, cdr_year)
 
 
 @module.router.get(
@@ -1361,6 +1380,7 @@ async def get_purchases_by_user_id_by_seller_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get a user's purchases.
@@ -1374,6 +1394,7 @@ async def get_purchases_by_user_id_by_seller_id(
         db=db,
         user_id=user_id,
         seller_id=seller_id,
+        cdr_year=cdr_year.year,
     )
     result = []
     for purchase in purchases:
@@ -1402,10 +1423,12 @@ async def get_purchases_by_user_id_by_seller_id(
                             price=product_variant.price,
                             product=schemas_cdr.ProductComplete(
                                 id=product.id,
+                                year=product.year,
                                 seller_id=product.seller_id,
                                 name_fr=product.name_fr,
                                 name_en=product.name_en,
                                 available_online=product.available_online,
+                                needs_validation=product.needs_validation,
                                 description_fr=product.description_fr,
                                 description_en=product.description_en,
                                 related_membership=schemas_memberships.MembershipSimple(
@@ -1438,13 +1461,14 @@ async def create_purchase(
     purchase: schemas_cdr.PurchaseBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Create a purchase.
 
     **User must create a purchase for themself and for an online available product or be part of the seller's group to use this endpoint**
     """
-    status = await get_core_data(schemas_cdr.Status, db)
+    status = await get_core_data(coredata_cdr.Status, db)
     if status.status in [CdrStatus.pending, CdrStatus.closed]:
         raise HTTPException(
             status_code=403,
@@ -1467,6 +1491,11 @@ async def create_purchase(
         raise HTTPException(
             status_code=404,
             detail="Invalid product.",
+        )
+    if product_variant.year != cdr_year.year:
+        raise HTTPException(
+            status_code=404,
+            detail="Product unavailable.",
         )
     if not (user_id == user.id and product.available_online):
         await is_user_in_a_seller_group(product.seller_id, user=user, db=db)
@@ -1493,30 +1522,109 @@ async def create_purchase(
         timestamp=datetime.now(UTC),
     )
     if existing_db_purchase:
-        try:
-            await cruds_cdr.update_purchase(
-                db=db,
-                user_id=user_id,
-                product_variant_id=product_variant_id,
-                purchase=purchase,
-            )
-            cruds_cdr.create_action(db, db_action)
-            await db.commit()
-        except Exception:
-            await db.rollback()
-            raise
-        else:
-            return db_purchase
-
-    try:
-        cruds_cdr.create_purchase(db, db_purchase)
+        await cruds_cdr.update_purchase(
+            db=db,
+            user_id=user_id,
+            product_variant_id=product_variant_id,
+            purchase=purchase,
+        )
         cruds_cdr.create_action(db, db_action)
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-    else:
+        await db.flush()
         return db_purchase
+
+    cruds_cdr.create_purchase(db, db_purchase)
+    cruds_cdr.create_action(db, db_action)
+    await db.flush()
+    return db_purchase
+
+
+@module.router.post(
+    "/cdr/batch-purchases/",
+    status_code=201,
+)
+async def create_purchase_batch(
+    batch: schemas_cdr.BatchPurchase,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
+):
+    """
+    Create a purchase for a list of user.
+
+    **User must be part of the seller's group to use this endpoint**
+    """
+    status = await get_core_data(coredata_cdr.Status, db)
+    if status.status in [CdrStatus.pending, CdrStatus.closed]:
+        raise HTTPException(
+            status_code=403,
+            detail="CDR is closed.",
+        )
+    product_variant = await cruds_cdr.get_product_variant_by_id(
+        db=db,
+        variant_id=batch.product_variant_id,
+    )
+    if not product_variant:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid product_variant_id",
+        )
+    product = await cruds_cdr.get_product_by_id(
+        db=db,
+        product_id=product_variant.product_id,
+    )
+    if not product:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid product.",
+        )
+    if product_variant.year != cdr_year.year:
+        raise HTTPException(
+            status_code=404,
+            detail="Product unavailable.",
+        )
+
+    await is_user_in_a_seller_group(product.seller_id, user=user, db=db)
+
+    for email in batch.user_emails:
+        user_db = await cruds_users.get_user_by_email(db=db, email=email)
+
+        if user_db is not None:
+            existing_db_purchase = await cruds_cdr.get_purchase_by_id(
+                db=db,
+                user_id=user_db.id,
+                product_variant_id=batch.product_variant_id,
+            )
+
+            db_purchase = models_cdr.Purchase(
+                user_id=user_db.id,
+                product_variant_id=batch.product_variant_id,
+                validated=False,
+                quantity=batch.quantity,
+                purchased_on=datetime.now(UTC),
+            )
+            db_action = models_cdr.CdrAction(
+                id=uuid4(),
+                user_id=user.id,
+                subject_id=db_purchase.user_id,
+                action_type=CdrLogActionType.purchase_add,
+                action=str(db_purchase.__dict__),
+                timestamp=datetime.now(UTC),
+            )
+            if existing_db_purchase:
+                await cruds_cdr.update_purchase(
+                    db=db,
+                    user_id=user_db.id,
+                    product_variant_id=batch.product_variant_id,
+                    purchase=schemas_cdr.PurchaseBase(quantity=batch.quantity),
+                )
+                cruds_cdr.create_action(db, db_action)
+                await db.flush()
+                continue
+
+            cruds_cdr.create_purchase(db, db_purchase)
+            cruds_cdr.create_action(db, db_action)
+        # If the user does not exist, we will pass silently
+    await db.flush()
 
 
 async def remove_existing_membership(
@@ -1571,7 +1679,7 @@ async def add_membership(
                 ),
             )
         else:
-            cruds_memberships.create_user_membership(
+            await cruds_memberships.create_user_membership(
                 db=db,
                 user_membership=schemas_memberships.UserMembershipSimple(
                     id=uuid4(),
@@ -1624,7 +1732,7 @@ async def mark_purchase_as_validated(
         db=db,
         product_id=product_variant.product_id,
     )
-    if not product:
+    if not product or not product.needs_validation:
         raise HTTPException(
             status_code=404,
             detail="Invalid product.",
@@ -1645,7 +1753,7 @@ async def mark_purchase_as_validated(
             )
             if not purchases:
                 if product_constraint.related_membership:
-                    if product_constraint.related_membership not in [
+                    if product_constraint.related_membership.id not in [
                         m.association_membership_id for m in memberships
                     ]:
                         raise HTTPException(
@@ -1700,7 +1808,7 @@ async def mark_purchase_as_validated(
                 (
                     m
                     for m in memberships
-                    if m.association_membership_id == product.related_membership
+                    if m.association_membership_id == product.related_membership.id
                 ),
                 None,
             )
@@ -1723,13 +1831,38 @@ async def mark_purchase_as_validated(
         product_variant_id=product_variant_id,
         validated=validated,
     )
-    try:
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-    else:
-        return db_purchase
+    await db.flush()
+    return db_purchase
+
+
+@module.router.post(
+    "/cdr/batch-validation/",
+    status_code=201,
+)
+async def validate_purchase_batch(
+    batch: schemas_cdr.BatchValidation,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+):
+    for email in batch.user_emails:
+        user_db = await cruds_users.get_user_by_email(db=db, email=email)
+
+        # We only want to add existing users to the group
+        if user_db is not None:
+            try:
+                await mark_purchase_as_validated(
+                    user_db.id,
+                    batch.product_variant_id,
+                    batch.validated,
+                    db,
+                    user,
+                )
+            except HTTPException as e:
+                hyperion_error_logger.info(
+                    f"Batch validation failed for user {email} with {e}",
+                )
+                continue
+        # If the user does not exist, we will pass silently
 
 
 @module.router.delete(
@@ -1741,6 +1874,7 @@ async def delete_purchase(
     product_variant_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Delete a purchase.
@@ -1785,7 +1919,11 @@ async def delete_purchase(
         )
 
     # Check if a validated purchase depends on this purchase
-    user_purchases = await cruds_cdr.get_purchases_by_user_id(db=db, user_id=user_id)
+    user_purchases = await cruds_cdr.get_purchases_by_user_id(
+        db=db,
+        user_id=user_id,
+        cdr_year=cdr_year.year,
+    )
     for purchase in user_purchases:
         if purchase.validated:
             purchased_product = await cruds_cdr.get_product_by_id(
@@ -1811,7 +1949,7 @@ async def delete_purchase(
                         all_possible_purchases.remove(db_purchase)
                         if not all_possible_purchases:
                             if product.related_membership:
-                                if product.related_membership not in [
+                                if product.related_membership.id not in [
                                     m.association_membership_id for m in memberships
                                 ]:
                                     raise HTTPException(
@@ -1832,18 +1970,14 @@ async def delete_purchase(
         action=str(db_purchase.__dict__),
         timestamp=datetime.now(UTC),
     )
-    try:
-        await cruds_cdr.delete_purchase(
-            user_id=user_id,
-            product_variant_id=product_variant_id,
-            db=db,
-            product_id=product.id,
-        )
-        cruds_cdr.create_action(db, db_action)
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.delete_purchase(
+        user_id=user_id,
+        product_variant_id=product_variant_id,
+        db=db,
+        product_id=product.id,
+    )
+    cruds_cdr.create_action(db, db_action)
 
 
 @module.router.get(
@@ -1914,7 +2048,7 @@ async def create_signature(
 
     **User must sign numerically or be part of the seller's group to use this endpoint**
     """
-    status = await get_core_data(schemas_cdr.Status, db)
+    status = await get_core_data(coredata_cdr.Status, db)
     if status.status == CdrStatus.pending:
         raise HTTPException(
             status_code=403,
@@ -1958,14 +2092,10 @@ async def create_signature(
         signature_type=signature.signature_type,
         numeric_signature_id=signature.numeric_signature_id,
     )
-    try:
-        cruds_cdr.create_signature(db, db_signature)
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-    else:
-        return db_signature
+
+    cruds_cdr.create_signature(db, db_signature)
+    await db.flush()
+    return db_signature
 
 
 @module.router.delete(
@@ -1993,16 +2123,12 @@ async def delete_signature(
             status_code=404,
             detail="Invalid signature",
         )
-    try:
-        await cruds_cdr.delete_signature(
-            user_id=user_id,
-            document_id=document_id,
-            db=db,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.delete_signature(
+        user_id=user_id,
+        document_id=document_id,
+        db=db,
+    )
 
 
 @module.router.get(
@@ -2037,7 +2163,7 @@ async def create_curriculum(
 
     **User must be CDR Admin to use this endpoint**
     """
-    status = await get_core_data(schemas_cdr.Status, db)
+    status = await get_core_data(coredata_cdr.Status, db)
     if status.status == CdrStatus.closed:
         raise HTTPException(
             status_code=403,
@@ -2047,14 +2173,10 @@ async def create_curriculum(
         id=uuid4(),
         name=curriculum.name,
     )
-    try:
-        cruds_cdr.create_curriculum(db, db_curriculum)
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-    else:
-        return db_curriculum
+
+    cruds_cdr.create_curriculum(db, db_curriculum)
+    await db.flush()
+    return db_curriculum
 
 
 @module.router.delete(
@@ -2080,15 +2202,11 @@ async def delete_curriculum(
             status_code=404,
             detail="Invalid curriculum_id",
         )
-    try:
-        await cruds_cdr.delete_curriculum(
-            curriculum_id=curriculum_id,
-            db=db,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.delete_curriculum(
+        curriculum_id=curriculum_id,
+        db=db,
+    )
 
 
 @module.router.post(
@@ -2132,37 +2250,35 @@ async def create_curriculum_membership(
         )
     curriculum = await cruds_cdr.get_curriculum_by_user_id(db=db, user_id=user_id)
     if curriculum:
-        purchases = await cruds_cdr.get_purchases_by_user_id(db=db, user_id=user_id)
+        purchases = await cruds_cdr.get_all_purchases_by_user_id(
+            db=db,
+            user_id=user_id,
+        )
         if purchases:
             raise HTTPException(
                 status_code=403,
                 detail="You can't edit this curriculum if user has purchases.",
             )
-        try:
-            await cruds_cdr.delete_curriculum_membership(
-                db=db,
-                user_id=user_id,
-                curriculum_id=curriculum.curriculum_id,
-            )
-            await db.commit()
-        except Exception:
-            await db.rollback()
-            raise
+
+        await cruds_cdr.delete_curriculum_membership(
+            db=db,
+            user_id=user_id,
+            curriculum_id=curriculum.curriculum_id,
+        )
+        await db.flush()
+
     curriculum_membership = models_cdr.CurriculumMembership(
         user_id=user_id,
         curriculum_id=curriculum_id,
     )
-    try:
-        cruds_cdr.create_curriculum_membership(
-            db=db,
-            curriculum_membership=curriculum_membership,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
 
-    cdr_status = await get_core_data(schemas_cdr.Status, db)
+    cruds_cdr.create_curriculum_membership(
+        db=db,
+        curriculum_membership=curriculum_membership,
+    )
+    await db.flush()
+
+    cdr_status = await get_core_data(coredata_cdr.Status, db)
     if cdr_status.status == CdrStatus.onsite:
         try:
             await ws_manager.send_message_to_room(
@@ -2231,18 +2347,15 @@ async def update_curriculum_membership(
             status_code=404,
             detail="Invalid curriculum_id",
         )
-    try:
-        await cruds_cdr.update_curriculum_membership(
-            db=db,
-            user_id=user_id,
-            curriculum_id=curriculum_id,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
 
-    cdr_status = await get_core_data(schemas_cdr.Status, db)
+    await cruds_cdr.update_curriculum_membership(
+        db=db,
+        user_id=user_id,
+        curriculum_id=curriculum_id,
+    )
+    await db.flush()
+
+    cdr_status = await get_core_data(coredata_cdr.Status, db)
     if cdr_status.status == CdrStatus.onsite:
         try:
             await ws_manager.send_message_to_room(
@@ -2311,18 +2424,15 @@ async def delete_curriculum_membership(
             status_code=404,
             detail="User not found.",
         )
-    try:
-        await cruds_cdr.delete_curriculum_membership(
-            db=db,
-            user_id=user_id,
-            curriculum_id=curriculum_id,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
 
-    cdr_status = await get_core_data(schemas_cdr.Status, db)
+    await cruds_cdr.delete_curriculum_membership(
+        db=db,
+        user_id=user_id,
+        curriculum_id=curriculum_id,
+    )
+    await db.flush()
+
+    cdr_status = await get_core_data(coredata_cdr.Status, db)
     if cdr_status.status == CdrStatus.onsite:
         try:
             await ws_manager.send_message_to_room(
@@ -2359,6 +2469,7 @@ async def get_payments_by_user_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get a user's payments.
@@ -2372,7 +2483,11 @@ async def get_payments_by_user_id(
             status_code=403,
             detail="You're not allowed to see other users payments.",
         )
-    return await cruds_cdr.get_payments_by_user_id(db=db, user_id=user_id)
+    return await cruds_cdr.get_payments_by_user_id(
+        db=db,
+        user_id=user_id,
+        cdr_year=cdr_year.year,
+    )
 
 
 @module.router.post(
@@ -2385,13 +2500,14 @@ async def create_payment(
     payment: schemas_cdr.PaymentBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Create a payment.
 
     **User must be CDR Admin to use this endpoint**
     """
-    status = await get_core_data(schemas_cdr.Status, db)
+    status = await get_core_data(coredata_cdr.Status, db)
     if status.status == CdrStatus.pending:
         raise HTTPException(
             status_code=403,
@@ -2402,6 +2518,7 @@ async def create_payment(
         user_id=user_id,
         total=payment.total,
         payment_type=payment.payment_type,
+        year=cdr_year.year,
     )
     db_action = models_cdr.CdrAction(
         id=uuid4(),
@@ -2411,15 +2528,11 @@ async def create_payment(
         action=str(db_payment.__dict__),
         timestamp=datetime.now(UTC),
     )
-    try:
-        cruds_cdr.create_payment(db, db_payment)
-        cruds_cdr.create_action(db, db_action)
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-    else:
-        return db_payment
+
+    cruds_cdr.create_payment(db, db_payment)
+    cruds_cdr.create_action(db, db_action)
+    await db.flush()
+    return db_payment
 
 
 @module.router.delete(
@@ -2459,16 +2572,12 @@ async def delete_payment(
         action=str(db_payment.__dict__),
         timestamp=datetime.now(UTC),
     )
-    try:
-        await cruds_cdr.delete_payment(
-            payment_id=payment_id,
-            db=db,
-        )
-        cruds_cdr.create_action(db, db_action)
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.delete_payment(
+        payment_id=payment_id,
+        db=db,
+    )
+    cruds_cdr.create_action(db, db_action)
 
 
 @module.router.post(
@@ -2480,13 +2589,23 @@ async def get_payment_url(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
-    payment_tool: PaymentTool = Depends(get_payment_tool),
+    payment_tool: PaymentTool = Depends(get_payment_tool(HelloAssoConfigName.CDR)),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get payment url
     """
-    purchases = await cruds_cdr.get_purchases_by_user_id(db=db, user_id=user.id)
-    payments = await cruds_cdr.get_payments_by_user_id(db=db, user_id=user.id)
+
+    purchases = await cruds_cdr.get_purchases_by_user_id(
+        db=db,
+        user_id=user.id,
+        cdr_year=cdr_year.year,
+    )
+    payments = await cruds_cdr.get_payments_by_user_id(
+        db=db,
+        user_id=user.id,
+        cdr_year=cdr_year.year,
+    )
 
     purchases_total = sum(
         purchase.product_variant.price * purchase.quantity for purchase in purchases
@@ -2524,10 +2643,8 @@ async def get_payment_url(
     )
     checkout = await payment_tool.init_checkout(
         module=module.root,
-        helloasso_slug="AEECL",
         checkout_amount=amount,
         checkout_name="Chaine de rentrée",
-        redirection_uri=settings.CDR_PAYMENT_REDIRECTION_URL or "",
         payer_user=user_schema,
         db=db,
     )
@@ -2540,26 +2657,44 @@ async def get_payment_url(
             checkout_id=checkout.id,
         ),
     )
-    try:
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
     return schemas_cdr.PaymentUrl(
         url=checkout.payment_url,
     )
 
 
 @module.router.get(
+    "/cdr/year/",
+    response_model=coredata_cdr.CdrYear,
+    status_code=200,
+)
+async def get_cdr_year(
+    db: AsyncSession = Depends(get_db),
+):
+    return await get_core_data(coredata_cdr.CdrYear, db)
+
+
+@module.router.patch(
+    "/cdr/year/",
+    status_code=204,
+)
+async def update_cdr_year(
+    cdr_year: coredata_cdr.CdrYear,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
+):
+    await set_core_data(cdr_year, db)
+
+
+@module.router.get(
     "/cdr/status/",
-    response_model=schemas_cdr.Status,
+    response_model=coredata_cdr.Status,
     status_code=200,
 )
 async def get_status(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
 ):
-    return await get_core_data(schemas_cdr.Status, db)
+    return await get_core_data(coredata_cdr.Status, db)
 
 
 @module.router.patch(
@@ -2567,11 +2702,11 @@ async def get_status(
     status_code=204,
 )
 async def update_status(
-    status: schemas_cdr.Status,
+    status: coredata_cdr.Status,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_cdr)),
 ):
-    current_status = await get_core_data(schemas_cdr.Status, db)
+    current_status = await get_core_data(coredata_cdr.Status, db)
     match status.status:
         case CdrStatus.pending:
             if current_status.status != CdrStatus.closed:
@@ -2767,19 +2902,15 @@ async def scan_ticket(
             status_code=403,
             detail="This ticket has expired.",
         )
-    try:
-        await cruds_cdr.scan_ticket(
-            db=db,
-            ticket_id=ticket.id,
-            scan=ticket.scan_left - 1,
-            tags=ticket.tags + "," + ticket_data.tag
-            if ticket.tags != ""
-            else ticket_data.tag,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.scan_ticket(
+        db=db,
+        ticket_id=ticket.id,
+        scan=ticket.scan_left - 1,
+        tags=ticket.tags + "," + ticket_data.tag
+        if ticket.tags != ""
+        else ticket_data.tag,
+    )
 
 
 @module.router.get(
@@ -2924,12 +3055,11 @@ async def generate_ticket_for_product(
             expiration=ticketgen.expiration,
         )
         cruds_cdr.create_ticket(db=db, ticket=ticket)
-    try:
-        await db.commit()
-        return await cruds_cdr.get_product_by_id(db=db, product_id=product_id)
-    except Exception:
-        await db.rollback()
-        raise
+    await db.flush()
+    return await cruds_cdr.get_product_by_id(
+        db=db,
+        product_id=product_id,
+    )
 
 
 @module.router.delete(
@@ -2963,19 +3093,14 @@ async def delete_ticket_generator_for_product(
             status_code=404,
             detail="Product Ticket not found.",
         )
-    await cruds_cdr.delete_ticket_generator(
-        db=db,
-        ticket_generator_id=ticket_generator_id,
-    )
     await cruds_cdr.delete_product_generated_tickets(
         db=db,
         ticket_generator_id=ticket_generator_id,
     )
-    try:
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+    await cruds_cdr.delete_ticket_generator(
+        db=db,
+        ticket_generator_id=ticket_generator_id,
+    )
 
 
 @module.router.get(
@@ -3020,15 +3145,54 @@ async def create_custom_data_field(
         id=uuid4(),
         product_id=product_id,
         name=custom_data_field.name,
+        can_user_answer=custom_data_field.can_user_answer,
     )
-    try:
-        cruds_cdr.create_customdata_field(db, db_data)
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-    else:
-        return db_data
+
+    cruds_cdr.create_customdata_field(db, db_data)
+    await db.flush()
+    return db_data
+
+
+@module.router.patch(
+    "/cdr/sellers/{seller_id}/products/{product_id}/data/{field_id}/",
+    status_code=204,
+)
+async def update_custom_data_field(
+    seller_id: UUID,
+    product_id: UUID,
+    field_id: UUID,
+    custom_data_field: schemas_cdr.CustomDataFieldBase,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_a_member),
+):
+    await is_user_in_a_seller_group(
+        seller_id,
+        user,
+        db=db,
+    )
+    await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
+    db_datafield = await cruds_cdr.get_customdata_field(db=db, field_id=field_id)
+    if db_datafield is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Field not found.",
+        )
+    if db_datafield.product_id != product_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Field does not belong to this product.",
+        )
+
+    datafield = schemas_cdr.CustomDataFieldBase(
+        name=custom_data_field.name,
+        can_user_answer=custom_data_field.can_user_answer,
+    )
+
+    await cruds_cdr.update_customdata_field(
+        db,
+        field_id=field_id,
+        datafield=datafield,
+    )
 
 
 @module.router.delete(
@@ -3059,15 +3223,11 @@ async def delete_customdata_field(
             status_code=403,
             detail="Field does not belong to this product.",
         )
-    try:
-        await cruds_cdr.delete_customdata_field(
-            field_id=field_id,
-            db=db,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.delete_customdata_field(
+        field_id=field_id,
+        db=db,
+    )
 
 
 @module.router.get(
@@ -3113,11 +3273,6 @@ async def create_custom_data(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
 ):
-    await is_user_in_a_seller_group(
-        seller_id,
-        user,
-        db=db,
-    )
     await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
     db_field = await cruds_cdr.get_customdata_field(db=db, field_id=field_id)
     if db_field is None:
@@ -3125,6 +3280,22 @@ async def create_custom_data(
             status_code=404,
             detail="Field not found.",
         )
+    if not (
+        is_user_member_of_any_group(user, [GroupType.admin_cdr])
+        or seller_id
+        in [
+            s.id
+            for s in await cruds_cdr.get_sellers_by_group_ids(
+                db=db,
+                group_ids=[g.id for g in user.groups],
+            )
+        ]
+    ) and not (db_field.can_user_answer and user_id == user.id):
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to add data for this field.",
+        )
+
     if db_field.product_id != product_id:
         raise HTTPException(
             status_code=403,
@@ -3135,14 +3306,11 @@ async def create_custom_data(
         field_id=field_id,
         value=custom_data.value,
     )
-    try:
-        cruds_cdr.create_customdata(db, db_data)
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-    else:
-        return await cruds_cdr.get_customdata(db=db, field_id=field_id, user_id=user_id)
+
+    cruds_cdr.create_customdata(db, db_data)
+    await db.flush()
+
+    return await cruds_cdr.get_customdata(db=db, field_id=field_id, user_id=user_id)
 
 
 @module.router.patch(
@@ -3158,11 +3326,6 @@ async def update_custom_data(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
 ):
-    await is_user_in_a_seller_group(
-        seller_id,
-        user,
-        db=db,
-    )
     await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
     db_data = await cruds_cdr.get_customdata(db=db, field_id=field_id, user_id=user_id)
     if db_data is None:
@@ -3170,22 +3333,33 @@ async def update_custom_data(
             status_code=404,
             detail="Field Data not found.",
         )
+    if not (
+        is_user_member_of_any_group(user, [GroupType.admin_cdr])
+        or seller_id
+        in [
+            s.id
+            for s in await cruds_cdr.get_sellers_by_group_ids(
+                db=db,
+                group_ids=[g.id for g in user.groups],
+            )
+        ]
+    ) and not (db_data.field.can_user_answer and user_id == user.id):
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to edit data for this field.",
+        )
     if db_data.field.product_id != product_id:
         raise HTTPException(
             status_code=403,
             detail="Field does not belong to this product.",
         )
-    try:
-        await cruds_cdr.update_customdata(
-            db,
-            field_id=field_id,
-            user_id=user_id,
-            value=custom_data.value,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.update_customdata(
+        db,
+        field_id=field_id,
+        user_id=user_id,
+        value=custom_data.value,
+    )
 
 
 @module.router.delete(
@@ -3200,11 +3374,6 @@ async def delete_customdata(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_a_member),
 ):
-    await is_user_in_a_seller_group(
-        seller_id,
-        user,
-        db=db,
-    )
     await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
     db_data = await cruds_cdr.get_customdata(db=db, field_id=field_id, user_id=user_id)
     if db_data is None:
@@ -3212,21 +3381,32 @@ async def delete_customdata(
             status_code=404,
             detail="Field Data not found.",
         )
+    if not (
+        is_user_member_of_any_group(user, [GroupType.admin_cdr])
+        or seller_id
+        in [
+            s.id
+            for s in await cruds_cdr.get_sellers_by_group_ids(
+                db=db,
+                group_ids=[g.id for g in user.groups],
+            )
+        ]
+    ) and not (db_data.field.can_user_answer and user_id == user.id):
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to delete data for this field.",
+        )
     if db_data.field.product_id != product_id:
         raise HTTPException(
             status_code=403,
             detail="Field does not belong to this product.",
         )
-    try:
-        await cruds_cdr.delete_customdata(
-            field_id=field_id,
-            user_id=user_id,
-            db=db,
-        )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
+
+    await cruds_cdr.delete_customdata(
+        field_id=field_id,
+        user_id=user_id,
+        db=db,
+    )
 
 
 @module.router.websocket("/cdr/users/ws")

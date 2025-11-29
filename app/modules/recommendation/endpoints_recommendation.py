@@ -9,7 +9,6 @@ from app.core.groups.groups_type import AccountType, GroupType
 from app.core.users import models_users
 from app.dependencies import (
     get_db,
-    get_request_id,
     is_user_a_member,
     is_user_in,
 )
@@ -18,6 +17,7 @@ from app.modules.recommendation import (
     models_recommendation,
     schemas_recommendation,
 )
+from app.modules.recommendation.factory_recommendation import RecommendationFactory
 from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
@@ -30,6 +30,7 @@ module = Module(
     root="recommendation",
     tag="Recommendation",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    factory=RecommendationFactory(),
 )
 
 
@@ -168,7 +169,6 @@ async def create_recommendation_image(
     recommendation_id: uuid.UUID,
     image: UploadFile = File(),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.BDE)),
-    request_id: str = Depends(get_request_id),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -188,7 +188,6 @@ async def create_recommendation_image(
         upload_file=image,
         directory="recommendations",
         filename=str(recommendation_id),
-        request_id=request_id,
         max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,

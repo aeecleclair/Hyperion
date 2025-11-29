@@ -17,6 +17,7 @@ core_module = CoreModule(
     root="google-api",
     tag="GoogleAPI",
     router=router,
+    factory=None,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")

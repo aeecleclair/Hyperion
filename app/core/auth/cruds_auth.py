@@ -3,7 +3,6 @@
 from datetime import UTC, datetime
 
 from sqlalchemy import delete, select, update
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import models_auth
@@ -29,13 +28,8 @@ async def create_authorization_token(
     """Create a new group in database and return it"""
 
     db.add(db_authorization_code)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return db_authorization_code
+    await db.flush()
+    return db_authorization_code
 
 
 async def delete_authorization_token_by_token(
@@ -49,7 +43,7 @@ async def delete_authorization_token_by_token(
             models_auth.AuthorizationCode.code == code,
         ),
     )
-    await db.commit()
+    await db.flush()
     return None
 
 
@@ -71,13 +65,8 @@ async def create_refresh_token(
     """Create a new refresh token in database and return it"""
 
     db.add(db_refresh_token)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise
-    else:
-        return db_refresh_token
+    await db.flush()
+    return db_refresh_token
 
 
 async def revoke_refresh_token_by_token(
@@ -94,7 +83,7 @@ async def revoke_refresh_token_by_token(
         )
         .values(revoked_on=datetime.now(UTC)),
     )
-    await db.commit()
+    await db.flush()
     return None
 
 
@@ -102,7 +91,7 @@ async def revoke_refresh_token_by_client_and_user_id(
     db: AsyncSession,
     client_id: str,
     user_id: str,
-) -> models_auth.RefreshToken | None:
+) -> None:
     """Revoke a refresh token from database"""
 
     await db.execute(
@@ -114,5 +103,21 @@ async def revoke_refresh_token_by_client_and_user_id(
         )
         .values(revoked_on=datetime.now(UTC)),
     )
-    await db.commit()
-    return None
+    await db.flush()
+
+
+async def revoke_refresh_token_by_user_id(
+    db: AsyncSession,
+    user_id: str,
+) -> None:
+    """Revoke a refresh token from database"""
+
+    await db.execute(
+        update(models_auth.RefreshToken)
+        .where(
+            models_auth.RefreshToken.user_id == user_id,
+            models_auth.RefreshToken.revoked_on.is_(None),
+        )
+        .values(revoked_on=datetime.now(UTC)),
+    )
+    await db.flush()

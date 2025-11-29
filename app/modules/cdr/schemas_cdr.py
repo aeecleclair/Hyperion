@@ -7,11 +7,9 @@ from pydantic import BaseModel, ConfigDict, StringConstraints, field_validator
 from app.core.memberships import schemas_memberships
 from app.core.users.schemas_users import CoreUserSimple
 from app.modules.cdr.types_cdr import (
-    CdrStatus,
     DocumentSignatureType,
     PaymentType,
 )
-from app.types.core_data import BaseCoreData
 from app.types.floors_type import FloorsType
 from app.types.websocket import WSMessageModel
 from app.utils import validators
@@ -40,10 +38,10 @@ class CurriculumComplete(CurriculumBase):
 
 class CdrUserPreview(CoreUserSimple):
     curriculum: CurriculumComplete | None = None
+    promo: int | None = None
 
 
 class CdrUser(CdrUserPreview):
-    promo: int | None = None
     email: str
     birthday: date | None = None
     phone: str | None = None
@@ -99,6 +97,7 @@ class ProductVariantBase(BaseModel):
 
 class ProductVariantComplete(BaseModel):
     id: UUID
+    year: int
     product_id: UUID
     name_fr: str
     name_en: str | None = None
@@ -131,6 +130,7 @@ class ProductBase(BaseModel):
     description_fr: str | None = None
     description_en: str | None = None
     available_online: bool
+    needs_validation: bool = True
     related_membership: schemas_memberships.MembershipSimple | None = None
     tickets: list[GenerateTicketBase] = []
     product_constraints: list[UUID]
@@ -143,6 +143,8 @@ class ProductCompleteNoConstraint(BaseModel):
     description_fr: str | None = None
     description_en: str | None = None
     available_online: bool
+    needs_validation: bool
+    year: int
     id: UUID
     seller_id: UUID
     variants: list[ProductVariantComplete] = []
@@ -158,7 +160,9 @@ class ProductComplete(BaseModel):
     description_fr: str | None = None
     description_en: str | None = None
     available_online: bool
+    needs_validation: bool
     id: UUID
+    year: int
     seller_id: UUID
     variants: list[ProductVariantComplete] = []
     related_membership: schemas_memberships.MembershipSimple | None = None
@@ -244,12 +248,9 @@ class PaymentBase(BaseModel):
 class PaymentComplete(PaymentBase):
     id: UUID
     user_id: str
+    year: int
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class Status(BaseCoreData):
-    status: CdrStatus = CdrStatus.pending
 
 
 class PaymentUrl(BaseModel):
@@ -295,6 +296,7 @@ class UpdateUserWSMessageModel(WSMessageModel):
 
 class CustomDataFieldBase(BaseModel):
     name: str
+    can_user_answer: bool
 
 
 class CustomDataFieldComplete(CustomDataFieldBase):
@@ -318,3 +320,15 @@ class CustomDataComplete(CustomDataBase):
 
 class ResultRequest(BaseModel):
     emails: list[str]
+
+
+class BatchPurchase(BaseModel):
+    user_emails: list[str]
+    product_variant_id: UUID
+    quantity: int
+
+
+class BatchValidation(BaseModel):
+    user_emails: list[str]
+    product_variant_id: UUID
+    validated: bool

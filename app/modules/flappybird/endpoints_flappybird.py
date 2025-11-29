@@ -18,6 +18,7 @@ module = Module(
     root="flappybird",
     tag="Flappy Bird",
     default_allowed_account_types=[AccountType.student],
+    factory=None,
 )
 
 
@@ -26,10 +27,12 @@ module = Module(
     response_model=list[schemas_flappybird.FlappyBirdScoreInDB],
     status_code=200,
 )
-async def get_flappybird_score(db: AsyncSession = Depends(get_db)):
+async def get_flappybird_score(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_a_member),
+):
     """Return the leaderboard"""
-    leaderboard = await cruds_flappybird.get_flappybird_score_leaderboard(db=db)
-    return leaderboard
+    return await cruds_flappybird.get_flappybird_score_leaderboard(db=db)
 
 
 @module.router.get(
@@ -63,14 +66,12 @@ async def get_current_user_flappybird_personal_best(
             status_code=404,
             detail="Not found",
         )
-    user_personal_best = schemas_flappybird.FlappyBirdScoreCompleteFeedBack(
+    return schemas_flappybird.FlappyBirdScoreCompleteFeedBack(
         value=user_personal_best_table.value,
         user=user_personal_best_table.user,
         creation_time=user_personal_best_table.creation_time,
         position=position,
     )
-
-    return user_personal_best
 
 
 @module.router.post(

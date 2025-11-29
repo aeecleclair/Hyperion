@@ -3,7 +3,6 @@ import smtplib
 import ssl
 from email.message import EmailMessage
 from typing import TYPE_CHECKING
-from uuid import UUID
 
 if TYPE_CHECKING:
     from app.core.utils.config import Settings
@@ -16,11 +15,6 @@ def send_email(
     subject: str,
     content: str,
     settings: "Settings",
-    file_directory: str | None = None,
-    file_uuid: UUID | None = None,
-    file_name: str | None = None,
-    main_type: str | None = None,
-    sub_type: str | None = None,
 ):
     """
     Send a html email using **starttls**.
@@ -46,4 +40,9 @@ def send_email(
     with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
         server.starttls(context=context)
         server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-        server.send_message(msg, settings.SMTP_EMAIL, recipient)
+        try:
+            server.send_message(msg, settings.SMTP_EMAIL, recipient)
+        except smtplib.SMTPRecipientsRefused:
+            hyperion_error_logger.warning(
+                f'Bad email adress: "{", ".join(recipient)}" for mail with subject "{subject}".',
+            )

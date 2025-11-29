@@ -1,6 +1,7 @@
 """Schemas file for endpoint /auth"""
 
 from datetime import datetime
+from typing import Literal
 
 from fastapi import Form
 from pydantic import BaseModel, field_validator
@@ -145,7 +146,7 @@ class TokenReq(BaseModel):
 
 class TokenResponse(BaseModel):
     access_token: str
-    token_type: str = "bearer"
+    token_type: Literal["bearer"] = "bearer"  # noqa: S105
     expires_in: int = 1800
     scope: str = ""
     refresh_token: str

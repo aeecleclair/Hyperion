@@ -41,8 +41,12 @@ async def get_sellers(
 
 async def get_online_sellers(
     db: AsyncSession,
+    cdr_year: int,
 ) -> Sequence[models_cdr.Seller]:
-    online_products = await get_online_products(db=db)
+    online_products = await get_online_products(
+        db=db,
+        cdr_year=cdr_year,
+    )
     seller_ids = set(product.seller_id for product in online_products)
     result = await db.execute(
         select(models_cdr.Seller).where(models_cdr.Seller.id.in_(seller_ids)),
@@ -52,18 +56,23 @@ async def get_online_sellers(
 
 async def get_online_products(
     db: AsyncSession,
+    cdr_year: int,
 ) -> Sequence[models_cdr.CdrProduct]:
     result = await db.execute(
-        select(models_cdr.CdrProduct).where(models_cdr.CdrProduct.available_online),
+        select(models_cdr.CdrProduct).where(
+            models_cdr.CdrProduct.available_online,
+            models_cdr.CdrProduct.year == cdr_year,
+        ),
     )
     return result.unique().scalars().all()
 
 
 async def get_products(
     db: AsyncSession,
+    cdr_year: int,
 ) -> Sequence[models_cdr.CdrProduct]:
     result = await db.execute(
-        select(models_cdr.CdrProduct),
+        select(models_cdr.CdrProduct).where(models_cdr.CdrProduct.year == cdr_year),
     )
     return result.unique().scalars().all()
 
@@ -122,6 +131,20 @@ async def delete_seller(
 async def get_products_by_seller_id(
     db: AsyncSession,
     seller_id: UUID,
+    cdr_year: int,
+) -> Sequence[models_cdr.CdrProduct]:
+    result = await db.execute(
+        select(models_cdr.CdrProduct).where(
+            models_cdr.CdrProduct.seller_id == seller_id,
+            models_cdr.CdrProduct.year == cdr_year,
+        ),
+    )
+    return result.unique().scalars().all()
+
+
+async def get_all_products_by_seller_id(
+    db: AsyncSession,
+    seller_id: UUID,
 ) -> Sequence[models_cdr.CdrProduct]:
     result = await db.execute(
         select(models_cdr.CdrProduct).where(
@@ -134,11 +157,13 @@ async def get_products_by_seller_id(
 async def get_online_products_by_seller_id(
     db: AsyncSession,
     seller_id: UUID,
+    cdr_year: int,
 ) -> Sequence[models_cdr.CdrProduct]:
     result = await db.execute(
         select(models_cdr.CdrProduct).where(
             models_cdr.CdrProduct.seller_id == seller_id,
             models_cdr.CdrProduct.available_online,
+            models_cdr.CdrProduct.year == cdr_year,
         ),
     )
     return result.unique().scalars().all()
@@ -149,7 +174,11 @@ async def get_product_by_id(
     product_id: UUID,
 ) -> models_cdr.CdrProduct | None:
     result = await db.execute(
-        select(models_cdr.CdrProduct).where(models_cdr.CdrProduct.id == product_id),
+        select(models_cdr.CdrProduct)
+        .where(
+            models_cdr.CdrProduct.id == product_id,
+        )
+        .options(selectinload(models_cdr.CdrProduct.product_constraints)),
     )
     return result.unique().scalars().first()
 
@@ -178,8 +207,15 @@ async def update_product(
         .values(
             **product.model_dump(
                 exclude_none=True,
-                exclude={"product_constraints", "document_constraints"},
+                exclude={
+                    "product_constraints",
+                    "document_constraints",
+                    "related_membership",
+                },
             ),
+            related_membership_id=product.related_membership.id
+            if product.related_membership
+            else None,
         ),
     )
 
@@ -397,11 +433,31 @@ async def get_all_purchases(db: AsyncSession) -> Sequence[models_cdr.Purchase]:
 async def get_purchases_by_user_id(
     db: AsyncSession,
     user_id: str,
+    cdr_year: int,
 ) -> Sequence[models_cdr.Purchase]:
     result = await db.execute(
         select(models_cdr.Purchase)
-        .where(models_cdr.Purchase.user_id == user_id)
+        .join(
+            models_cdr.ProductVariant,
+            models_cdr.Purchase.product_variant_id == models_cdr.ProductVariant.id,
+        )
+        .where(
+            models_cdr.Purchase.user_id == user_id,
+            models_cdr.ProductVariant.year == cdr_year,
+        )
         .options(selectinload("*")),
+    )
+    return result.scalars().all()
+
+
+async def get_all_purchases_by_user_id(
+    db: AsyncSession,
+    user_id: str,
+) -> Sequence[models_cdr.Purchase]:
+    result = await db.execute(
+        select(models_cdr.Purchase).where(
+            models_cdr.Purchase.user_id == user_id,
+        ),
     )
     return result.scalars().all()
 
@@ -440,14 +496,34 @@ async def get_purchases_by_user_id_by_seller_id(
     db: AsyncSession,
     user_id: str,
     seller_id: UUID,
+    cdr_year: int,
 ) -> Sequence[models_cdr.Purchase]:
     result = await db.execute(
         select(models_cdr.Purchase)
-        .join(models_cdr.ProductVariant)
-        .join(models_cdr.CdrProduct)
+        .join(
+            models_cdr.ProductVariant,
+            models_cdr.Purchase.product_variant_id == models_cdr.ProductVariant.id,
+        )
+        .join(
+            models_cdr.CdrProduct,
+            models_cdr.ProductVariant.product_id == models_cdr.CdrProduct.id,
+        )
         .where(
             models_cdr.CdrProduct.seller_id == seller_id,
             models_cdr.Purchase.user_id == user_id,
+            models_cdr.ProductVariant.year == cdr_year,
+        ),
+    )
+    return result.scalars().all()
+
+
+async def get_purchases_by_variant_id(
+    db: AsyncSession,
+    product_variant_id: UUID,
+) -> Sequence[models_cdr.Purchase]:
+    result = await db.execute(
+        select(models_cdr.Purchase).where(
+            models_cdr.Purchase.product_variant_id == product_variant_id,
         ),
     )
     return result.scalars().all()
@@ -677,9 +753,13 @@ async def delete_curriculum_membership(
 async def get_payments_by_user_id(
     db: AsyncSession,
     user_id: str,
+    cdr_year: int,
 ) -> Sequence[models_cdr.Payment]:
     result = await db.execute(
-        select(models_cdr.Payment).where(models_cdr.Payment.user_id == user_id),
+        select(models_cdr.Payment).where(
+            models_cdr.Payment.user_id == user_id,
+            models_cdr.Payment.year == cdr_year,
+        ),
     )
     return result.scalars().all()
 
@@ -811,6 +891,20 @@ def create_customdata_field(db: AsyncSession, datafield: models_cdr.CustomDataFi
     db.add(datafield)
 
 
+async def update_customdata_field(
+    db: AsyncSession,
+    field_id: UUID,
+    datafield: schemas_cdr.CustomDataFieldBase,
+):
+    await db.execute(
+        update(models_cdr.CustomDataField)
+        .where(
+            models_cdr.CustomDataField.id == field_id,
+        )
+        .values(**datafield.model_dump(exclude_none=True)),
+    )
+
+
 async def get_customdata_field(
     db: AsyncSession,
     field_id: UUID,
@@ -895,7 +989,19 @@ async def delete_customdata(db: AsyncSession, field_id: UUID, user_id: str):
 
 async def get_pending_validation_users(db: AsyncSession) -> Sequence[CoreUser]:
     result = await db.execute(
-        select(models_cdr.Purchase).where(models_cdr.Purchase.validated.is_(False)),
+        select(models_cdr.Purchase)
+        .join(
+            models_cdr.ProductVariant,
+            models_cdr.Purchase.product_variant_id == models_cdr.ProductVariant.id,
+        )
+        .join(
+            models_cdr.CdrProduct,
+            models_cdr.ProductVariant.product_id == models_cdr.CdrProduct.id,
+        )
+        .where(
+            models_cdr.Purchase.validated.is_(False),
+            models_cdr.CdrProduct.needs_validation.is_(True),
+        ),
     )
     user_ids = set(purchase.user_id for purchase in result.scalars().all())
     result_users = await db.execute(select(CoreUser).where(CoreUser.id.in_(user_ids)))
@@ -910,7 +1016,10 @@ async def get_product_validated_purchases(
     db: AsyncSession,
     product_id: UUID,
 ) -> Sequence[models_cdr.Purchase]:
-    variant = await get_product_variants(db=db, product_id=product_id)
+    variant = await get_product_variants(
+        db=db,
+        product_id=product_id,
+    )
     variant_ids = [v.id for v in variant]
     result = await db.execute(
         select(models_cdr.Purchase).where(

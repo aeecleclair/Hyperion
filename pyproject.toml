@@ -1,3 +1,24 @@
+[project]
+name = "hyperion"
+description = "Back-end of MyECL, the app of the students of École Centrale de Lyon, made by ÉCLAIR"
+readme = "README.md"
+authors = [{ name = "AEECL ECLAIR" }]
+
+# Hyperion follows Semantic Versioning
+# https://semver.org/
+version = "4.10.4"
+minimal-titan-version-code = 139
+requires-python = ">= 3.11, < 3.13"
+
+license = "MIT"
+license-files = [
+    "LICENSE",
+    "assets/privacy.txt",
+    "assets/terms-and-conditions.txt",
+    "assets/myeclpay-terms-of-service.txt",
+]
+
+
 [tool.ruff]
 # By default ruff also respect gitignore files
 # Same as Black.
@@ -6,15 +27,9 @@ indent-width = 4
 target-version = "py311"
 
 [tool.ruff.lint]
-# Enable Pyflakes (`F`), pycodestyle (`E`, `W`), isort (`I`), pep8-naming (`N`), flake8-bugbear (`B`)
-# T201: check for prints, C90: mccabe complexity
 select = [
-    "F",
-    "E",
-    "W",
-    "C90",
-    "I",
-    "UP",
+    "FAST",
+    "YTT",
     "ASYNC",
     "S",
     "B",
@@ -23,28 +38,42 @@ select = [
     "C4",
     "DTZ",
     "FA",
+    "INT",
     "ISC",
     "ICN",
+    "LOG",
+    "G",
     "INP",
     "PIE",
     "T20",
     "PYI",
     "PT",
+    "RET",
     "Q",
     "SLF",
-    "SLOT",
     "SIM",
-    "TCH",
+    "SLOT",
+    "TID",
+    "TC",
     "PTH",
-    "PL",
-    "TRY",
     "FLY",
+    "I",
+    "C90",
     "PERF",
+    "E",
+    "W",
+    "F",
+    "PGH",
+    "PL",
+    "UP",
     "FURB",
     "RUF",
-] # "B", "N" to add later
+    "TRY",
+    "TCH",
+]
 # We may want to enable "ERA" to found commented-out code
 ignore = [
+    "FAST002", # We don't use annotated dependencies
     "E203",
     "E266",
     "E501",
@@ -61,6 +90,7 @@ ignore = [
     "PLR0913", # "Too many arguments in function definition"
     "PLR0915", # "Too many statements"
     "PLR2004", # "Magic value used in comparison"
+    "G004",    # "Logging statement uses f-string"
 ]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
@@ -122,6 +152,7 @@ disallow_untyped_defs = false
 disallow_any_generics = false
 disallow_untyped_calls = false
 
+
 [[tool.mypy.overrides]]
 # google_auth_oauthlib : https://github.com/googleapis/google-auth-library-python-oauthlib/issues/288
 # googleapiclient : https://github.com/googleapis/google-api-python-client/issues/2426
@@ -131,12 +162,17 @@ module = [
     "fitz",
     "google_auth_oauthlib.flow",
     "googleapiclient.*",
+    "sqlalchemy_utils",
+    "weasyprint",
+    "xlsxwriter",
 ]
 ignore_missing_imports = true
 
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "module"
+asyncio_default_test_loop_scope = "module"
 filterwarnings = [
     "error",
     # We don't know how to fix the warning:

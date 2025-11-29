@@ -7,8 +7,7 @@ from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import AccountType, GroupType
-from app.core.notification.notification_types import CustomTopic, Topic
-from app.core.notification.schemas_notification import Message
+from app.core.notification.schemas_notification import Message, Topic
 from app.core.users import cruds_users, models_users, schemas_users
 from app.core.users.endpoints_users import read_user
 from app.dependencies import (
@@ -20,16 +19,28 @@ from app.dependencies import (
     is_user_in,
 )
 from app.modules.amap import cruds_amap, models_amap, schemas_amap
+from app.modules.amap.factory_amap import AmapFactory
 from app.modules.amap.types_amap import DeliveryStatusType
 from app.types.module import Module
 from app.utils.communication.notifications import NotificationTool
 from app.utils.redis import locker_get, locker_set
 from app.utils.tools import is_user_member_of_any_group
 
+root = "amap"
+amap_topic = Topic(
+    id=uuid.UUID("8d7e6e89-5096-4d41-8781-9a2d43fcd01b"),
+    module_root=root,
+    name="🛒 AMAP",
+    topic_identifier=None,
+    restrict_to_group_id=None,
+    restrict_to_members=True,
+)
 module = Module(
-    root="amap",
+    root=root,
     tag="AMAP",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    registred_topics=[amap_topic],
+    factory=AmapFactory(),
 )
 
 hyperion_amap_logger = logging.getLogger("hyperion.amap")
@@ -50,8 +61,7 @@ async def get_products(
 
     **The user must be a member of the group AMAP to use this endpoint**
     """
-    products = await cruds_amap.get_products(db)
-    return products
+    return await cruds_amap.get_products(db)
 
 
 @module.router.post(
@@ -71,8 +81,7 @@ async def create_product(
     """
     db_product = models_amap.Product(id=str(uuid.uuid4()), **product.__dict__)
 
-    result = await cruds_amap.create_product(product=db_product, db=db)
-    return result
+    return await cruds_amap.create_product(product=db_product, db=db)
 
 
 @module.router.get(
@@ -196,8 +205,7 @@ async def create_delivery(
             detail="There is already a delivery planned that day.",
         )
 
-    result = await cruds_amap.create_delivery(delivery=db_delivery, db=db)
-    return result
+    return await cruds_amap.create_delivery(delivery=db_delivery, db=db)
 
 
 @module.router.delete(
@@ -282,14 +290,11 @@ async def add_product_to_delivery(
             detail=f"You can't add a product if the delivery is not in creation mode. The current mode is {delivery.status}.",
         )
 
-    try:
-        await cruds_amap.add_product_to_delivery(
-            delivery_id=delivery_id,
-            products_ids=products_ids,
-            db=db,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    await cruds_amap.add_product_to_delivery(
+        delivery_id=delivery_id,
+        products_ids=products_ids,
+        db=db,
+    )
 
 
 @module.router.delete(
@@ -490,9 +495,6 @@ async def add_order_to_delievery(
         )
         return schemas_amap.OrderReturn(productsdetail=productsret, **orderret.__dict__)
 
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
-
     finally:
         locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
@@ -542,14 +544,11 @@ async def edit_order_from_delivery(
         )
 
     if order.products_ids is None:
-        try:
-            await cruds_amap.edit_order_without_products(
-                order=order,
-                db=db,
-                order_id=order_id,
-            )
-        except ValueError as error:
-            raise HTTPException(status_code=400, detail=str(error))
+        await cruds_amap.edit_order_without_products(
+            order=order,
+            db=db,
+            order_id=order_id,
+        )
 
     else:
         if order.products_quantity is None or len(order.products_quantity) != len(
@@ -609,9 +608,6 @@ async def edit_order_from_delivery(
             hyperion_amap_logger.info(
                 f"Edit_order: Order {order_id} has been edited for user {db_order.user_id}. Amount was {previous_amount}€, is now {amount}€. ({request_id})",
             )
-
-        except ValueError as error:
-            raise HTTPException(status_code=400, detail=str(error))
 
         finally:
             locker_set(redis_client=redis_client, key=redis_key, lock=False)
@@ -685,9 +681,6 @@ async def remove_order(
         )
         return Response(status_code=204)
 
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
-
     finally:
         locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
@@ -720,7 +713,7 @@ async def open_ordering_of_delivery(
         action_module="amap",
     )
     await notification_tool.send_notification_to_topic(
-        custom_topic=CustomTopic(Topic.amap),
+        topic_id=amap_topic.id,
         message=message,
     )
 
@@ -803,8 +796,7 @@ async def get_users_cash(
 
     **The user must be a member of the group AMAP to use this endpoint**
     """
-    cash = await cruds_amap.get_users_cash(db)
-    return cash
+    return await cruds_amap.get_users_cash(db)
 
 
 @module.router.get(
@@ -1026,16 +1018,11 @@ async def edit_information(
             link="",
             description="",
         )
-        try:
-            await cruds_amap.add_information(empty_information, db)
-        except ValueError as error:
-            raise HTTPException(status_code=400, detail=str(error))
+
+        await cruds_amap.add_information(empty_information, db)
 
     else:
-        try:
-            await cruds_amap.edit_information(
-                information_update=edit_information,
-                db=db,
-            )
-        except ValueError as error:
-            raise HTTPException(status_code=400, detail=str(error))
+        await cruds_amap.edit_information(
+            information_update=edit_information,
+            db=db,
+        )

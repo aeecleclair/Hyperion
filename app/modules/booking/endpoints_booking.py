@@ -16,7 +16,12 @@ from app.dependencies import (
     is_user_an_ecl_member,
     is_user_in,
 )
-from app.modules.booking import cruds_booking, models_booking, schemas_booking
+from app.modules.booking import (
+    cruds_booking,
+    models_booking,
+    schemas_booking,
+)
+from app.modules.booking.factory_booking import BookingFactory
 from app.modules.booking.types_booking import Decision
 from app.types.module import Module
 from app.utils.communication.notifications import NotificationTool
@@ -26,6 +31,7 @@ module = Module(
     root="booking",
     tag="Booking",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    factory=BookingFactory(),
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -72,16 +78,13 @@ async def create_manager(
             detail="Invalid id, group_id must be a valid group id",
         )
 
-    try:
-        manager_db = models_booking.Manager(
-            id=str(uuid.uuid4()),
-            name=manager.name,
-            group_id=manager.group_id,
-        )
+    manager_db = models_booking.Manager(
+        id=str(uuid.uuid4()),
+        name=manager.name,
+        group_id=manager.group_id,
+    )
 
-        return await cruds_booking.create_manager(manager=manager_db, db=db)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+    return await cruds_booking.create_manager(manager=manager_db, db=db)
 
 
 @module.router.patch(
@@ -138,8 +141,7 @@ async def delete_manager(
             status_code=403,
             detail="There are still rooms linked to this manager",
         )
-    else:
-        await cruds_booking.delete_manager(manager_id=manager_id, db=db)
+    await cruds_booking.delete_manager(manager_id=manager_id, db=db)
 
 
 @module.router.get(
@@ -220,9 +222,7 @@ async def get_confirmed_bookings(
     **The user must be authenticated to use this endpoint**
     """
 
-    bookings = await cruds_booking.get_confirmed_bookings(db=db)
-
-    return bookings
+    return await cruds_booking.get_confirmed_bookings(db=db)
 
 
 @module.router.get(
@@ -239,8 +239,7 @@ async def get_applicant_bookings(
 
     **Only usable by the user**
     """
-    bookings = await cruds_booking.get_applicant_bookings(db=db, applicant_id=user.id)
-    return bookings
+    return await cruds_booking.get_applicant_bookings(db=db, applicant_id=user.id)
 
 
 @module.router.post(
@@ -323,14 +322,11 @@ async def edit_booking(
             detail="You are not allowed to edit this booking",
         )
 
-    try:
-        await cruds_booking.edit_booking(
-            booking_id=booking_id,
-            booking=booking_edit,
-            db=db,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    await cruds_booking.edit_booking(
+        booking_id=booking_id,
+        booking=booking_edit,
+        db=db,
+    )
 
 
 @module.router.patch(
@@ -431,14 +427,11 @@ async def create_room(
     **This endpoint is only usable by admins**
     """
 
-    try:
-        room_db = models_booking.Room(
-            id=str(uuid.uuid4()),
-            **room.model_dump(),
-        )
-        return await cruds_booking.create_room(db=db, room=room_db)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    room_db = models_booking.Room(
+        id=str(uuid.uuid4()),
+        **room.model_dump(),
+    )
+    return await cruds_booking.create_room(db=db, room=room_db)
 
 
 @module.router.patch(

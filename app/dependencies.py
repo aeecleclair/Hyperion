@@ -10,30 +10,47 @@ async def get_users(db: AsyncSession = Depends(get_db)):
 import logging
 from collections.abc import AsyncGenerator, Callable, Coroutine
 from functools import lru_cache
-from typing import Any, cast
+from typing import Annotated, Any, cast
 
+import calypsso
 import redis
-from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
+import starlette
+import starlette.datastructures
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
 from sqlalchemy.ext.asyncio import (
-    AsyncEngine,
     AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
 )
 
 from app.core.auth import schemas_auth
 from app.core.groups.groups_type import AccountType, GroupType, get_ecl_account_types
 from app.core.payment.payment_tool import PaymentTool
-from app.core.users import models_users
+from app.core.payment.types_payment import HelloAssoConfigName
+from app.core.users import cruds_users, models_users
 from app.core.utils import security
 from app.core.utils.config import Settings, construct_prod_settings
-from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
-from app.types.scheduler import OfflineScheduler, Scheduler
+from app.types.exceptions import (
+    InvalidAppStateTypeError,
+    PaymentToolCredentialsNotSetException,
+)
+from app.types.scheduler import Scheduler
 from app.types.scopes_type import ScopeType
 from app.types.websocket import WebsocketConnectionManager
 from app.utils.auth import auth_utils
 from app.utils.communication.notifications import NotificationManager, NotificationTool
-from app.utils.redis import connect
+from app.utils.state import (
+    GlobalState,
+    RuntimeLifespanState,
+    disconnect_redis_client,
+    disconnect_scheduler,
+    disconnect_websocket_connection_manager,
+    init_engine,
+    init_mail_templates,
+    init_payment_tools,
+    init_redis_client,
+    init_scheduler,
+    init_SessionLocal,
+    init_websocket_connection_manager,
+)
 from app.utils.tools import (
     is_user_external,
     is_user_member_of_any_group,
@@ -43,96 +60,112 @@ from app.utils.tools import (
 hyperion_access_logger = logging.getLogger("hyperion.access")
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
-redis_client: redis.Redis | bool | None = (
-    None  # Create a global variable for the redis client, so that it can be instancied in the startup event
-)
-# Is None if the redis client is not instantiated, is False if the redis client is instancied but not connected, is a redis.Redis object if the redis client is connected
-
-scheduler: Scheduler | None = None
-
-websocket_connection_manager: WebsocketConnectionManager | None = None
-
-engine: AsyncEngine | None = (
-    None  # Create a global variable for the database engine, so that it can be instancied in the startup event
-)
-SessionLocal: Callable[[], AsyncSession] | None = (
-    None  # Create a global variable for the database session, so that it can be instancied in the startup event
-)
+GLOBAL_STATE: GlobalState
 
 
-notification_manager: NotificationManager | None = None
+async def init_state(
+    app: FastAPI,
+    settings: Settings,
+    hyperion_error_logger: logging.Logger,
+) -> None:
+    """
+    Initialize the global state for the project. This dependency should be called at the start of the application lifespan.
 
-drive_file_manage: DriveFileManager | None = None
+    This methode should be called as a dependency, and test may override it to provide their own state.
+    ```python
+    app.dependency_overrides.get(
+        init_state,
+        init_state,
+    )(
+        app=app,
+        settings=settings,
+        hyperion_error_logger=hyperion_error_logger,
+    )
+    ```
+    """
+    global GLOBAL_STATE
 
-payment_tool: PaymentTool | None = None
+    engine = init_engine(settings=settings)
+
+    SessionLocal = init_SessionLocal(engine)
+
+    redis_client = init_redis_client(
+        settings=settings,
+        hyperion_error_logger=hyperion_error_logger,
+    )
+
+    scheduler = await init_scheduler(
+        settings=settings,
+        _dependency_overrides=app.dependency_overrides,
+    )
+
+    ws_manager = await init_websocket_connection_manager(
+        settings=settings,
+    )
+
+    notification_manager = NotificationManager(settings=settings)
+
+    payment_tools = init_payment_tools(
+        settings=settings,
+        hyperion_error_logger=hyperion_error_logger,
+    )
+
+    mail_templates = init_mail_templates(settings=settings)
+
+    GLOBAL_STATE = GlobalState(
+        engine=engine,
+        SessionLocal=SessionLocal,
+        redis_client=redis_client,
+        scheduler=scheduler,
+        ws_manager=ws_manager,
+        notification_manager=notification_manager,
+        payment_tools=payment_tools,
+        mail_templates=mail_templates,
+    )
 
 
-async def get_request_id(request: Request) -> str:
+async def disconnect_state(
+    hyperion_error_logger: logging.Logger,
+) -> None:
+    """
+    Disconnect items requiring it. This dependency should be used at the end of the application lifespan.
+
+    This methode should be called as a dependency as tests may need to run additional steps
+    """
+
+    disconnect_redis_client(GLOBAL_STATE["redis_client"])
+    await disconnect_scheduler(GLOBAL_STATE["scheduler"])
+    await disconnect_websocket_connection_manager(GLOBAL_STATE["ws_manager"])
+
+    hyperion_error_logger.info("Application state disconnected successfully.")
+
+
+def get_app_state(request: Request) -> RuntimeLifespanState:
+    """
+    Get the application state from the request. The state is injected by our middleware.
+    """
+    # `request.state` may be a TypedDict or a starlette State object
+    # depending if it is accessed in an endpoint or the lifespan
+
+    # `state` should be a RuntimeLifespanState object injected in the state by our middleware
+    # We force Mypy to consider it as a RuntimeLifespanState instead of Any
+
+    if isinstance(request.state, dict):
+        return cast("RuntimeLifespanState", request.state)
+    if isinstance(request.state, starlette.datastructures.State):
+        return cast("RuntimeLifespanState", request.state.__dict__["_state"])
+    raise InvalidAppStateTypeError
+
+
+AppState = Annotated[RuntimeLifespanState, Depends(get_app_state)]
+
+
+async def get_request_id(state: AppState) -> str:
     """
     The request identifier is a unique UUID which is used to associate logs saved during the same request
     """
-    # `request_id` is a string injected in the state by our middleware
-    # We force Mypy to consider it as a str instead of Any
-    request_id = cast(str, request.state.request_id)
 
-    return request_id
-
-
-def init_and_get_db_engine(settings: Settings) -> AsyncEngine:
-    """
-    Return the (asynchronous) database engine, if the engine doesn't exit yet it will create one based on the settings
-    """
-    global engine
-    global SessionLocal
-    if settings.SQLITE_DB:
-        SQLALCHEMY_DATABASE_URL = f"sqlite+aiosqlite:///./{settings.SQLITE_DB}"
-    else:
-        SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
-
-    if engine is None:
-        engine = create_async_engine(
-            SQLALCHEMY_DATABASE_URL,
-            echo=settings.DATABASE_DEBUG,
-        )
-        SessionLocal = async_sessionmaker(
-            engine,
-            class_=AsyncSession,
-            expire_on_commit=False,
-        )
-    return engine
-
-
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Return a database session
-    """
-    if SessionLocal is None:
-        hyperion_error_logger.error("Database engine is not initialized")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database engine is not initialized",
-        )
-    async with SessionLocal() as db:
-        try:
-            yield db
-        finally:
-            await db.close()
-
-
-async def get_unsafe_db() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Return a database session but don't close it automatically
-
-    It should only be used for really specific cases where `get_db` will not work
-    """
-    if SessionLocal is None:
-        hyperion_error_logger.error("Database engine is not initialized")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database engine is not initialized",
-        )
-    async with SessionLocal() as db:
-        yield db
+    return state["request_id"]
 
 
 @lru_cache
@@ -145,69 +178,86 @@ def get_settings() -> Settings:
     return construct_prod_settings()
 
 
-def get_redis_client(
-    settings: Settings = Depends(get_settings),
-) -> redis.Redis | None | bool:
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """
+    Return a database session that will be automatically committed and closed after usage.
+
+    If an HTTPException is raised during the request, we consider that the error was expected and managed by the endpoint. We commit the session.
+    If an other exception is raised, we rollback the session to avoid.
+
+    Cruds and endpoints should never call `db.commit()` or `db.rollback()` directly.
+    After adding an object to the session, calling `await db.flush()` will integrate the changes in the transaction without committing them.
+
+    If an endpoint needs to add objects to the sessions that should be committed even in case of an unexpected error,
+    it should start a SAVEPOINT after adding the object.
+
+    ```python
+    # Add here the object that should always be committed, even in case of an unexpected error
+    await db.add(object)
+    await db.flush()
+
+    # Start a SAVEPOINT. If the code in the following context manager raises an exception, the changes will be rolled back to this point.
+    async with db.begin_nested():
+        # Add objects that may be rolled back in case of an error here
+    ```
+    """
+    async with GLOBAL_STATE["SessionLocal"]() as db:
+        try:
+            yield db
+        except HTTPException:
+            await db.commit()
+            raise
+        except Exception:
+            await db.rollback()
+            raise
+        else:
+            await db.commit()
+        finally:
+            await db.close()
+
+
+async def get_unsafe_db() -> AsyncGenerator[AsyncSession, None]:
+    """
+    Return a database session but don't close it automatically
+
+    It should only be used for really specific cases where `get_db` will not work
+    """
+
+    async with GLOBAL_STATE["SessionLocal"]() as db:
+        yield db
+
+
+def get_redis_client() -> redis.Redis | None:
     """
     Dependency that returns the redis client
 
-    Settings can be None if the redis client is already instanced, so that we don't need to pass the settings to the function.
-    Is None if the redis client is not instantiated, is False if the redis client is instantiated but not connected, is a redis.Redis object if the redis client is connected
+    If the redis client is not available, it will return None.
     """
-    global redis_client
-    if redis_client is None:
-        if settings.REDIS_HOST != "":
-            try:
-                redis_client = connect(settings)
-            except redis.exceptions.ConnectionError:
-                hyperion_error_logger.exception(
-                    "Redis connection error: Check the Redis configuration or the Redis server",
-                )
-        else:
-            redis_client = False
-    return redis_client
+    return GLOBAL_STATE["redis_client"]
 
 
-def get_scheduler(settings: Settings = Depends(get_settings)) -> Scheduler:
-    global scheduler
-    if scheduler is None:
-        scheduler = Scheduler() if settings.REDIS_HOST != "" else OfflineScheduler()
-    return scheduler
+def get_scheduler() -> Scheduler:
+    return GLOBAL_STATE["scheduler"]
 
 
-def get_websocket_connection_manager(
-    settings: Settings = Depends(get_settings),
-):
-    global websocket_connection_manager
-
-    if websocket_connection_manager is None:
-        websocket_connection_manager = WebsocketConnectionManager(settings=settings)
-
-    return websocket_connection_manager
+def get_websocket_connection_manager() -> WebsocketConnectionManager:
+    return GLOBAL_STATE["ws_manager"]
 
 
-def get_notification_manager(
-    settings: Settings = Depends(get_settings),
-) -> NotificationManager:
+def get_notification_manager() -> NotificationManager:
     """
     Dependency that returns the notification manager.
     This dependency provide a low level tool allowing to use notification manager internal methods.
 
     If you want to send a notification, prefer `get_notification_tool` dependency.
     """
-    global notification_manager
-
-    if notification_manager is None:
-        notification_manager = NotificationManager(settings=settings)
-
-    return notification_manager
+    return GLOBAL_STATE["notification_manager"]
 
 
 def get_notification_tool(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     notification_manager: NotificationManager = Depends(get_notification_manager),
-    scheduler: Scheduler = Depends(get_scheduler),
 ) -> NotificationTool:
     """
     Dependency that returns a notification tool, allowing to send push notification as a background tasks.
@@ -220,32 +270,29 @@ def get_notification_tool(
     )
 
 
-def get_drive_file_manager() -> DriveFileManager:
-    """
-    Dependency that returns the drive file manager.
-    """
-    global drive_file_manage
-
-    if drive_file_manage is None:
-        drive_file_manage = DriveFileManager()
-
-    return drive_file_manage
-
-
+@lru_cache
 def get_payment_tool(
-    settings: Settings = Depends(get_settings),
-) -> PaymentTool:
+    name: HelloAssoConfigName,
+) -> Callable[[], PaymentTool]:
+    def get_payment_tool() -> PaymentTool:
+        payment_tools = GLOBAL_STATE["payment_tools"]
+        if name not in payment_tools:
+            hyperion_error_logger.warning(
+                f"HelloAsso API credentials are not set for {name.value}, payment won't be available",
+            )
+            raise PaymentToolCredentialsNotSetException
+
+        return payment_tools[name]
+
+    return get_payment_tool
+
+
+def get_mail_templates() -> calypsso.MailTemplates:
     """
-    Dependency that returns the payment manager.
-
-    You should call `payment_tool.is_payment_available()` to know if payment credentials are set in settings.
+    Dependency that returns the mail templates manager.
     """
-    global payment_tool
 
-    if payment_tool is None:
-        payment_tool = PaymentTool(settings=settings)
-
-    return payment_tool
+    return GLOBAL_STATE["mail_templates"]
 
 
 def get_token_data(
@@ -263,10 +310,42 @@ def get_token_data(
     )
 
 
+def get_user_id_from_token_with_scopes(
+    scopes: list[list[ScopeType]],
+) -> Callable[
+    [schemas_auth.TokenData],
+    Coroutine[Any, Any, str],
+]:
+    """
+    Generate a dependency which will:
+     * check the request header contain a valid JWT token
+     * make sure the token contain the given scopes
+     * return the corresponding user_id of the token
+
+    This endpoint allows to require scopes other than the API scope. This should only be used by the auth endpoints.
+    To restrict an endpoint from the API, use `is_user_in`.
+    """
+
+    async def get_current_user_id(
+        token_data: schemas_auth.TokenData = Depends(get_token_data),
+    ) -> str:
+        """
+        Dependency that makes sure the token is valid, contains the expected scopes and returns the corresponding user_id.
+        The expected scopes are passed as list of list of scopes, each list of scopes is an "AND" condition, and the list of list of scopes is an "OR" condition.
+        """
+
+        return auth_utils.get_user_id_from_token_with_scopes(
+            scopes=scopes,
+            token_data=token_data,
+        )
+
+    return get_current_user_id
+
+
 def get_user_from_token_with_scopes(
     scopes: list[list[ScopeType]],
 ) -> Callable[
-    [AsyncSession, schemas_auth.TokenData],
+    [AsyncSession, str],
     Coroutine[Any, Any, models_users.CoreUser],
 ]:
     """
@@ -279,22 +358,20 @@ def get_user_from_token_with_scopes(
     To restrict an endpoint from the API, use `is_user_in`.
     """
 
-    async def get_current_user(
+    async def get_user_from_user_id(
         db: AsyncSession = Depends(get_db),
-        token_data: schemas_auth.TokenData = Depends(get_token_data),
+        user_id: str = Depends(get_user_id_from_token_with_scopes(scopes)),
     ) -> models_users.CoreUser:
         """
         Dependency that makes sure the token is valid, contains the expected scopes and returns the corresponding user.
         The expected scopes are passed as list of list of scopes, each list of scopes is an "AND" condition, and the list of list of scopes is an "OR" condition.
         """
+        user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        return user
 
-        return await auth_utils.get_user_from_token_with_scopes(
-            scopes=scopes,
-            db=db,
-            token_data=token_data,
-        )
-
-    return get_current_user
+    return get_user_from_user_id
 
 
 def is_user(

@@ -1,8 +1,7 @@
-import logging
 from os import path
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,19 +15,18 @@ from app.dependencies import (
     is_user,
     is_user_in,
 )
-from app.modules.module_list import module_list
+from app.module import module_list
 from app.types.module import CoreModule
 from app.utils.tools import is_group_id_valid
 
 router = APIRouter(tags=["Core"])
 
 core_module = CoreModule(
-    root="",
+    root="core",
     tag="Core",
     router=router,
+    factory=None,
 )
-
-hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 @router.get(
@@ -37,6 +35,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
     status_code=200,
 )
 async def read_information(
+    request: Request,
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -77,13 +76,25 @@ async def read_terms_and_conditions():
 
 
 @router.get(
+    "/myeclpay-terms-of-service",
+    response_class=FileResponse,
+    status_code=200,
+)
+async def read_myeclpay_tos():
+    """
+    Return MyECLPay latest ToS
+    """
+    return FileResponse("assets/myeclpay-terms-of-service.txt")
+
+
+@router.get(
     "/support",
     response_class=FileResponse,
     status_code=200,
 )
 async def read_support():
     """
-    Return Hyperion terms and conditions pages
+    Return Hyperion support
     """
 
     return FileResponse("assets/support.txt")
@@ -251,26 +262,22 @@ async def add_module_visibility(
             root=module_visibility.root,
             allowed_group_id=module_visibility.allowed_group_id,
         )
-        try:
-            return await cruds_core.create_module_group_visibility(
-                module_visibility=module_group_visibility_db,
-                db=db,
-            )
-        except ValueError as error:
-            raise HTTPException(status_code=400, detail=str(error))
+
+        await cruds_core.create_module_group_visibility(
+            module_visibility=module_group_visibility_db,
+            db=db,
+        )
 
     if module_visibility.allowed_account_type is not None:
         module_account_visibility_db = models_core.ModuleAccountTypeVisibility(
             root=module_visibility.root,
             allowed_account_type=module_visibility.allowed_account_type,
         )
-        try:
-            return await cruds_core.create_module_account_type_visibility(
-                module_visibility=module_account_visibility_db,
-                db=db,
-            )
-        except ValueError as error:
-            raise HTTPException(status_code=400, detail=str(error))
+
+        await cruds_core.create_module_account_type_visibility(
+            module_visibility=module_account_visibility_db,
+            db=db,
+        )
 
 
 @router.delete("/module-visibility/{root}/groups/{group_id}", status_code=204)

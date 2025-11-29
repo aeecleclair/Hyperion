@@ -50,6 +50,7 @@ core_module = CoreModule(
     root="auth",
     tag="Auth",
     router=router,
+    factory=None,
 )
 
 templates = Jinja2Templates(directory="assets/templates")
@@ -256,7 +257,9 @@ async def authorize_validation(
         )
         return RedirectResponse(
             settings.CLIENT_URL
-            + calypsso.get_error_relative_url(message="Invalid client_id"),
+            + calypsso.get_message_relative_url(
+                message_type=calypsso.TypeMessage.invalid_client_id,
+            ),
             status_code=status.HTTP_302_FOUND,
         )
 
@@ -278,7 +281,9 @@ async def authorize_validation(
         )
         return RedirectResponse(
             settings.CLIENT_URL
-            + calypsso.get_error_relative_url(message="Mismatching redirect_uri"),
+            + calypsso.get_message_relative_url(
+                message_type=calypsso.TypeMessage.mismatching_redirect_uri,
+            ),
             status_code=status.HTTP_302_FOUND,
         )
     else:
@@ -324,8 +329,8 @@ async def authorize_validation(
             )
             return RedirectResponse(
                 settings.CLIENT_URL
-                + calypsso.get_error_relative_url(
-                    message="User is not member of an allowed group",
+                + calypsso.get_message_relative_url(
+                    message_type=calypsso.TypeMessage.user_not_member_of_allowed_group,
                 ),
                 status_code=status.HTTP_302_FOUND,
             )
@@ -336,8 +341,8 @@ async def authorize_validation(
             )
             return RedirectResponse(
                 settings.CLIENT_URL
-                + calypsso.get_error_relative_url(
-                    message="User account type is not allowed",
+                + calypsso.get_message_relative_url(
+                    message_type=calypsso.TypeMessage.user_account_type_not_allowed,
                 ),
                 status_code=status.HTTP_302_FOUND,
             )
@@ -442,7 +447,7 @@ async def token(
             request_id=request_id,
         )
 
-    elif tokenreq.grant_type == "refresh_token":
+    if tokenreq.grant_type == "refresh_token":
         return await refresh_token_grant(
             db=db,
             settings=settings,
@@ -451,15 +456,14 @@ async def token(
             request_id=request_id,
         )
 
-    else:
-        hyperion_access_logger.warning(
-            f"Token: Unsupported grant_type, received {tokenreq.grant_type} ({request_id})",
-        )
-        raise AuthHTTPException(
-            status_code=400,
-            error="unsupported_grant_type",
-            error_description=f"{tokenreq.grant_type} is not supported",
-        )
+    hyperion_access_logger.warning(
+        f"Token: Unsupported grant_type, received {tokenreq.grant_type} ({request_id})",
+    )
+    raise AuthHTTPException(
+        status_code=400,
+        error="unsupported_grant_type",
+        error_description=f"{tokenreq.grant_type} is not supported",
+    )
 
 
 async def authorization_code_grant(
@@ -708,7 +712,7 @@ async def refresh_token_grant(
             error="invalid_request",
             error_description="Invalid refresh token",
         )
-    elif db_refresh_token.revoked_on is not None:
+    if db_refresh_token.revoked_on is not None:
         # If the client tries to use a revoked refresh_token, we want to revoke all other refresh tokens from this client and user
         await cruds_auth.revoke_refresh_token_by_client_and_user_id(
             db=db,
@@ -762,7 +766,7 @@ async def refresh_token_grant(
         )
 
     # If the auth provider expects to use a client secret, we don't use PKCE
-    elif auth_client.secret is not None:
+    if auth_client.secret is not None:
         # We need to check the correct client_secret was provided
         if auth_client.secret != tokenreq.client_secret:
             hyperion_access_logger.warning(
@@ -919,15 +923,13 @@ async def create_response_body(
     access_token = create_access_token(data=access_token_data, settings=settings)
 
     # We create an OAuth response, with oidc specific elements if required
-    response_body = schemas_auth.TokenResponse(
+    return schemas_auth.TokenResponse(
         access_token=access_token,
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # in seconds
         scope=granted_scopes,
         refresh_token=refresh_token,
         id_token=id_token,
     )
-
-    return response_body
 
 
 @router.post(

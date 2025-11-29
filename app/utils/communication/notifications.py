@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from uuid import UUID
 
 import firebase_admin
 from fastapi import BackgroundTasks
@@ -7,8 +8,8 @@ from firebase_admin import credentials, messaging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.notification import cruds_notification, models_notification
-from app.core.notification.notification_types import CustomTopic
 from app.core.notification.schemas_notification import Message
+from app.core.users import cruds_users
 from app.core.utils.config import Settings
 from app.types.scheduler import Scheduler
 
@@ -41,6 +42,7 @@ class NotificationManager:
 
     async def _manage_firebase_batch_response(
         self,
+        message_content: Message,
         response: messaging.BatchResponse,
         tokens: list[str],
         db: AsyncSession,
@@ -49,22 +51,44 @@ class NotificationManager:
         Manage the response of a firebase notification. We need to assume that tokens that failed to be send are not valid anymore and delete them from the database.
         """
         if response.failure_count > 0:
-            responses = response.responses
-            failed_tokens = []
+            responses: list[messaging.SendResponse] = response.responses
+            failed_tokens: list[str] = []
+            mismatching_tokens: list[str] = []
             for idx, resp in enumerate(responses):
                 if not resp.success:
                     # Firebase may return different errors: https://firebase.google.com/docs/reference/admin/python/firebase_admin.messaging#exceptions
                     # UnregisteredError happens when the token is not valid anymore, and should thus be removed from the database
-                    # Other errors may happen, we want to log them as they may indicate a problem with the firebase configuration
+                    # Other errors may happen, we want to log them as they may indicate a problem with the firebase configuration.
+                    # We cannot do more from the back-end to have the user eventually receive the notification.
                     if not isinstance(
                         resp.exception,
-                        firebase_admin.messaging.UnregisteredError,
+                        messaging.UnregisteredError,
                     ):
-                        hyperion_error_logger.error(
-                            f"Firebase: Failed to send firebase notification to token {tokens[idx]}: {resp.exception}",
-                        )
+                        if isinstance(
+                            resp.exception,
+                            messaging.SenderIdMismatchError,
+                        ):
+                            mismatching_tokens.append(tokens[idx])
+                        else:
+                            hyperion_error_logger.error(
+                                f"Firebase: Failed to send firebase notification to token {tokens[idx]}: {resp.exception}",
+                            )
                     # The order of responses corresponds to the order of the registration tokens.
                     failed_tokens.append(tokens[idx])
+            if len(mismatching_tokens) > 0:
+                usernames = await cruds_notification.get_usernames_by_firebase_tokens(
+                    tokens=mismatching_tokens,
+                    db=db,
+                )
+                hyperion_error_logger.error(
+                    "Firebase: SenderId mismatch for notification '%s' (%s module) for %s/%s tokens (%s users) : %s",
+                    message_content.title,
+                    message_content.action_module,
+                    len(mismatching_tokens),
+                    response.success_count + response.failure_count,
+                    len(usernames),
+                    ", ".join(usernames),
+                )
             hyperion_error_logger.info(
                 f"{response.failure_count} messages failed to be send, removing their tokens from the database.",
             )
@@ -113,13 +137,14 @@ class NotificationManager:
                 ),
             )
 
-            result = messaging.send_each_for_multicast(message)
+            result: messaging.BatchResponse = messaging.send_each_for_multicast(message)
         except Exception:
             hyperion_error_logger.exception(
                 "Notification: Unable to send firebase notification to tokens",
             )
             raise
         await self._manage_firebase_batch_response(
+            message_content,
             response=result,
             tokens=tokens,
             db=db,
@@ -127,7 +152,7 @@ class NotificationManager:
 
     def _send_firebase_push_notification_by_topic(
         self,
-        custom_topic: CustomTopic,
+        topic_id: UUID,
         message_content: Message,
     ):
         """
@@ -137,24 +162,38 @@ class NotificationManager:
 
         if not self.use_firebase:
             return
-        message = messaging.Message(
-            topic=custom_topic.to_str(),
-            notification=messaging.Notification(
-                title=message_content.title,
-                body=message_content.content,
-            ),
-        )
+
         try:
-            messaging.send(message)
-        except messaging.FirebaseError:
+            topic = str(topic_id)
+            message = messaging.Message(
+                topic=topic,
+                data={"action_module": message_content.action_module},
+                notification=messaging.Notification(
+                    title=message_content.title,
+                    body=message_content.content,
+                ),
+            )
+
+            result: messaging.BatchResponse = messaging.send_each([message])
+        except Exception:
             hyperion_error_logger.exception(
-                f"Notification: Unable to send firebase notification for topic {custom_topic}",
+                f"Notification: Unable to send firebase notification for topic {topic}",
             )
             raise
 
+        if result.failure_count > 0:
+            hyperion_error_logger.error(
+                "Firebase: Failed to send notification '%s' for topic %s (%s module) for %s/%s tokens",
+                message_content.title,
+                topic,
+                message_content.action_module,
+                result.failure_count,
+                result.success_count + result.failure_count,
+            )
+
     async def subscribe_tokens_to_topic(
         self,
-        custom_topic: CustomTopic,
+        topic_id: UUID,
         tokens: list[str],
     ):
         """
@@ -163,15 +202,22 @@ class NotificationManager:
         if not self.use_firebase:
             return
 
-        response = messaging.subscribe_to_topic(tokens, custom_topic.to_str())
+        if len(tokens) == 0:
+            return
+
+        topic = str(topic_id)
+        response: messaging.TopicManagementResponse = messaging.subscribe_to_topic(
+            tokens,
+            topic,
+        )
         if response.failure_count > 0:
             hyperion_error_logger.info(
-                f"Notification: Failed to subscribe to topic {custom_topic} due to {[error.reason for error in response.errors]}",
+                f"Notification: Failed to subscribe to topic {topic} due to {[error.reason for error in response.errors]}",
             )
 
     async def unsubscribe_tokens_to_topic(
         self,
-        custom_topic: CustomTopic,
+        topic_id: UUID,
         tokens: list[str],
     ):
         """
@@ -180,7 +226,8 @@ class NotificationManager:
         if not self.use_firebase:
             return
 
-        messaging.unsubscribe_from_topic(tokens, custom_topic.to_str())
+        topic = str(topic_id)
+        messaging.unsubscribe_from_topic(tokens, topic)
 
     async def send_notification_to_users(
         self,
@@ -222,9 +269,8 @@ class NotificationManager:
 
     async def send_notification_to_topic(
         self,
-        custom_topic: CustomTopic,
+        topic_id: UUID,
         message: Message,
-        db: AsyncSession,
     ) -> None:
         """
         Send a notification to a given topic.
@@ -241,17 +287,17 @@ class NotificationManager:
 
         try:
             self._send_firebase_push_notification_by_topic(
-                custom_topic=custom_topic,
+                topic_id=topic_id,
                 message_content=message,
             )
         except Exception as error:
             hyperion_error_logger.warning(
-                f"Notification: Unable to send firebase notification for topic {custom_topic}: {error}",
+                f"Notification: Unable to send firebase notification for topic {topic_id}: {error}",
             )
 
     async def subscribe_user_to_topic(
         self,
-        custom_topic: CustomTopic,
+        topic_id: UUID,
         user_id: str,
         db: AsyncSession,
     ) -> None:
@@ -260,18 +306,18 @@ class NotificationManager:
         """
 
         existing_topic_membership = (
-            await cruds_notification.get_topic_membership_by_user_id_and_custom_topic(
-                custom_topic=custom_topic,
+            await cruds_notification.get_topic_membership_by_user_id_and_topic_id(
                 user_id=user_id,
+                topic_id=topic_id,
                 db=db,
             )
         )
+
         # If the membership already exist we don't want to create a new one
         if not existing_topic_membership:
             topic_membership = models_notification.TopicMembership(
                 user_id=user_id,
-                topic=custom_topic.topic,
-                topic_identifier=custom_topic.topic_identifier,
+                topic_id=topic_id,
             )
             await cruds_notification.create_topic_membership(
                 topic_membership=topic_membership,
@@ -281,14 +327,15 @@ class NotificationManager:
                 user_ids=[user_id],
                 db=db,
             )
+
             await self.subscribe_tokens_to_topic(
-                custom_topic=custom_topic,
+                topic_id=topic_id,
                 tokens=tokens,
             )
 
     async def unsubscribe_user_to_topic(
         self,
-        custom_topic: CustomTopic,
+        topic_id: UUID,
         user_id: str,
         db: AsyncSession,
     ) -> None:
@@ -296,7 +343,7 @@ class NotificationManager:
         Unsubscribe a user to a given topic.
         """
         await cruds_notification.delete_topic_membership(
-            custom_topic=custom_topic,
+            topic_id=topic_id,
             user_id=user_id,
             db=db,
         )
@@ -304,7 +351,41 @@ class NotificationManager:
             user_ids=[user_id],
             db=db,
         )
-        await self.unsubscribe_tokens_to_topic(custom_topic=custom_topic, tokens=tokens)
+        await self.unsubscribe_tokens_to_topic(topic_id=topic_id, tokens=tokens)
+
+    async def register_new_topic(
+        self,
+        topic_id: UUID,
+        name: str,
+        module_root: str,
+        topic_identifier: str | None,
+        restrict_to_group_id: str | None,
+        restrict_to_members: bool,
+        db: AsyncSession,
+    ):
+        await cruds_notification.create_notification_topic(
+            notification_topic=models_notification.NotificationTopic(
+                id=topic_id,
+                name=name,
+                module_root=module_root,
+                topic_identifier=topic_identifier,
+                restrict_to_group_id=restrict_to_group_id,
+                restrict_to_members=restrict_to_members,
+            ),
+            db=db,
+        )
+
+        # We want, by default, to register users to this new topic
+        users = await cruds_users.get_users(
+            db=db,
+            included_groups=[restrict_to_group_id] if restrict_to_group_id else None,
+        )
+        for user in users:
+            await self.subscribe_user_to_topic(
+                topic_id=topic_id,
+                user_id=user.id,
+                db=db,
+            )
 
 
 class NotificationTool:
@@ -327,6 +408,28 @@ class NotificationTool:
         self.notification_manager = notification_manager
         self.db = db
         # self.scheduler = scheduler
+
+    async def send_notification_to_group(
+        self,
+        group_id: str,
+        message: Message,
+        scheduler: Scheduler | None = None,
+        defer_date: datetime | None = None,
+        job_id: str | None = None,
+    ):
+        users = await cruds_users.get_users(
+            included_groups=[group_id],
+            db=self.db,
+        )
+        user_ids = [user.id for user in users]
+
+        await self.send_notification_to_users(
+            user_ids=user_ids,
+            message=message,
+            scheduler=scheduler,
+            defer_date=defer_date,
+            job_id=job_id,
+        )
 
     async def send_notification_to_users(
         self,
@@ -360,6 +463,7 @@ class NotificationTool:
         defer_date: datetime,
         job_id: str,
     ):
+        await scheduler.cancel_job(job_id=job_id)
         await scheduler.queue_job_defer_to(
             self.notification_manager.send_notification_to_users,
             user_ids=user_ids,
@@ -380,7 +484,7 @@ class NotificationTool:
 
     async def send_notification_to_topic(
         self,
-        custom_topic: CustomTopic,
+        topic_id: UUID,
         message: Message,
         scheduler: Scheduler | None = None,
         defer_date: datetime | None = None,
@@ -388,7 +492,7 @@ class NotificationTool:
     ):
         if defer_date is not None and scheduler is not None and job_id is not None:
             await self.send_future_notification_to_topic_defer_to(
-                custom_topic=custom_topic,
+                topic_id=topic_id,
                 message=message,
                 scheduler=scheduler,
                 defer_date=defer_date,
@@ -397,22 +501,22 @@ class NotificationTool:
         else:
             self.background_tasks.add_task(
                 self.notification_manager.send_notification_to_topic,
-                custom_topic=custom_topic,
+                topic_id=topic_id,
                 message=message,
-                db=self.db,
             )
 
     async def send_future_notification_to_topic_defer_to(
         self,
-        custom_topic: CustomTopic,
+        topic_id: UUID,
         message: Message,
         scheduler: Scheduler,
         defer_date: datetime,
         job_id: str,
     ):
+        await scheduler.cancel_job(job_id=job_id)
         await scheduler.queue_job_defer_to(
             self.notification_manager.send_notification_to_topic,
-            custom_topic=custom_topic,
+            topic_id=topic_id,
             message=message,
             job_id=job_id,
             defer_date=defer_date,

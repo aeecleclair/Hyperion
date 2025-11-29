@@ -1,35 +1,51 @@
+from collections.abc import Generator
+
 import pytest
 from fastapi.testclient import TestClient
 
 from app.app import get_application
 from app.dependencies import (
-    get_db,
-    get_payment_tool,
-    get_redis_client,
-    get_scheduler,
     get_settings,
-    get_unsafe_db,
+    init_state,
 )
+from tests import commons
 from tests.commons import (
-    override_get_db,
-    override_get_payment_tool,
-    override_get_redis_client,
-    override_get_scheduler,
+    create_test_settings,
     override_get_settings,
-    override_get_unsafe_db,
-    settings,
+    override_init_state,
 )
 
 
 @pytest.fixture(scope="module", autouse=True)
-def client() -> TestClient:
-    test_app = get_application(settings=settings, drop_db=True)  # Create the test's app
+def client(request) -> Generator[TestClient, None, None]:
+    """
+    TestClient fixture.
 
-    test_app.dependency_overrides[get_db] = override_get_db
-    test_app.dependency_overrides[get_unsafe_db] = override_get_unsafe_db
+    A parameter `use_attribute` can be passed to the fixture using:
+    ```python
+    @pytest.mark.parametrize("client", [True], indirect=True)
+    async def test_example(client: TestClient):
+        ...
+    ```
+    """
+    try:
+        use_factory = request.__getattribute__("param")
+    except AttributeError:
+        use_factory = False
+
+    commons.SETTINGS = create_test_settings(
+        USE_FACTORIES=use_factory,
+    )
+
+    test_app = get_application(
+        settings=commons.SETTINGS,
+        drop_db=True,
+    )  # Create the test's app
+
+    test_app.dependency_overrides[init_state] = override_init_state
     test_app.dependency_overrides[get_settings] = override_get_settings
-    test_app.dependency_overrides[get_redis_client] = override_get_redis_client
-    test_app.dependency_overrides[get_payment_tool] = override_get_payment_tool
-    test_app.dependency_overrides[get_scheduler] = override_get_scheduler
 
-    return TestClient(test_app)  # Create a client to execute tests
+    # The TestClient should be used as a context manager in order for the lifespan to be called
+    # See https://www.starlette.io/lifespan/#running-lifespan-in-tests
+    with TestClient(test_app) as client:
+        yield client

@@ -8,7 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.users import models_users
 from app.dependencies import get_db, is_user_an_ecl_member, is_user_in
-from app.modules.calendar import cruds_calendar, models_calendar, schemas_calendar
+from app.modules.calendar import (
+    cruds_calendar,
+    models_calendar,
+    schemas_calendar,
+)
+from app.modules.calendar.factory_calendar import CalendarFactory
 from app.modules.calendar.types_calendar import Decision
 from app.types.module import Module
 from app.utils.tools import is_user_member_of_any_group
@@ -17,6 +22,7 @@ module = Module(
     root="event",
     tag="Calendar",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    factory=CalendarFactory(),
 )
 
 ical_file_path = "data/ics/ae_calendar.ics"
@@ -32,8 +38,7 @@ async def get_events(
     user: models_users.CoreUser = Depends(is_user_in(GroupType.BDE)),
 ):
     """Get all events from the database."""
-    events = await cruds_calendar.get_all_events(db=db)
-    return events
+    return await cruds_calendar.get_all_events(db=db)
 
 
 @module.router.get(
@@ -50,8 +55,7 @@ async def get_confirmed_events(
 
     **Usable by every member**
     """
-    events = await cruds_calendar.get_confirmed_events(db=db)
-    return events
+    return await cruds_calendar.get_confirmed_events(db=db)
 
 
 @module.router.get(
@@ -73,13 +77,11 @@ async def get_applicant_bookings(
         user,
         [GroupType.BDE],
     ):
-        bookings = await cruds_calendar.get_applicant_events(
+        return await cruds_calendar.get_applicant_events(
             db=db,
             applicant_id=applicant_id,
         )
-        return bookings
-    else:
-        raise HTTPException(status_code=403)
+    raise HTTPException(status_code=403)
 
 
 @module.router.get(
@@ -97,8 +99,7 @@ async def get_event_by_id(
     event = await cruds_calendar.get_event(db=db, event_id=event_id)
     if event is not None:
         return event
-    else:
-        raise HTTPException(status_code=404)
+    raise HTTPException(status_code=404)
 
 
 @module.router.get(
@@ -114,8 +115,7 @@ async def get_event_applicant(
     event = await cruds_calendar.get_event(db=db, event_id=event_id)
     if event is not None:
         return event.applicant
-    else:
-        raise HTTPException(status_code=404)
+    raise HTTPException(status_code=404)
 
 
 @module.router.post(
@@ -138,10 +138,8 @@ async def add_event(
         applicant_id=user.id,
         **event.model_dump(),
     )
-    try:
-        return await cruds_calendar.add_event(event=db_event, db=db)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+
+    return await cruds_calendar.add_event(event=db_event, db=db)
 
 
 @module.router.patch(
@@ -170,10 +168,7 @@ async def edit_bookings_id(
             detail="You are not allowed to edit this event",
         )
 
-    try:
-        await cruds_calendar.edit_event(event_id=event_id, event=event_edit, db=db)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+    await cruds_calendar.edit_event(event_id=event_id, event=event_edit, db=db)
 
 
 @module.router.patch(
@@ -251,5 +246,4 @@ async def get_icalendar_file(db: AsyncSession = Depends(get_db)):
     if Path(ical_file_path).exists():
         return FileResponse(ical_file_path)
 
-    else:
-        raise HTTPException(status_code=404)
+    raise HTTPException(status_code=404)

@@ -6,8 +6,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import AccountType, GroupType
-from app.core.notification.notification_types import CustomTopic, Topic
-from app.core.notification.schemas_notification import Message
+from app.core.notification.schemas_notification import Message, Topic
 from app.core.users import models_users
 from app.dependencies import (
     get_db,
@@ -29,10 +28,21 @@ from app.utils.tools import (
     save_pdf_first_page_as_image,
 )
 
+root = "ph"
+ph_topic = Topic(
+    id=uuid.UUID("b493c745-adb3-4822-9d1d-1fc6d5152681"),
+    module_root=root,
+    name="📗 PH",
+    topic_identifier=None,
+    restrict_to_group_id=None,
+    restrict_to_members=True,
+)
 module = Module(
-    root="ph",
+    root=root,
     tag="ph",
     default_allowed_account_types=[AccountType.student],
+    registred_topics=[ph_topic],
+    factory=None,
 )
 
 
@@ -72,11 +82,10 @@ async def get_papers(
     """
     Return all editions until now, sorted from the latest to the oldest
     """
-    result = await cruds_ph.get_papers(
+    return await cruds_ph.get_papers(
         db=db,
         end_date=datetime.now(tz=UTC).date(),
     )  # Return papers from the latest to the oldest until now
-    return result
 
 
 @module.router.get(
@@ -91,10 +100,9 @@ async def get_papers_admin(
     """
     Return all editions, sorted from the latest to the oldest
     """
-    result = await cruds_ph.get_papers(
+    return await cruds_ph.get_papers(
         db=db,
     )  # Return all papers from the latest to the oldest
-    return result
 
 
 @module.router.post(
@@ -115,44 +123,38 @@ async def create_paper(
         id=uuid.uuid4(),
         **paper.model_dump(),
     )
-    try:
-        paper_db = models_ph.Paper(
-            id=paper_complete.id,
-            name=paper_complete.name,
-            release_date=paper_complete.release_date,
+
+    paper_db = models_ph.Paper(
+        id=paper_complete.id,
+        name=paper_complete.name,
+        release_date=paper_complete.release_date,
+    )
+
+    now = datetime.now(UTC)
+
+    # We only want to send a notification if the paper was released less than a month ago.
+    if paper_db.release_date >= now.date() - timedelta(days=30):
+        message = Message(
+            title=f"📗 PH - {paper_db.name}",
+            content="Un nouveau journal est disponible! 🎉",
+            action_module="ph",
         )
-
-        now = datetime.now(UTC)
-
-        # We only want to send a notification if the paper was released less than a month ago.
-        if paper_db.release_date >= now.date() - timedelta(days=30):
-            message = Message(
-                title=f"📗 PH - {paper_db.name}",
-                content="Un nouveau journal est disponible! 🎉",
-                action_module="ph",
+        if paper_db.release_date == now.date():
+            await notification_tool.send_notification_to_topic(
+                topic_id=ph_topic.id,
+                message=message,
             )
-            if paper_db.release_date == now.date():
-                await notification_tool.send_notification_to_topic(
-                    custom_topic=CustomTopic(topic=Topic.ph),
-                    message=message,
-                )
-            else:
-                delivery_time = time(11, 00, 00, tzinfo=UTC)
-                release_date = datetime.combine(paper_db.release_date, delivery_time)
-                await notification_tool.send_notification_to_topic(
-                    custom_topic=CustomTopic(topic=Topic.ph),
-                    message=message,
-                    scheduler=scheduler,
-                    defer_date=release_date,
-                    job_id=f"ph_{paper_db.id}",
-                )
-        return await cruds_ph.create_paper(paper=paper_db, db=db)
-
-    except ValueError as error:
-        raise HTTPException(
-            status_code=400,
-            detail=str(error),
-        )
+        else:
+            delivery_time = time(11, 00, 00, tzinfo=UTC)
+            release_date = datetime.combine(paper_db.release_date, delivery_time)
+            await notification_tool.send_notification_to_topic(
+                topic_id=ph_topic.id,
+                message=message,
+                scheduler=scheduler,
+                defer_date=release_date,
+                job_id=f"ph_{paper_db.id}",
+            )
+    return await cruds_ph.create_paper(paper=paper_db, db=db)
 
 
 @module.router.post(
@@ -177,7 +179,6 @@ async def create_paper_pdf_and_cover(
         upload_file=pdf,
         directory="ph/pdf",
         filename=str(paper_id),
-        request_id=request_id,
         max_file_size=10 * 1024 * 1024,  # 10 MB
         accepted_content_types=[ContentType.pdf],
     )
@@ -187,7 +188,6 @@ async def create_paper_pdf_and_cover(
         output_image_directory="ph/cover",
         filename=str(paper_id),
         default_pdf_path="assets/pdf/default_ph.pdf",
-        request_id=request_id,
         jpg_quality=95,
     )
 

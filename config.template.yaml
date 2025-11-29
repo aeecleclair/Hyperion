@@ -1,0 +1,189 @@
+###############################################
+# Authorization using OAuth or Openid connect #
+###############################################
+# ACCESS_TOKEN_SECRET_KEY should contain a random string with enough entropy (at least 32 bytes long) to securely sign all access_tokens for OAuth and Openid connect
+ACCESS_TOKEN_SECRET_KEY: ""
+# RSA_PRIVATE_PEM_STRING should be a string containing the PEM certificate of a private RSA key. It will be used to sign id_tokens for Openid connect authentication
+# The example below was generated using a 2048-bit RSA key generator
+RSA_PRIVATE_PEM_STRING: |
+  #-----BEGIN RSA PRIVATE KEY-----
+  #MIIEpQIBAAKCAQEA1tpj3TZDkJakp2RygsM392pQbcmNBOGFT8FlETcRG/JVFT7k
+  #iClJu+CVOJSVD0epfpYp93cYepfw74SezYnBCyuoLJ2yg5Qh4KlCrWmvwM7vhFIN
+  #x0xddIQi+Gm0T3dxGtv4Ga50TYX4SV4FE3ctJG9m3pyNF6POODp5tMJvShQWYTto
+  #W9qNhltZ8Z+14bq2INV/efpT47WuMT+VD/fa9/WwopAtgBcQOvq57fv5+DaPOIVR
+  #9BiP7F+pv+v6wQ373hI22QzCMsA4Whl+BmWFKcFoBDOBRjlW5VqhJWJkWZIRP0q+
+  #VAZHk2xJK+0YFc9jmaC+ExMtuyHYK0RnQK/8LQIDAQABAoIBABxJ8v4sZ+cAvrs/
+  #kYhAFf1gpShfck7jNr9SknEa1Aje9m7usf5vmULAhkVF4v55DAsb0HjB2JpDqTiQ
+  #OKyNZ7qFzAXb2aZTecZv4tScZsS3OngsqZ3FI0T1JPmaSWBxNJY5wkf3XV7btd5L
+  #H9X5ShtTA7Np33XuXneu01mGhEq3boLro+vfXMHV5QHyle1F4LUFWEqtP0UmZ5wA
+  #rro0Y7pA8R88tu5X4iWEjQPnAsbRixwFQ9LNMD8+40e1UIguobRySnP5umErHaIh
+  #Kui7ZijLjbZh/dPS0IfpgahL1K6s9XhT3mD9WMvAvMkNtLewHIZZukG45mOQBrjF
+  #vvyYxoECgYEA+EY6YimGw0IKnUuf+5uZRXST7kDMENz1Flkcj8oZvo47hdX8/lDN
+  #i0y7gm3VNfHAK2R2KZPmSbtXA0DvS7kmx1/CFcmwkaakhuU5dyCHldWwSaTME3IE
+  #xjSZfTvlAiq9i6nUflgfkKo3Bdsiq8TYOUAv25S2SwYDH9Tx0fQwwGECgYEA3Ynt
+  #CHc8e4YRlGT65UQmEZ8cptmqVRyY4ClMU1xht7Pn0G1JwKRraiEL5/LndwscWf3h
+  #DygQuArJ28pp4d22FEW1LeXozXYUjJoz3anIA45IZ1OihS7Cx7tJB51/QNJeFdF4
+  #EX/XHaVukHyYSsAxkwCUYOw3cSgZOSEddL5Wf00CgYEA7JlIlDmMwtFR+jqSmJ3c
+  #//Kr8zZvAnb/Xa/IZ0MrK4yyLsYR1m48o06Ztx9iO4lKIFAZx1+563QL5P7hzOEC
+  #kqev90GA8hzD2AXksKEgdOrymAvjq3hSEm0YBN+qS1ldzxYmec0TL7L2wq7lqJnr
+  #kQuZUAG1g2OUYKZ3WSUDvKECgYEAv24NSkFuG/avfiD7w9xtYNCye2KekskROLG2
+  #6FltfsWQTEQDdNkekChaF2WHqRAKwaBlNymRuNZpsuhnMerZCQ9rDWwbDF86RnyA
+  #0MuCr7/kxJQ6XQcY/GnTIydu7F5bOlM0gzqKcW2f6m4fUohczf+0N0QmbDsQAJOi
+  #1lwadgkCgYEA3tkCBJIPTQecfjWiLqSocS6SrwXU+r3Jw6kI3/IB6ban/nsFdHSb
+  #nADST7f2zZatN6XALwsLU7f2R09R39ub0AJPyfToxo7MngR1rvaUYooF3rLlaU32
+  #8DqGvGpLkZkwbtcDmcX1zQoHjUo7RvoShZoapr59ihfrkiiEsXOkuGw=
+  #-----END RSA PRIVATE KEY-----
+
+# Host or url of the instance of Hyperion
+# This url will be especially used for oidc/oauth2 discovery endpoint and links send by email
+# NOTE: A trailing / is required
+CLIENT_URL: http://127.0.0.1:8000/
+
+# Sometimes, when running third services with oidc inside Docker containers, and running Hyperion on your local device
+# you may need to use a different url for call made from docker and call made from your device
+# For exemple:
+#   you will access the login page from your browser http://localhost:8000/auth/authorize
+#   but the docker container should call http://host.docker.internal:8000/auth/token and not your localhost address
+# NOTE: A trailing / is required
+#OVERRIDDEN_CLIENT_URL_FOR_OIDC: "http://host.docker.internal:8000/"
+
+# Configure AuthClients, to allow services to authenticate users using OAuth2 or Openid connect
+# The following format should be used in yaml config files:
+# ```yml
+# AUTH_CLIENTS:
+#   <ClientId>:
+#     secret: <ClientSecret>
+#     redirect_uri:
+#       - <RedirectUri1>
+#       - <RedirectUri2>
+#     auth_client: <AuthClientClassName>
+# ```
+# `AuthClientClassName` should be a class from `app.utils.auth.providers`
+# `secret` may be omitted to use PKCE instead of a client secret
+AUTH_CLIENTS:
+  Titan:
+    secret:
+    redirect_uri:
+      - http://localhost:3000/static.html
+      - http://127.0.0.1:3000/static.html
+    auth_client: AppAuthClient
+  Postman:
+    secret: PostmanSecret
+    redirect_uri:
+      - https://oauth.pstmn.io/v1/callback
+      - http://postman
+      - http://localhost:8000/docs/oauth2-redirect
+      - http://127.0.0.1:8000/docs/oauth2-redirect
+    auth_client: APIToolAuthClient
+
+#####################
+# Hyperion settings #
+#####################
+
+LOG_DEBUG_MESSAGES: True
+
+# Origins for the CORS middleware. `["http://localhost"]` can be used for development.
+# See https://fastapi.tiangolo.com/tutorial/cors/
+# It should begin with 'http://' or 'https:// and should never end with a '/'
+CORS_ORIGINS:
+  - http://localhost:3000
+  - http://127.0.0.1:3000
+#  - *
+
+# If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (if possible Postgresql should be used instead)
+SQLITE_DB: app.db
+# If True, will print all SQL queries in the console
+DATABASE_DEBUG: False
+# if True and the database is empty, it will be seeded with mocked data
+USE_FACTORIES: True
+
+#####################################
+# SMTP configuration using starttls #
+#####################################
+
+SMTP_ACTIVE: False
+SMTP_PORT: 587
+SMTP_SERVER: ""
+SMTP_USERNAME: ""
+SMTP_PASSWORD: ""
+SMTP_EMAIL: ""
+
+##########################
+# Firebase Configuration #
+##########################
+
+# To enable Firebase push notification capabilities, a JSON key file named `firebase.json` should be placed at Hyperion root.
+# This file can be created and downloaded from [Google cloud, IAM and administration, Service account](https://console.cloud.google.com/iam-admin/serviceaccounts) page.
+USE_FIREBASE: false
+########################
+# Matrix configuration #
+########################
+
+# Matrix configuration is optional. If configured, Hyperion will be able to send messages to a Matrix server.
+# This configuration will be used to send errors messages.
+# If the following parameters are not set, logging won't use the Matrix handler
+# MATRIX_SERVER_BASE_URL is optional, the official Matrix server will be used if not configured
+# Advanced note: Username and password will be used to ask for an access token. A Matrix custom client `Hyperion` is used to make all requests
+#MATRIX_SERVER_BASE_URL: ""
+#MATRIX_TOKEN: ""
+#MATRIX_LOG_ERROR_ROOM_ID: ""
+#MATRIX_LOG_AMAP_ROOM_ID: ""
+
+#############################
+# Token to use the TMDB API #
+#############################
+
+# This API key is required in order to send requests to the Internet Movie Database.
+# It is only used in the Cinema module.
+#THE_MOVIE_DB_API: ""
+
+####################
+# S3 configuration #
+####################
+
+# S3 configuration is needed to use the S3 storage for MyECLPay logs
+
+#S3_BUCKET_NAME: ""
+#S3_ACCESS_KEY_ID: ""
+#S3_SECRET_ACCESS_KEY: ""
+
+##############
+# Google API #
+##############
+
+# Google API configuration #
+# Google API is used to upload files to Google Drive
+# See ./app/utils/google_api/README.md for more information
+#GOOGLE_API_CLIENT_ID: ""
+#GOOGLE_API_CLIENT_SECRET:  ""
+
+#RAID_DRIVE_REFRESH_TOKEN: ""
+#RAID_DRIVE_API_KEY: ""
+#RAID_DRIVE_CLIENT_ID: ""
+#RAID_DRIVE_CLIENT_SECRET: ""
+#RAID_PAYMENT_REDIRECTION_URL: ""
+
+###########################
+# HelloAsso configuration #
+###########################
+
+# To be able to use payment features using HelloAsso, you need to set a client id, secret for their API
+# HelloAsso provide a sandbox to be able to realize tests
+# HELLOASSO_API_BASE should have the format: `api.helloasso-sandbox.com`
+# HelloAsso only allow 20 simultaneous active access token. Note that each Hyperion worker will need its own access token.
+
+# [["name", "helloasso_client_id", "helloasso_client_secret", "helloasso_slug", "redirection_uri"]]
+#HELLOASSO_CONFIGURATIONS: []
+#HELLOASSO_API_BASE: ""
+
+# Maximum wallet balance for MyECLPay in cents, we will prevent user from adding more money to their wallet if it will make their balance exceed this value
+#MYECLPAY_MAXIMUM_WALLET_BALANCE: 1000
+
+# Trusted urls is a list of redirect payment url that can be trusted by Hyperion.
+# These urls will be used to validate the redirect url provided by the front
+#TRUSTED_PAYMENT_REDIRECT_URLS: []
+
+# MyECLPay requires an external service to recurrently check for transactions and state integrity, this service needs an access to all the data related to the transactions and the users involved
+# This service will use a special token to access the data
+# If this token is not set, the service will not be able to access the data and no integrity check will be performed
+#MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN: ""

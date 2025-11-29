@@ -11,6 +11,8 @@ data/
 
 # Dotenv file
 .env
+config.yaml
+
 
 # Firebase secrets
 firebase.json
@@ -33,3 +35,5 @@ tests/jinja_test_outputs/
 
 # Local testing
 scripts/
+
+node_modules

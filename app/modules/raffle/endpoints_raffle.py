@@ -24,7 +24,6 @@ from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.redis import locker_get, locker_set
 from app.utils.tools import (
-    get_display_name,
     get_file_from_data,
     is_user_member_of_any_group,
     save_file_as_data,
@@ -34,6 +33,7 @@ module = Module(
     root="tombola",
     tag="Raffle",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
+    factory=None,
 )
 
 hyperion_raffle_logger = logging.getLogger("hyperion.raffle")
@@ -52,8 +52,7 @@ async def get_raffle(
     """
     Return all raffles
     """
-    raffles = await cruds_raffle.get_raffles(db)
-    return raffles
+    return await cruds_raffle.get_raffles(db)
 
 
 @module.router.post(
@@ -77,8 +76,7 @@ async def create_raffle(
     raffle.status = RaffleStatusType.creation
     db_raffle = models_raffle.Raffle(id=str(uuid.uuid4()), **raffle.model_dump())
 
-    result = await cruds_raffle.create_raffle(raffle=db_raffle, db=db)
-    return result
+    return await cruds_raffle.create_raffle(raffle=db_raffle, db=db)
 
 
 @module.router.patch(
@@ -166,8 +164,7 @@ async def get_raffles_by_group_id(
     """
     Return all raffles from a group
     """
-    raffle = await cruds_raffle.get_raffles_by_groupid(group_id, db)
-    return raffle
+    return await cruds_raffle.get_raffles_by_groupid(group_id, db)
 
 
 @module.router.get(
@@ -235,7 +232,6 @@ async def create_current_raffle_logo(
         upload_file=image,
         directory="raffle-pictures",
         filename=str(raffle_id),
-        request_id=request_id,
         max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,
@@ -283,8 +279,7 @@ async def get_pack_tickets(
     """
     Return all tickets
     """
-    pack_tickets = await cruds_raffle.get_packtickets(db)
-    return pack_tickets
+    return await cruds_raffle.get_packtickets(db)
 
 
 @module.router.post(
@@ -317,8 +312,7 @@ async def create_packticket(
         **packticket.model_dump(),
     )
 
-    result = await cruds_raffle.create_packticket(packticket=db_packticket, db=db)
-    return result
+    return await cruds_raffle.create_packticket(packticket=db_packticket, db=db)
 
 
 @module.router.patch(
@@ -416,8 +410,7 @@ async def get_pack_tickets_by_raffle_id(
     """
     Return all pack_tickets associated to a raffle
     """
-    pack_tickets = await cruds_raffle.get_packtickets_by_raffleid(raffle_id, db)
-    return pack_tickets
+    return await cruds_raffle.get_packtickets_by_raffleid(raffle_id, db)
 
 
 @module.router.get(
@@ -434,8 +427,7 @@ async def get_tickets(
 
     **The user must be a member of the group admin to use this endpoint**
     """
-    tickets = await cruds_raffle.get_tickets(db)
-    return tickets
+    return await cruds_raffle.get_tickets(db)
 
 
 @module.router.post(
@@ -506,13 +498,9 @@ async def buy_ticket(
             amount=new_amount,
         )
 
-        display_name = get_display_name(
-            firstname=user.firstname,
-            name=user.name,
-            nickname=user.nickname,
-        )
+        display_name = user.full_name
         hyperion_raffle_logger.info(
-            f"Add_ticket_to_user: A pack of {pack_ticket.pack_size} tickets of type {pack_id} has been buyed by user {display_name}({user.id}) for an amount of {pack_ticket.price}€. ({request_id})",
+            f"Add_ticket_to_user: A pack of {pack_ticket.pack_size} tickets of type {pack_id} has been bought by user {display_name}({user.id}) for an amount of {pack_ticket.price}€. ({request_id})",
         )
 
         return tickets
@@ -546,9 +534,7 @@ async def get_tickets_by_userid(
             detail="Users that are not member of the group admin can only access the endpoint for their own user_id.",
         )
 
-    else:
-        tickets = await cruds_raffle.get_tickets_by_userid(user_id=user_id, db=db)
-        return tickets
+    return await cruds_raffle.get_tickets_by_userid(user_id=user_id, db=db)
 
 
 @module.router.get(
@@ -598,8 +584,7 @@ async def get_prizes(
     """
     Return all prizes
     """
-    prizes = await cruds_raffle.get_prizes(db)
-    return prizes
+    return await cruds_raffle.get_prizes(db)
 
 
 @module.router.post(
@@ -635,8 +620,7 @@ async def create_prize(
 
     db_prize = models_raffle.Prize(id=str(uuid.uuid4()), **prize.model_dump())
 
-    result = await cruds_raffle.create_prize(prize=db_prize, db=db)
-    return result
+    return await cruds_raffle.create_prize(prize=db_prize, db=db)
 
 
 @module.router.patch(
@@ -726,9 +710,7 @@ async def get_prizes_by_raffleid(
     Get prizes from a specific raffle.
     """
 
-    prizes = await cruds_raffle.get_prizes_by_raffleid(raffle_id=raffle_id, db=db)
-
-    return prizes
+    return await cruds_raffle.get_prizes_by_raffleid(raffle_id=raffle_id, db=db)
 
 
 @module.router.post(
@@ -773,7 +755,6 @@ async def create_prize_picture(
         upload_file=image,
         directory="raffle-prize_pictures",
         filename=str(prize_id),
-        request_id=request_id,
         max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,
@@ -823,8 +804,7 @@ async def get_users_cash(
 
     **The user must be a member of the group admin to use this endpoint
     """
-    cash = await cruds_raffle.get_users_cash(db)
-    return cash
+    return await cruds_raffle.get_users_cash(db)
 
 
 @module.router.get(
@@ -853,16 +833,14 @@ async def get_cash_by_id(
         cash = await cruds_raffle.get_cash_by_id(user_id=user_id, db=db)
         if cash is not None:
             return cash
-        else:
-            # We want to return a balance of 0 but we don't want to add it to the database
-            # An admin AMAP has indeed to add a cash to the user the first time
-            # TODO: this is a strange behaviour
-            return schemas_raffle.CashComplete(balance=0, user_id=user_id, user=user_db)
-    else:
-        raise HTTPException(
-            status_code=403,
-            detail="Users that are not member of the group admin can only access the endpoint for their own user_id.",
-        )
+        # We want to return a balance of 0 but we don't want to add it to the database
+        # An admin AMAP has indeed to add a cash to the user the first time
+        # TODO: this is a strange behaviour
+        return schemas_raffle.CashComplete(balance=0, user_id=user_id, user=user_db)
+    raise HTTPException(
+        status_code=403,
+        detail="Users that are not member of the group admin can only access the endpoint for their own user_id.",
+    )
 
 
 @module.router.post(
@@ -951,10 +929,6 @@ async def edit_cash_by_id(
             amount=cash.balance + balance.balance,
             db=db,
         )
-    except ValueError:
-        hyperion_error_logger.exception("Error in tombola edit_cash_by_id")
-        raise HTTPException(status_code=400, detail="Error while editing cash.")
-
     finally:
         locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
@@ -990,13 +964,10 @@ async def draw_winner(
             detail="Raffle must be locked to draw a prize",
         )
 
-    try:
-        winning_tickets = await cruds_raffle.draw_winner_by_prize_raffle(
-            prize_id=prize_id,
-            db=db,
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    winning_tickets = await cruds_raffle.draw_winner_by_prize_raffle(
+        prize_id=prize_id,
+        db=db,
+    )
 
     for ticket in winning_tickets:
         ticket.prize = prize

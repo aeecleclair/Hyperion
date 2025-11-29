@@ -8,11 +8,12 @@ from app.core.groups.groups_type import (
     GroupType,
     get_account_types_except_externals,
     get_ecl_account_types,
+    get_schools_account_types,
 )
 from app.core.users import models_users
 from app.types.floors_type import FloorsType
 from app.types.scopes_type import ScopeType
-from app.utils.tools import get_display_name, is_user_member_of_any_group
+from app.utils.tools import is_user_member_of_any_group
 
 
 class BaseAuthClient:
@@ -142,11 +143,7 @@ class NextcloudAuthClient(BaseAuthClient):
 
         return {
             "sub": user.id,
-            "name": get_display_name(
-                firstname=user.firstname,
-                name=user.name,
-                nickname=user.nickname,
-            ),
+            "name": user.full_name,
             # TODO: should we use group ids instead of names? It would be less human readable but would guarantee uniqueness. Question: are group names unique?
             # We may want to filter which groups are provided as they won't always all be useful
             "groups": [group.name for group in user.groups] + [user.account_type.value],
@@ -176,14 +173,13 @@ class PiwigoAuthClient(BaseAuthClient):
 
         # For Piwigo, providing the username is sufficient. The name of the claim (here `"name"`) needs to be set in Piwigo oidc plugin configuration page.
         # A modified Piwigo oidc plugin allows managing groups from the oidc provider
+        promo = user.promo
         return {
             "sub": user.id,
-            "name": get_display_name(
-                firstname=user.firstname,
-                name=user.name,
-                nickname=user.nickname,
-            ),
-            "groups": [group.name for group in user.groups] + [user.account_type.value],
+            "name": user.full_name,
+            "groups": [group.name for group in user.groups]
+            + [user.account_type.value]
+            + [str(promo) if promo is not None and promo >= 2014 else None],
             "email": user.email,
         }
 
@@ -211,17 +207,13 @@ class WikijsAuthClient(BaseAuthClient):
     # See app.types.scopes_type.ScopeType for possible values
     allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
 
-    allowed_account_types: list[AccountType] | None = get_ecl_account_types()
+    allowed_account_types: list[AccountType] | None = get_schools_account_types()
 
     @classmethod
     def get_userinfo(cls, user: models_users.CoreUser):
         return {
             "sub": user.id,
-            "name": get_display_name(
-                firstname=user.firstname,
-                name=user.name,
-                nickname=user.nickname,
-            ),
+            "name": user.full_name,
             "email": user.email,
             "groups": [group.name for group in user.groups] + [user.account_type.value],
         }
@@ -251,14 +243,10 @@ class SynapseAuthClient(BaseAuthClient):
 
         return {
             "sub": user.id,
-            # "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture",
+            "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture",
             # Matrix does not support special characters in username
             "username": username,
-            "displayname": get_display_name(
-                firstname=user.firstname,
-                name=user.name,
-                nickname=user.nickname,
-            ),
+            "displayname": user.full_name,
             "email": user.email,
         }
 
@@ -283,16 +271,8 @@ class MinecraftAuthClient(BaseAuthClient):
 class ChallengerAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.types.scopes_type.ScopeType for possible values
-    allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
-
-    @classmethod
-    def get_userinfo(cls, user: models_users.CoreUser):
-        return {
-            "sub": user.id,
-            "name": user.name,
-            "firstname": user.firstname,
-            "email": user.email,
-        }
+    allowed_scopes: set[ScopeType | str] = {ScopeType.API}
+    allowed_account_types: list[AccountType] | None = None
 
 
 class OpenProjectAuthClient(BaseAuthClient):
@@ -306,11 +286,7 @@ class OpenProjectAuthClient(BaseAuthClient):
     def get_userinfo(cls, user: models_users.CoreUser):
         return {
             "sub": user.id,
-            "name": get_display_name(
-                firstname=user.firstname,
-                name=user.name,
-                nickname=user.nickname,
-            ),
+            "name": user.full_name,
             "given_name": user.firstname,
             "family_name": user.name,
             "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture",
@@ -332,11 +308,7 @@ class RalllyAuthClient(BaseAuthClient):
     def get_userinfo(cls, user: models_users.CoreUser):
         return {
             "sub": user.id,
-            "name": get_display_name(
-                firstname=user.firstname,
-                name=user.name,
-                nickname=user.nickname,
-            ),
+            "name": user.full_name,
             "email": user.email,
         }
 
@@ -358,11 +330,7 @@ class DocumensoAuthClient(BaseAuthClient):
     def get_userinfo(cls, user: models_users.CoreUser):
         return {
             "sub": user.id,
-            "name": get_display_name(
-                firstname=user.firstname,
-                name=user.name,
-                nickname=user.nickname,
-            ),
+            "name": user.full_name,
             "email": user.email,
         }
 
@@ -377,17 +345,13 @@ class RAIDRegisteringAuthClient(BaseAuthClient):
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
     allowed_scopes: set[ScopeType | str] = {ScopeType.API}
 
-    allowed_account_types: list[AccountType] | None = (
-        None  # No restriction on account types
-    )
+    allowed_account_types: list[AccountType] | None = None
 
 
 class SiarnaqAuthClient(BaseAuthClient):
     allowed_scopes: set[ScopeType | str] = {ScopeType.API}
 
-    allowed_account_types: list[AccountType] | None = (
-        None  # No restriction on account types
-    )
+    allowed_account_types: list[AccountType] | None = None
 
 
 class OverleafAuthClient(BaseAuthClient):
@@ -423,11 +387,7 @@ class PlankaAuthClient(BaseAuthClient):
     def get_userinfo(cls, user: models_users.CoreUser):
         return {
             "sub": user.id,
-            "name": get_display_name(
-                firstname=user.firstname,
-                name=user.name,
-                nickname=user.nickname,
-            ),
+            "name": user.full_name,
             "groups": [group.name for group in user.groups] + [user.account_type.value],
             "email": user.email,
         }
@@ -447,10 +407,6 @@ class SlashAuthClient(BaseAuthClient):
         # WARNING: The sub (subject) Claim MUST always be returned in the UserInfo Response.
         return {
             "sub": user.id,
-            "name": get_display_name(
-                firstname=user.firstname,
-                name=user.name,
-                nickname=user.nickname,
-            ),
+            "name": user.full_name,
             "email": user.email,
         }
