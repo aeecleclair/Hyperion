@@ -92,12 +92,6 @@ async def create_flappybird_score(
     # And get the current date and time
     creation_time = datetime.now(UTC)
 
-    db_flappybird_score = models_flappybird.FlappyBirdScore(
-        id=score_id,
-        user_id=user.id,
-        value=flappybird_score.value,
-        creation_time=creation_time,
-    )
     db_flappybird_best_score = models_flappybird.FlappyBirdBestScore(
         id=score_id,
         user_id=user.id,
@@ -113,18 +107,14 @@ async def create_flappybird_score(
             flappybird_best_score=db_flappybird_best_score,
             db=db,
         )
-    else:
-        if personal_best.value < flappybird_score.value:
-            await cruds_flappybird.update_flappybird_best_score(
-                user_id=user.id,
-                best_score=flappybird_score.value,
-                db=db,
-            )
-        await cruds_flappybird.create_flappybird_score(
-            flappybird_score=db_flappybird_score,
+    elif personal_best.value < flappybird_score.value:
+        await cruds_flappybird.update_flappybird_best_score(
+            user_id=user.id,
+            best_score=flappybird_score.value,
             db=db,
         )
-    return db_flappybird_score
+
+    return db_flappybird_best_score
 
 
 @module.router.delete(
