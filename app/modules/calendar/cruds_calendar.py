@@ -100,7 +100,7 @@ async def confirm_event(db: AsyncSession, decision: Decision, event_id: str):
         await create_icalendar_file(db)
 
 
-def date_all_day(dt: datetime, all_day: bool) -> date:
+def date_all_day(dt: datetime, all_day: bool) -> date | datetime:
     """
     RFC 5545 3.6.1 :
     * The DTEND name is exclusive, so we add one day on the iCalendar file.
