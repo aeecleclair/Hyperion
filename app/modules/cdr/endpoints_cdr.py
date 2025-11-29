@@ -1371,6 +1371,73 @@ async def get_my_purchases(
 
 
 @module.router.get(
+    "/cdr/me/purchases/all",
+    response_model=list[schemas_cdr.PurchaseReturn],
+    status_code=200,
+)
+async def get_all_my_purchases(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
+):
+    purchases = await cruds_cdr.get_all_purchases_by_user_id(
+        db=db,
+        user_id=user.id,
+    )
+    result = []
+    for purchase in purchases:
+        product_variant = await cruds_cdr.get_product_variant_by_id(
+            db=db,
+            variant_id=purchase.product_variant_id,
+        )
+        if product_variant:
+            product = await cruds_cdr.get_product_by_id(
+                db=db,
+                product_id=product_variant.product_id,
+            )
+            if product:
+                seller = await cruds_cdr.get_seller_by_id(
+                    db=db,
+                    seller_id=product.seller_id,
+                )
+                if seller:
+                    result.append(
+                        schemas_cdr.PurchaseReturn(
+                            user_id=purchase.user_id,
+                            product_variant_id=purchase.product_variant_id,
+                            validated=purchase.validated,
+                            purchased_on=purchase.purchased_on,
+                            quantity=purchase.quantity,
+                            price=product_variant.price,
+                            product=schemas_cdr.ProductComplete(
+                                id=product.id,
+                                year=product.year,
+                                seller_id=product.seller_id,
+                                name_fr=product.name_fr,
+                                name_en=product.name_en,
+                                available_online=product.available_online,
+                                needs_validation=product.needs_validation,
+                                description_fr=product.description_fr,
+                                description_en=product.description_en,
+                                related_membership=schemas_memberships.MembershipSimple(
+                                    id=product.related_membership.id,
+                                    name=product.related_membership.name,
+                                    manager_group_id=product.related_membership.manager_group_id,
+                                )
+                                if product.related_membership
+                                else None,
+                            ),
+                            seller=schemas_cdr.SellerComplete(
+                                id=seller.id,
+                                name=seller.name,
+                                group_id=seller.group_id,
+                                order=seller.order,
+                            ),
+                        ),
+                    )
+    return result
+
+
+@module.router.get(
     "/cdr/sellers/{seller_id}/users/{user_id}/purchases/",
     response_model=list[schemas_cdr.PurchaseReturn],
     status_code=200,
