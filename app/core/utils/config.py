@@ -238,7 +238,7 @@ class Settings(BaseSettings):
     ####################
     # S3 configuration #
     ####################
-    # S3 configuration is needed to use the S3 storage for MyECLPay logs
+    # S3 configuration is needed to use the S3 storage for MyPayment logs
 
     S3_BUCKET_NAME: str | None = None
     S3_ACCESS_KEY_ID: str | None = None
@@ -271,17 +271,17 @@ class Settings(BaseSettings):
     HELLOASSO_CONFIGURATIONS: dict[HelloAssoConfigName, HelloAssoConfig] = {}
     HELLOASSO_API_BASE: str | None = None
 
-    # Maximum wallet balance for MyECLPay in cents, we will prevent user from adding more money to their wallet if it will make their balance exceed this value
-    MYECLPAY_MAXIMUM_WALLET_BALANCE: int = 1000
+    # Maximum wallet balance for MyPayment in cents, we will prevent user from adding more money to their wallet if it will make their balance exceed this value
+    MYPAYMENT_MAXIMUM_WALLET_BALANCE: int = 1000
 
     # Trusted urls is a list of redirect payment url that can be trusted by Hyperion.
     # These urls will be used to validate the redirect url provided by the front
     TRUSTED_PAYMENT_REDIRECT_URLS: list[str] = []
 
-    # MyECLPay requires an external service to recurrently check for transactions and state integrity, this service needs an access to all the data related to the transactions and the users involved
+    # MyPayment requires an external service to recurrently check for transactions and state integrity, this service needs an access to all the data related to the transactions and the users involved
     # This service will use a special token to access the data
     # If this token is not set, the service will not be able to access the data and no integrity check will be performed
-    MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN: str | None = None
+    MYPAYMENT_DATA_VERIFIER_ACCESS_TOKEN: str | None = None
 
     ###################
     # Tokens validity #
@@ -292,7 +292,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 14  # 14 days
     AUTHORIZATION_CODE_EXPIRE_MINUTES: int = 7
-    MYECLPAY_MANAGER_TRANSFER_TOKEN_EXPIRES_MINUTES: int = 20
+    MYPAYMENT_MANAGER_TRANSFER_TOKEN_EXPIRES_MINUTES: int = 20
 
     #############################
     # pyproject.toml parameters #

@@ -76,15 +76,15 @@ async def read_terms_and_conditions():
 
 
 @router.get(
-    "/myeclpay-terms-of-service",
+    "/mypayment-terms-of-service",
     response_class=FileResponse,
     status_code=200,
 )
-async def read_myeclpay_tos():
+async def read_mypayment_tos():
     """
-    Return MyECLPay latest ToS
+    Return MyPayment latest ToS
     """
-    return FileResponse("assets/myeclpay-terms-of-service.txt")
+    return FileResponse("assets/mypayment-terms-of-service.txt")
 
 
 @router.get(

@@ -113,9 +113,9 @@ def test_get_terms_and_conditions(client: TestClient) -> None:
     assert response.status_code == 200
 
 
-def test_get_myeclpay_tos(client: TestClient) -> None:
+def test_get_mypayment_tos(client: TestClient) -> None:
     response = client.get(
-        "/myeclpay-terms-of-service",
+        "/mypayment-terms-of-service",
     )
     assert response.status_code == 200
 
