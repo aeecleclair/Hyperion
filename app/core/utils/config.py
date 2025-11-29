@@ -1,9 +1,9 @@
-import tomllib
 from functools import cached_property
 from pathlib import Path
 from typing import Any, ClassVar
 
 import jwt
+import tomllib
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from pydantic import BaseModel, computed_field, model_validator
@@ -181,6 +181,7 @@ class Settings(BaseSettings):
         False  # If True, the database will be populated with fake data
     )
     FACTORIES_DEMO_USERS: list[UserDemoFactoryConfig] = []
+    USE_NULL_POOL: bool = False  # Set to true only for tests
     #####################################
     # SMTP configuration using starttls #
     #####################################
