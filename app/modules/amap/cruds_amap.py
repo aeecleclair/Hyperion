@@ -2,7 +2,7 @@
 
 import logging
 from collections.abc import Sequence
-from datetime import date
+from datetime import datetime
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -116,16 +116,6 @@ async def get_delivery_by_id(
         ),
     )
     return result.scalars().first()
-
-
-async def is_there_a_delivery_on(db: AsyncSession, delivery_date: date) -> bool:
-    result = await db.execute(
-        select(models_amap.Delivery).where(
-            models_amap.Delivery.delivery_date == delivery_date,
-            models_amap.Delivery.status != DeliveryStatusType.archived,
-        ),
-    )
-    return result.scalars().all() != []
 
 
 async def create_delivery(
@@ -248,6 +238,7 @@ async def get_products_of_order(
 async def add_order_to_delivery(
     db: AsyncSession,
     order: schemas_amap.OrderComplete,
+    delivery: models_amap.Delivery,
 ):
     db.add(
         models_amap.Order(
@@ -358,7 +349,7 @@ async def add_cash(db: AsyncSession, user_id: str, amount: float):
         await db.execute(
             update(models_amap.Cash)
             .where(models_amap.Cash.user_id == user_id)
-            .values(user_id=balance.user_id, balance=balance.balance + amount),
+            .values(balance=balance.balance + amount),
         )
         await db.flush()
 
@@ -372,7 +363,21 @@ async def remove_cash(db: AsyncSession, user_id: str, amount: float):
         await db.execute(
             update(models_amap.Cash)
             .where(models_amap.Cash.user_id == user_id)
-            .values(user_id=balance.user_id, balance=balance.balance - amount),
+            .values(balance=balance.balance - amount),
+        )
+        await db.flush()
+
+
+async def update_last_ordering_date(db: AsyncSession, user_id: str, date: datetime):
+    result = await db.execute(
+        select(models_amap.Cash).where(models_amap.Cash.user_id == user_id),
+    )
+    balance = result.scalars().first()
+    if balance is not None:
+        await db.execute(
+            update(models_amap.Cash)
+            .where(models_amap.Cash.user_id == user_id)
+            .values(last_order_date=date),
         )
         await db.flush()
 

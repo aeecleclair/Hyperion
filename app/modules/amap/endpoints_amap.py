@@ -196,14 +196,6 @@ async def create_delivery(
         status=DeliveryStatusType.creation,
         **delivery.model_dump(),
     )
-    if await cruds_amap.is_there_a_delivery_on(
-        db=db,
-        delivery_date=db_delivery.delivery_date,
-    ):
-        raise HTTPException(
-            status_code=400,
-            detail="There is already a delivery planned that day.",
-        )
 
     return await cruds_amap.create_delivery(delivery=db_delivery, db=db)
 
@@ -359,7 +351,14 @@ async def get_orders_from_delivery(
             schemas_amap.ProductQuantity(**product.__dict__)
             for product in order_content
         ]
-        res.append(schemas_amap.OrderReturn(productsdetail=products, **order.__dict__))
+        res.append(
+            schemas_amap.OrderReturn(
+                productsdetail=products,
+                delivery_date=delivery.delivery_date,
+                delivery_name=delivery.name,
+                **order.__dict__,
+            ),
+        )
     return res
 
 
@@ -384,7 +383,12 @@ async def get_order_by_id(
         raise HTTPException(status_code=404, detail="Delivery not found")
 
     products = await cruds_amap.get_products_of_order(db=db, order_id=order_id)
-    return schemas_amap.OrderReturn(productsdetail=products, **order.__dict__)
+    return schemas_amap.OrderReturn(
+        productsdetail=products,
+        delivery_name=order.delivery.name,
+        delivery_date=order.delivery.delivery_date,
+        **order.__dict__,
+    )
 
 
 @module.router.post(
@@ -443,7 +447,6 @@ async def add_order_to_delievery(
         order_id=order_id,
         amount=amount,
         ordering_date=ordering_date,
-        delivery_date=delivery.delivery_date,
         **order.model_dump(),
     )
     balance: models_amap.Cash | None = await cruds_amap.get_cash_by_id(
@@ -453,12 +456,10 @@ async def add_order_to_delievery(
 
     # If the balance does not exist, we create a new one with a balance of 0
     if not balance:
-        new_cash_db = schemas_amap.CashDB(
+        balance = models_amap.Cash(
             balance=0,
             user_id=order.user_id,
-        )
-        balance = models_amap.Cash(
-            **new_cash_db.model_dump(),
+            last_order_date=ordering_date,
         )
         await cruds_amap.create_cash_of_user(
             cash=balance,
@@ -480,11 +481,18 @@ async def add_order_to_delievery(
         await cruds_amap.add_order_to_delivery(
             order=db_order,
             db=db,
+            delivery=delivery,
         )
         await cruds_amap.remove_cash(
             db=db,
             user_id=order.user_id,
             amount=amount,
+        )
+
+        await cruds_amap.update_last_ordering_date(
+            db=db,
+            user_id=order.user_id,
+            date=ordering_date,
         )
 
         orderret = await cruds_amap.get_order_by_id(order_id=db_order.order_id, db=db)
@@ -493,8 +501,16 @@ async def add_order_to_delievery(
         hyperion_amap_logger.info(
             f"Add_order_to_delivery: An order has been created for user {order.user_id} for an amount of {amount}€. ({request_id})",
         )
-        return schemas_amap.OrderReturn(productsdetail=productsret, **orderret.__dict__)
 
+        if orderret is None:
+            raise HTTPException(status_code=404, detail="added order not found")
+
+        return schemas_amap.OrderReturn(
+            productsdetail=productsret,
+            delivery_name=orderret.delivery.name,
+            delivery_date=orderret.delivery.delivery_date,
+            **orderret.__dict__,
+        )
     finally:
         locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
@@ -604,6 +620,12 @@ async def edit_order_from_delivery(
                 db=db,
                 user_id=previous_order.user_id,
                 amount=previous_amount,
+            )
+            date = datetime.now(UTC)
+            await cruds_amap.update_last_ordering_date(
+                db=db,
+                user_id=previous_order.user_id,
+                date=date,
             )
             hyperion_amap_logger.info(
                 f"Edit_order: Order {order_id} has been edited for user {db_order.user_id}. Amount was {previous_amount}€, is now {amount}€. ({request_id})",
@@ -833,6 +855,7 @@ async def get_cash_by_id(
             balance=0,
             user_id=user_id,
             user=schemas_users.CoreUserSimple(**user_db.__dict__),
+            last_order_date=datetime.now(UTC),
         )
 
     return cash
@@ -868,7 +891,11 @@ async def create_cash_of_user(
             detail="This user already has a cash.",
         )
 
-    cash_db = models_amap.Cash(user_id=user_id, balance=cash.balance)
+    cash_db = models_amap.Cash(
+        user_id=user_id,
+        balance=cash.balance,
+        last_order_date=datetime.now(UTC),
+    )
 
     await cruds_amap.create_cash_of_user(
         cash=cash_db,
@@ -965,7 +992,16 @@ async def get_orders_of_user(
             db=db,
             order_id=order.order_id,
         )
-        res.append(schemas_amap.OrderReturn(productsdetail=products, **order.__dict__))
+        if order is None:
+            raise HTTPException(status_code=404, detail="at least one order not found")
+        res.append(
+            schemas_amap.OrderReturn(
+                productsdetail=products,
+                delivery_date=order.delivery.delivery_date,
+                delivery_name=order.delivery.name,
+                **order.__dict__,
+            ),
+        )
     return res
 
 
