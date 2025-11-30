@@ -33,13 +33,13 @@ jobs:
           branch=$(curl -fs ${{ github.api_url }}/repos/${{ github.repository }}/pulls/${{ github.event.inputs.pr }} | jq -r '.head.ref')
           echo "branch=${branch:?'PR #${{ github.event.inputs.pr }} does not exist'}" >> "$GITHUB_OUTPUT"
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ steps.branch.outputs.branch }}
 
       - name: Docker metadata
         id: meta
-        uses: docker/metadata-action@v5.8.0
+        uses: docker/metadata-action@v5.10.0
         with:
           images: ${{ secrets.DOCKER_REGISTRY_IDENTIFER }}/hyperion
           tags: |

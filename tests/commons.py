@@ -95,6 +95,7 @@ def create_test_settings(**kwargs) -> Settings:
     return Settings(
         _env_file="./tests/.env.test",
         _yaml_file="./tests/config.test.yaml",
+        USE_NULL_POOL=True,
         **kwargs,
     )
 

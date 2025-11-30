@@ -7,9 +7,6 @@
   "editor.codeActionsOnSave": {
     "source.organizeImports": "explicit"
   },
-  // We don't want VS Code to find our dotenv file, as the IDE is not cappable of parsing it correctly.
-  // When using the debugger, VS Code pass the porly parsed file as environnement variables, letting to Pydantic validation erros
-  "python.envFile": "${workspaceFolder}/",
   "[python]": {
     "editor.defaultFormatter": "charliermarsh.ruff"
   },
