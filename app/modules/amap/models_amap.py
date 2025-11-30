@@ -59,6 +59,7 @@ class Delivery(Base):
     )
     status: Mapped[DeliveryStatusType] = mapped_column(String)
     orders: Mapped[list["Order"]] = relationship(
+        "Order",
         init=False,
         back_populates="delivery",
     )
@@ -84,6 +85,7 @@ class Order(Base):
     collection_slot: Mapped[AmapSlotType]
     ordering_date: Mapped[datetime]
     delivery: Mapped["Delivery"] = relationship(
+        "Delivery",
         lazy="joined",
         init=False,
         back_populates="orders",

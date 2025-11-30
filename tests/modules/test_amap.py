@@ -84,7 +84,6 @@ async def init_objects() -> None:
     order = models_amap.Order(
         order_id=str(uuid.uuid4()),
         user_id=student_user.id,
-        delivery=delivery,
         delivery_id=delivery.id,
         amount=0,
         collection_slot=AmapSlotType.midi,
@@ -99,7 +98,6 @@ async def init_objects() -> None:
         amount=0,
         collection_slot=AmapSlotType.midi,
         ordering_date=datetime(2022, 8, 18, 12, 16, 26, tzinfo=UTC),
-        delivery=locked_delivery,
     )
     await add_object_to_db(deletable_order_by_admin)
 
