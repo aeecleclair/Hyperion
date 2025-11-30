@@ -26,10 +26,12 @@ def upgrade() -> None:
     op.add_column("amap_delivery", sa.Column("name", sa.String(), nullable=True))
     op.execute("UPDATE amap_delivery SET name = ''")
     op.alter_column("amap_delivery", "name", nullable=False)
-
-    op.add_column("amap_order", sa.Column("delivery_name", sa.String(), nullable=True))
-    op.execute("UPDATE amap_order SET delivery_name = ''")
-    op.alter_column("amap_order", "delivery_name", nullable=False)
+    op.create_index(
+        op.f("ix_amap_delivery_name"),
+        "amap_delivery",
+        ["name"],
+        unique=False,
+    )
 
     op.add_column(
         "amap_cash",
@@ -43,11 +45,23 @@ def upgrade() -> None:
     )
     op.alter_column("amap_cash", "last_order_date", nullable=False)
 
+    op.drop_column("amap_order", "delivery_date")
+
 
 def downgrade() -> None:
     op.drop_column("amap_cash", "last_order_date")
-    op.drop_column("amap_order", "delivery_name")
     op.drop_column("amap_delivery", "name")
+    op.add_column(
+        "amap_order",
+        sa.Column("delivery_date", TZDateTime(), nullable=True),
+    )
+    default_time = datetime(2025, 1, 1, tzinfo=UTC)
+    op.execute(
+        sa.text("UPDATE amap_order SET delivery_date = :delivery_date").bindparams(
+            sa.bindparam("delivery_date", value=default_time),
+        ),
+    )
+    op.alter_column("amap_order", "delivery_date", nullable=False)
 
 
 def pre_test_upgrade(
