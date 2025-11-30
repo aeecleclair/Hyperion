@@ -456,12 +456,10 @@ async def add_order_to_delievery(
 
     # If the balance does not exist, we create a new one with a balance of 0
     if not balance:
-        new_cash_db = schemas_amap.CashBase(
+        balance = models_amap.Cash(
             balance=0,
             user_id=order.user_id,
-        )
-        balance = models_amap.Cash(
-            **new_cash_db.model_dump(),
+            last_ordering_date=ordering_date,
         )
         await cruds_amap.create_cash_of_user(
             cash=balance,
@@ -489,6 +487,12 @@ async def add_order_to_delievery(
             db=db,
             user_id=order.user_id,
             amount=amount,
+        )
+
+        await cruds_amap.update_last_ordering_date(
+            db=db,
+            user_id=order.user_id,
+            date=ordering_date,
         )
 
         orderret = await cruds_amap.get_order_by_id(order_id=db_order.order_id, db=db)
@@ -616,6 +620,12 @@ async def edit_order_from_delivery(
                 db=db,
                 user_id=previous_order.user_id,
                 amount=previous_amount,
+            )
+            date = datetime.now(UTC)
+            await cruds_amap.update_last_ordering_date(
+                db=db,
+                user_id=previous_order.user_id,
+                date=date,
             )
             hyperion_amap_logger.info(
                 f"Edit_order: Order {order_id} has been edited for user {db_order.user_id}. Amount was {previous_amount}€, is now {amount}€. ({request_id})",
@@ -845,6 +855,7 @@ async def get_cash_by_id(
             balance=0,
             user_id=user_id,
             user=schemas_users.CoreUserSimple(**user_db.__dict__),
+            last_ordering_date=datetime.now(UTC),
         )
 
     return cash
@@ -880,7 +891,9 @@ async def create_cash_of_user(
             detail="This user already has a cash.",
         )
 
-    cash_db = models_amap.Cash(user_id=user_id, balance=cash.balance)
+    cash_db = models_amap.Cash(
+        user_id=user_id, balance=cash.balance, last_ordering_date=datetime.now(UTC)
+    )
 
     await cruds_amap.create_cash_of_user(
         cash=cash_db,
@@ -985,7 +998,7 @@ async def get_orders_of_user(
                 delivery_date=order.delivery.delivery_date,
                 delivery_name=order.delivery.name,
                 **order.__dict__,
-            )
+            ),
         )
     return res
 
