@@ -968,7 +968,16 @@ async def get_orders_of_user(
             db=db,
             order_id=order.order_id,
         )
-        res.append(schemas_amap.OrderReturn(productsdetail=products, **order.__dict__))
+        if order is None:
+            raise HTTPException(status_code=404, detail="at least one order not found")
+        res.append(
+            schemas_amap.OrderReturn(
+                productsdetail=products,
+                delivery_date=order.delivery.delivery_date,
+                delivery_name=order.delivery.name,
+                **order.__dict__,
+            )
+        )
     return res
 
 
