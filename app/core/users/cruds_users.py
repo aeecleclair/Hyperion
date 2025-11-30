@@ -3,7 +3,7 @@
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import ForeignKey, and_, delete, not_, or_, select, update
+from sqlalchemy import ForeignKey, and_, delete, func, not_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy_utils import get_referencing_foreign_keys
@@ -96,6 +96,7 @@ async def get_users(
                 *excluded_account_type_condition,
                 *excluded_group_condition,
                 school_condition,
+                models_users.CoreUser.deactivated.is_(False),
             ),
         ),
     )
@@ -110,7 +111,10 @@ async def get_user_by_id(
 
     result = await db.execute(
         select(models_users.CoreUser)
-        .where(models_users.CoreUser.id == user_id)
+        .where(
+            models_users.CoreUser.id == user_id,
+            models_users.CoreUser.deactivated.is_(False),
+        )
         .options(
             # The group relationship need to be loaded
             selectinload(models_users.CoreUser.groups),
@@ -127,7 +131,10 @@ async def get_user_by_email(
 
     result = await db.execute(
         select(models_users.CoreUser)
-        .where(models_users.CoreUser.email == email)
+        .where(
+            models_users.CoreUser.email == email,
+            models_users.CoreUser.deactivated.is_(False),
+        )
         .options(
             # The group relationship need to be loaded to be able
             # to check if the user is a member of a specific group
@@ -144,7 +151,10 @@ async def update_user(
 ):
     await db.execute(
         update(models_users.CoreUser)
-        .where(models_users.CoreUser.id == user_id)
+        .where(
+            models_users.CoreUser.id == user_id,
+            models_users.CoreUser.deactivated.is_(False),
+        )
         .values(**user_update.model_dump(exclude_none=True)),
     )
 
@@ -277,7 +287,10 @@ async def update_user_password_by_id(
 ):
     await db.execute(
         update(models_users.CoreUser)
-        .where(models_users.CoreUser.id == user_id)
+        .where(
+            models_users.CoreUser.id == user_id,
+            models_users.CoreUser.deactivated.is_(False),
+        )
         .values(password_hash=new_password_hash),
     )
     await db.flush()
@@ -418,3 +431,71 @@ async def fusion_users(
 
     # Delete the user_deleted
     await delete_user(db, user_deleted_id)
+
+
+async def count_deactivated_users(db: AsyncSession) -> int:
+    """Return the number of deactivated users in the database"""
+
+    result = (
+        await db.execute(
+            select(func.count()).where(
+                models_users.CoreUser.deactivated,
+            ),
+        )
+    ).scalar()
+    return result or 0
+
+
+async def deactivate_user(
+    db: AsyncSession,
+    user_id: str,
+):
+    """Deactivate a user in the database"""
+    count = await count_deactivated_users(db)
+
+    await db.execute(
+        update(models_users.CoreUser)
+        .where(models_users.CoreUser.id == user_id)
+        .values(
+            deactivated=True,
+            email=f"deleted.user{count}@myecl.fr",
+            name="Deleted User",
+            firstname=str(count),
+            nickname=None,
+            floor=None,
+            phone=None,
+            promo=None,
+            birthday=None,
+            school_id=SchoolType.no_school.value,
+            account_type=AccountType.external,
+        ),
+    )
+    await db.commit()
+
+
+async def delete_email_migration_code_by_user_id(
+    db: AsyncSession,
+    user_id: str,
+):
+    """Delete a user from database by id"""
+
+    await db.execute(
+        delete(models_users.CoreUserEmailMigrationCode).where(
+            models_users.CoreUserEmailMigrationCode.user_id == user_id,
+        ),
+    )
+    await db.commit()
+
+
+async def delete_recover_request_by_user_id(
+    db: AsyncSession,
+    user_id: str,
+):
+    """Delete a user from database by id"""
+
+    await db.execute(
+        delete(models_users.CoreUserRecoverRequest).where(
+            models_users.CoreUserRecoverRequest.user_id == user_id,
+        ),
+    )
+    await db.commit()
