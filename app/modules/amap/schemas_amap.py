@@ -47,6 +47,7 @@ class ProductQuantity(BaseModel):
 class DeliveryBase(BaseModel):
     """Base schema for AMAP deliveries"""
 
+    name: str
     delivery_date: date
     products_ids: list[str] = []
 
@@ -58,6 +59,7 @@ class DeliveryComplete(DeliveryBase):
 
 
 class DeliveryUpdate(BaseModel):
+    name: str | None = None
     delivery_date: date | None = None
 
 
@@ -101,6 +103,7 @@ class OrderEdit(BaseModel):
 
 
 class DeliveryReturn(BaseModel):
+    name: str
     delivery_date: date
     products: list[ProductComplete] = []
     id: str

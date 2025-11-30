@@ -45,6 +45,7 @@ class AmapFactory(Factory):
             db=db,
             delivery=schemas_amap.DeliveryComplete(
                 id=str(uuid.uuid4()),
+                name="Première livraison",
                 status=DeliveryStatusType.orderable,
                 delivery_date=(datetime.now(UTC) + timedelta(days=8)).date(),
                 products_ids=[product.id for product in products],
@@ -55,6 +56,7 @@ class AmapFactory(Factory):
             db=db,
             delivery=schemas_amap.DeliveryComplete(
                 id=str(uuid.uuid4()),
+                name="Deuxième livraison",
                 status=DeliveryStatusType.orderable,
                 delivery_date=(datetime.now(UTC) + timedelta(days=1)).date(),
                 products_ids=[product.id for product in products],

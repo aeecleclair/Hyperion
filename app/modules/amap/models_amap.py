@@ -52,6 +52,7 @@ class Delivery(Base):
     __tablename__ = "amap_delivery"
 
     id: Mapped[str] = mapped_column(primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(index=True, unique=False)
     delivery_date: Mapped[date] = mapped_column(
         unique=False,
         index=True,
