@@ -13,7 +13,6 @@ from tests.commons import (
     create_user_with_groups,
 )
 
-flappybird_score: models_flappybird.FlappyBirdScore
 user: models_users.CoreUser
 token: str = ""
 admin_user: models_users.CoreUser
@@ -35,16 +34,6 @@ async def init_objects() -> None:
 
     global admin_token
     admin_token = create_api_access_token(user=admin_user)
-
-    global flappybird_score
-    flappybird_score = models_flappybird.FlappyBirdScore(
-        id=uuid.uuid4(),
-        user_id=user.id,
-        value=25,
-        creation_time=datetime.now(UTC),
-    )
-
-    await add_object_to_db(flappybird_score)
 
     flappybird_best_score = models_flappybird.FlappyBirdBestScore(
         id=uuid.uuid4(),
