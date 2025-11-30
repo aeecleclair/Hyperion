@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.users import models_users
 from app.dependencies import get_db, is_user
 from app.modules.ticketing import cruds_ticketing, schemas_ticketing
+from app.modules.ticketing.factory_ticketing import TicketingFactory
 from app.types.module import CoreModule
 
 router = APIRouter(tags=["Ticketing"])
@@ -14,7 +15,7 @@ core_module = CoreModule(
     root="ticketing",
     tag="Ticketing",
     router=router,
-    factory=None,
+    factory=TicketingFactory(),
 )
 
 
@@ -71,6 +72,7 @@ async def create_event(
         await db.rollback()
         raise HTTPException(status_code=500, detail="Event creation failed")
     return event_complete
+
 
 @router.patch(
     "/ticketing/events/{event_id}",
