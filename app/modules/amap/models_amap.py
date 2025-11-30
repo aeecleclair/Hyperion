@@ -76,6 +76,7 @@ class Order(Base):
         ForeignKey("amap_delivery.id"),
         index=True,
     )
+    delivery_name: Mapped[str]
     order_id: Mapped[str] = mapped_column(primary_key=True, index=True)
     amount: Mapped[int]
     collection_slot: Mapped[AmapSlotType]
