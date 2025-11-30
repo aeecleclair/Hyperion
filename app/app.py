@@ -544,7 +544,7 @@ async def init_lifespan(
 
     get_db_dependency: Callable[
         [],
-        AsyncGenerator[AsyncSession, None],
+        AsyncGenerator[AsyncSession],
     ] = app.dependency_overrides.get(
         get_db,
         get_db,
@@ -604,7 +604,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     # Creating a lifespan which will be called when the application starts then shuts down
     # https://fastapi.tiangolo.com/advanced/events/
     @asynccontextmanager
-    async def lifespan(app: FastAPI) -> AsyncGenerator[LifespanState, None]:
+    async def lifespan(app: FastAPI) -> AsyncGenerator[LifespanState]:
         state = await init_lifespan(
             app=app,
             settings=settings,
@@ -715,7 +715,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         )
 
         return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content=jsonable_encoder({"detail": exc.errors(), "body": exc.body}),
         )
 

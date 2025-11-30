@@ -11,6 +11,7 @@ from sqlalchemy import Connection, MetaData, delete, select
 from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from sqlalchemy.pool import NullPool
 
 from app.core.core_endpoints import models_core
 from app.core.groups import models_groups
@@ -30,12 +31,19 @@ def get_sync_db_engine(settings: Settings) -> Engine:
     """
     Create a synchronous database engine
     """
+    poolClass = None
     if settings.SQLITE_DB:
         SQLALCHEMY_DATABASE_URL = f"sqlite:///./{settings.SQLITE_DB}"
     else:
         SQLALCHEMY_DATABASE_URL = f"postgresql+psycopg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
+        if settings.USE_NULL_POOL:
+            poolClass = NullPool
 
-    return create_engine(SQLALCHEMY_DATABASE_URL, echo=settings.DATABASE_DEBUG)
+    return create_engine(
+        SQLALCHEMY_DATABASE_URL,
+        poolclass=poolClass,
+        echo=settings.DATABASE_DEBUG,
+    )
 
 
 def get_all_module_group_visibility_membership_sync(

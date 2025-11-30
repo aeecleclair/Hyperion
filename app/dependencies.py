@@ -178,7 +178,7 @@ def get_settings() -> Settings:
     return construct_prod_settings()
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_db() -> AsyncGenerator[AsyncSession]:
     """
     Return a database session that will be automatically committed and closed after usage.
 
@@ -216,7 +216,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await db.close()
 
 
-async def get_unsafe_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_unsafe_db() -> AsyncGenerator[AsyncSession]:
     """
     Return a database session but don't close it automatically
 
