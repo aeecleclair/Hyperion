@@ -90,11 +90,11 @@ from app.utils.tools import (
     set_core_data,
 )
 
-router = APIRouter(tags=["MyECLPay"])
+router = APIRouter(tags=["MyPayment"])
 
 core_module = CoreModule(
     root="mypayment",
-    tag="MyECLPay",
+    tag="MyPayment",
     router=router,
     payment_callback=validate_transfer_callback,
     factory=MyPaymentFactory(),

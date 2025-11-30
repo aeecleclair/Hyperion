@@ -21,6 +21,14 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     op.rename_table(
+        "payment_checkout_payment",
+        "checkout_checkout_payment",
+    )
+    op.rename_table(
+        "payment_checkout",
+        "checkout_checkout",
+    )
+    op.rename_table(
         "myeclpay_wallet",
         "mypayment_wallet",
     )
@@ -77,10 +85,28 @@ def upgrade() -> None:
         "myeclpay_withdrawal",
         "mypayment_withdrawal",
     )
+    op.drop_index(
+        "ix_payment_checkout_payment_hello_asso_payment_id",
+        table_name="checkout_checkout_payment",
+    )
+    op.create_index(
+        op.f("ix_checkout_checkout_payment_hello_asso_payment_id"),
+        "checkout_checkout_payment",
+        ["hello_asso_payment_id"],
+        unique=True,
+    )
     # ### end Alembic commands ###s
 
 
 def downgrade() -> None:
+    op.rename_table(
+        "checkout_checkout_payment",
+        "payment_checkout_payment",
+    )
+    op.rename_table(
+        "checkout_checkout",
+        "payment_checkout",
+    )
     op.rename_table(
         "mypayment_wallet",
         "myeclpay_wallet",
@@ -137,6 +163,16 @@ def downgrade() -> None:
     op.rename_table(
         "mypayment_withdrawal",
         "myeclpay_withdrawal",
+    )
+    op.drop_index(
+        "ix_checkout_checkout_payment_hello_asso_payment_id",
+        table_name="checkout_checkout_payment",
+    )
+    op.create_index(
+        "ix_payment_checkout_payment_hello_asso_payment_id",
+        "payment_checkout_payment",
+        ["hello_asso_payment_id"],
+        unique=True,
     )
 
 
