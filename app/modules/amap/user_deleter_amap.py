@@ -6,7 +6,7 @@ from app.types.module_user_deleter import ModuleUserDeleter
 
 
 class AmapUserDeleter(ModuleUserDeleter):
-    async def can_delete_user(
+    async def has_reason_not_to_delete_user(
         self,
         user_id: str,
         db: AsyncSession,
