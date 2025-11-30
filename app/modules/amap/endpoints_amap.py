@@ -359,7 +359,14 @@ async def get_orders_from_delivery(
             schemas_amap.ProductQuantity(**product.__dict__)
             for product in order_content
         ]
-        res.append(schemas_amap.OrderReturn(productsdetail=products, **order.__dict__))
+        res.append(
+            schemas_amap.OrderReturn(
+                productsdetail=products,
+                delivery_date=delivery.delivery_date,
+                delivery_name=delivery.name,
+                **order.__dict__,
+            ),
+        )
     return res
 
 
@@ -384,7 +391,12 @@ async def get_order_by_id(
         raise HTTPException(status_code=404, detail="Delivery not found")
 
     products = await cruds_amap.get_products_of_order(db=db, order_id=order_id)
-    return schemas_amap.OrderReturn(productsdetail=products, **order.__dict__)
+    return schemas_amap.OrderReturn(
+        productsdetail=products,
+        delivery_name=order.delivery.name,
+        delivery_date=order.delivery.delivery_date,
+        **order.__dict__,
+    )
 
 
 @module.router.post(
@@ -443,7 +455,6 @@ async def add_order_to_delievery(
         order_id=order_id,
         amount=amount,
         ordering_date=ordering_date,
-        delivery_date=delivery.delivery_date,
         **order.model_dump(),
     )
     balance: models_amap.Cash | None = await cruds_amap.get_cash_by_id(

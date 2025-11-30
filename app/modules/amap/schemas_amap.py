@@ -70,7 +70,6 @@ class DeliveryProductsUpdate(BaseModel):
 class OrderBase(BaseModel):
     user_id: str
     delivery_id: str
-    delivery_name: str
     products_ids: list[str]
     collection_slot: AmapSlotType
     products_quantity: list[int]
@@ -80,7 +79,6 @@ class OrderComplete(OrderBase):
     order_id: str
     amount: int
     ordering_date: datetime
-    delivery_date: date
     model_config = ConfigDict(from_attributes=True)
 
 

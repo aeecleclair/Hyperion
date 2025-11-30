@@ -58,7 +58,10 @@ class Delivery(Base):
         index=True,
     )
     status: Mapped[DeliveryStatusType] = mapped_column(String)
-    orders: Mapped[list["Order"]] = relationship("Order", init=False)
+    orders: Mapped[list["Order"]] = relationship(
+        init=False,
+        back_populates="delivery",
+    )
     products: Mapped[list[Product]] = relationship(
         "Product",
         secondary="amap_delivery_content",
@@ -76,12 +79,13 @@ class Order(Base):
         ForeignKey("amap_delivery.id"),
         index=True,
     )
-    delivery_name: Mapped[str]
     order_id: Mapped[str] = mapped_column(primary_key=True, index=True)
     amount: Mapped[int]
     collection_slot: Mapped[AmapSlotType]
     ordering_date: Mapped[datetime]
-    delivery_date: Mapped[date]
+    delivery: Mapped["Delivery"] = relationship(
+        back_populates="orders",
+    )
     user: Mapped[CoreUser] = relationship(
         "CoreUser",
         init=False,
