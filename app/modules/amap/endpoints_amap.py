@@ -483,6 +483,7 @@ async def add_order_to_delievery(
         await cruds_amap.add_order_to_delivery(
             order=db_order,
             db=db,
+            delivery=delivery,
         )
         await cruds_amap.remove_cash(
             db=db,
@@ -496,8 +497,16 @@ async def add_order_to_delievery(
         hyperion_amap_logger.info(
             f"Add_order_to_delivery: An order has been created for user {order.user_id} for an amount of {amount}€. ({request_id})",
         )
-        return schemas_amap.OrderReturn(productsdetail=productsret, **orderret.__dict__)
 
+        if orderret is None:
+            raise HTTPException(status_code=404, detail="added order not found")
+
+        return schemas_amap.OrderReturn(
+            productsdetail=productsret,
+            delivery_name=orderret.delivery.name,
+            delivery_date=orderret.delivery.delivery_date,
+            **orderret.__dict__,
+        )
     finally:
         locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
