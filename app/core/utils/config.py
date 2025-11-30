@@ -1,12 +1,14 @@
 import tomllib
 from functools import cached_property
 from pathlib import Path
+from re import Pattern
 from typing import Any, ClassVar
 
 import jwt
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from pydantic import BaseModel, computed_field, model_validator
+from pydantic_extra_types.color import Color
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -14,6 +16,7 @@ from pydantic_settings import (
     YamlConfigSettingsSource,
 )
 
+from app.core.core_endpoints.schemas_core import MainActivationForm
 from app.core.payment.types_payment import HelloAssoConfig, HelloAssoConfigName
 from app.types.exceptions import (
     DotenvInvalidAuthClientNameInError,
@@ -22,6 +25,52 @@ from app.types.exceptions import (
     InvalidRSAKeyInDotenvError,
 )
 from app.utils.auth import providers
+
+
+class School(BaseModel):
+    """
+    Configuration for a school.
+    This class is used to store the configuration of a school.
+    It is used to create an instance of the school.
+    """
+
+    # Name of the school (ex: École Centrale Lyon)
+    school_name: str
+    # Name of the application (ex: MyECL)
+    application_name: str
+    # Name of the payment solution (ex: MyECLPay)
+    payment_name: str
+    # Domain name of the application (ex: myecl.fr)
+    application_domain_name: str
+    # Name of the entity managing the application (ex: ÉCLAIR)
+    entity_name: str
+    # The entity website url, used for promotion (ex: "https://myecl.fr/")
+    entity_site_url: str
+    # The entity email, used for contact
+    entity_email: str
+    # Date of the end of support for the application (ex: 2025-08-25)
+    end_of_support: str
+    # Colors used for the application
+    primary_color: Color
+    # Email placeholder
+    email_placeholder: str
+    # Main activation form configuration
+    main_activation_form: MainActivationForm
+    # Apple Store URL
+    app_store_url: str | None = None
+    # Google Play Store URL
+    play_store_url: str | None = None
+
+    # Regex for email account type validation
+    # On registration, user whose email match these regex will be automatically assigned to the corresponding account type
+    # Use simple quotes to avoid escaping the regex
+    # Ex: `student_email_regex: '^[\w\-.]*@domain.fr$'`
+    student_email_regex: Pattern
+    staff_email_regex: Pattern | None = None
+    former_student_email_regex: Pattern | None = None
+
+    # If event should be confirmed by a moderator before being added to the calendar
+    require_event_confirmation: bool = True
 
 
 class AuthClientConfig(BaseModel):
@@ -214,6 +263,11 @@ class Settings(BaseSettings):
     # To enable Firebase push notification capabilities, a JSON key file named `firebase.json` should be placed at Hyperion root.
     # This file can be created and downloaded from [Google cloud, IAM and administration, Service account](https://console.cloud.google.com/iam-admin/serviceaccounts) page.
     USE_FIREBASE: bool = False
+
+    ########################
+    # School Configuration #
+    ########################
+    school: School
 
     ########################
     # Matrix configuration #

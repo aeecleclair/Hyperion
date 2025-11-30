@@ -24,7 +24,6 @@ from app.core.users import cruds_users, models_users, schemas_users
 from app.core.utils import security
 from app.core.utils.config import Settings
 from app.types import core_data
-from app.types.floors_type import FloorsType
 from app.types.scheduler import OfflineScheduler
 from app.types.sqlalchemy import Base, SessionLocalType
 from app.utils.communication.notifications import NotificationManager
@@ -172,7 +171,7 @@ async def create_user_with_groups(
     password: str | None = None,
     name: str | None = None,
     firstname: str | None = None,
-    floor: FloorsType | None = None,
+    floor: str | None = None,
     nickname: str | None = None,
 ) -> models_users.CoreUser:
     """

@@ -11,7 +11,6 @@ from app.core.groups.groups_type import (
     get_schools_account_types,
 )
 from app.core.users import models_users
-from app.types.floors_type import FloorsType
 from app.types.scopes_type import ScopeType
 from app.utils.tools import is_user_member_of_any_group
 
@@ -264,7 +263,7 @@ class MinecraftAuthClient(BaseAuthClient):
             "id": user.id,
             "nickname": user.nickname,
             "promo": user.promo,
-            "floor": user.floor or FloorsType.Autre,
+            "floor": user.floor or "Autre",
         }
 
 

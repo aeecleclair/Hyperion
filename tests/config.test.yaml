@@ -71,6 +71,39 @@ SMTP_EMAIL: ""
 # Push notifications using Firebase Cloud Messaging
 USE_FIREBASE: false
 
+school:
+  school_name: "École Centrale Lyon"
+  application_name: Tests MyECL
+  payment_name: Tests MyECLPay
+  application_domain_name: myecl.fr
+  entity_name: ÉCLAIR
+  entity_site_url: "https://myecl.fr/"
+  entity_email: "eclair@myecl.fr"
+  end_of_support: "2030-01-01"
+  email_placeholder: prenom.nom@etu.ec-lyon.fr
+  main_activation_form:
+    fields:
+      - birthdate
+      - promotion
+      - phone
+      - floor
+      - nickname
+    floor_choices:
+      - V3
+      - V45
+      - T21
+      - X3
+      - Adoma
+      - "Exté"
+      - X2
+    promotion_offset: 0
+
+  primary_color: "#F97315"
+
+  student_email_regex: '^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$'
+  staff_email_regex: '^[\w\-.]*@(enise\.)?ec-lyon\.fr$'
+  former_student_email_regex: '^[\w\-.]*@centraliens-lyon\.net$'
+
 # Payment configuration #
 
 TRUSTED_PAYMENT_REDIRECT_URLS: ["http://localhost:3000/payment_callback"]
