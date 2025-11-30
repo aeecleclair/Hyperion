@@ -7,10 +7,10 @@ from app.types.sqlalchemy import Base, PrimaryKey
 
 
 class CheckoutPayment(Base):
-    __tablename__ = "payment_checkout_payment"
+    __tablename__ = "checkout_checkout_payment"
 
     id: Mapped[PrimaryKey]
-    checkout_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("payment_checkout.id"))
+    checkout_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("checkout_checkout.id"))
 
     paid_amount: Mapped[int]
     hello_asso_payment_id: Mapped[int] = mapped_column(index=True, unique=True)
@@ -21,7 +21,7 @@ class Checkout(Base):
     The checkout table store data about HelloAsso checkouts.
     """
 
-    __tablename__ = "payment_checkout"
+    __tablename__ = "checkout_checkout"
 
     id: Mapped[PrimaryKey]
     # Module should match the module root for the payment callback to be called

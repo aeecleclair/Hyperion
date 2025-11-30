@@ -5,7 +5,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.groups.groups_type import AccountType
 from app.core.schools.schemas_schools import CoreSchool
-from app.types.floors_type import FloorsType
 from app.utils import validators
 from app.utils.examples import examples_core
 
@@ -42,7 +41,7 @@ class CoreUser(CoreUserSimple):
     email: str
     birthday: date | None = None
     promo: int | None = None
-    floor: FloorsType | None = None
+    floor: str | None = None
     phone: str | None = None
     created_on: datetime | None = None
     groups: "list[CoreGroupSimple]" = []
@@ -55,7 +54,7 @@ class CoreUserUpdate(BaseModel):
     nickname: str | None = None
     birthday: date | None = None
     phone: str | None = None
-    floor: FloorsType | None = None
+    floor: str | None = None
 
     _normalize_nickname = field_validator("nickname")(
         validators.trailing_spaces_remover,
@@ -83,7 +82,7 @@ class CoreUserUpdateAdmin(BaseModel):
     nickname: str | None = None
     birthday: date | None = None
     phone: str | None = None
-    floor: FloorsType | None = None
+    floor: str | None = None
 
     _normalize_name = field_validator("name")(validators.trailing_spaces_remover)
     _normalize_firstname = field_validator("firstname")(
@@ -140,7 +139,7 @@ class CoreUserActivateRequest(CoreUserBase):
     password: str
     birthday: date | None = None
     phone: str | None = None
-    floor: FloorsType | None = None
+    floor: str | None = None
     promo: int | None = Field(
         default=None,
         description="Promotion of the student, an integer like 2021",

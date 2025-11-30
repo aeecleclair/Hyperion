@@ -1,8 +1,8 @@
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.myeclpay.coredata_myeclpay import MyECLPayBankAccountHolder
-from app.core.myeclpay.cruds_myeclpay import get_structure_by_id
+from app.core.mypayment.coredata_mypayment import MyPaymentBankAccountHolder
+from app.core.mypayment.cruds_mypayment import get_structure_by_id
 from app.core.users.models_users import CoreUser
 from app.dependencies import get_db, is_user
 from app.utils.tools import get_core_data
@@ -14,7 +14,7 @@ async def is_user_bank_account_holder(
 ) -> CoreUser:
     """Check if the user is a bank account holder."""
     account_holder = await get_core_data(
-        MyECLPayBankAccountHolder,
+        MyPaymentBankAccountHolder,
         db=db,
     )
     structure = await get_structure_by_id(
