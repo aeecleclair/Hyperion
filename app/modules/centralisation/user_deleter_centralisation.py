@@ -1,12 +1,15 @@
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.types.module_user_deleter import ModuleUserDeleter
 
 
 class CentralisationUserDeleter(ModuleUserDeleter):
-    def can_delete_user(self, user_id) -> bool:
-        return True
+    async def can_delete_user(
+        self,
+        user_id: str,
+        db: AsyncSession,
+    ) -> str:
+        return ""
 
-    def delete_user(self, user_id) -> None:
+    async def delete_user(self, user_id: str, db: AsyncSession) -> None:
         pass
-
-
-user_deleter = CentralisationUserDeleter()

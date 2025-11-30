@@ -1,5 +1,3 @@
-from typing import Literal
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.users import cruds_users
@@ -12,8 +10,8 @@ class UsersUserDeleter(ModuleUserDeleter):
         self,
         user_id: str,
         db: AsyncSession,
-    ) -> Literal[True] | str:
-        return True
+    ) -> str:
+        return ""
 
     async def delete_user(self, user_id: str, db: AsyncSession) -> None:
         await cruds_users.delete_email_migration_code_by_user_id(

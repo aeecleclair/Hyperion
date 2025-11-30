@@ -1,5 +1,3 @@
-from typing import Literal
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups import cruds_groups
@@ -11,8 +9,8 @@ class GroupsUserDeleter(ModuleUserDeleter):
         self,
         user_id: str,
         db: AsyncSession,
-    ) -> Literal[True] | str:
-        return True
+    ) -> str:
+        return ""
 
     async def delete_user(self, user_id: str, db: AsyncSession) -> None:
         await cruds_groups.delete_membership_by_user_id(
