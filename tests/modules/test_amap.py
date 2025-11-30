@@ -58,17 +58,18 @@ async def init_objects() -> None:
     )
     await add_object_to_db(deletable_product)
 
-    # We can not create two deliveries with the same date
     delivery = models_amap.Delivery(
         id=str(uuid.uuid4()),
         delivery_date=datetime(2022, 8, 15, tzinfo=UTC),
         status=DeliveryStatusType.creation,
+        name="Livraison 1",
     )
     await add_object_to_db(delivery)
     deletable_delivery = models_amap.Delivery(
         id=str(uuid.uuid4()),
         delivery_date=datetime(2022, 8, 16, tzinfo=UTC),
         status=DeliveryStatusType.creation,
+        name="Livraison supprimable",
     )
     await add_object_to_db(deletable_delivery)
 
@@ -76,17 +77,17 @@ async def init_objects() -> None:
         id=str(uuid.uuid4()),
         delivery_date=datetime(2022, 8, 17, tzinfo=UTC),
         status=DeliveryStatusType.locked,
+        name="Livraison verrouillée",
     )
     await add_object_to_db(locked_delivery)
 
     order = models_amap.Order(
         order_id=str(uuid.uuid4()),
         user_id=student_user.id,
-        delivery_id=delivery.id,
+        delivery=delivery,
         amount=0,
         collection_slot=AmapSlotType.midi,
         ordering_date=datetime(2022, 8, 10, 12, 16, 26, tzinfo=UTC),
-        delivery_date=delivery.delivery_date,
     )
     await add_object_to_db(order)
 
@@ -159,7 +160,7 @@ def test_delete_product(client: TestClient) -> None:
 
 
 def test_get_deliveries(client: TestClient) -> None:
-    # The user don't need to be part of group amap to get a product
+    # The user don't need to be part of group amap to get a delivery
     student_token = create_api_access_token(student_user)
 
     response = client.get(
@@ -175,6 +176,7 @@ def test_create_delivery(client: TestClient) -> None:
     response = client.post(
         "/amap/deliveries",
         json={
+            "name": "Livraison",
             "delivery_date": "2022-08-18",
             "products_ids": [product.id],
             "locked": False,
@@ -199,7 +201,11 @@ def test_edit_delivery(client: TestClient) -> None:
 
     response = client.patch(
         f"/amap/deliveries/{delivery.id}",
-        json={"delivery_date": "2022-08-18", "locked": False},
+        json={
+            "name": "Livraison editee",
+            "delivery_date": "2022-08-18",
+            "locked": False,
+        },
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
