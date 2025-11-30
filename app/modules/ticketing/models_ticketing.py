@@ -9,6 +9,7 @@ from app.types.sqlalchemy import Base, PrimaryKey
 
 if TYPE_CHECKING:
     from app.core.myeclpay.models_myeclpay import Store
+    from app.modules import ticketing
 
 
 class Event(Base):
@@ -29,7 +30,7 @@ class Event(Base):
     user_quota: Mapped[int | None]
     disabled: Mapped[bool]
 
-    sessions: Mapped[list["Session"]] = relationship(
+    sessions: Mapped[list["ticketing.models_ticketing.Session"]] = relationship(
         init=False,
         lazy="selectin",
     )
@@ -65,7 +66,7 @@ class Category(Base):
         lazy="selectin",
     )
     name: Mapped[str]
-    linked_sessions: Mapped[list[UUID] | None]
+    linked_sessions: Mapped[str | None]
     required_mebership: Mapped[UUID | None] = mapped_column(
         ForeignKey("core_association_membership.id"),
     )

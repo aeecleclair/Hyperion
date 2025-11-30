@@ -1,11 +1,9 @@
 from datetime import datetime
-from typing import TYPE_CHECKING
 from uuid import UUID
 
 from pydantic import BaseModel
 
-if TYPE_CHECKING:
-    from app.core.myeclpay.schemas_myeclpay import StoreSimple
+from app.core.myeclpay.schemas_myeclpay import StoreSimple
 
 
 class EventBase(BaseModel):
@@ -25,7 +23,7 @@ class EventSimple(EventBase):
 
 
 class EventComplete(EventSimple):
-    store: "StoreSimple"
+    store: StoreSimple
     sessions: list["SessionComplete"]
     categories: list["CategoryComplete"]
 
