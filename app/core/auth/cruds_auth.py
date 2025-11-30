@@ -121,3 +121,31 @@ async def revoke_refresh_token_by_user_id(
         .values(revoked_on=datetime.now(UTC)),
     )
     await db.flush()
+
+
+async def delete_refresh_token_by_user_id(
+    db: AsyncSession,
+    user_id: str,
+) -> None:
+    """Delete a refresh token from database"""
+
+    await db.execute(
+        delete(models_auth.RefreshToken).where(
+            models_auth.RefreshToken.user_id == user_id,
+        ),
+    )
+    await db.flush()
+
+
+async def delete_authorization_token_by_user_id(
+    db: AsyncSession,
+    user_id: str,
+) -> None:
+    """Delete a refresh token from database"""
+
+    await db.execute(
+        delete(models_auth.AuthorizationCode).where(
+            models_auth.AuthorizationCode.user_id == user_id,
+        ),
+    )
+    await db.flush()
