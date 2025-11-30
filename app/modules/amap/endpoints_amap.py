@@ -892,7 +892,9 @@ async def create_cash_of_user(
         )
 
     cash_db = models_amap.Cash(
-        user_id=user_id, balance=cash.balance, last_order_date=datetime.now(UTC)
+        user_id=user_id,
+        balance=cash.balance,
+        last_order_date=datetime.now(UTC),
     )
 
     await cruds_amap.create_cash_of_user(

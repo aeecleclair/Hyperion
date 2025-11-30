@@ -104,7 +104,9 @@ async def init_objects() -> None:
     await add_object_to_db(deletable_order_by_admin)
 
     cash = models_amap.Cash(
-        user_id=student_user.id, balance=666, last_order_date=datetime.now(UTC)
+        user_id=student_user.id,
+        balance=666,
+        last_order_date=datetime.now(UTC),
     )
     await add_object_to_db(cash)
 
