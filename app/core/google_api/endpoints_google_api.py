@@ -4,6 +4,9 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.google_api.google_api import GoogleAPI
+from app.core.google_api.user_deleter_google_api import (
+    GoogleAPIUserDeleter,
+)
 from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
@@ -18,6 +21,7 @@ core_module = CoreModule(
     tag="GoogleAPI",
     router=router,
     factory=None,
+    user_deleter=GoogleAPIUserDeleter(),
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")

@@ -272,3 +272,27 @@ async def get_usernames_by_firebase_tokens(
         .distinct(),
     )
     return [f"{u.firstname} {u.name}" for u in list(result.scalars().all())]
+
+
+async def delete_topic_membership_by_user_id(
+    user_id: str,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_notification.TopicMembership).where(
+            models_notification.TopicMembership.user_id == user_id,
+        ),
+    )
+    await db.flush()
+
+
+async def delete_firebase_devices_by_user_id(
+    user_id: str,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_notification.FirebaseDevice).where(
+            models_notification.FirebaseDevice.user_id == user_id,
+        ),
+    )
+    await db.flush()

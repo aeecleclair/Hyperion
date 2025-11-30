@@ -330,6 +330,19 @@ async def get_has_voted(
     return result.scalars().all()
 
 
+async def delete_user_has_voted(
+    db: AsyncSession,
+    user_id: str,
+) -> None:
+    """Delete all votes for a given user."""
+    await db.execute(
+        delete(models_campaign.HasVoted).where(
+            models_campaign.HasVoted.user_id == user_id,
+        ),
+    )
+    await db.commit()
+
+
 async def get_votes(db: AsyncSession) -> Sequence[models_campaign.Votes]:
     result = await db.execute(select(models_campaign.Votes))
     return result.scalars().all()

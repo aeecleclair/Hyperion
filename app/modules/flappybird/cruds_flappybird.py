@@ -78,6 +78,18 @@ async def delete_flappybird_best_score(
     )
 
 
+async def delete_flappybird_score(
+    db: AsyncSession,
+    user_id: str,
+):
+    """Remove a FlappyBirdScore in database"""
+    await db.execute(
+        delete(models_flappybird.FlappyBirdScore).where(
+            models_flappybird.FlappyBirdScore.user_id == user_id,
+        ),
+    )
+
+
 async def update_flappybird_best_score(
     db: AsyncSession,
     user_id: str,

@@ -114,3 +114,15 @@ async def update_group(
         .values(**group_update.model_dump(exclude_none=True)),
     )
     await db.flush()
+
+
+async def delete_membership_by_user_id(
+    user_id: str,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_groups.CoreMembership).where(
+            models_groups.CoreMembership.user_id == user_id,
+        ),
+    )
+    await db.flush()
