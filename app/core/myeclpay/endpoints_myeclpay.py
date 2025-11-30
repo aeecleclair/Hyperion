@@ -49,6 +49,7 @@ from app.core.myeclpay.types_myeclpay import (
     WalletDeviceStatus,
     WalletType,
 )
+from app.core.myeclpay.user_deleter_myeclpay import MyECLPayUserDeleter
 from app.core.myeclpay.utils_myeclpay import (
     LATEST_TOS,
     QRCODE_EXPIRATION,
@@ -98,6 +99,7 @@ core_module = CoreModule(
     router=router,
     payment_callback=validate_transfer_callback,
     factory=MyECLPayFactory(),
+    user_deleter=MyECLPayUserDeleter(),
 )
 
 templates = Jinja2Templates(directory="assets/templates")
