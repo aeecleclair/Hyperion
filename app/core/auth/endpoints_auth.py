@@ -21,6 +21,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import cruds_auth, models_auth, schemas_auth
+from app.core.auth.user_deleter_auth import user_deleter
 from app.core.users import cruds_users, models_users
 from app.core.utils.config import Settings
 from app.core.utils.security import (
@@ -51,6 +52,7 @@ core_module = CoreModule(
     tag="Auth",
     router=router,
     factory=None,
+    user_deleter=user_deleter,
 )
 
 templates = Jinja2Templates(directory="assets/templates")

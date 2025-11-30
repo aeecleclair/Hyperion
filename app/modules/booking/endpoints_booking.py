@@ -23,6 +23,7 @@ from app.modules.booking import (
 )
 from app.modules.booking.factory_booking import BookingFactory
 from app.modules.booking.types_booking import Decision
+from app.modules.booking.user_deleter_booking import user_deleter
 from app.types.module import Module
 from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import is_group_id_valid, is_user_member_of_any_group
@@ -32,6 +33,7 @@ module = Module(
     tag="Booking",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
     factory=BookingFactory(),
+    user_deleter=user_deleter,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")

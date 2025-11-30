@@ -19,6 +19,7 @@ from app.modules.seed_library import (
 )
 from app.modules.seed_library.factory_seed_library import SeedLibraryFactory
 from app.modules.seed_library.types_seed_library import PlantState, SpeciesType
+from app.modules.seed_library.user_deleter_seed_library import user_deleter
 from app.types.module import Module
 from app.utils import tools
 from app.utils.tools import is_user_member_of_any_group
@@ -28,6 +29,7 @@ module = Module(
     tag="seed_library",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
     factory=SeedLibraryFactory(),
+    user_deleter=user_deleter,
 )
 
 

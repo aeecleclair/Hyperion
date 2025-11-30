@@ -23,6 +23,7 @@ from app.modules.advert import (
     schemas_advert,
 )
 from app.modules.advert.factory_advert import AdvertFactory
+from app.modules.advert.user_deleter_advert import user_deleter
 from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
@@ -40,6 +41,7 @@ module = Module(
     tag="Advert",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
     factory=AdvertFactory(),
+    user_deleter=user_deleter,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
