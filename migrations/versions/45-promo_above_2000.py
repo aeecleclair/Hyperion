@@ -1,4 +1,4 @@
-"""43-promo-above-2000
+"""Promo above 2000
 
 Create Date: 2025-09-07 09:54:34.421809
 """
