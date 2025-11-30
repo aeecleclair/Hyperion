@@ -85,6 +85,7 @@ async def init_objects() -> None:
         order_id=str(uuid.uuid4()),
         user_id=student_user.id,
         delivery=delivery,
+        delivery_id=delivery.id,
         amount=0,
         collection_slot=AmapSlotType.midi,
         ordering_date=datetime(2022, 8, 10, 12, 16, 26, tzinfo=UTC),
@@ -98,11 +99,13 @@ async def init_objects() -> None:
         amount=0,
         collection_slot=AmapSlotType.midi,
         ordering_date=datetime(2022, 8, 18, 12, 16, 26, tzinfo=UTC),
-        delivery_date=locked_delivery.delivery_date,
+        delivery=locked_delivery,
     )
     await add_object_to_db(deletable_order_by_admin)
 
-    cash = models_amap.Cash(user_id=student_user.id, balance=666)
+    cash = models_amap.Cash(
+        user_id=student_user.id, balance=666, last_order_date=datetime.now(UTC)
+    )
     await add_object_to_db(cash)
 
 
