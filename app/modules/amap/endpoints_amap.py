@@ -459,7 +459,7 @@ async def add_order_to_delievery(
         balance = models_amap.Cash(
             balance=0,
             user_id=order.user_id,
-            last_ordering_date=ordering_date,
+            last_order_date=ordering_date,
         )
         await cruds_amap.create_cash_of_user(
             cash=balance,
@@ -855,7 +855,7 @@ async def get_cash_by_id(
             balance=0,
             user_id=user_id,
             user=schemas_users.CoreUserSimple(**user_db.__dict__),
-            last_ordering_date=datetime.now(UTC),
+            last_order_date=datetime.now(UTC),
         )
 
     return cash
@@ -892,7 +892,7 @@ async def create_cash_of_user(
         )
 
     cash_db = models_amap.Cash(
-        user_id=user_id, balance=cash.balance, last_ordering_date=datetime.now(UTC)
+        user_id=user_id, balance=cash.balance, last_order_date=datetime.now(UTC)
     )
 
     await cruds_amap.create_cash_of_user(

@@ -378,7 +378,7 @@ async def update_last_ordering_date(db: AsyncSession, user_id: str, date: dateti
         await db.execute(
             update(models_amap.Cash)
             .where(models_amap.Cash.user_id == user_id)
-            .values(last_ordering_date=date),
+            .values(last_order_date=date),
         )
         await db.flush()
 
