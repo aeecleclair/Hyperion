@@ -90,11 +90,13 @@ from app.utils.tools import (
     set_core_data,
 )
 
-router = APIRouter(tags=["MyECLPay"])
+DISPLAY_NAME = get_settings().school.payment_name
+
+router = APIRouter(tags=[DISPLAY_NAME])
 
 core_module = CoreModule(
     root="mypayment",
-    tag="MyECLPay",
+    tag=DISPLAY_NAME,
     router=router,
     payment_callback=validate_transfer_callback,
     factory=MyPaymentFactory(),
@@ -1512,7 +1514,7 @@ async def activate_user_device(
         message = Message(
             title="💳 Paiement - appareil activé",
             content=f"Vous avez activé l'appareil {wallet_device.name}",
-            action_module="MyECLPay",
+            action_module=settings.school.payment_name,
         )
         await notification_tool.send_notification_to_user(
             user_id=user.id,
@@ -1538,6 +1540,7 @@ async def revoke_user_devices(
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user()),
     notification_tool: NotificationTool = Depends(get_notification_tool),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Revoke a device for the user.
@@ -1585,7 +1588,7 @@ async def revoke_user_devices(
     message = Message(
         title="💳 Paiement - appareil revoqué",
         content=f"Vous avez revoqué l'appareil {wallet_device.name}",
-        action_module="MyECLPay",
+        action_module=settings.school.payment_name,
     )
     await notification_tool.send_notification_to_user(
         user_id=user_payment.user_id,
@@ -1806,7 +1809,7 @@ async def init_ha_transfer(
     checkout = await payment_tool.init_checkout(
         module="mypayment",
         checkout_amount=transfer_info.amount,
-        checkout_name="Recharge MyECLPay",
+        checkout_name=f"Recharge {settings.school.payment_name}",
         redirection_uri=f"{settings.CLIENT_URL}mypayment/transfer/redirect?url={transfer_info.redirect_url}",
         payer_user=user_schema,
         db=db,
@@ -1974,6 +1977,7 @@ async def store_scan_qrcode(
     user: CoreUser = Depends(is_user_an_ecl_member),
     request_id: str = Depends(get_request_id),
     notification_tool: NotificationTool = Depends(get_notification_tool),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Scan and bank a QR code for this store.
@@ -2193,7 +2197,7 @@ async def store_scan_qrcode(
         message = Message(
             title=f"💳 Paiement - {store.name}",
             content=f"Une transaction de {scan_info.tot / 100} € a été effectuée",
-            action_module="MyECLPay",
+            action_module=settings.school.payment_name,
         )
         await notification_tool.send_notification_to_user(
             user_id=debited_wallet.user.id,
@@ -2212,6 +2216,7 @@ async def refund_transaction(
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(is_user_an_ecl_member),
     notification_tool: NotificationTool = Depends(get_notification_tool),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Refund a transaction. Only transactions made in the last 30 days can be refunded.
@@ -2371,7 +2376,7 @@ async def refund_transaction(
         message = Message(
             title="💳 Remboursement",
             content=f"La transaction pour {wallet_previously_credited_name} ({transaction.total / 100} €) a été remboursée de {refund_amount / 100} €",
-            action_module="MyECLPay",
+            action_module=settings.school.payment_name,
         )
         await notification_tool.send_notification_to_user(
             user_id=wallet_previously_debited.user.id,
@@ -2386,7 +2391,7 @@ async def refund_transaction(
         message = Message(
             title="💳 Remboursement",
             content=f"Vous avez remboursé la transaction de {wallet_previously_debited_name} ({transaction.total / 100} €) de {refund_amount / 100} €",
-            action_module="MyECLPay",
+            action_module=settings.school.payment_name,
         )
         await notification_tool.send_notification_to_user(
             user_id=wallet_previously_credited.user.id,
@@ -2404,6 +2409,7 @@ async def cancel_transaction(
     user: CoreUser = Depends(is_user_an_ecl_member),
     request_id: str = Depends(get_request_id),
     notification_tool: NotificationTool = Depends(get_notification_tool),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Cancel a transaction.
@@ -2521,7 +2527,7 @@ async def cancel_transaction(
         message = Message(
             title="💳 Paiement annulé",
             content=f"La transaction de {transaction.total / 100} € a été annulée",
-            action_module="MyECLPay",
+            action_module=settings.school.payment_name,
         )
         await notification_tool.send_notification_to_user(
             user_id=debited_wallet.user.id,
@@ -2651,6 +2657,7 @@ async def create_structure_invoice(
     structure_id: UUID,
     db: AsyncSession = Depends(get_db),
     token_data: schemas_auth.TokenData = Depends(get_token_data),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Create an invoice for a structure.
@@ -2791,7 +2798,7 @@ async def create_structure_invoice(
 
     context = {
         "invoice": invoice_db.model_dump(),
-        "payment_name": "MyECLPay",
+        "payment_name": settings.school.payment_name,
         "holder_coordinates": {
             "name": bank_holder_structure.name,
             "address_street": bank_holder_structure.siege_address_street,
