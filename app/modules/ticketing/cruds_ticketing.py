@@ -193,6 +193,8 @@ async def get_session_by_id(
             user_quota=session.user_quota,
             used_quota=session.used_quota,
             disabled=session.disabled,
+            event_id=session.event_id,
+            event=session.event,
         )
         if session
         else None
@@ -201,7 +203,7 @@ async def get_session_by_id(
 
 async def create_session(
     db: AsyncSession,
-    session: schemas_ticketing.SessionBase,
+    session: schemas_ticketing.SessionSimple,
 ) -> None:
     """Create a new session."""
 
@@ -262,6 +264,7 @@ async def get_category_by_id(
         schemas_ticketing.CategoryComplete(
             id=category.id,
             event_id=category.event_id,
+            event=category.event,
             name=category.name,
             linked_sessions=category.linked_sessions,
             required_mebership=category.required_mebership,
@@ -278,12 +281,18 @@ async def get_category_by_id(
 
 async def create_category(
     db: AsyncSession,
-    category: schemas_ticketing.CategoryBase,
+    category: schemas_ticketing.CategorySimple,
 ) -> None:
     """Create a new category."""
-
+    joined_sessions = (
+        ",".join(str(session_id) for session_id in category.linked_sessions)
+        if category.linked_sessions
+        else None
+    )
+    category_model = category.model_dump()
+    category_model["linked_sessions"] = joined_sessions
     db.add(
-        models_ticketing.Category(**category.model_dump()),
+        models_ticketing.Category(**category_model),
     )
     await db.flush()
 
@@ -333,6 +342,8 @@ async def get_tickets(
             created_at=ticket.created_at,
             event=ticket.event,
             category=ticket.category,
+            status=ticket.status,
+            nb_scan=ticket.nb_scan,
         )
         for ticket in tickets.scalars().all()
     ]
@@ -359,6 +370,8 @@ async def get_tickets_by_user_id(
             created_at=ticket.created_at,
             event=ticket.event,
             category=ticket.category,
+            status=ticket.status,
+            nb_scan=ticket.nb_scan,
         )
         for ticket in tickets.scalars().all()
     ]
@@ -392,6 +405,8 @@ async def get_ticket_by_id(
             created_at=ticket.created_at,
             event=ticket.event,
             category=ticket.category,
+            status=ticket.status,
+            nb_scan=ticket.nb_scan,
         )
         if ticket
         else None
