@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.core_endpoints import cruds_core, models_core, schemas_core
-from app.core.core_endpoints.user_deleter_core import user_deleter
+from app.core.core_endpoints.user_deleter_core import CoreUserDeleter
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.users import models_users
 from app.core.utils.config import Settings
@@ -27,7 +27,7 @@ core_module = CoreModule(
     tag="Core",
     router=router,
     factory=None,
-    user_deleter=user_deleter,
+    user_deleter=CoreUserDeleter(),
 )
 
 

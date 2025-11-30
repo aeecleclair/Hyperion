@@ -10,10 +10,8 @@ from pydantic import TypeAdapter, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.payment import cruds_payment, models_payment, schemas_payment
-from app.core.payment.types_payment import (
-    NotificationResultContent,
-)
-from app.core.payment.user_deleter_payment import user_deleter
+from app.core.payment.types_payment import NotificationResultContent
+from app.core.payment.user_deleter_payment import PaymentUserDeleter
 from app.dependencies import get_db
 from app.module import all_modules
 from app.types.module import CoreModule
@@ -25,7 +23,7 @@ core_module = CoreModule(
     tag="Payments",
     router=router,
     factory=None,
-    user_deleter=user_deleter,
+    user_deleter=PaymentUserDeleter(),
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")

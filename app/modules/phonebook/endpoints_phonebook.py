@@ -20,7 +20,7 @@ from app.modules.phonebook import (
 )
 from app.modules.phonebook.factory_phonebook import PhonebookFactory
 from app.modules.phonebook.types_phonebook import RoleTags
-from app.modules.phonebook.user_deleter_phonebook import user_deleter
+from app.modules.phonebook.user_deleter_phonebook import PhonebookUserDeleter
 from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
@@ -35,7 +35,7 @@ module = Module(
     tag="Phonebook",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
     factory=PhonebookFactory(),
-    user_deleter=user_deleter,
+    user_deleter=PhonebookUserDeleter(),
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")

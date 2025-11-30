@@ -21,7 +21,7 @@ from app.dependencies import (
 )
 from app.modules.cinema import cruds_cinema, schemas_cinema
 from app.modules.cinema.factory_cinema import CinemaFactory
-from app.modules.cinema.user_deleter_cinema import user_deleter
+from app.modules.cinema.user_deleter_cinema import CinemaUserDeleter
 from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
@@ -49,7 +49,7 @@ module = Module(
     default_allowed_account_types=[AccountType.student, AccountType.staff],
     registred_topics=[cinema_topic],
     factory=CinemaFactory(),
-    user_deleter=user_deleter,
+    user_deleter=CinemaUserDeleter(),
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")

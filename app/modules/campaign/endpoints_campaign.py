@@ -24,7 +24,7 @@ from app.modules.campaign import (
 )
 from app.modules.campaign.factory_campaign import CampaignFactory
 from app.modules.campaign.types_campaign import ListType, StatusType
-from app.modules.campaign.user_deleter_campaign import user_deleter
+from app.modules.campaign.user_deleter_campaign import CampaignUserDeleter
 from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
@@ -39,7 +39,7 @@ module = Module(
     tag="Campaign",
     default_allowed_groups_ids=[GroupType.AE],
     factory=CampaignFactory(),
-    user_deleter=user_deleter,
+    user_deleter=CampaignUserDeleter(),
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")

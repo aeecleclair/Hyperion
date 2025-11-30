@@ -12,10 +12,10 @@ from app.core.memberships import (
     schemas_memberships,
 )
 from app.core.memberships.factory_memberships import CoreMembershipsFactory
-from app.core.memberships.user_deleter_memberships import user_deleter
-from app.core.memberships.utils_memberships import (
-    validate_user_new_membership,
+from app.core.memberships.user_deleter_memberships import (
+    MembershipsUserDeleter,
 )
+from app.core.memberships.utils_memberships import validate_user_new_membership
 from app.core.users import cruds_users, models_users, schemas_users
 from app.dependencies import (
     get_db,
@@ -34,7 +34,7 @@ core_module = CoreModule(
     tag="Memberships",
     router=router,
     factory=CoreMembershipsFactory(),
-    user_deleter=user_deleter,
+    user_deleter=MembershipsUserDeleter(),
 )
 
 

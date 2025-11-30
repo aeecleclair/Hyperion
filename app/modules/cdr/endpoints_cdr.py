@@ -41,7 +41,7 @@ from app.modules.cdr.types_cdr import (
     CdrStatus,
     DocumentSignatureType,
 )
-from app.modules.cdr.user_deleter_cdr import user_deleter
+from app.modules.cdr.user_deleter_cdr import CdrUserDeleter
 from app.modules.cdr.utils_cdr import (
     check_request_consistency,
     construct_dataframe_from_users_purchases,
@@ -69,7 +69,7 @@ module = Module(
     payment_callback=validate_payment,
     default_allowed_groups_ids=[GroupType.admin_cdr],
     factory=None,
-    user_deleter=user_deleter,
+    user_deleter=CdrUserDeleter(),
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")

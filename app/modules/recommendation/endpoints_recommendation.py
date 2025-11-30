@@ -18,7 +18,9 @@ from app.modules.recommendation import (
     schemas_recommendation,
 )
 from app.modules.recommendation.factory_recommendation import RecommendationFactory
-from app.modules.recommendation.user_deleter_recommendation import user_deleter
+from app.modules.recommendation.user_deleter_recommendation import (
+    RecommendationUserDeleter,
+)
 from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
@@ -32,7 +34,7 @@ module = Module(
     tag="Recommendation",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
     factory=RecommendationFactory(),
-    user_deleter=user_deleter,
+    user_deleter=RecommendationUserDeleter(),
 )
 
 

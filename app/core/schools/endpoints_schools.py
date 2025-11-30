@@ -18,7 +18,7 @@ from app.core.schools import (
 )
 from app.core.schools.factory_schools import CoreSchoolsFactory
 from app.core.schools.schools_type import SchoolType
-from app.core.schools.user_deleter_schools import user_deleter
+from app.core.schools.user_deleter_schools import SchoolsUserDeleter
 from app.core.users import cruds_users, schemas_users
 from app.dependencies import (
     get_db,
@@ -33,7 +33,7 @@ core_module = CoreModule(
     tag="Schools",
     router=router,
     factory=CoreSchoolsFactory(),
-    user_deleter=user_deleter,
+    user_deleter=SchoolsUserDeleter(),
 )
 
 

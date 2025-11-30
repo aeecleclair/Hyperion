@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.groups import cruds_groups, models_groups, schemas_groups
 from app.core.groups.factory_groups import CoreGroupsFactory
 from app.core.groups.groups_type import GroupType
-from app.core.groups.user_deleter_groups import user_deleter
+from app.core.groups.user_deleter_groups import GroupsUserDeleter
 from app.core.notification.utils_notification import get_topics_restricted_to_group_id
 from app.core.users import cruds_users
 from app.dependencies import (
@@ -33,7 +33,7 @@ core_module = CoreModule(
     tag="Groups",
     router=router,
     factory=CoreGroupsFactory(),
-    user_deleter=user_deleter,
+    user_deleter=GroupsUserDeleter(),
 )
 
 hyperion_security_logger = logging.getLogger("hyperion.security")

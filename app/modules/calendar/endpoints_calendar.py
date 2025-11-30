@@ -15,7 +15,7 @@ from app.modules.calendar import (
 )
 from app.modules.calendar.factory_calendar import CalendarFactory
 from app.modules.calendar.types_calendar import Decision
-from app.modules.calendar.user_deleter_calendar import user_deleter
+from app.modules.calendar.user_deleter_calendar import CalendarUserDeleter
 from app.types.module import Module
 from app.utils.tools import is_user_member_of_any_group
 
@@ -24,7 +24,7 @@ module = Module(
     tag="Calendar",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
     factory=CalendarFactory(),
-    user_deleter=user_deleter,
+    user_deleter=CalendarUserDeleter(),
 )
 
 ical_file_path = "data/ics/ae_calendar.ics"
