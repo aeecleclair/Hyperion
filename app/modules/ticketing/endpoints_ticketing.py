@@ -7,11 +7,11 @@ from app.core.users import models_users
 from app.dependencies import get_db, is_user
 from app.modules.ticketing import cruds_ticketing, schemas_ticketing
 from app.modules.ticketing.factory_ticketing import TicketingFactory
-from app.types.module import CoreModule
+from app.types.module import Module
 
 router = APIRouter(tags=["Ticketing"])
 
-core_module = CoreModule(
+module = Module(
     root="ticketing",
     tag="Ticketing",
     router=router,
@@ -19,7 +19,7 @@ core_module = CoreModule(
 )
 
 
-@router.get(
+@module.router.get(
     "/ticketing/events/",
     summary="Get all events",
     response_model=list[schemas_ticketing.EventComplete],
@@ -32,7 +32,7 @@ async def get_events(
     return await cruds_ticketing.get_events(db=db)
 
 
-@router.get(
+@module.router.get(
     "/ticketing/events/{event_id}",
     summary="Get an event by its ID",
     response_model=schemas_ticketing.EventComplete,
@@ -46,7 +46,7 @@ async def get_event_by_id(
     return await cruds_ticketing.get_event_by_id(event_id=event_id, db=db)
 
 
-@router.post(
+@module.router.post(
     "/ticketing/events/",
     summary="Create a new event",
     response_model=schemas_ticketing.EventComplete,
@@ -74,7 +74,7 @@ async def create_event(
     return event_complete
 
 
-@router.patch(
+@module.router.patch(
     "/ticketing/events/{event_id}",
     summary="Update an existing event",
     response_model=None,
@@ -96,7 +96,7 @@ async def update_event(
     )
 
 
-@router.delete(
+@module.router.delete(
     "/ticketing/events/{event_id}",
     summary="Delete an existing event",
     response_model=None,
@@ -118,7 +118,7 @@ async def delete_event(
     await cruds_ticketing.delete_event(event_id=event_id, db=db)
 
 
-@router.get(
+@module.router.get(
     "/ticketing/sessions/{session_id}",
     summary="Get a session by its ID",
     response_model=schemas_ticketing.SessionComplete,
@@ -135,7 +135,7 @@ async def get_session_by_id(
     return session
 
 
-@router.post(
+@module.router.post(
     "/ticketing/sessions/",
     summary="Create a new session",
     response_model=schemas_ticketing.SessionComplete,
@@ -163,7 +163,7 @@ async def create_session(
     return session_complete
 
 
-@router.patch(
+@module.router.patch(
     "/ticketing/sessions/{session_id}",
     summary="Update an existing session",
     response_model=None,
@@ -185,7 +185,7 @@ async def update_session(
     )
 
 
-@router.delete(
+@module.router.delete(
     "/ticketing/sessions/{session_id}",
     summary="Delete an existing session",
     response_model=None,
@@ -207,7 +207,7 @@ async def delete_session(
     await cruds_ticketing.delete_session(session_id=session_id, db=db)
 
 
-@router.get(
+@module.router.get(
     "/ticketing/categories/{category_id}",
     summary="Get a category by its ID",
     response_model=schemas_ticketing.CategoryComplete,
@@ -224,7 +224,7 @@ async def get_category_by_id(
     return category
 
 
-@router.post(
+@module.router.post(
     "/ticketing/categories/",
     summary="Create a new category",
     response_model=schemas_ticketing.CategoryComplete,
@@ -245,7 +245,7 @@ async def create_category(
     return category_complete
 
 
-@router.patch(
+@module.router.patch(
     "/ticketing/categories/{category_id}",
     summary="Update an existing category",
     response_model=None,
@@ -267,7 +267,7 @@ async def update_category(
     )
 
 
-@router.delete(
+@module.router.delete(
     "/ticketing/categories/{category_id}",
     summary="Delete an existing category",
     response_model=None,
@@ -289,7 +289,7 @@ async def delete_category(
     await cruds_ticketing.delete_category(category_id=category_id, db=db)
 
 
-@router.get(
+@module.router.get(
     "/ticketing/tickets/{ticket_id}",
     summary="Get a ticket by its ID",
     response_model=schemas_ticketing.TicketComplete,
@@ -306,7 +306,7 @@ async def get_ticket_by_id(
     return ticket
 
 
-@router.get(
+@module.router.get(
     "/ticketing/tickets/",
     summary="Get all tickets",
     response_model=list[schemas_ticketing.TicketComplete],
@@ -319,7 +319,7 @@ async def get_all_tickets(
     return await cruds_ticketing.get_tickets(db=db)
 
 
-@router.get(
+@module.router.get(
     "/ticketing/users/{user_id}/tickets/",
     summary="Get all tickets for a user",
     response_model=list[schemas_ticketing.TicketComplete],
@@ -333,7 +333,7 @@ async def get_tickets_by_user(
     return await cruds_ticketing.get_tickets_by_user_id(user_id=user_id, db=db)
 
 
-@router.get(
+@module.router.get(
     "/ticketing/users/me/tickets/",
     summary="Get all tickets for a user",
     response_model=list[schemas_ticketing.TicketComplete],
@@ -347,7 +347,7 @@ async def get_my_tickets(
     return await cruds_ticketing.get_tickets_by_user_id(user_id=user.id, db=db)
 
 
-@router.post(
+@module.router.post(
     "/ticketing/tickets/",
     summary="Create a new ticket",
     response_model=schemas_ticketing.TicketComplete,
@@ -376,7 +376,7 @@ async def create_ticket(
     return ticket_complete
 
 
-@router.patch(
+@module.router.patch(
     "/ticketing/tickets/{ticket_id}",
     summary="Update an existing ticket",
     response_model=None,
@@ -398,7 +398,7 @@ async def update_ticket(
     )
 
 
-@router.delete(
+@module.router.delete(
     "/ticketing/tickets/{ticket_id}",
     summary="Delete an existing ticket",
     response_model=None,

@@ -24,8 +24,8 @@ class EventSimple(EventBase):
 
 class EventComplete(EventSimple):
     store: StoreSimple
-    sessions: list["SessionComplete"]
-    categories: list["CategoryComplete"]
+    sessions: list["SessionSimple"]
+    categories: list["CategorySimple"]
 
 
 class EventUpdate(BaseModel):
@@ -38,6 +38,7 @@ class EventUpdate(BaseModel):
 
 
 class SessionBase(BaseModel):
+    event_id: UUID
     name: str
     quota: int | None = None
     user_quota: int | None = None
@@ -70,10 +71,14 @@ class CategoryBase(BaseModel):
     price: int
 
 
-class CategoryComplete(CategoryBase):
+class CategorySimple(CategoryBase):
     id: UUID
     used_quota: int
     disabled: bool
+
+
+class CategoryComplete(CategorySimple):
+    event: EventSimple
 
 
 class CategoryUpdate(BaseModel):
@@ -96,6 +101,8 @@ class TicketBase(BaseModel):
 class TicketSimple(TicketBase):
     id: UUID
     created_at: datetime
+    status: str
+    nb_scan: int
 
 
 class TicketComplete(TicketSimple):

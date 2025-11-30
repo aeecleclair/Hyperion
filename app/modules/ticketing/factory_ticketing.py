@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.memberships.factory_memberships import CoreMembershipsFactory
 from app.core.myeclpay.factory_myeclpay import MyECLPayFactory
 from app.core.users.factory_users import CoreUsersFactory
 from app.core.utils.config import Settings
@@ -15,6 +16,7 @@ class TicketingFactory(Factory):
     depends_on = [
         CoreUsersFactory,
         MyECLPayFactory,
+        CoreMembershipsFactory,
     ]
 
     event_id = uuid4()
@@ -38,7 +40,7 @@ class TicketingFactory(Factory):
             db,
             schemas_ticketing.EventSimple(
                 id=cls.event_id,
-                store_id=MyECLPayFactory.other_stores_id[0],
+                store_id=MyECLPayFactory.other_stores_id[0][0],
                 creator_id=CoreUsersFactory.other_users_id[0],
                 name="Commuz 2025",
                 open_date=datetime.now(UTC),
@@ -55,7 +57,7 @@ class TicketingFactory(Factory):
         """Create sample sessions."""
         await cruds_ticketing.create_session(
             db,
-            schemas_ticketing.SessionBase(
+            schemas_ticketing.SessionSimple(
                 id=cls.session1_id,
                 event_id=cls.event_id,
                 name="Session du Samedi Soir",
@@ -67,7 +69,7 @@ class TicketingFactory(Factory):
         )
         await cruds_ticketing.create_session(
             db,
-            schemas_ticketing.SessionBase(
+            schemas_ticketing.SessionSimple(
                 id=cls.session2_id,
                 event_id=cls.event_id,
                 name="Session du Dimanche Après-midi",
@@ -83,12 +85,12 @@ class TicketingFactory(Factory):
         """Create sample categories."""
         await cruds_ticketing.create_category(
             db,
-            schemas_ticketing.CategoryBase(
+            schemas_ticketing.CategorySimple(
                 id=cls.category1_id,
                 event_id=cls.event_id,
                 name="Étudiant Centrale",
                 linked_sessions=[cls.session1_id, cls.session2_id],
-                required_mebership=["centrale_student"],
+                required_mebership=CoreMembershipsFactory.memberships_ids[0],
                 quota=150,
                 user_quota=2,
                 used_quota=0,
@@ -98,12 +100,12 @@ class TicketingFactory(Factory):
         )
         await cruds_ticketing.create_category(
             db,
-            schemas_ticketing.CategoryBase(
+            schemas_ticketing.CategorySimple(
                 id=cls.category2_id,
                 event_id=cls.event_id,
                 name="Étudiant Lyon",
                 linked_sessions=[cls.session1_id, cls.session2_id],
-                required_mebership=["student"],
+                required_mebership=CoreMembershipsFactory.memberships_ids[1],
                 quota=200,
                 user_quota=2,
                 used_quota=0,
@@ -113,7 +115,7 @@ class TicketingFactory(Factory):
         )
         await cruds_ticketing.create_category(
             db,
-            schemas_ticketing.CategoryBase(
+            schemas_ticketing.CategorySimple(
                 id=cls.category3_id,
                 event_id=cls.event_id,
                 name="Externe",
@@ -144,6 +146,8 @@ class TicketingFactory(Factory):
                     category_id=category_id,
                     total=1500 if category_id == cls.category1_id else 2000,
                     created_at=datetime.now(UTC),
+                    nb_scan=0,
+                    status="valid",
                 ),
             )
 
