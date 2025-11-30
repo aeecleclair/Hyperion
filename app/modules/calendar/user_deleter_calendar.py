@@ -17,7 +17,7 @@ class CalendarUserDeleter(ModuleUserDeleter):
             applicant_id=user_id,
         )
         reasons = [
-            f"User has booking in future: {event.id}"
+            f"User has events in future: {event.id}"
             for event in user_events
             if event.end > datetime.now(tz=UTC)
         ]

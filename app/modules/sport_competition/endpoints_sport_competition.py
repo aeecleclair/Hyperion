@@ -28,6 +28,9 @@ from app.modules.sport_competition.types_sport_competition import (
     ExcelExportParams,
     ProductSchoolType,
 )
+from app.modules.sport_competition.user_deleter_sport_competition import (
+    SportCompetitionUserDeleter,
+)
 from app.modules.sport_competition.utils.data_exporter import (
     construct_users_excel_with_parameters,
 )
@@ -57,6 +60,7 @@ module = Module(
     default_allowed_account_types=get_account_types_except_externals(),
     payment_callback=validate_payment,
     factory=None,
+    user_deleter=SportCompetitionUserDeleter(),
 )
 
 # region: Sport

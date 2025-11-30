@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.campaign import cruds_campaign, types_campaign
+from app.modules.campaign import cruds_campaign
 from app.types.module_user_deleter import ModuleUserDeleter
 
 
@@ -10,9 +10,9 @@ class CampaignUserDeleter(ModuleUserDeleter):
         user_id: str,
         db: AsyncSession,
     ) -> str:
-        status = await cruds_campaign.get_status(db=db)
-        if status != types_campaign.StatusType.published:
-            return "    - User has voted in unpublished campaign, wait for publish"
+        status = await cruds_campaign.get_has_voted(db=db, user_id=user_id)
+        if len(status) > 0:
+            return "    - User has voted in active campaign, wait for reset"
         return ""
 
     async def delete_user(self, user_id: str, db: AsyncSession) -> None:
