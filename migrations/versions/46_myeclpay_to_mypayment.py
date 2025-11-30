@@ -65,6 +65,18 @@ def upgrade() -> None:
         "myeclpay_used_qrcode",
         "mypayment_used_qrcode",
     )
+    op.rename_table(
+        "myeclpay_invoice",
+        "mypayment_invoice",
+    )
+    op.rename_table(
+        "myeclpay_invoice_detail",
+        "mypayment_invoice_detail",
+    )
+    op.rename_table(
+        "myeclpay_withdrawal",
+        "mypayment_withdrawal",
+    )
     # ### end Alembic commands ###s
 
 
@@ -113,6 +125,18 @@ def downgrade() -> None:
     op.rename_table(
         "mypayment_used_qrcode",
         "myeclpay_used_qrcode",
+    )
+    op.rename_table(
+        "mypayment_invoice",
+        "myeclpay_invoice",
+    )
+    op.rename_table(
+        "mypayment_invoice_detail",
+        "myeclpay_invoice_detail",
+    )
+    op.rename_table(
+        "mypayment_withdrawal",
+        "myeclpay_withdrawal",
     )
 
 
