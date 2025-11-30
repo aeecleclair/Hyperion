@@ -70,6 +70,7 @@ class AmapFactory(Factory):
             cash=models_amap.Cash(
                 user_id=CoreUsersFactory.demo_users_id[0],
                 balance=10000,
+                last_order_date=datetime.now(UTC),
             ),
         )
 
