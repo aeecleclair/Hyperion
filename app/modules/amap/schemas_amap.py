@@ -126,10 +126,6 @@ class CashComplete(CashBase):
     user: CoreUserSimple
 
 
-class CashDB(CashBase):
-    user_id: str
-
-
 class CashEdit(BaseModel):
     balance: int
 

@@ -456,7 +456,7 @@ async def add_order_to_delievery(
 
     # If the balance does not exist, we create a new one with a balance of 0
     if not balance:
-        new_cash_db = schemas_amap.CashDB(
+        new_cash_db = schemas_amap.CashBase(
             balance=0,
             user_id=order.user_id,
         )
