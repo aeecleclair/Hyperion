@@ -90,13 +90,11 @@ from app.utils.tools import (
     set_core_data,
 )
 
-DISPLAY_NAME = get_settings().school.payment_name
-
-router = APIRouter(tags=[DISPLAY_NAME])
+router = APIRouter(tags=["MyECLPay"])
 
 core_module = CoreModule(
     root="mypayment",
-    tag=DISPLAY_NAME,
+    tag="MyECLPay",
     router=router,
     payment_callback=validate_transfer_callback,
     factory=MyPaymentFactory(),
