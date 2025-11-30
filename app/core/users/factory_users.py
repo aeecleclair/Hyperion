@@ -15,7 +15,6 @@ from app.core.users.models_users import CoreUser
 from app.core.utils import security
 from app.core.utils.config import Settings, UserDemoFactoryConfig
 from app.types.factory import Factory
-from app.types.floors_type import FloorsType
 
 NB_USERS = 100
 
@@ -66,7 +65,10 @@ class CoreUsersFactory(Factory):
             randint(datetime.now(tz=UTC).year - 5, datetime.now(tz=UTC).year)  # noqa: S311
             for _ in range(NB_USERS)
         ]
-        floors = [random.choice(list(FloorsType)) for _ in range(NB_USERS)]  # noqa: S311
+        floors = [
+            random.choice(["V3", "V45", "T21", "X3", "Adoma", "X2"])  # noqa: S311
+            for _ in range(NB_USERS)
+        ]
         for i in range(NB_USERS):
             hyperion_error_logger.debug(
                 "Creating user %s/%s",

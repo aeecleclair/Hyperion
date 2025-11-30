@@ -38,7 +38,7 @@ which does not contain the field `date` expected in the documentation example: h
 class HelloAssoConfigName(Enum):
     CDR = "CDR"
     RAID = "RAID"
-    MYECLPAY = "MYECLPAY"
+    MYPAYMENT = "MYPAYMENT"
     CHALLENGER = "CHALLENGER"
 
 

@@ -1,6 +1,6 @@
 from weasyprint import CSS, HTML
 
-html = HTML("./myeclpay_invoice.html")
+html = HTML("./mypayment_invoice.html")
 
 css = CSS("./output.css")
 # cssextra = CSS("./outputextra.css")

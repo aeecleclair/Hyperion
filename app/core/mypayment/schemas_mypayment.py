@@ -8,7 +8,7 @@ from pydantic import (
 )
 
 from app.core.memberships import schemas_memberships
-from app.core.myeclpay.types_myeclpay import (
+from app.core.mypayment.types_mypayment import (
     HistoryType,
     TransactionStatus,
     TransactionType,
