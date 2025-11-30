@@ -25,6 +25,7 @@ from app.modules.sport_competition.utils.schemas_converters import (
     purchase_model_to_schema,
     school_extension_model_to_schema,
     team_model_to_schema,
+    volunteer_shift_model_to_schema,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -432,7 +433,7 @@ async def add_competition_user(
             is_cameraman=user.is_cameraman,
             is_pompom=user.is_pompom,
             is_fanfare=user.is_fanfare,
-            is_volunteer=user.is_volunteer,
+            allow_pictures=user.allow_pictures,
             validated=user.validated,
             created_at=user.created_at,
         ),
@@ -455,6 +456,19 @@ async def update_competition_user(
         .values(**user.model_dump(exclude_unset=True)),
     )
     await db.flush()
+
+
+async def delete_competition_user_by_id(
+    user_id: str,
+    edition_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_sport_competition.CompetitionUser).where(
+            models_sport_competition.CompetitionUser.user_id == user_id,
+            models_sport_competition.CompetitionUser.edition_id == edition_id,
+        ),
+    )
 
 
 # endregion: Competition Users
@@ -665,6 +679,20 @@ async def invalidate_competition_user(
             ),
         )
         .values(validated=False),
+    )
+    await db.flush()
+
+
+async def delete_participant_by_user_id(
+    user_id: str,
+    edition_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_sport_competition.CompetitionParticipant).where(
+            models_sport_competition.CompetitionParticipant.user_id == user_id,
+            models_sport_competition.CompetitionParticipant.edition_id == edition_id,
+        ),
     )
     await db.flush()
 
@@ -1867,10 +1895,29 @@ async def get_global_podiums(
         )
         .group_by(models_sport_competition.SportPodium.school_id),
     )
+    pompom_podiums = (
+        (
+            await db.execute(
+                select(models_sport_competition.PompomPodium).where(
+                    models_sport_competition.PompomPodium.edition_id == edition_id,
+                ),
+            )
+        )
+        .scalars()
+        .all()
+    )
     return [
         schemas_sport_competition.SchoolResult(
             school_id=podium[0],
-            total_points=podium[1],
+            total_points=podium[1]
+            + next(
+                (
+                    pompom_podium.points
+                    for pompom_podium in pompom_podiums
+                    if pompom_podium.school_id == podium[0]
+                ),
+                0,
+            ),
         )
         for podium in podiums.all()
     ]
@@ -1938,6 +1985,24 @@ async def load_school_podiums(
     ]
 
 
+async def load_pompom_podiums(
+    edition_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_sport_competition.SchoolResult]:
+    podiums = await db.execute(
+        select(models_sport_competition.PompomPodium).where(
+            models_sport_competition.PompomPodium.edition_id == edition_id,
+        ),
+    )
+    return [
+        schemas_sport_competition.SchoolResult(
+            school_id=podium.school_id,
+            total_points=podium.points,
+        )
+        for podium in podiums.scalars().all()
+    ]
+
+
 async def add_sport_ranking(
     rankings: list[schemas_sport_competition.TeamSportResult],
     db: AsyncSession,
@@ -1951,6 +2016,22 @@ async def add_sport_ranking(
                 edition_id=ranking.edition_id,
                 rank=ranking.rank,
                 points=ranking.points,
+            ),
+        )
+    await db.flush()
+
+
+async def add_pompom_ranking(
+    rankings: list[schemas_sport_competition.SchoolResult],
+    edition_id: UUID,
+    db: AsyncSession,
+):
+    for ranking in rankings:
+        db.add(
+            models_sport_competition.PompomPodium(
+                school_id=ranking.school_id,
+                edition_id=edition_id,
+                points=ranking.total_points,
             ),
         )
     await db.flush()
@@ -1970,6 +2051,18 @@ async def delete_sport_ranking(
     await db.flush()
 
 
+async def delete_pompom_ranking(
+    edition_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_sport_competition.PompomPodium).where(
+            models_sport_competition.PompomPodium.edition_id == edition_id,
+        ),
+    )
+    await db.flush()
+
+
 # endregion: Podiums
 # region: Products
 
@@ -1984,7 +2077,11 @@ async def load_products(
             models_sport_competition.CompetitionProduct.edition_id == edition_id,
         )
         .options(
-            selectinload(models_sport_competition.CompetitionProduct.variants),
+            selectinload(
+                models_sport_competition.CompetitionProduct.variants,
+            ).selectinload(
+                models_sport_competition.CompetitionProductVariant.purchases,
+            ),
         ),
     )
     return [
@@ -1995,7 +2092,7 @@ async def load_products(
             required=product.required,
             description=product.description,
             variants=[
-                schemas_sport_competition.ProductVariant(
+                schemas_sport_competition.ProductVariantStats(
                     id=variant.id,
                     edition_id=variant.edition_id,
                     product_id=variant.product_id,
@@ -2006,6 +2103,8 @@ async def load_products(
                     unique=variant.unique,
                     school_type=variant.school_type,
                     public_type=variant.public_type,
+                    booked=len(variant.purchases),
+                    paid=sum(purchase.validated for purchase in variant.purchases),
                 )
                 for variant in product.variants
             ],
@@ -2134,8 +2233,13 @@ async def load_available_product_variants(
         select(models_sport_competition.CompetitionProductVariant).where(
             models_sport_competition.CompetitionProductVariant.edition_id == edition_id,
             models_sport_competition.CompetitionProductVariant.enabled,
-            models_sport_competition.CompetitionProductVariant.school_type
-            == school_type,
+            or_(
+                models_sport_competition.CompetitionProductVariant.school_type
+                == school_type,
+                models_sport_competition.CompetitionProductVariant.school_type.is_(
+                    None,
+                ),
+            ),
             or_(
                 models_sport_competition.CompetitionProductVariant.public_type.in_(
                     public_type,
@@ -2439,6 +2543,20 @@ async def delete_purchase(
     await db.flush()
 
 
+async def delete_purchases_by_user_id(
+    user_id: str,
+    edition_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_sport_competition.CompetitionPurchase).where(
+            models_sport_competition.CompetitionPurchase.user_id == user_id,
+            models_sport_competition.CompetitionPurchase.edition_id == edition_id,
+        ),
+    )
+    await db.flush()
+
+
 # endregion: Purchases
 # region: Payments
 
@@ -2586,7 +2704,7 @@ async def get_checkout_by_checkout_id(
 async def load_all_volunteer_shifts_by_edition_id(
     edition_id: UUID,
     db: AsyncSession,
-) -> list[schemas_sport_competition.VolunteerShiftComplete]:
+) -> list[schemas_sport_competition.VolunteerShiftCompleteWithVolunteers]:
     shifts = await db.execute(
         select(models_sport_competition.VolunteerShift)
         .where(
@@ -2598,39 +2716,18 @@ async def load_all_volunteer_shifts_by_edition_id(
             ).selectinload(
                 models_sport_competition.VolunteerRegistration.user,
             ),
+            selectinload(
+                models_sport_competition.VolunteerShift.manager,
+            ),
         ),
     )
-    return [
-        schemas_sport_competition.VolunteerShiftComplete(
-            id=shift.id,
-            edition_id=shift.edition_id,
-            name=shift.name,
-            description=shift.description,
-            value=shift.value,
-            start_time=shift.start_time,
-            end_time=shift.end_time,
-            max_volunteers=shift.max_volunteers,
-            location=shift.location,
-            registrations=[
-                schemas_sport_competition.VolunteerRegistrationWithUser(
-                    user_id=registration.user_id,
-                    shift_id=registration.shift_id,
-                    edition_id=registration.edition_id,
-                    validated=registration.validated,
-                    registered_at=registration.registered_at,
-                    user=competition_user_model_to_schema(registration.user),
-                )
-                for registration in shift.registrations
-            ],
-        )
-        for shift in shifts.scalars().all()
-    ]
+    return [volunteer_shift_model_to_schema(shift) for shift in shifts.scalars().all()]
 
 
 async def load_volunteer_shift_by_id(
     shift_id: UUID,
     db: AsyncSession,
-) -> schemas_sport_competition.VolunteerShiftComplete | None:
+) -> schemas_sport_competition.VolunteerShiftCompleteWithVolunteers | None:
     shift = (
         (
             await db.execute(
@@ -2644,38 +2741,16 @@ async def load_volunteer_shift_by_id(
                     ).selectinload(
                         models_sport_competition.VolunteerRegistration.user,
                     ),
+                    selectinload(
+                        models_sport_competition.VolunteerShift.manager,
+                    ),
                 ),
             )
         )
         .scalars()
         .first()
     )
-    return (
-        schemas_sport_competition.VolunteerShiftComplete(
-            id=shift.id,
-            edition_id=shift.edition_id,
-            name=shift.name,
-            description=shift.description,
-            value=shift.value,
-            start_time=shift.start_time,
-            end_time=shift.end_time,
-            max_volunteers=shift.max_volunteers,
-            location=shift.location,
-            registrations=[
-                schemas_sport_competition.VolunteerRegistrationWithUser(
-                    user_id=registration.user_id,
-                    shift_id=registration.shift_id,
-                    edition_id=registration.edition_id,
-                    validated=registration.validated,
-                    registered_at=registration.registered_at,
-                    user=competition_user_model_to_schema(registration.user),
-                )
-                for registration in shift.registrations
-            ],
-        )
-        if shift
-        else None
-    )
+    return volunteer_shift_model_to_schema(shift) if shift else None
 
 
 async def add_volunteer_shift(
@@ -2687,6 +2762,7 @@ async def add_volunteer_shift(
             id=shift.id,
             edition_id=shift.edition_id,
             name=shift.name,
+            manager_id=shift.manager_id,
             description=shift.description,
             value=shift.value,
             start_time=shift.start_time,
@@ -2746,16 +2822,26 @@ async def load_volunteer_registrations_by_user_id(
             edition_id=registration.edition_id,
             validated=registration.validated,
             registered_at=registration.registered_at,
-            shift=schemas_sport_competition.VolunteerShift(
+            shift=schemas_sport_competition.VolunteerShiftComplete(
                 id=registration.shift.id,
                 edition_id=registration.shift.edition_id,
                 name=registration.shift.name,
+                manager_id=registration.shift.manager_id,
                 description=registration.shift.description,
                 value=registration.shift.value,
                 start_time=registration.shift.start_time,
                 end_time=registration.shift.end_time,
                 max_volunteers=registration.shift.max_volunteers,
                 location=registration.shift.location,
+                manager=schemas_users.CoreUser(
+                    id=registration.shift.manager.id,
+                    email=registration.shift.manager.email,
+                    name=registration.shift.manager.name,
+                    school_id=registration.shift.manager.school_id,
+                    firstname=registration.shift.manager.firstname,
+                    nickname=registration.shift.manager.nickname,
+                    account_type=registration.shift.manager.account_type,
+                ),
             )
             if registration.shift
             else None,
