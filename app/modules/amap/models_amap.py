@@ -84,6 +84,7 @@ class Order(Base):
     collection_slot: Mapped[AmapSlotType]
     ordering_date: Mapped[datetime]
     delivery: Mapped["Delivery"] = relationship(
+        lazy="joined",
         back_populates="orders",
     )
     user: Mapped[CoreUser] = relationship(
