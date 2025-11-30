@@ -45,10 +45,14 @@ class SessionBase(BaseModel):
     user_quota: int | None = None
 
 
-class SessionComplete(SessionBase):
+class SessionSimple(SessionBase):
     id: UUID
     used_quota: int
     disabled: bool
+
+
+class SessionComplete(SessionSimple):
+    event: EventSimple
 
 
 class SessionUpdate(BaseModel):
