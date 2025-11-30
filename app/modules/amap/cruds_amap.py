@@ -118,16 +118,6 @@ async def get_delivery_by_id(
     return result.scalars().first()
 
 
-async def is_there_a_delivery_on(db: AsyncSession, delivery_date: date) -> bool:
-    result = await db.execute(
-        select(models_amap.Delivery).where(
-            models_amap.Delivery.delivery_date == delivery_date,
-            models_amap.Delivery.status != DeliveryStatusType.archived,
-        ),
-    )
-    return result.scalars().all() != []
-
-
 async def create_delivery(
     delivery: schemas_amap.DeliveryComplete,
     db: AsyncSession,
