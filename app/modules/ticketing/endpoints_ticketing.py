@@ -60,14 +60,17 @@ async def create_event(
     stored = await cruds_ticketing.get_event_by_name(name=event.name, db=db)
     if stored is not None:
         raise HTTPException(status_code=400, detail="Event already exists")
-    event = schemas_ticketing.EventComplete(
+    event = schemas_ticketing.EventSimple(
         **event.model_dump(),
         id=UUID(),
         creator_id=user.id,
     )
     await cruds_ticketing.create_event(event=event, db=db)
-    return event
-
+    event_complete = await cruds_ticketing.get_event_by_id(event_id=event.id, db=db)
+    if event_complete is None:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="Event creation failed")
+    return event_complete
 
 @router.patch(
     "/ticketing/events/{event_id}",
@@ -141,13 +144,20 @@ async def create_session(
     db: AsyncSession = Depends(get_db),
 ) -> schemas_ticketing.SessionComplete:
     """Create a new session."""
-    session_complete = schemas_ticketing.SessionComplete(
+    session_simple = schemas_ticketing.SessionSimple(
         **session.model_dump(),
         id=UUID(),
         used_quota=0,
         disabled=False,
     )
-    await cruds_ticketing.create_session(session=session_complete, db=db)
+    await cruds_ticketing.create_session(session=session_simple, db=db)
+    session_complete = await cruds_ticketing.get_session_by_id(
+        session_id=session_simple.id,
+        db=db,
+    )
+    if session_complete is None:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="Session creation failed")
     return session_complete
 
 

@@ -130,7 +130,7 @@ async def get_event_by_name(
 
 async def create_event(
     db: AsyncSession,
-    event: schemas_ticketing.EventComplete,
+    event: schemas_ticketing.EventSimple,
 ) -> None:
     """Create a new event."""
 
