@@ -52,7 +52,7 @@ class Delivery(Base):
     __tablename__ = "amap_delivery"
 
     id: Mapped[str] = mapped_column(primary_key=True, index=True)
-    name: Mapped[str] = mapped_column(index=True, unique=False)
+    name: Mapped[str] = mapped_column(unique=False)
     delivery_date: Mapped[date] = mapped_column(
         unique=False,
         index=True,
@@ -85,6 +85,7 @@ class Order(Base):
     ordering_date: Mapped[datetime]
     delivery: Mapped["Delivery"] = relationship(
         lazy="joined",
+        init=False,
         back_populates="orders",
     )
     user: Mapped[CoreUser] = relationship(

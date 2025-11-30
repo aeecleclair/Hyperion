@@ -242,7 +242,6 @@ async def add_order_to_delivery(
 ):
     db.add(
         models_amap.Order(
-            delivery=delivery,
             **order.model_dump(exclude={"products_ids", "products_quantity"}),
         ),
     )

@@ -26,12 +26,6 @@ def upgrade() -> None:
     op.add_column("amap_delivery", sa.Column("name", sa.String(), nullable=True))
     op.execute("UPDATE amap_delivery SET name = ''")
     op.alter_column("amap_delivery", "name", nullable=False)
-    op.create_index(
-        op.f("ix_amap_delivery_name"),
-        "amap_delivery",
-        ["name"],
-        unique=False,
-    )
 
     op.add_column(
         "amap_cash",
