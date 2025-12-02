@@ -85,7 +85,6 @@ class CompetitionUserBase(BaseModel):
     is_fanfare: bool = False
     is_cameraman: bool = False
     is_athlete: bool = False
-    is_volunteer: bool = False
 
     @model_validator(mode="after")
     def validate_sport_category(self) -> "CompetitionUserBase":
@@ -107,7 +106,6 @@ class CompetitionUserBase(BaseModel):
                 self.is_fanfare,
                 self.is_cameraman,
                 self.is_athlete,
-                self.is_volunteer,
             ],
         ):
             raise InvalidUserType("none")
@@ -137,7 +135,6 @@ class CompetitionUserEdit(BaseModel):
     is_fanfare: bool | None = None
     is_cameraman: bool | None = None
     is_athlete: bool | None = None
-    is_volunteer: bool | None = None
 
 
 class SportBase(BaseModel):
@@ -429,6 +426,7 @@ class Checkout(BaseModel):
 
 class VolunteerShiftBase(BaseModel):
     name: str
+    manager_id: str
     description: str | None = None
     value: PositiveInt
     start_time: datetime
@@ -443,6 +441,10 @@ class VolunteerShift(VolunteerShiftBase):
 
 
 class VolunteerShiftComplete(VolunteerShift):
+    manager: schemas_users.CoreUser
+
+
+class VolunteerShiftCompleteWithVolunteers(VolunteerShiftComplete):
     registrations: list["VolunteerRegistrationWithUser"] = []
 
 
@@ -465,8 +467,8 @@ class VolunteerRegistration(BaseModel):
 
 
 class VolunteerRegistrationWithUser(VolunteerRegistration):
-    user: CompetitionUser
+    user: schemas_users.CoreUser
 
 
 class VolunteerRegistrationComplete(VolunteerRegistration):
-    shift: VolunteerShift
+    shift: VolunteerShiftComplete

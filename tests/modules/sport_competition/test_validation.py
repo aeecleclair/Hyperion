@@ -49,7 +49,6 @@ athlete_user: models_users.CoreUser
 cameraman_user: models_users.CoreUser
 pompom_user: models_users.CoreUser
 fanfare_user: models_users.CoreUser
-volunteer_user: models_users.CoreUser
 athlete_cameraman_user: models_users.CoreUser
 athlete_pompom_user: models_users.CoreUser
 athlete_fanfare_user: models_users.CoreUser
@@ -59,7 +58,6 @@ competition_user_athlete: models_sport_competition.CompetitionUser
 competition_user_cameraman: models_sport_competition.CompetitionUser
 competition_user_pompom: models_sport_competition.CompetitionUser
 competition_user_fanfare: models_sport_competition.CompetitionUser
-competition_user_volunteer: models_sport_competition.CompetitionUser
 competition_user_athlete_cameraman: models_sport_competition.CompetitionUser
 competition_user_athlete_pompom: models_sport_competition.CompetitionUser
 competition_user_athlete_fanfare: models_sport_competition.CompetitionUser
@@ -94,7 +92,6 @@ def users():
         "cameraman": cameraman_user,
         "pompom": pompom_user,
         "fanfare": fanfare_user,
-        "volunteer": volunteer_user,
         "athlete_cameraman": athlete_cameraman_user,
         "athlete_pompom": athlete_pompom_user,
         "athlete_fanfare": athlete_fanfare_user,
@@ -137,7 +134,6 @@ async def create_competition_user(
         is_cameraman=is_cameraman,
         is_pompom=is_pompom,
         is_fanfare=is_fanfare,
-        is_volunteer=is_volunteer,
     )
     await add_object_to_db(new_competition_user)
     token = create_api_access_token(new_user)
@@ -262,7 +258,6 @@ async def init_objects() -> None:
         cameraman_user, \
         pompom_user, \
         fanfare_user, \
-        volunteer_user, \
         athlete_cameraman_user, \
         athlete_pompom_user, \
         athlete_fanfare_user
@@ -272,7 +267,6 @@ async def init_objects() -> None:
         competition_user_cameraman, \
         competition_user_pompom, \
         competition_user_fanfare, \
-        competition_user_volunteer, \
         competition_user_athlete_cameraman, \
         competition_user_athlete_pompom, \
         competition_user_athlete_fanfare
@@ -328,16 +322,6 @@ async def init_objects() -> None:
         is_pompom=False,
         is_fanfare=True,
         is_volunteer=False,
-        sport_category=SportCategory.feminine,
-    )
-    volunteer_user, competition_user_volunteer, _ = await create_competition_user(
-        active_edition.id,
-        school_sport_quota.id,
-        is_athlete=False,
-        is_cameraman=False,
-        is_pompom=False,
-        is_fanfare=False,
-        is_volunteer=True,
         sport_category=SportCategory.feminine,
     )
     (
