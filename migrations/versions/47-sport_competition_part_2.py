@@ -14,7 +14,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "12ceba87cf"
-down_revision: str | None = "52ce74575f"
+down_revision: str | None = "67919cf7c3f5"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -60,11 +60,16 @@ def upgrade() -> None:
         ["manager_id"],
         ["id"],
     )
+    op.add_column(
+        "competition_user",
+        sa.Column("allow_pictures", sa.Boolean(), nullable=False),
+    )
 
     # ### end Alembic commands ###s
 
 
 def downgrade() -> None:
+    op.drop_column("competition_user", "allow_pictures")
     op.drop_constraint(
         "fk_volunteer_shift_manager",
         "competition_volunteer_shift",

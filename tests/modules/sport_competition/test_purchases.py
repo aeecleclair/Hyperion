@@ -554,6 +554,22 @@ async def test_get_products(
     assert len(data) > 0
     assert all("id" in item for item in data)
     assert all("name" in item for item in data)
+    product1_data = next(
+        (item for item in data if item["id"] == str(product1.id)),
+        None,
+    )
+    assert product1_data is not None
+    variant_for_athlete_data = next(
+        (
+            v
+            for v in product1_data["variants"]
+            if v["id"] == str(variant_for_athlete.id)
+        ),
+        None,
+    )
+    assert variant_for_athlete_data is not None
+    assert variant_for_athlete_data["booked"] == 1
+    assert variant_for_athlete_data["paid"] == 0
 
 
 async def test_create_product(
@@ -1272,6 +1288,28 @@ async def test_create_payment(
     )
     assert invalid_purchase is not None
     assert invalid_purchase["validated"] is False
+
+    products = client.get(
+        "/competition/products",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    products_data = products.json()
+    product1_data = next(
+        (item for item in products_data if item["id"] == str(product1.id)),
+        None,
+    )
+    assert product1_data is not None
+    variant_for_athlete_data = next(
+        (
+            variant
+            for variant in product1_data["variants"]
+            if variant["id"] == str(variant_for_athlete.id)
+        ),
+        None,
+    )
+    assert variant_for_athlete_data is not None
+    assert variant_for_athlete_data["booked"] == 2
+    assert variant_for_athlete_data["paid"] == 1
 
 
 async def test_delete_payment(

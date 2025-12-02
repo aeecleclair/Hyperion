@@ -63,6 +63,7 @@ class CompetitionUser(Base):
     is_fanfare: Mapped[bool] = mapped_column(default=False)
     is_cameraman: Mapped[bool] = mapped_column(default=False)
     is_athlete: Mapped[bool] = mapped_column(default=False)
+    allow_pictures: Mapped[bool] = mapped_column(default=True)
 
     user: Mapped[CoreUser] = relationship(
         "CoreUser",
@@ -365,6 +366,12 @@ class CompetitionProductVariant(Base):
     product: Mapped["CompetitionProduct"] = relationship(
         "CompetitionProduct",
         lazy="joined",
+        init=False,
+        viewonly=True,
+    )
+    purchases: Mapped[list["CompetitionPurchase"]] = relationship(
+        "CompetitionPurchase",
+        lazy="selectin",
         init=False,
         viewonly=True,
     )
