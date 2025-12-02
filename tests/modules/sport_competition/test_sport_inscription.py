@@ -1869,11 +1869,11 @@ async def test_create_team(
         name="New Team",
         school_id=SchoolType.centrale_lyon.value,
         sport_id=sport_with_team.id,
-        captain_id=user3.id,
+        captain_id=admin_user.id,
     )
     response = client.post(
         "/competition/teams",
-        headers={"Authorization": f"Bearer {user3_token}"},
+        headers={"Authorization": f"Bearer {admin_token}"},
         json=team_info.model_dump(exclude_none=True, mode="json"),
     )
     assert response.status_code == 201, response.json()
@@ -3550,3 +3550,13 @@ async def test_data_exporter(
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 200
+
+
+async def test_delete_competition_user(
+    client: TestClient,
+) -> None:
+    response = client.delete(
+        f"/competition/users/{user3.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 204
