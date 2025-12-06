@@ -42,8 +42,6 @@ def get_public_type_from_user(
         types.append(types_sport_competition.ProductPublicType.cameraman)
     elif user.is_fanfare:
         types.append(types_sport_competition.ProductPublicType.fanfare)
-    if user.is_volunteer:
-        types.append(types_sport_competition.ProductPublicType.volunteer)
     return types
 
 
@@ -104,11 +102,6 @@ def validate_product_variant_purchase(
             product_variant.public_type
             == types_sport_competition.ProductPublicType.pompom
             and not user.is_pompom
-        )
-        or (
-            product_variant.public_type
-            == types_sport_competition.ProductPublicType.volunteer
-            and not user.is_volunteer
         )
         or (
             product_variant.public_type
