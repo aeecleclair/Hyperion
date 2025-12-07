@@ -58,6 +58,7 @@ async def init_objects() -> None:
         id=uuid.uuid4(),
         checkout_id=checkout_with_existing_checkout_payment_id,
         paid_amount=100,
+        tip_amount=0,
         hello_asso_payment_id=1,
     )
     await add_object_to_db(existing_checkout_payment)
