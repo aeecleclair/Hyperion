@@ -1,10 +1,8 @@
 import asyncio
 import logging
-import os
 from collections.abc import Callable
 from typing import ParamSpec, TypeVar
 
-import psutil
 import redis
 from pydantic import ValidationError
 from sqlalchemy import Connection, MetaData, delete, select
@@ -296,7 +294,6 @@ async def use_lock_for_workers(
     job_function: Callable[P, R],
     key: str,
     redis_client: redis.Redis | None,
-    number_of_workers: int,
     logger: logging.Logger,
     unlock_key: str | None = None,
     *args: P.args,
@@ -312,17 +309,9 @@ async def use_lock_for_workers(
     We assume that the function execution won't take more than 20 seconds.
 
     If the Redis client is not provided, the function will execute `job_function` directly without acquiring a lock.
-
-    If `number_of_workers` is less than or equal to 1, the function will execute `job_function` directly without acquiring a lock.
     """
 
-    if (
-        not isinstance(
-            redis_client,
-            redis.Redis,
-        )
-        or number_of_workers <= 1
-    ):
+    if not isinstance(redis_client, redis.Redis):
         # If a Redis is not provided, we execute the function directly
         await execute_async_or_sync_method(job_function, *args, **kwargs)
 
@@ -349,16 +338,3 @@ async def use_lock_for_workers(
         while redis_client.get(unlock_key) is None:
             logger.debug(f"Waiting for {job_function.__name__} to finish")
             await asyncio.sleep(1)
-
-
-def get_number_of_workers() -> int:
-    """
-    Get the number of active Hyperion workers
-    """
-    # We use the parent process to get the workers
-    parent_pid = os.getppid()  # PID du parent (FastAPI master process)
-    parent_process = psutil.Process(parent_pid)
-    workers = [
-        p for p in parent_process.children() if p.status() != psutil.STATUS_ZOMBIE
-    ]
-    return len(workers)
