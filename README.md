@@ -82,9 +82,9 @@ pyenv activate hyperion
 
 ## 2. Install dependencies
 
-### About Jellyfish and Rust
+### About Jellyfish and Rust (Windows only)
 
-If you don't have Rust installed or don't want to install it, decrease the version of `jellyfish` to `0.10.0` in the `requirements.txt` file:
+If you don't have Rust installed on your Windows PC or don't want to install it, decrease the version of `jellyfish` to `0.10.0` in the `requirements.txt` file:
 
 ```
 jellyfish==0.10.0                    # String Matching
