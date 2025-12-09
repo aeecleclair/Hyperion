@@ -77,7 +77,21 @@ def upgrade() -> None:
     )
     op.add_column(
         "competition_user",
-        sa.Column("allow_pictures", sa.Boolean(), nullable=False),
+        sa.Column(
+            "allow_pictures",
+            sa.Boolean(),
+            nullable=True,
+        ),
+    )
+    conn.execute(
+        sa.text(
+            "UPDATE competition_user SET allow_pictures = true",
+        ),
+    )
+    op.alter_column(
+        "competition_user",
+        "allow_pictures",
+        nullable=False,
     )
 
     # ### end Alembic commands ###s
