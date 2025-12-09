@@ -272,7 +272,7 @@ While **with Docker** you should have rather something like:
 ```sh
 POSTGRES_USER="hyperion"
 POSTGRES_PASSWORD=""
-POSTGRES_HOST="hyperion-db" # POSTGRES_HOST Should be set to the name of the postgres container
+POSTGRES_HOST="hyperion-db" # Should be set to the name of the postgres container
 POSTGRES_DB="hyperion"
 ```
 
