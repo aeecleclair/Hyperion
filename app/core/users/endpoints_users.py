@@ -956,13 +956,14 @@ async def merge_users(
         kept_mail=user_kept.email,
     )
 
-    background_tasks.add_task(
-        send_email,
-        recipient=[user_kept.email, user_deleted.email],
-        subject="MyECL - Accounts merged",
-        content=mail,
-        settings=settings,
-    )
+    if settings.SMTP_ACTIVE:
+        background_tasks.add_task(
+            send_email,
+            recipient=[user_kept.email, user_deleted.email],
+            subject="MyECL - Accounts merged",
+            content=mail,
+            settings=settings,
+        )
     hyperion_security_logger.info(
         f"User {user_kept.email} - {user_kept.id} has been merged with {user_deleted.email} - {user_deleted.id}",
     )

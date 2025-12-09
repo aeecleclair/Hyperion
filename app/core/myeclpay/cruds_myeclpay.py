@@ -6,7 +6,6 @@ from sqlalchemy import and_, delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import noload, selectinload
 
-from app.core.memberships import schemas_memberships
 from app.core.myeclpay import models_myeclpay, schemas_myeclpay
 from app.core.myeclpay.exceptions_myeclpay import WalletNotFoundOnUpdateError
 from app.core.myeclpay.types_myeclpay import (
@@ -14,19 +13,33 @@ from app.core.myeclpay.types_myeclpay import (
     WalletDeviceStatus,
     WalletType,
 )
+from app.core.myeclpay.utils_myeclpay import (
+    invoice_model_to_schema,
+    refund_model_to_schema,
+    structure_model_to_schema,
+)
 from app.core.users import schemas_users
 
 
 async def create_structure(
-    structure: schemas_myeclpay.Structure,
+    structure: schemas_myeclpay.StructureSimple,
     db: AsyncSession,
 ) -> None:
     db.add(
         models_myeclpay.Structure(
             id=structure.id,
+            short_id=structure.short_id,
             name=structure.name,
             association_membership_id=structure.association_membership_id,
             manager_user_id=structure.manager_user_id,
+            siret=structure.siret,
+            siege_address_street=structure.siege_address_street,
+            siege_address_city=structure.siege_address_city,
+            siege_address_zipcode=structure.siege_address_zipcode,
+            siege_address_country=structure.siege_address_country,
+            iban=structure.iban,
+            bic=structure.bic,
+            creation=structure.creation,
         ),
     )
 
@@ -112,28 +125,7 @@ async def get_structures(
 ) -> Sequence[schemas_myeclpay.Structure]:
     result = await db.execute(select(models_myeclpay.Structure))
     return [
-        schemas_myeclpay.Structure(
-            name=structure.name,
-            association_membership_id=structure.association_membership_id,
-            association_membership=schemas_memberships.MembershipSimple(
-                id=structure.association_membership.id,
-                name=structure.association_membership.name,
-                manager_group_id=structure.association_membership.manager_group_id,
-            )
-            if structure.association_membership
-            else None,
-            manager_user_id=structure.manager_user_id,
-            id=structure.id,
-            manager_user=schemas_users.CoreUserSimple(
-                id=structure.manager_user.id,
-                firstname=structure.manager_user.firstname,
-                name=structure.manager_user.name,
-                nickname=structure.manager_user.nickname,
-                account_type=structure.manager_user.account_type,
-                school_id=structure.manager_user.school_id,
-            ),
-        )
-        for structure in result.scalars().all()
+        structure_model_to_schema(structure) for structure in result.scalars().all()
     ]
 
 
@@ -152,31 +144,7 @@ async def get_structure_by_id(
         .scalars()
         .first()
     )
-    return (
-        schemas_myeclpay.Structure(
-            name=structure.name,
-            association_membership_id=structure.association_membership_id,
-            association_membership=schemas_memberships.MembershipSimple(
-                id=structure.association_membership.id,
-                name=structure.association_membership.name,
-                manager_group_id=structure.association_membership.manager_group_id,
-            )
-            if structure.association_membership
-            else None,
-            manager_user_id=structure.manager_user_id,
-            id=structure.id,
-            manager_user=schemas_users.CoreUserSimple(
-                id=structure.manager_user.id,
-                firstname=structure.manager_user.firstname,
-                name=structure.manager_user.name,
-                nickname=structure.manager_user.nickname,
-                account_type=structure.manager_user.account_type,
-                school_id=structure.manager_user.school_id,
-            ),
-        )
-        if structure
-        else None
-    )
+    return structure_model_to_schema(structure) if structure else None
 
 
 async def create_store(
@@ -822,47 +790,7 @@ async def get_refund_by_transaction_id(
         .scalars()
         .first()
     )
-    return (
-        schemas_myeclpay.Refund(
-            id=result.id,
-            transaction_id=result.transaction_id,
-            credited_wallet_id=result.credited_wallet_id,
-            debited_wallet_id=result.debited_wallet_id,
-            total=result.total,
-            creation=result.creation,
-            seller_user_id=result.seller_user_id,
-            transaction=schemas_myeclpay.Transaction(
-                id=result.transaction.id,
-                debited_wallet_id=result.transaction.debited_wallet_id,
-                credited_wallet_id=result.transaction.credited_wallet_id,
-                transaction_type=result.transaction.transaction_type,
-                seller_user_id=result.transaction.seller_user_id,
-                total=result.transaction.total,
-                creation=result.transaction.creation,
-                status=result.transaction.status,
-            ),
-            debited_wallet=schemas_myeclpay.WalletInfo(
-                id=result.debited_wallet.id,
-                type=result.debited_wallet.type,
-                owner_name=result.debited_wallet.store.name
-                if result.debited_wallet.store
-                else result.debited_wallet.user.full_name
-                if result.debited_wallet.user
-                else None,
-            ),
-            credited_wallet=schemas_myeclpay.WalletInfo(
-                id=result.credited_wallet.id,
-                type=result.credited_wallet.type,
-                owner_name=result.credited_wallet.store.name
-                if result.credited_wallet.store
-                else result.credited_wallet.user.full_name
-                if result.credited_wallet.user
-                else None,
-            ),
-        )
-        if result
-        else None
-    )
+    return refund_model_to_schema(result) if result else None
 
 
 async def get_refunds_by_wallet_id(
@@ -874,7 +802,8 @@ async def get_refunds_by_wallet_id(
     result = (
         (
             await db.execute(
-                select(models_myeclpay.Refund).where(
+                select(models_myeclpay.Refund)
+                .where(
                     or_(
                         models_myeclpay.Refund.debited_wallet_id == wallet_id,
                         models_myeclpay.Refund.credited_wallet_id == wallet_id,
@@ -885,52 +814,17 @@ async def get_refunds_by_wallet_id(
                     models_myeclpay.Refund.creation <= end_datetime
                     if end_datetime
                     else and_(True),
+                )
+                .options(
+                    selectinload(models_myeclpay.Refund.debited_wallet),
+                    selectinload(models_myeclpay.Refund.credited_wallet),
                 ),
             )
         )
         .scalars()
         .all()
     )
-    return [
-        schemas_myeclpay.Refund(
-            id=refund.id,
-            transaction_id=refund.transaction_id,
-            credited_wallet_id=refund.credited_wallet_id,
-            debited_wallet_id=refund.debited_wallet_id,
-            total=refund.total,
-            creation=refund.creation,
-            seller_user_id=refund.seller_user_id,
-            transaction=schemas_myeclpay.Transaction(
-                id=refund.transaction.id,
-                debited_wallet_id=refund.transaction.debited_wallet_id,
-                credited_wallet_id=refund.transaction.credited_wallet_id,
-                transaction_type=refund.transaction.transaction_type,
-                seller_user_id=refund.transaction.seller_user_id,
-                total=refund.transaction.total,
-                creation=refund.transaction.creation,
-                status=refund.transaction.status,
-            ),
-            debited_wallet=schemas_myeclpay.WalletInfo(
-                id=refund.debited_wallet.id,
-                type=refund.debited_wallet.type,
-                owner_name=refund.debited_wallet.store.name
-                if refund.debited_wallet.store
-                else refund.debited_wallet.user.full_name
-                if refund.debited_wallet.user
-                else None,
-            ),
-            credited_wallet=schemas_myeclpay.WalletInfo(
-                id=refund.credited_wallet.id,
-                type=refund.credited_wallet.type,
-                owner_name=refund.credited_wallet.store.name
-                if refund.credited_wallet.store
-                else refund.credited_wallet.user.full_name
-                if refund.credited_wallet.user
-                else None,
-            ),
-        )
-        for refund in result
-    ]
+    return [refund_model_to_schema(refund) for refund in result]
 
 
 async def get_store(
@@ -981,3 +875,216 @@ async def delete_used_qrcode(
             models_myeclpay.UsedQRCode.qr_code_id == qr_code_id,
         ),
     )
+
+
+async def get_invoices(
+    db: AsyncSession,
+    skip: int | None = None,
+    limit: int | None = None,
+    structures_ids: list[UUID] | None = None,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+) -> list[schemas_myeclpay.Invoice]:
+    select_command = (
+        select(models_myeclpay.Invoice)
+        .where(
+            models_myeclpay.Invoice.end_date >= start_date
+            if start_date
+            else and_(True),
+            models_myeclpay.Invoice.end_date <= end_date if end_date else and_(True),
+            models_myeclpay.Invoice.structure_id.in_(structures_ids)
+            if structures_ids
+            else and_(True),
+        )
+        .order_by(
+            models_myeclpay.Invoice.end_date.desc(),
+        )
+    )
+    if skip is not None:
+        select_command = select_command.offset(skip)
+    if limit is not None:
+        select_command = select_command.limit(limit)
+    result = await db.execute(select_command)
+    return [invoice_model_to_schema(invoice) for invoice in result.scalars().all()]
+
+
+async def get_invoice_by_id(
+    invoice_id: UUID,
+    db: AsyncSession,
+) -> schemas_myeclpay.Invoice | None:
+    result = await db.execute(
+        select(models_myeclpay.Invoice)
+        .where(
+            models_myeclpay.Invoice.id == invoice_id,
+        )
+        .with_for_update(of=models_myeclpay.Invoice),
+    )
+    invoice = result.scalars().first()
+    return invoice_model_to_schema(invoice) if invoice else None
+
+
+async def get_pending_invoices_by_structure_id(
+    structure_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_myeclpay.Invoice]:
+    result = await db.execute(
+        select(models_myeclpay.Invoice).where(
+            models_myeclpay.Invoice.structure_id == structure_id,
+            models_myeclpay.Invoice.received.is_(False),
+        ),
+    )
+    return [invoice_model_to_schema(invoice) for invoice in result.scalars().all()]
+
+
+async def get_unreceived_invoices_by_store_id(
+    store_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_myeclpay.InvoiceDetailBase]:
+    result = await db.execute(
+        select(models_myeclpay.InvoiceDetail)
+        .join(models_myeclpay.Invoice)
+        .where(
+            models_myeclpay.InvoiceDetail.store_id == store_id,
+            models_myeclpay.Invoice.received.is_(False),
+        ),
+    )
+    return [
+        schemas_myeclpay.InvoiceDetailBase(
+            invoice_id=detail.invoice_id,
+            store_id=detail.store_id,
+            total=detail.total,
+        )
+        for detail in result.scalars().all()
+    ]
+
+
+async def create_invoice(
+    invoice: schemas_myeclpay.InvoiceInfo,
+    db: AsyncSession,
+) -> None:
+    invoice_db = models_myeclpay.Invoice(
+        id=invoice.id,
+        reference=invoice.reference,
+        creation=invoice.creation,
+        start_date=invoice.start_date,
+        end_date=invoice.end_date,
+        total=invoice.total,
+        structure_id=invoice.structure_id,
+        received=invoice.received,
+    )
+    db.add(invoice_db)
+    for detail in invoice.details:
+        detail_db = models_myeclpay.InvoiceDetail(
+            invoice_id=invoice.id,
+            store_id=detail.store_id,
+            total=detail.total,
+        )
+        db.add(detail_db)
+
+
+async def update_invoice_received_status(
+    invoice_id: UUID,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_myeclpay.Invoice)
+        .where(models_myeclpay.Invoice.id == invoice_id)
+        .values(received=True),
+    )
+
+
+async def update_invoice_paid_status(
+    invoice_id: UUID,
+    paid: bool,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_myeclpay.Invoice)
+        .where(models_myeclpay.Invoice.id == invoice_id)
+        .values(paid=paid),
+    )
+
+
+async def delete_invoice(
+    invoice_id: UUID,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        delete(models_myeclpay.InvoiceDetail).where(
+            models_myeclpay.InvoiceDetail.invoice_id == invoice_id,
+        ),
+    )
+    await db.execute(
+        delete(models_myeclpay.Invoice).where(
+            models_myeclpay.Invoice.id == invoice_id,
+        ),
+    )
+
+
+async def get_last_structure_invoice(
+    structure_id: UUID,
+    db: AsyncSession,
+) -> schemas_myeclpay.Invoice | None:
+    result = (
+        (
+            await db.execute(
+                select(models_myeclpay.Invoice)
+                .where(
+                    models_myeclpay.Invoice.structure_id == structure_id,
+                )
+                .order_by(models_myeclpay.Invoice.end_date.desc())
+                .limit(1),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return invoice_model_to_schema(result) if result else None
+
+
+async def add_withdrawal(
+    withdrawal: schemas_myeclpay.Withdrawal,
+    db: AsyncSession,
+) -> None:
+    withdrawal_db = models_myeclpay.Withdrawal(
+        id=withdrawal.id,
+        wallet_id=withdrawal.wallet_id,
+        total=withdrawal.total,
+        creation=withdrawal.creation,
+    )
+    db.add(withdrawal_db)
+
+
+async def get_withdrawals(
+    db: AsyncSession,
+) -> list[schemas_myeclpay.Withdrawal]:
+    result = await db.execute(select(models_myeclpay.Withdrawal))
+    return [
+        schemas_myeclpay.Withdrawal(
+            id=withdrawal.id,
+            wallet_id=withdrawal.wallet_id,
+            total=withdrawal.total,
+            creation=withdrawal.creation,
+        )
+        for withdrawal in result.scalars().all()
+    ]
+
+
+async def get_withdrawals_by_wallet_id(
+    wallet_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_myeclpay.Withdrawal]:
+    result = await db.execute(
+        select(models_myeclpay.Withdrawal).where(
+            models_myeclpay.Withdrawal.wallet_id == wallet_id,
+        ),
+    )
+    return [
+        schemas_myeclpay.Withdrawal(
+            id=withdrawal.id,
+            wallet_id=withdrawal.wallet_id,
+            total=withdrawal.total,
+            creation=withdrawal.creation,
+        )
+        for withdrawal in result.scalars().all()
+    ]

@@ -8,7 +8,7 @@ Hyperion is the API of an open-source project launched by ÉCLAIR, the computer 
 
 The structure of this project is modular. Hyperion has a core that performs vital functions (authentication, database migration, authorization, etc). The other functions of Hyperion are realized in what we call modules. You can contribute to the project by adding modules if you wish.
 
-## 1. Creating a virtual environment for Python 3.12
+## 1. Creating a virtual environment for Python 3.14
 
 <details>
 <summary>
@@ -22,7 +22,7 @@ Create the virtual environment
 > You need to be in Hyperion main folder
 
 ```bash
-py -3.12 -m venv .venv
+py -3.14 -m venv .venv
 ```
 
 If you get an error saying roughly:
@@ -69,7 +69,7 @@ eval "$(pyenv virtualenv-init -)"
 Create the virtual environment
 
 ```bash
-pyenv virtualenv 3.12.0 hyperion
+pyenv virtualenv 3.14.2 hyperion
 ```
 
 Activate it

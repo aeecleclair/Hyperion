@@ -295,7 +295,7 @@ async def test_webhook_payment_callback(
 ) -> None:
     # We patch the callback to be able to check if it was called
     mocked_callback = mocker.patch(
-        "tests.test_payment.callback",
+        "tests.core.test_payment.callback",
     )
 
     # We patch the module_list to inject our custom test module
@@ -336,7 +336,7 @@ async def test_webhook_payment_callback_fail(
 ) -> None:
     # We patch the callback to be able to check if it was called
     mocked_callback = mocker.patch(
-        "tests.test_payment.callback",
+        "tests.core.test_payment.callback",
         side_effect=ValueError("Test error"),
     )
 

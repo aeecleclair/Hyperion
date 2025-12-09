@@ -178,7 +178,7 @@ def get_settings() -> Settings:
     return construct_prod_settings()
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_db() -> AsyncGenerator[AsyncSession]:
     """
     Return a database session that will be automatically committed and closed after usage.
 
@@ -216,7 +216,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await db.close()
 
 
-async def get_unsafe_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_unsafe_db() -> AsyncGenerator[AsyncSession]:
     """
     Return a database session but don't close it automatically
 
@@ -334,7 +334,7 @@ def get_user_id_from_token_with_scopes(
         The expected scopes are passed as list of list of scopes, each list of scopes is an "AND" condition, and the list of list of scopes is an "OR" condition.
         """
 
-        return await auth_utils.get_user_id_from_token_with_scopes(
+        return auth_utils.get_user_id_from_token_with_scopes(
             scopes=scopes,
             token_data=token_data,
         )

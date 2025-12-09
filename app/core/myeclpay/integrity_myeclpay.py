@@ -43,3 +43,10 @@ def format_cancel_log(
     transaction_id: UUID,
 ):
     return f"{ActionType.CANCEL.name} {transaction_id}"
+
+
+def format_withdrawal_log(
+    wallet_id: UUID,
+    total: int,
+):
+    return f"{ActionType.WITHDRAWAL.name} {wallet_id} {total}"

@@ -6,8 +6,8 @@ authors = [{ name = "AEECL ECLAIR" }]
 
 # Hyperion follows Semantic Versioning
 # https://semver.org/
-version = "4.9.9"
-requires-python = ">= 3.11, < 3.13"
+version = "4.11.1"
+requires-python = ">= 3.12, < 3.15"
 
 license = "MIT"
 license-files = [
@@ -25,7 +25,7 @@ minimal-titan-version-code = 139
 # Same as Black.
 line-length = 88
 indent-width = 4
-target-version = "py312"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = [
@@ -130,7 +130,7 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.14"
 plugins = ["pydantic.mypy"]
 
 warn_unreachable = true
@@ -174,13 +174,7 @@ ignore_missing_imports = true
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "module"
 asyncio_default_test_loop_scope = "module"
-filterwarnings = [
-    "error",
-    # We don't know how to fix the warning:
-    # `ResourceWarning: connection <psycopg.Connection [IDLE] (host=... user=... database=...) at 0x1166bf310> was deleted while still open. Please use 'with' or '.close()' to close the connection`
-    # It only happen when running tests with Postgresql
-    "ignore:connection <.*> was deleted while still open.:ResourceWarning",
-]
+filterwarnings = ["error"]
 
 [tool.coverage.run]
 source_pkgs = ["app"]

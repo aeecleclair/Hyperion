@@ -46,16 +46,6 @@ async def get_flappybird_score_position(
     return result.scalar()
 
 
-async def create_flappybird_score(
-    db: AsyncSession,
-    flappybird_score: models_flappybird.FlappyBirdScore,
-) -> models_flappybird.FlappyBirdScore:
-    """Add a FlappyBirdScore in database"""
-    db.add(flappybird_score)
-    await db.flush()
-    return flappybird_score
-
-
 async def create_flappybird_best_score(
     db: AsyncSession,
     flappybird_best_score: models_flappybird.FlappyBirdBestScore,

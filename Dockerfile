@@ -1,4 +1,4 @@
-FROM ghcr.io/astral-sh/uv:python3.12-trixie-slim
+FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim
 
 # Default number of workers; can be overridden at runtime
 ENV WORKERS=1
@@ -14,8 +14,9 @@ ENV PYTHONUNBUFFERED=1
 ENV UV_COMPILE_BYTECODE=1
 
 # Create non-root user early for better security
-RUN groupadd --gid 1000 hyperion && \
-    useradd --uid 1000 --gid hyperion --shell /bin/bash --create-home hyperion
+# Choose an id that is not likely to be a default one
+RUN groupadd --gid 10101 hyperion && \
+    useradd --uid 10101 --gid hyperion --shell /bin/bash --create-home hyperion
 
 WORKDIR /hyperion
 
