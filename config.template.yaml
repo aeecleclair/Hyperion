@@ -3,7 +3,9 @@
 ###############################################
 
 # ACCESS_TOKEN_SECRET_KEY should contain a random string with enough entropy (at least 32 bytes long) to securely sign all access_tokens for OAuth and Openid connect
-ACCESS_TOKEN_SECRET_KEY: #YWZOHliiI53lJMJc5BI_WbGbA4GF2T7Wbt1airIhOXEa3c021c4-1c55-4182-b141-7778bcc8fac4
+# If you want to generate your own, the following openssl command may be used:
+# openssl rand -hex 32
+ACCESS_TOKEN_SECRET_KEY: #83523d418f71bb5a9982511380c73445313d247d092233c4f656b6590ee0cec7
 
 # RSA_PRIVATE_PEM_STRING should be a string containing the PEM certificate of a private RSA key. It will be used to sign id_tokens for Openid connect authentication
 # The 2048-bit-long PEM certificate example below was generated using a 2048-bit RSA key generator online.
