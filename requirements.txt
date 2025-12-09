@@ -18,7 +18,7 @@ jellyfish==1.2.1                    # String Matching
 Jinja2==3.1.6                       # template engine for html files
 phonenumbers==8.13.43               # Used for phone number validation
 psutil==7.0.0                       # psutil is used to determine the number of Hyperion workers
-psycopg[binary]==3.2.9              # PostgreSQL adapter for *synchronous* operations at startup (database initializations & migrations)
+psycopg[binary]==3.2.13              # PostgreSQL adapter for *synchronous* operations at startup (database initializations & migrations)
 pydantic-settings==2.3.4
 pydantic==2.12.5
 pyjwt[crypto]==2.8.0                # generate and verify the JWT tokens, imported as `jwt`
