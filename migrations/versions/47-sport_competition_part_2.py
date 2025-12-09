@@ -51,7 +51,7 @@ def upgrade() -> None:
     )
     op.add_column(
         "competition_volunteer_shift",
-        sa.Column("manager_id", sa.String(), nullable=False),
+        sa.Column("manager_id", sa.String(), nullable=True),
     )
     op.create_foreign_key(
         "fk_volunteer_shift_manager",
@@ -59,6 +59,21 @@ def upgrade() -> None:
         "core_user",
         ["manager_id"],
         ["id"],
+    )
+    conn = op.get_bind()
+    user = conn.execute(
+        sa.text("SELECT id FROM core_user LIMIT 1"),
+    ).first()
+    if user is not None:
+        conn.execute(
+            sa.text(
+                "UPDATE competition_volunteer_shift SET manager_id = :sid",
+            ).bindparams(sid=user[0]),
+        )
+    op.alter_column(
+        "competition_volunteer_shift",
+        "manager_id",
+        nullable=False,
     )
     op.add_column(
         "competition_user",
