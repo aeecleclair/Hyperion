@@ -258,7 +258,7 @@ Again there's nothing to do.
 
 Set your user, password, host and db.
 
-For instance, with the installer you should have something like:
+For instance, **with the installer** you should have something like:
 
 ```sh
 POSTGRES_USER="postgres"
@@ -267,13 +267,12 @@ POSTGRES_HOST="localhost"
 POSTGRES_DB="hyperion"
 ```
 
-While with Docker you should have rather something like:
+While **with Docker** you should have rather something like:
 
 ```sh
 POSTGRES_USER="hyperion"
 POSTGRES_PASSWORD=""
-# POSTGRES_HOST Should be set to the name of the postgres container
-POSTGRES_HOST="hyperion-db"
+POSTGRES_HOST="hyperion-db" # POSTGRES_HOST Should be set to the name of the postgres container
 POSTGRES_DB="hyperion"
 ```
 
