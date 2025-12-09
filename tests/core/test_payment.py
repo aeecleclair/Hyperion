@@ -12,7 +12,6 @@ from helloasso_python.models.hello_asso_api_v5_models_carts_init_checkout_respon
     HelloAssoApiV5ModelsCartsInitCheckoutResponse,
 )
 from pytest_mock import MockerFixture
-from requests import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.payment import cruds_payment, models_payment, schemas_payment
@@ -495,8 +494,6 @@ async def test_payment_tool_init_checkout_with_one_failure(
         init_checkout_body: HelloAssoApiV5ModelsCartsInitCheckoutBody,
     ):
         if init_checkout_body.payer is not None:
-            r = Response()
-            r.status_code = 400
             raise UnauthorizedException
         return HelloAssoApiV5ModelsCartsInitCheckoutResponse(
             id=7,

@@ -41,7 +41,6 @@ class MatrixHandler(StreamHandler):
     def emit(self, record):
         if self.enabled:
             msg = self.format(record)
-
             try:
                 self.matrix.send_message(self.room_id, msg)
             # We should catch and log any error, as Python may discarded them in production
