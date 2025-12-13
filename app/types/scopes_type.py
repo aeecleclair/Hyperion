@@ -15,3 +15,7 @@ class ScopeType(str, Enum):
     # profile allows the user to access the userinfos auth endpoint
     # The profile scope is introduced because some clients may want to access the user's profile without doing oidc
     profile = "profile"
+
+    # Some services may ask to access the user's email
+    # This scope is not required as the email can be included with any other scope
+    email = "email"
