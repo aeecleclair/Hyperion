@@ -1,8 +1,10 @@
 import base64
+import csv
 import logging
 import urllib
 import uuid
 from datetime import UTC, datetime, timedelta
+from io import StringIO
 from pathlib import Path
 from uuid import UUID
 
@@ -14,6 +16,7 @@ from fastapi import (
     Header,
     HTTPException,
     Query,
+    Response,
 )
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -693,6 +696,169 @@ async def get_store_history(
         )
 
     return history
+
+
+@router.get(
+    "/myeclpay/stores/{store_id}/history/data-export",
+    status_code=200,
+    response_model=None,
+)
+async def export_store_history(
+    store_id: UUID,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user()),
+):
+    store = await cruds_myeclpay.get_store(
+        store_id=store_id,
+        db=db,
+    )
+    if store is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Store does not exist",
+        )
+
+    seller = await cruds_myeclpay.get_seller(
+        user_id=user.id,
+        store_id=store_id,
+        db=db,
+    )
+    if seller is None or not seller.can_see_history:
+        raise HTTPException(
+            status_code=403,
+            detail="User is not authorized to see the store history",
+        )
+
+    transactions_with_sellers = (
+        await cruds_myeclpay.get_transactions_and_sellers_by_wallet_id(
+            wallet_id=store.wallet_id,
+            db=db,
+            start_datetime=start_date,
+            end_datetime=end_date,
+        )
+    )
+
+    # TODO: do we accept transfers to empty a store wallet?
+    transfers_with_sellers = (
+        await cruds_myeclpay.get_transfers_and_sellers_by_wallet_id(
+            wallet_id=store.wallet_id,
+            db=db,
+            start_datetime=start_date,
+            end_datetime=end_date,
+        )
+    )
+    if len(transfers_with_sellers) > 0:
+        hyperion_error_logger.error(
+            f"Store {store.id} should never have transfers",
+        )
+
+    # We add refunds
+    refunds_with_sellers = await cruds_myeclpay.get_refunds_ans_sellers_by_wallet_id(
+        wallet_id=store.wallet_id,
+        db=db,
+        start_datetime=start_date,
+        end_datetime=end_date,
+    )
+
+    # Create refunds map for quick lookup
+    refunds_map = {
+        refund.transaction_id: (refund, seller_name)
+        for refund, seller_name in refunds_with_sellers
+    }
+
+    csv_io = StringIO()
+    # Add UTF-8 BOM for Excel compatibility
+    csv_io.write("\ufeff")
+
+    writer = csv.writer(csv_io, delimiter=";", quoting=csv.QUOTE_MINIMAL)
+
+    # Write headers
+    writer.writerow(
+        [
+            "Date/Heure",
+            "Transaction ID",
+            "Type",
+            "Autre partie",
+            "Montant (€)",
+            "Statut",
+            "Vendeur",
+            "Note magasin",
+            "Montant remboursé (€)",
+            "Date remboursement",
+        ]
+    )
+
+    # Write transaction data
+    for transaction, seller_full_name in transactions_with_sellers:
+        transaction_type = (
+            "REÇU" if transaction.credited_wallet_id == store.wallet_id else "DONNÉ"
+        )
+        other_party_wallet = (
+            transaction.debited_wallet
+            if transaction.credited_wallet_id == store.wallet_id
+            else transaction.credited_wallet
+        )
+        other_party = "Inconnu"
+        if other_party_wallet.user:
+            other_party = f"{other_party_wallet.user[0].firstname} {other_party_wallet.user[0].name}"
+        elif other_party_wallet.store:
+            other_party = other_party_wallet.store[0].name
+
+        # Check if transaction has a refund
+        refund_data = refunds_map.get(transaction.id)
+        refund_amount = ""
+        refund_date = ""
+        if refund_data:
+            refund, _ = refund_data
+            refund_amount = f"{refund.total / 100:.2f}"
+            refund_date = refund.creation.strftime("%d/%m/%Y %H:%M:%S")
+
+        writer.writerow(
+            [
+                transaction.creation.strftime("%d/%m/%Y %H:%M:%S"),
+                str(transaction.id),
+                transaction_type,
+                other_party,
+                f"{transaction.total / 100:.2f}",
+                transaction.status.value,
+                seller_full_name or "N/A",
+                transaction.store_note or "",
+                refund_amount,
+                refund_date,
+            ]
+        )
+
+    # Generate filename
+    date_range = ""
+    if start_date and end_date:
+        date_range = (
+            f"_{start_date.strftime('%Y-%m-%d')}_to_{end_date.strftime('%Y-%m-%d')}"
+        )
+    elif start_date:
+        date_range = f"_from_{start_date.strftime('%Y-%m-%d')}"
+    elif end_date:
+        date_range = f"_until_{end_date.strftime('%Y-%m-%d')}"
+
+    # Sanitize store name for filename
+    safe_store_name = "".join(
+        c for c in store.name if c.isalnum() or c in (" ", "-", "_")
+    ).rstrip()
+
+    filename = f"store_history_{safe_store_name}{date_range}.csv"
+
+    res = csv_io.getvalue()
+    csv_io.close()
+
+    headers = {
+        "Content-Disposition": f'attachment; filename="{filename}"',
+    }
+    return Response(
+        res,
+        headers=headers,
+        media_type="text/csv; charset=utf-8",
+    )
 
 
 @router.get(
