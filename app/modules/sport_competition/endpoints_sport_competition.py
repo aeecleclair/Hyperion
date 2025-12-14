@@ -692,8 +692,7 @@ async def validate_competition_user(
         )
 
     if (
-        GroupType.competition_admin.value
-        not in [group.id for group in user.groups]
+        GroupType.competition_admin.value not in [group.id for group in user.groups]
         and user.school_id != user_to_validate.user.school_id
     ):
         raise HTTPException(
@@ -759,8 +758,7 @@ async def invalidate_competition_user(
             detail="User is not validated",
         )
     if (
-        GroupType.competition_admin.value
-        not in [group.id for group in user.groups]
+        GroupType.competition_admin.value not in [group.id for group in user.groups]
         and user.school_id != user_to_invalidate.user.school_id
     ):
         raise HTTPException(
@@ -2342,8 +2340,7 @@ async def delete_participant(
     ),
 ) -> None:
     if (
-        GroupType.competition_admin.value
-        not in [group.id for group in user.groups]
+        GroupType.competition_admin.value not in [group.id for group in user.groups]
         and not edition.inscription_enabled
     ):
         raise HTTPException(
@@ -2367,8 +2364,7 @@ async def delete_participant(
             detail="Cannot delete a validated participant",
         )
     if (
-        GroupType.competition_admin.value
-        not in [group.id for group in user.groups]
+        GroupType.competition_admin.value not in [group.id for group in user.groups]
         and user.school_id != participant.school_id
     ):
         raise HTTPException(
@@ -3633,7 +3629,7 @@ async def delete_purchase(
 async def get_users_payments_by_school_id(
     school_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
+    user: models_users.CoreUser = Depends(
         has_user_competition_access(competition_group=CompetitionGroupType.schools_bds),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
