@@ -667,7 +667,7 @@ async def validate_competition_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_competition_user(
+        has_user_competition_access(
             competition_group=CompetitionGroupType.schools_bds,
         ),
     ),
@@ -735,7 +735,7 @@ async def invalidate_competition_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_competition_user(
+        has_user_competition_access(
             competition_group=CompetitionGroupType.schools_bds,
         ),
     ),
@@ -1137,7 +1137,7 @@ async def get_school_general_quota(
     school_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_competition_user(
+        has_user_competition_access(
             competition_group=CompetitionGroupType.schools_bds,
         ),
     ),
@@ -2333,7 +2333,7 @@ async def delete_participant(
     sport_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_competition_user(
+        has_user_competition_access(
             competition_group=CompetitionGroupType.schools_bds,
         ),
     ),
@@ -3391,7 +3391,7 @@ async def get_purchases_by_school_id(
     school_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_competition_user(competition_group=CompetitionGroupType.schools_bds),
+        has_user_competition_access(competition_group=CompetitionGroupType.schools_bds),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -3634,7 +3634,7 @@ async def get_users_payments_by_school_id(
     school_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_competition_user(competition_group=CompetitionGroupType.schools_bds),
+        has_user_competition_access(competition_group=CompetitionGroupType.schools_bds),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
