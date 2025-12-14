@@ -666,7 +666,7 @@ async def edit_competition_user(
 async def validate_competition_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
+    user: models_users.CoreUser = Depends(
         has_user_competition_access(
             competition_group=CompetitionGroupType.schools_bds,
         ),
@@ -693,8 +693,8 @@ async def validate_competition_user(
 
     if (
         GroupType.competition_admin.value
-        not in [group.id for group in user.user.groups]
-        and user.user.school_id != user_to_validate.user.school_id
+        not in [group.id for group in user.groups]
+        and user.school_id != user_to_validate.user.school_id
     ):
         raise HTTPException(
             status_code=403,
@@ -734,7 +734,7 @@ async def validate_competition_user(
 async def invalidate_competition_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
+    user: models_users.CoreUser = Depends(
         has_user_competition_access(
             competition_group=CompetitionGroupType.schools_bds,
         ),
@@ -760,8 +760,8 @@ async def invalidate_competition_user(
         )
     if (
         GroupType.competition_admin.value
-        not in [group.id for group in user.user.groups]
-        and user.user.school_id != user_to_invalidate.user.school_id
+        not in [group.id for group in user.groups]
+        and user.school_id != user_to_invalidate.user.school_id
     ):
         raise HTTPException(
             status_code=403,
@@ -2332,7 +2332,7 @@ async def delete_participant(
     user_id: str,
     sport_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
+    user: models_users.CoreUser = Depends(
         has_user_competition_access(
             competition_group=CompetitionGroupType.schools_bds,
         ),
@@ -2343,7 +2343,7 @@ async def delete_participant(
 ) -> None:
     if (
         GroupType.competition_admin.value
-        not in [group.id for group in user.user.groups]
+        not in [group.id for group in user.groups]
         and not edition.inscription_enabled
     ):
         raise HTTPException(
@@ -2368,8 +2368,8 @@ async def delete_participant(
         )
     if (
         GroupType.competition_admin.value
-        not in [group.id for group in user.user.groups]
-        and user.user.school_id != participant.school_id
+        not in [group.id for group in user.groups]
+        and user.school_id != participant.school_id
     ):
         raise HTTPException(
             status_code=403,
@@ -2712,7 +2712,7 @@ async def create_match(
     sport_id: UUID,
     match_info: schemas_sport_competition.MatchBase,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
+    user: models_users.CoreUser = Depends(
         has_user_competition_access(
             competition_group=CompetitionGroupType.sport_manager,
         ),
@@ -3390,7 +3390,7 @@ async def delete_product_variant(
 async def get_purchases_by_school_id(
     school_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
+    user: models_users.CoreUser = Depends(
         has_user_competition_access(competition_group=CompetitionGroupType.schools_bds),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
@@ -3651,8 +3651,8 @@ async def get_users_payments_by_school_id(
             status_code=404,
             detail="The school does not exist.",
         )
-    if user.user.school_id != school_id and GroupType.competition_admin.value not in [
-        group.id for group in user.user.groups
+    if user.school_id != school_id and GroupType.competition_admin.value not in [
+        group.id for group in user.groups
     ]:
         raise HTTPException(
             status_code=403,
