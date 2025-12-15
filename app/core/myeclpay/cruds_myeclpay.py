@@ -647,9 +647,13 @@ async def get_transactions_and_sellers_by_wallet_id(
     end_datetime: datetime | None = None,
 ) -> Sequence[tuple[models_myeclpay.Transaction, str | None]]:
     result = await db.execute(
-        select(models_myeclpay.Transaction, models_users.CoreUser.full_name)
+        select(
+            models_myeclpay.Transaction,
+            models_users.CoreUser.firstname,
+            models_users.CoreUser.name,
+        )
         .outerjoin(
-            models_users,
+            models_users.CoreUser,
             models_users.CoreUser.id == models_myeclpay.Transaction.seller_user_id,
         )
         .where(
@@ -756,10 +760,14 @@ async def get_transfers_and_sellers_by_wallet_id(
     end_datetime: datetime | None = None,
 ) -> Sequence[tuple[models_myeclpay.Transfer, str | None]]:
     result = await db.execute(
-        select(models_myeclpay.Transfer, models_users.CoreUser.full_name)
+        select(
+            models_myeclpay.Transfer,
+            models_users.CoreUser.firstname,
+            models_users.CoreUser.name,
+        )
         .outerjoin(
-            models_users,
-            models_users.CoreUser.id == models_myeclpay.Transaction.seller_user_id,
+            models_users.CoreUser,
+            models_users.CoreUser.id == models_myeclpay.Transfer.approver_user_id,
         )
         .where(
             models_myeclpay.Transfer.wallet_id == wallet_id,
@@ -893,7 +901,11 @@ async def get_refunds_and_sellers_by_wallet_id(
     end_datetime: datetime | None = None,
 ) -> Sequence[tuple[models_myeclpay.Refund, str | None]]:
     result = await db.execute(
-        select(models_myeclpay.Refund, models_users.CoreUser.full_name)
+        select(
+            models_myeclpay.Refund,
+            models_users.CoreUser.firstname,
+            models_users.CoreUser.name,
+        )
         .outerjoin(
             models_users.CoreUser,
             models_users.CoreUser.id == models_myeclpay.Refund.seller_user_id,
