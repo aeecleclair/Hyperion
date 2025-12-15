@@ -591,11 +591,6 @@ async def get_store_history(
 
     **The user must be authorized to see the store history**
     """
-    if start_date is not None and start_date.tzinfo is None:
-        start_date = start_date.replace(tzinfo=UTC)
-    if end_date is not None and end_date.tzinfo is None:
-        end_date = end_date.replace(tzinfo=UTC)
-
     store = await cruds_myeclpay.get_store(
         store_id=store_id,
         db=db,
@@ -718,11 +713,6 @@ async def export_store_history(
     """
     Export store payment history as a CSV file.
     """
-    if start_date is not None and start_date.tzinfo is None:
-        start_date = start_date.replace(tzinfo=UTC)
-    if end_date is not None and end_date.tzinfo is None:
-        end_date = end_date.replace(tzinfo=UTC)
-
     store = await cruds_myeclpay.get_store(
         store_id=store_id,
         db=db,
@@ -791,15 +781,14 @@ async def export_store_history(
     writer.writerow(
         [
             "Date/Heure",
-            "Transaction ID",
             "Type",
             "Autre partie",
             "Montant (€)",
             "Statut",
             "Vendeur",
-            "Note magasin",
             "Montant remboursé (€)",
             "Date remboursement",
+            "Note magasin",
         ],
     )
 
@@ -833,15 +822,14 @@ async def export_store_history(
         writer.writerow(
             [
                 transaction.creation.strftime("%d/%m/%Y %H:%M:%S"),
-                str(transaction.id),
                 transaction_type,
                 other_party,
                 str(transaction.total / 100),
                 transaction.status.value,
                 seller_full_name or "N/A",
-                transaction.store_note or "",
                 refund_amount,
                 refund_date,
+                transaction.store_note or "",
             ],
         )
 
