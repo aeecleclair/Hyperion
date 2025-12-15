@@ -755,7 +755,7 @@ async def export_store_history(
         )
 
     # We add refunds
-    refunds_with_sellers = await cruds_myeclpay.get_refunds_ans_sellers_by_wallet_id(
+    refunds_with_sellers = await cruds_myeclpay.get_refunds_and_sellers_by_wallet_id(
         wallet_id=store.wallet_id,
         db=db,
         start_datetime=start_date,
@@ -787,7 +787,7 @@ async def export_store_history(
             "Note magasin",
             "Montant remboursé (€)",
             "Date remboursement",
-        ]
+        ],
     )
 
     # Write transaction data
