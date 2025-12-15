@@ -802,9 +802,11 @@ async def export_store_history(
         )
         other_party = "Inconnu"
         if other_party_wallet.user:
-            other_party = f"{other_party_wallet.user[0].firstname} {other_party_wallet.user[0].name}"
+            other_party = (
+                f"{other_party_wallet.user.firstname} {other_party_wallet.user.name}"
+            )
         elif other_party_wallet.store:
-            other_party = other_party_wallet.store[0].name
+            other_party = other_party_wallet.store.name
 
         # Check if transaction has a refund
         refund_data = refunds_map.get(transaction.id)
@@ -827,7 +829,7 @@ async def export_store_history(
                 transaction.store_note or "",
                 refund_amount,
                 refund_date,
-            ]
+            ],
         )
 
     # Generate filename
