@@ -1,10 +1,8 @@
 import base64
-import csv
 import logging
 import urllib
 import uuid
 from datetime import UTC, datetime, timedelta
-from io import StringIO
 from pathlib import Path
 from uuid import UUID
 
@@ -774,7 +772,7 @@ async def export_store_history(
 
     # Generate CSV content
     csv_content = generate_store_history_csv(
-        transactions_with_sellers=transactions_with_sellers,
+        transactions_with_sellers=list(transactions_with_sellers),
         refunds_map=refunds_map,
         store_wallet_id=store.wallet_id,
     )
