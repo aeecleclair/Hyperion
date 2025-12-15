@@ -51,6 +51,7 @@ from app.core.myeclpay.types_myeclpay import (
     WalletDeviceStatus,
     WalletType,
 )
+from app.core.myeclpay.utils.data_exporter import generate_store_history_csv
 from app.core.myeclpay.utils_myeclpay import (
     LATEST_TOS,
     QRCODE_EXPIRATION,
@@ -765,73 +766,18 @@ async def export_store_history(
         end_datetime=end_date,
     )
 
-    # Create refunds map for quick lookup
+    # Create refunds map
     refunds_map = {
         refund.transaction_id: (refund, seller_name)
         for refund, seller_name in refunds_with_sellers
     }
 
-    csv_io = StringIO()
-    # Add UTF-8 BOM for Excel compatibility
-    csv_io.write("\ufeff")
-
-    writer = csv.writer(csv_io, delimiter=";", quoting=csv.QUOTE_MINIMAL)
-
-    # Write headers
-    writer.writerow(
-        [
-            "Date/Heure",
-            "Type",
-            "Autre partie",
-            "Montant (€)",
-            "Statut",
-            "Vendeur",
-            "Montant remboursé (€)",
-            "Date remboursement",
-            "Note magasin",
-        ],
+    # Generate CSV content
+    csv_content = generate_store_history_csv(
+        transactions_with_sellers=transactions_with_sellers,
+        refunds_map=refunds_map,
+        store_wallet_id=store.wallet_id,
     )
-
-    # Write transaction data
-    for transaction, seller_full_name in transactions_with_sellers:
-        transaction_type = (
-            "RECU" if transaction.credited_wallet_id == store.wallet_id else "DONNÉ"
-        )
-        other_party_wallet = (
-            transaction.debited_wallet
-            if transaction.credited_wallet_id == store.wallet_id
-            else transaction.credited_wallet
-        )
-        other_party = "Inconnu"
-        if other_party_wallet.user:
-            other_party = (
-                f"{other_party_wallet.user.firstname} {other_party_wallet.user.name}"
-            )
-        elif other_party_wallet.store:
-            other_party = other_party_wallet.store.name
-
-        # Check if transaction has a refund
-        refund_data = refunds_map.get(transaction.id)
-        refund_amount = ""
-        refund_date = ""
-        if refund_data:
-            refund, _ = refund_data
-            refund_amount = str(refund.total / 100)
-            refund_date = refund.creation.strftime("%d/%m/%Y %H:%M:%S")
-
-        writer.writerow(
-            [
-                transaction.creation.strftime("%d/%m/%Y %H:%M:%S"),
-                transaction_type,
-                other_party,
-                str(transaction.total / 100),
-                transaction.status.value,
-                seller_full_name or "N/A",
-                refund_amount,
-                refund_date,
-                transaction.store_note or "",
-            ],
-        )
 
     # Generate filename
     date_range = ""
@@ -851,14 +797,11 @@ async def export_store_history(
 
     filename = f"store_history_{safe_store_name}{date_range}.csv"
 
-    res = csv_io.getvalue()
-    csv_io.close()
-
     headers = {
         "Content-Disposition": f'attachment; filename="{filename}"',
     }
     return Response(
-        res,
+        csv_content,
         headers=headers,
         media_type="text/csv; charset=utf-8",
     )
