@@ -651,6 +651,7 @@ async def get_transactions_and_sellers_by_wallet_id(
             models_myeclpay.Transaction,
             models_users.CoreUser.firstname,
             models_users.CoreUser.name,
+            models_users.CoreUser.nickname,
         )
         .outerjoin(
             models_users.CoreUser,
@@ -673,7 +674,26 @@ async def get_transactions_and_sellers_by_wallet_id(
             selectinload(models_myeclpay.Transaction.credited_wallet),
         ),
     )
-    return result.all()
+
+    transactions_with_sellers = []
+    for row in result.all():
+        transaction = row[0]
+        firstname = row[1]
+        name = row[2]
+        nickname = row[3]
+
+        if firstname and name:
+            full_name = (
+                f"{firstname} {name} ({nickname})"
+                if nickname
+                else f"{firstname} {name}"
+            )
+        else:
+            full_name = None
+
+        transactions_with_sellers.append((transaction, full_name))
+
+    return transactions_with_sellers
 
 
 async def get_transfers(
@@ -764,6 +784,7 @@ async def get_transfers_and_sellers_by_wallet_id(
             models_myeclpay.Transfer,
             models_users.CoreUser.firstname,
             models_users.CoreUser.name,
+            models_users.CoreUser.nickname,
         )
         .outerjoin(
             models_users.CoreUser,
@@ -771,8 +792,6 @@ async def get_transfers_and_sellers_by_wallet_id(
         )
         .where(
             models_myeclpay.Transfer.wallet_id == wallet_id,
-        )
-        .where(
             models_myeclpay.Transfer.creation >= start_datetime
             if start_datetime
             else and_(True),
@@ -781,7 +800,26 @@ async def get_transfers_and_sellers_by_wallet_id(
             else and_(True),
         ),
     )
-    return result.all()
+
+    transfers_with_users = []
+    for row in result.all():
+        transfer = row[0]
+        firstname = row[1]
+        name = row[2]
+        nickname = row[3]
+
+        if firstname and name:
+            full_name = (
+                f"{firstname} {name} ({nickname})"
+                if nickname
+                else f"{firstname} {name}"
+            )
+        else:
+            full_name = None
+
+        transfers_with_users.append((transfer, full_name))
+
+    return transfers_with_users
 
 
 async def get_transfer_by_transfer_identifier(
@@ -905,6 +943,7 @@ async def get_refunds_and_sellers_by_wallet_id(
             models_myeclpay.Refund,
             models_users.CoreUser.firstname,
             models_users.CoreUser.name,
+            models_users.CoreUser.nickname,
         )
         .outerjoin(
             models_users.CoreUser,
@@ -927,7 +966,26 @@ async def get_refunds_and_sellers_by_wallet_id(
             selectinload(models_myeclpay.Refund.credited_wallet),
         ),
     )
-    return result.all()
+
+    refunds_with_sellers = []
+    for row in result.all():
+        refund = row[0]
+        firstname = row[1]
+        name = row[2]
+        nickname = row[3]
+
+        if firstname and name:
+            full_name = (
+                f"{firstname} {name} ({nickname})"
+                if nickname
+                else f"{firstname} {name}"
+            )
+        else:
+            full_name = None
+
+        refunds_with_sellers.append((refund, full_name))
+
+    return refunds_with_sellers
 
 
 async def get_store(
