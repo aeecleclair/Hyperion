@@ -974,6 +974,158 @@ async def test_get_store_history_with_date(client: TestClient):
     assert history[str(transaction_from_store_to_ecl_user.id)]["total"] == 700
 
 
+async def test_export_store_history_for_non_existing_store(client: TestClient):
+    response = client.get(
+        f"/myeclpay/stores/{uuid4()}/history/data-export",
+        headers={"Authorization": f"Bearer {ecl_user2_access_token}"},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Store does not exist"
+
+
+async def test_export_store_history_when_not_seller_can_see_history(client: TestClient):
+    response = client.get(
+        f"/myeclpay/stores/{store.id}/history/data-export",
+        headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
+    )
+
+    assert response.status_code == 403
+    assert (
+        response.json()["detail"] == "User is not authorized to see the store history"
+    )
+
+
+async def test_export_store_history(client: TestClient):
+    response = client.get(
+        f"/myeclpay/stores/{store.id}/history/data-export",
+        headers={
+            "Authorization": f"Bearer {store_seller_can_see_history_user_access_token}",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/csv; charset=utf-8"
+    assert "attachment" in response.headers["content-disposition"]
+    assert "store_history_Test Store" in response.headers["content-disposition"]
+
+    # Verify CSV content
+    csv_content = response.text
+    lines = csv_content.split("\n")
+
+    # Check header (skip BOM if present)
+    header = lines[0].strip("\ufeff")
+    assert "Date/Heure" in header
+    assert "Type" in header
+    assert "Autre partie" in header
+    assert "Montant (€)" in header
+    assert "Statut" in header
+    assert "Vendeur" in header
+    assert "Montant remboursé (€)" in header
+    assert "Date remboursement" in header
+    assert "Note magasin" in header
+
+    # Check that we have 2 transactions (header + 2 data rows)
+    # Filter out empty lines
+    non_empty_lines = [line for line in lines if line.strip()]
+    assert len(non_empty_lines) >= 3  # header + at least 2 transactions
+
+    # Verify transactions are present in CSV
+    csv_text = response.text
+    assert "firstname ECL User 2 (nickname)" in csv_text
+    assert "REÇU" in csv_text or "DONNÉ" in csv_text
+
+
+async def test_export_store_history_with_date(client: TestClient):
+    response = client.get(
+        f"/myeclpay/stores/{store.id}/history/data-export",
+        params={
+            "start_date": "2025-05-18T00:00:00Z",
+            "end_date": "2025-05-19T00:00:00Z",
+        },
+        headers={
+            "Authorization": f"Bearer {store_seller_can_see_history_user_access_token}",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/csv; charset=utf-8"
+
+    # Verify filename contains date range
+    content_disposition = response.headers["content-disposition"]
+    assert "2025-05-18" in content_disposition
+    assert "2025-05-19" in content_disposition
+
+    # Verify CSV content has only 1 transaction
+    csv_content = response.text
+    lines = [line for line in csv_content.split("\n") if line.strip()]
+    # header + 1 transaction
+    assert len(lines) == 2
+
+
+async def test_export_store_history_with_refund(client: TestClient):
+    # Create a transaction and its refund
+    transaction_to_refund = models_myeclpay.Transaction(
+        id=uuid4(),
+        debited_wallet_id=ecl_user_wallet.id,
+        debited_wallet_device_id=ecl_user_wallet_device.id,
+        credited_wallet_id=store_wallet.id,
+        transaction_type=TransactionType.DIRECT,
+        seller_user_id=ecl_user2.id,
+        total=300,
+        creation=datetime.now(UTC),
+        status=TransactionStatus.REFUNDED,
+        store_note="Transaction with refund",
+        qr_code_id=None,
+    )
+    await add_object_to_db(transaction_to_refund)
+
+    refund_test = models_myeclpay.Refund(
+        id=uuid4(),
+        transaction_id=transaction_to_refund.id,
+        debited_wallet_id=store_wallet.id,
+        credited_wallet_id=ecl_user_wallet.id,
+        total=300,
+        creation=datetime.now(UTC),
+        seller_user_id=ecl_user2.id,
+    )
+    await add_object_to_db(refund_test)
+
+    response = client.get(
+        f"/myeclpay/stores/{store.id}/history/data-export",
+        headers={
+            "Authorization": f"Bearer {store_seller_can_see_history_user_access_token}",
+        },
+    )
+
+    assert response.status_code == 200
+
+    # Verify refund information is in CSV
+    csv_content = response.text
+    assert "3" in csv_content or "3.00" in csv_content  # Refund amount
+    assert "Transaction with refund" in csv_content
+
+
+async def test_export_store_history_encoding(client: TestClient):
+    # Test that special characters (accents, etc.) are properly encoded
+    response = client.get(
+        f"/myeclpay/stores/{store.id}/history/data-export",
+        headers={
+            "Authorization": f"Bearer {store_seller_can_see_history_user_access_token}",
+        },
+    )
+
+    assert response.status_code == 200
+
+    # Verify UTF-8 BOM is present
+    assert response.content.startswith(b"\xef\xbb\xbf")
+
+    # Verify French characters are properly encoded
+    csv_content = response.text
+    assert "REÇU" in csv_content or "DONNÉ" in csv_content
+    assert "€" in csv_content
+
+
 async def test_get_stores_as_lambda(client: TestClient):
     response = client.get(
         "/myeclpay/users/me/stores",
