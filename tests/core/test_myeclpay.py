@@ -2001,7 +2001,7 @@ def test_get_transactions_success(client: TestClient):
     assert response.status_code == 200
 
     transactions = response.json()
-    assert len(transactions) == 5
+    assert len(transactions) == 7
     transactions_dict = {UUID(t["id"]): t for t in transactions}
 
     assert (
