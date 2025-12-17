@@ -17,6 +17,7 @@ from app.dependencies import (
     is_user_in,
 )
 from app.modules.ph import cruds_ph, models_ph, schemas_ph
+from app.modules.ph.user_deleter_ph import PHUserDeleter
 from app.types.content_type import ContentType
 from app.types.module import Module
 from app.types.scheduler import Scheduler
@@ -43,6 +44,7 @@ module = Module(
     default_allowed_account_types=[AccountType.student],
     registred_topics=[ph_topic],
     factory=None,
+    user_deleter=PHUserDeleter(),
 )
 
 

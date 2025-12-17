@@ -26,6 +26,7 @@ from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users, models_users, schemas_users
 from app.core.users.factory_users import CoreUsersFactory
 from app.core.users.tools_users import get_account_type_and_school_id_from_email
+from app.core.users.user_deleter_users import UsersUserDeleter
 from app.core.utils import security
 from app.core.utils.config import Settings
 from app.dependencies import (
@@ -59,6 +60,7 @@ core_module = CoreModule(
     tag="Users",
     router=router,
     factory=CoreUsersFactory(),
+    user_deleter=UsersUserDeleter(),
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -309,7 +311,7 @@ async def create_user(
     # After adding the unconfirmed user to the database, we got an activation token that need to be send by email,
     # in order to make sure the email address is valid
 
-    account_type, school_id = await get_account_type_and_school_id_from_email(
+    account_type, _ = await get_account_type_and_school_id_from_email(
         email=email,
         db=db,
     )

@@ -19,6 +19,7 @@ from app.dependencies import (
 )
 from app.modules.raffle import cruds_raffle, models_raffle, schemas_raffle
 from app.modules.raffle.types_raffle import RaffleStatusType
+from app.modules.raffle.user_deleter_raffle import RaffleUserDeleter
 from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
@@ -34,6 +35,7 @@ module = Module(
     tag="Raffle",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
     factory=None,
+    user_deleter=RaffleUserDeleter(),
 )
 
 hyperion_raffle_logger = logging.getLogger("hyperion.raffle")

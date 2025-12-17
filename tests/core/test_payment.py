@@ -19,6 +19,7 @@ from app.core.payment.payment_tool import PaymentTool
 from app.core.payment.types_payment import HelloAssoConfig, HelloAssoConfigName
 from app.core.schools import schemas_schools
 from app.core.users import schemas_users
+from app.modules.home.user_deleter_home import HomeUserDeleter
 from app.types.module import Module
 from tests.commons import (
     MockedPaymentTool,
@@ -305,6 +306,7 @@ async def test_webhook_payment_callback(
         default_allowed_groups_ids=[],
         payment_callback=callback,
         factory=None,
+        user_deleter=HomeUserDeleter(),
     )
     mocker.patch(
         "app.core.payment.endpoints_payment.all_modules",
@@ -347,6 +349,7 @@ async def test_webhook_payment_callback_fail(
         default_allowed_groups_ids=[],
         payment_callback=callback,
         factory=None,
+        user_deleter=HomeUserDeleter(),
     )
     mocker.patch(
         "app.core.payment.endpoints_payment.all_modules",
