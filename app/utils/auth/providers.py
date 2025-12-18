@@ -354,6 +354,12 @@ class SiarnaqAuthClient(BaseAuthClient):
     allowed_account_types: list[AccountType] | None = None
 
 
+class PMFAuthClient(BaseAuthClient):
+    allowed_scopes: set[ScopeType | str] = {ScopeType.API}
+
+    allowed_account_types: list[AccountType] | None = None
+
+
 class OverleafAuthClient(BaseAuthClient):
     allowed_account_types: list[AccountType] | None = get_ecl_account_types()
 
