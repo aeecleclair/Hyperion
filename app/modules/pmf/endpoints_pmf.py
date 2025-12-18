@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.users.models_users import CoreUser
 from app.dependencies import get_db, is_user, is_user_in
-from app.modules.pmf import cruds_pmf, schemas_pmf, types_pmf
+from app.modules.pmf import cruds_pmf, schemas_pmf, types_pmf, factory_pmf
 from app.types.module import Module
 from app.utils.tools import is_user_member_of_any_group
 
@@ -23,7 +23,7 @@ module = Module(
         AccountType.staff,
         AccountType.former_student,
     ],
-    factory=None,
+    factory=factory_pmf.PmfFactory,
 )
 
 

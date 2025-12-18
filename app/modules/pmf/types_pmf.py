@@ -3,7 +3,7 @@ from enum import Enum
 
 class OfferType(str, Enum):  # for the T-shirt and the bike
     TFE = "TFE"
-    S_APP = "Stage_Application"
+    APP = "APP"
     EXE = "EXE"
     CDI = "CDI"
     CDD = "CDD"
