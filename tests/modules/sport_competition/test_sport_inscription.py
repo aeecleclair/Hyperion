@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import delete, update
 
 from app.core.groups import models_groups
-from app.core.groups.groups_type import AccountType, GroupType
+from app.core.groups.groups_type import AccountType
 from app.core.schools import models_schools
 from app.core.schools.schools_type import SchoolType
 from app.core.users import models_users
