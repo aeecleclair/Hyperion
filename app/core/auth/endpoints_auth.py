@@ -87,7 +87,12 @@ async def login_for_access_token(
         )
     # We put the user id in the subject field of the token.
     # The subject `sub` is a JWT registered claim name, see https://datatracker.ietf.org/doc/html/rfc7519#section-4.1
-    data = schemas_auth.TokenData(sub=user.id, scopes=ScopeType.auth)
+    data = schemas_auth.TokenData(
+        sub=user.id,
+        scopes=ScopeType.auth,
+        account_type=user.account_type,
+        group_ids=[group.id for group in user.groups],
+    )
     access_token = create_access_token(settings=settings, data=data)
     return {"access_token": access_token, "token_type": "bearer"}
 
