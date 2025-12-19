@@ -5,7 +5,7 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.groups.groups_type import GroupType
+from app.core.groups import models_groups
 from app.core.payment import models_payment
 from app.core.schools import models_schools
 from app.core.schools.schools_type import SchoolType
@@ -15,6 +15,9 @@ from app.modules.sport_competition import (
     models_sport_competition,
     schemas_sport_competition,
 )
+from app.modules.sport_competition.permissions_sport_competition import (
+    SportCompetitionPermissions,
+)
 from app.modules.sport_competition.types_sport_competition import (
     ProductPublicType,
     ProductSchoolType,
@@ -23,10 +26,13 @@ from app.modules.sport_competition.types_sport_competition import (
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
     get_TestingSessionLocal,
     mocked_checkout_id,
 )
+
+admin_group: models_groups.CoreGroup
 
 school_from_lyon: models_schools.CoreSchool
 school_others: models_schools.CoreSchool
@@ -129,6 +135,12 @@ def variants():
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def setup():
+    global admin_group
+    admin_group = await create_groups_with_permissions(
+        [SportCompetitionPermissions.manage_sport_competition],
+        "competition_admin_group",
+    )
+
     global school_from_lyon, school_others
 
     school_from_lyon = models_schools.CoreSchool(
@@ -176,7 +188,7 @@ async def setup():
         user_fanfare, \
         user_multiple
     admin_user = await create_user_with_groups(
-        [GroupType.competition_admin],
+        [admin_group.id],
         email="Admin User",
     )
     user_from_lyon = await create_user_with_groups(

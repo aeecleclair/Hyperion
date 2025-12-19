@@ -41,7 +41,7 @@ from app.types.exceptions import AuthHTTPException
 from app.types.module import CoreModule
 from app.types.scopes_type import ScopeType
 from app.utils.auth.providers import BaseAuthClient
-from app.utils.tools import is_user_member_of_any_group
+from app.utils.tools import has_user_permission
 
 router = APIRouter(tags=["Auth"])
 
@@ -314,12 +314,14 @@ async def authorize_validation(
             status_code=status.HTTP_302_FOUND,
         )
 
-    # The auth_client may restrict the usage of the client to specific Hyperion groups.
-    # For example, only ECLAIR members may be allowed to access the wiki
-    if auth_client.allowed_groups is not None:
-        if not is_user_member_of_any_group(
-            user=user,
-            allowed_groups=auth_client.allowed_groups,
+    # The auth_client may restrict the usage of the client to specific Hyperion permissions
+    if auth_client.permission is not None:
+        if not (
+            await has_user_permission(
+                user=user,
+                permission_name=auth_client.permission,
+                db=db,
+            )
         ):
             hyperion_access_logger.warning(
                 f"Authorize-validation: user is not member of an allowed group {authorizereq.email} ({request_id})",
@@ -331,18 +333,7 @@ async def authorize_validation(
                 ),
                 status_code=status.HTTP_302_FOUND,
             )
-    if auth_client.allowed_account_types is not None:
-        if user.account_type not in auth_client.allowed_account_types:
-            hyperion_access_logger.warning(
-                f"Authorize-validation: user account type is not allowed {authorizereq.email} ({request_id})",
-            )
-            return RedirectResponse(
-                settings.CLIENT_URL
-                + calypsso.get_message_relative_url(
-                    message_type=calypsso.TypeMessage.user_account_type_not_allowed,
-                ),
-                status_code=status.HTTP_302_FOUND,
-            )
+
     # We generate a new authorization_code
     # The authorization code MUST expire
     # shortly after it is issued to mitigate the risk of leaks. A
