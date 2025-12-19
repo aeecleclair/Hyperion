@@ -15,6 +15,8 @@ from sqlalchemy.pool import NullPool
 
 from app.core.core_endpoints import models_core
 from app.core.groups import models_groups
+from app.core.groups.groups_type import AccountType
+from app.core.permissions import models_permissions
 from app.core.schools import models_schools
 from app.core.utils.config import Settings
 from app.types import core_data
@@ -46,58 +48,46 @@ def get_sync_db_engine(settings: Settings) -> Engine:
     )
 
 
-def get_all_module_group_visibility_membership_sync(
+def create_group_permission_sync(
+    group_id: str,
+    permission_name: str,
     db: Session,
-):
+) -> None:
     """
-    Return the every module with their visibility
+    Create a new group permission in database
     """
-    result = db.execute(select(models_core.ModuleGroupVisibility))
-    return result.unique().scalars().all()
-
-
-def get_all_module_account_type_visibility_membership_sync(
-    db: Session,
-):
-    """
-    Return the every module with their visibility
-    """
-    result = db.execute(select(models_core.ModuleAccountTypeVisibility))
-    return result.unique().scalars().all()
-
-
-def create_module_group_visibility_sync(
-    module_visibility: models_core.ModuleGroupVisibility,
-    db: Session,
-) -> models_core.ModuleGroupVisibility:
-    """
-    Create a new module visibility in database and return it
-    """
-    db.add(module_visibility)
+    db.add(
+        models_permissions.CorePermissionGroup(
+            group_id=group_id,
+            permission_name=permission_name,
+        ),
+    )
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
         raise
-    else:
-        return module_visibility
 
 
-def create_module_account_type_visibility_sync(
-    module_visibility: models_core.ModuleAccountTypeVisibility,
+def create_account_type_permission_sync(
+    account_type: AccountType,
+    permission_name: str,
     db: Session,
-) -> models_core.ModuleAccountTypeVisibility:
+) -> None:
     """
-    Create a new module visibility in database and return it
+    Create a new account type permission in database
     """
-    db.add(module_visibility)
+    db.add(
+        models_permissions.CorePermissionAccountType(
+            account_type=account_type,
+            permission_name=permission_name,
+        ),
+    )
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
         raise
-    else:
-        return module_visibility
 
 
 def get_group_by_id_sync(group_id: str, db: Session) -> models_groups.CoreGroup | None:
@@ -186,6 +176,20 @@ def create_school_sync(
         raise
     else:
         return school
+
+
+def clean_permissions_sync(db: Session, permssion_list: list[str]) -> None:
+    """
+    Delete all unused permissions in the database
+    """
+    db.execute(
+        delete(models_permissions.CorePermissionGroup).where(
+            models_permissions.CorePermissionGroup.permission_name.notin_(
+                permssion_list,
+            ),
+        ),
+    )
+    db.commit()
 
 
 def delete_core_data_crud_sync(schema: str, db: Session) -> None:

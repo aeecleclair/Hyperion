@@ -4,9 +4,10 @@ from datetime import UTC, datetime
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import AccountType, GroupType
+from app.core.groups.groups_type import AccountType
+from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users
-from app.dependencies import get_db, is_user_a_member, is_user_in
+from app.dependencies import get_db, is_user_allowed_to
 from app.modules.flappybird import (
     cruds_flappybird,
     models_flappybird,
@@ -14,11 +15,18 @@ from app.modules.flappybird import (
 )
 from app.types.module import Module
 
+
+class FlappyBirdPermissions(ModulePermissions):
+    access_flappybird = "access_flappybird"
+    manage_flappybird = "manage_flappybird"
+
+
 module = Module(
     root="flappybird",
     tag="Flappy Bird",
     default_allowed_account_types=[AccountType.student],
     factory=None,
+    permissions=FlappyBirdPermissions,
 )
 
 
@@ -29,7 +37,9 @@ module = Module(
 )
 async def get_flappybird_score(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([FlappyBirdPermissions.access_flappybird]),
+    ),
 ):
     """Return the leaderboard"""
     return await cruds_flappybird.get_flappybird_score_leaderboard(db=db)
@@ -42,7 +52,9 @@ async def get_flappybird_score(
 )
 async def get_current_user_flappybird_personal_best(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([FlappyBirdPermissions.access_flappybird]),
+    ),
 ):
     user_personal_best_table = (
         await cruds_flappybird.get_flappybird_personal_best_by_user_id(
@@ -81,7 +93,9 @@ async def get_current_user_flappybird_personal_best(
 )
 async def create_flappybird_score(
     flappybird_score: schemas_flappybird.FlappyBirdScoreBase,
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([FlappyBirdPermissions.access_flappybird]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     # Currently, flappybird_score is a schema instance
@@ -124,6 +138,8 @@ async def create_flappybird_score(
 async def remove_flappybird_score(
     targeted_user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([FlappyBirdPermissions.manage_flappybird]),
+    ),
 ):
     await cruds_flappybird.delete_flappybird_best_score(db=db, user_id=targeted_user_id)

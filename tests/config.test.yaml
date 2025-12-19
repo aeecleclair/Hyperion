@@ -91,31 +91,21 @@ AUTH_CLIENTS:
     redirect_uri:
       - http://127.0.0.1:8000/docs
     auth_client: "AppAuthClient"
-  BaseAuthClient:
-    secret: secret
+  GroupPermissionAuthClient:
+    secret: "secret"
     redirect_uri:
       - http://127.0.0.1:8000/docs
-    auth_client: BaseAuthClient
-  RalllyAuthClient:
-    secret: secret
+    auth_client: "AppAuthClient"
+  AccountTypePermissionAuthClient:
+    secret: "secret"
     redirect_uri:
-      - http://127.0.0.1:8000/docs
-    auth_client: RalllyAuthClient
-  SynapseAuthClient:
-    secret: secret
+      - "http://127.0.0.1:8000/docs"
+    auth_client: "RalllyAuthClient"
+  TokenIntrospectionAuthClient:
+    secret: "secret"
     redirect_uri:
-      - http://127.0.0.1:8000/docs
-    auth_client: SynapseAuthClient
-  AcceptingOnlyECLUsersAuthClient:
-    secret: secret
-    redirect_uri:
-      - http://127.0.0.1:8000/docs
-    auth_client: NextcloudAuthClient
-  RestrictingUsersGroupsAuthClient:
-    secret: secret
-    redirect_uri:
-      - http://127.0.0.1:8000/docs
-    auth_client: DocumensoAuthClient
+      - "http://127.0.0.1:8000/docs"
+    auth_client: "SynapseAuthClient"
 
 #####################
 # Hyperion settings #

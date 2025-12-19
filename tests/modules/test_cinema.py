@@ -4,14 +4,18 @@ import uuid
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.groups.groups_type import GroupType
+from app.core.groups import models_groups
 from app.core.users import models_users
 from app.modules.cinema import models_cinema
+from app.modules.cinema.endpoints_cinema import CinemaPermissions
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
 )
+
+admin_group: models_groups.CoreGroup
 
 session: models_cinema.Session
 cinema_user_cinema: models_users.CoreUser
@@ -22,8 +26,14 @@ token_simple: str
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
+    global admin_group
+    admin_group = await create_groups_with_permissions(
+        [CinemaPermissions.manage_sessions],
+        "cinema_admin",
+    )
+
     global cinema_user_cinema
-    cinema_user_cinema = await create_user_with_groups([GroupType.cinema])
+    cinema_user_cinema = await create_user_with_groups([admin_group.id])
 
     global token_cinema
     token_cinema = create_api_access_token(cinema_user_cinema)

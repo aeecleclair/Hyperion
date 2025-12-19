@@ -5,16 +5,16 @@ from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import AccountType, GroupType
+from app.core.groups.groups_type import AccountType
 from app.core.notification.schemas_notification import Message, Topic
+from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users
 from app.dependencies import (
     get_db,
     get_notification_tool,
     get_request_id,
     get_scheduler,
-    is_user_a_member,
-    is_user_in,
+    is_user_allowed_to,
 )
 from app.modules.ph import cruds_ph, models_ph, schemas_ph
 from app.types.content_type import ContentType
@@ -37,12 +37,20 @@ ph_topic = Topic(
     restrict_to_group_id=None,
     restrict_to_members=True,
 )
+
+
+class PHPermissions(ModulePermissions):
+    access_ph = "access_ph"
+    manage_ph = "manage_ph"
+
+
 module = Module(
     root=root,
     tag="ph",
     default_allowed_account_types=[AccountType.student],
     registred_topics=[ph_topic],
     factory=None,
+    permissions=PHPermissions,
 )
 
 
@@ -54,7 +62,9 @@ module = Module(
 async def get_paper_pdf(
     paper_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PHPermissions.access_ph]),
+    ),
 ):
     paper = await cruds_ph.get_paper_by_id(db=db, paper_id=paper_id)
     if paper is None:
@@ -77,7 +87,9 @@ async def get_paper_pdf(
 )
 async def get_papers(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PHPermissions.access_ph]),
+    ),
 ):
     """
     Return all editions until now, sorted from the latest to the oldest
@@ -95,7 +107,9 @@ async def get_papers(
 )
 async def get_papers_admin(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.ph)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PHPermissions.manage_ph]),
+    ),
 ):
     """
     Return all editions, sorted from the latest to the oldest
@@ -113,7 +127,9 @@ async def get_papers_admin(
 async def create_paper(
     paper: schemas_ph.PaperBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.ph)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PHPermissions.manage_ph]),
+    ),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     scheduler: Scheduler = Depends(get_scheduler),
 ):
@@ -164,7 +180,9 @@ async def create_paper(
 async def create_paper_pdf_and_cover(
     paper_id: uuid.UUID,
     pdf: UploadFile = File(...),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.ph)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PHPermissions.manage_ph]),
+    ),
     request_id: str = Depends(get_request_id),
     db: AsyncSession = Depends(get_db),
 ):
@@ -198,7 +216,9 @@ async def create_paper_pdf_and_cover(
 )
 async def get_cover(
     paper_id: uuid.UUID,
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PHPermissions.access_ph]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     paper = await cruds_ph.get_paper_by_id(db=db, paper_id=paper_id)
@@ -222,7 +242,9 @@ async def get_cover(
 async def update_paper(
     paper_id: uuid.UUID,
     paper_update: schemas_ph.PaperUpdate,
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.ph)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PHPermissions.manage_ph]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     paper = await cruds_ph.get_paper_by_id(paper_id=paper_id, db=db)
@@ -245,7 +267,9 @@ async def update_paper(
 )
 async def delete_paper(
     paper_id: uuid.UUID,
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.ph)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PHPermissions.manage_ph]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     paper = await cruds_ph.get_paper_by_id(paper_id=paper_id, db=db)

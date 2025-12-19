@@ -21,7 +21,7 @@ class CoreGroupsFactory(Factory):
 
     @classmethod
     async def create_core_groups(cls, db: AsyncSession):
-        groups = ["Oui", "Pixels"]
+        groups = ["AEECL", "USEECL"]
         descriptions = ["Groupe de test", "Groupe de test 2"]
         for i in range(len(groups)):
             await cruds_groups.create_group(
