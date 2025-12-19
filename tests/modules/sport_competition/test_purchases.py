@@ -5,6 +5,7 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
+from app.core.groups import models_groups
 from app.core.payment import models_payment
 from app.core.schools import models_schools
 from app.core.schools.schools_type import SchoolType
@@ -30,6 +31,8 @@ from tests.commons import (
     get_TestingSessionLocal,
     mocked_checkout_id,
 )
+
+admin_group: models_groups.CoreGroup
 
 school_from_lyon: models_schools.CoreSchool
 school_others: models_schools.CoreSchool
