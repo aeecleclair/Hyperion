@@ -27,7 +27,6 @@ from app.modules.sport_competition.dependencies_sport_competition import (
     has_user_competition_access,
     is_competition_user,
 )
-from app.modules.sport_competition.models_sport_competition import Sport
 from app.modules.sport_competition.permissions_sport_competition import (
     SportCompetitionPermissions,
 )

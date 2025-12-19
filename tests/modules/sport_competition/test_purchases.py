@@ -5,7 +5,6 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.groups.groups_type import GroupType
 from app.core.payment import models_payment
 from app.core.schools import models_schools
 from app.core.schools.schools_type import SchoolType
