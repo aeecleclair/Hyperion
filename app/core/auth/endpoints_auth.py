@@ -913,6 +913,10 @@ async def create_response_body(
                     status_code=500,
                     detail="Could not find user when trying the get userinfo but it should exist",
                 )
+            id_token_data.account_type = user.account_type
+            access_token_data.account_type = user.account_type
+            id_token_data.group_ids = [group.id for group in user.groups]
+            access_token_data.group_ids = [group.id for group in user.groups]
             additional_data = auth_client.get_userinfo(user=user)
 
         id_token = create_access_token_RS256(
