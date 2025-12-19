@@ -11,6 +11,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
+from app.core.groups import models_groups
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import models_memberships
 from app.core.myeclpay import cruds_myeclpay, models_myeclpay
@@ -31,9 +32,12 @@ from tests.commons import (
     add_coredata_to_db,
     add_object_to_db,
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
     get_TestingSessionLocal,
 )
+
+bde_group: models_groups.CoreGroup
 
 admin_user: models_users.CoreUser
 admin_user_token: str
@@ -99,6 +103,12 @@ UNIQUE_TOKEN = "UNIQUE_TOKEN"
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
+    global bde_group
+    bde_group = await create_groups_with_permissions(
+        [],
+        "BDE Group",
+    )
+
     global admin_user, admin_user_token
     admin_user = await create_user_with_groups(groups=[GroupType.admin])
     admin_user_token = create_api_access_token(admin_user)
@@ -107,7 +117,7 @@ async def init_objects() -> None:
     association_membership = models_memberships.CoreAssociationMembership(
         id=uuid4(),
         name="Test Association Membership",
-        manager_group_id=GroupType.BDE,
+        manager_group_id=bde_group.id,
     )
     await add_object_to_db(association_membership)
 
@@ -235,7 +245,7 @@ async def init_objects() -> None:
         firstname="firstname",
         name="ECL User 2",
         nickname="nickname",
-        groups=[GroupType.BDE],
+        groups=[bde_group.id],
     )
     ecl_user2_access_token = create_api_access_token(ecl_user2)
 

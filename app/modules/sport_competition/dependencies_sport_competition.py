@@ -6,7 +6,6 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups import groups_type
-from app.core.groups.groups_type import GroupType
 from app.core.users import models_users
 from app.dependencies import (
     get_db,
@@ -17,8 +16,12 @@ from app.modules.sport_competition import (
     cruds_sport_competition,
     schemas_sport_competition,
 )
+from app.modules.sport_competition.permissions_sport_competition import (
+    SportCompetitionPermissions,
+)
 from app.modules.sport_competition.types_sport_competition import CompetitionGroupType
 from app.types.scopes_type import ScopeType
+from app.utils.tools import has_user_permission
 
 hyperion_access_logger = logging.getLogger("hyperion.access")
 
@@ -63,7 +66,7 @@ def get_competition_user_from_token_with_scopes(
 
 
 def is_competition_user(
-    group_id: GroupType | None = None,
+    group_id: str | None = None,
     competition_group: CompetitionGroupType | None = None,
     exclude_external: bool = False,
 ) -> Callable[
@@ -104,8 +107,12 @@ def is_competition_user(
                 status_code=403,
                 detail="User is not a member of the group",
             )
-        if competition_group is not None and not any(
-            group.id == GroupType.competition_admin.value for group in user.user.groups
+        if competition_group is not None and not (
+            await has_user_permission(
+                user.user,
+                SportCompetitionPermissions.manage_sport_competition,
+                db,
+            )
         ):
             user_groups = (
                 await cruds_sport_competition.load_user_competition_groups_memberships(
@@ -125,7 +132,7 @@ def is_competition_user(
 
 
 def has_user_competition_access(
-    group_id: GroupType | None = None,
+    group_id: str | None = None,
     competition_group: CompetitionGroupType | None = None,
     exclude_external: bool = False,
 ) -> Callable[
@@ -163,8 +170,12 @@ def has_user_competition_access(
                 status_code=403,
                 detail="User is not a member of the group",
             )
-        if competition_group is not None and not any(
-            group.id == GroupType.competition_admin.value for group in user.groups
+        if competition_group is not None and not (
+            await has_user_permission(
+                user,
+                SportCompetitionPermissions.manage_sport_competition,
+                db,
+            )
         ):
             user_groups = (
                 await cruds_sport_competition.load_user_competition_groups_memberships(

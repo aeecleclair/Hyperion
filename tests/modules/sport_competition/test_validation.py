@@ -6,12 +6,15 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import update
 
-from app.core.groups.groups_type import GroupType
+from app.core.groups import models_groups
 from app.core.schools import models_schools
 from app.core.users import cruds_users, models_users, schemas_users
 from app.modules.sport_competition import (
     cruds_sport_competition,
     models_sport_competition,
+)
+from app.modules.sport_competition.permissions_sport_competition import (
+    SportCompetitionPermissions,
 )
 from app.modules.sport_competition.types_sport_competition import (
     ProductPublicType,
@@ -21,9 +24,12 @@ from app.modules.sport_competition.types_sport_competition import (
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
     get_TestingSessionLocal,
 )
+
+admin_group: models_groups.CoreGroup
 
 school_sport_quota: models_schools.CoreSchool
 school_simple_general_quota: models_schools.CoreSchool
@@ -142,6 +148,12 @@ async def create_competition_user(
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
+    global admin_group
+    admin_group = await create_groups_with_permissions(
+        [SportCompetitionPermissions.manage_sport_competition],
+        "competition_admin_group",
+    )
+
     global \
         school_sport_quota, \
         school_simple_general_quota, \
@@ -272,7 +284,7 @@ async def init_objects() -> None:
         competition_user_athlete_fanfare
 
     admin_user = await create_user_with_groups(
-        [GroupType.admin, GroupType.competition_admin],
+        [admin_group.id],
     )
     admin_token = create_api_access_token(admin_user)
     competition_user_admin = models_sport_competition.CompetitionUser(

@@ -5,11 +5,13 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
+from app.core.groups import models_groups
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import models_memberships
 from app.core.users import models_users
 from app.modules.cdr import models_cdr
 from app.modules.cdr.coredata_cdr import CdrYear
+from app.modules.cdr.endpoints_cdr import CdrPermissions
 from app.modules.cdr.types_cdr import (
     CdrStatus,
     DocumentSignatureType,
@@ -19,15 +21,21 @@ from tests.commons import (
     add_coredata_to_db,
     add_object_to_db,
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
     mocked_checkout_id,
 )
 
 year = datetime.now(UTC).year
 
-cdr_admin: models_users.CoreUser
-cdr_bde: models_users.CoreUser
-cdr_user: models_users.CoreUser
+admin_group: models_groups.CoreGroup
+seller_group: models_groups.CoreGroup
+online_seller_group: models_groups.CoreGroup
+empty_seller_group: models_groups.CoreGroup
+
+user_admin: models_users.CoreUser
+user_seller: models_users.CoreUser
+user: models_users.CoreUser
 
 token_admin: str
 token_bde: str
@@ -78,36 +86,54 @@ ticket_generator: models_cdr.TicketGenerator
 async def init_objects():
     await add_coredata_to_db(CdrYear(year=year))
 
-    global cdr_admin
-    cdr_admin = await create_user_with_groups(
-        [GroupType.admin_cdr],
-        email="cdr_admin@etu.ec-lyon.fr",
+    global admin_group, seller_group, online_seller_group, empty_seller_group
+    admin_group = await create_groups_with_permissions(
+        [CdrPermissions.manage_cdr],
+        "cdr_admin",
+    )
+    seller_group = await create_groups_with_permissions(
+        [],
+        "BDE",
+    )
+    online_seller_group = await create_groups_with_permissions(
+        [],
+        "CAA",
+    )
+    empty_seller_group = await create_groups_with_permissions(
+        [],
+        "cinema",
+    )
+
+    global user_admin
+    user_admin = await create_user_with_groups(
+        [admin_group.id],
+        email="user_admin@etu.ec-lyon.fr",
     )
 
     global token_admin
-    token_admin = create_api_access_token(cdr_admin)
+    token_admin = create_api_access_token(user_admin)
 
-    global cdr_bde
-    cdr_bde = await create_user_with_groups(
-        [GroupType.BDE],
+    global user_seller
+    user_seller = await create_user_with_groups(
+        [seller_group.id],
     )
 
     global token_bde
-    token_bde = create_api_access_token(cdr_bde)
+    token_bde = create_api_access_token(user_seller)
 
-    global cdr_user
-    cdr_user = await create_user_with_groups(
+    global user
+    user = await create_user_with_groups(
         [],
     )
 
     global token_user
-    token_user = create_api_access_token(cdr_user)
+    token_user = create_api_access_token(user)
 
     global seller
     seller = models_cdr.Seller(
         id=uuid.uuid4(),
         name="BDE",
-        group_id=str(GroupType.BDE.value),
+        group_id=str(seller_group.id),
         order=5,
     )
     await add_object_to_db(seller)
@@ -116,7 +142,7 @@ async def init_objects():
     online_seller = models_cdr.Seller(
         id=uuid.uuid4(),
         name="CAA",
-        group_id=str(GroupType.CAA.value),
+        group_id=str(online_seller_group.id),
         order=12,
     )
     await add_object_to_db(online_seller)
@@ -125,7 +151,7 @@ async def init_objects():
     empty_seller = models_cdr.Seller(
         id=uuid.uuid4(),
         name="Seller Vide",
-        group_id=str(GroupType.cinema.value),
+        group_id=str(empty_seller_group.id),
         order=99,
     )
     await add_object_to_db(empty_seller)
@@ -297,7 +323,7 @@ async def init_objects():
 
     global purchase
     purchase = models_cdr.Purchase(
-        user_id=cdr_user.id,
+        user_id=user.id,
         product_variant_id=variant.id,
         quantity=1,
         validated=False,
@@ -307,7 +333,7 @@ async def init_objects():
 
     global signature
     signature = models_cdr.Signature(
-        user_id=cdr_user.id,
+        user_id=user.id,
         document_id=document.id,
         signature_type=DocumentSignatureType.numeric,
         numeric_signature_id="somedocumensoid",
@@ -317,7 +343,7 @@ async def init_objects():
     global payment
     payment = models_cdr.Payment(
         id=uuid.uuid4(),
-        user_id=cdr_user.id,
+        user_id=user.id,
         total=5000,
         payment_type=PaymentType.cash,
         year=year,
@@ -328,14 +354,14 @@ async def init_objects():
     association_membership = models_memberships.CoreAssociationMembership(
         id=uuid.uuid4(),
         name="AEECL",
-        manager_group_id=GroupType.BDE,
+        manager_group_id=admin_group.id,
     )
     await add_object_to_db(association_membership)
 
     global user_membership
     user_membership = models_memberships.CoreAssociationUserMembership(
         id=uuid.uuid4(),
-        user_id=cdr_user.id,
+        user_id=user.id,
         association_membership_id=association_membership.id,
         start_date=date(2022, 9, 1),
         end_date=date(2026, 9, 1),
@@ -384,7 +410,7 @@ async def init_objects():
         product_variant_id=ticket_variant.id,
         generator_id=ticket_generator.id,
         name="Ticket",
-        user_id=cdr_user.id,
+        user_id=user.id,
         scan_left=1,
         tags="",
         expiration=datetime.now(UTC) + timedelta(days=1),
@@ -398,7 +424,7 @@ def test_get_all_cdr_users_seller(client: TestClient):
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
-    assert str(cdr_user.id) in [x["id"] for x in response.json()]
+    assert str(user.id) in [x["id"] for x in response.json()]
 
 
 def test_get_all_cdr_users_user(client: TestClient):
@@ -431,7 +457,7 @@ def test_get_all_cdr_pending_users_user(client: TestClient):
 
 def test_update_cdr_user_seller(client: TestClient):
     response = client.patch(
-        f"/cdr/users/{cdr_user.id}",
+        f"/cdr/users/{user.id}",
         json={
             "nickname": "surnom",
             "promo": 2023,
@@ -446,7 +472,7 @@ def test_update_cdr_user_seller(client: TestClient):
 
 def test_update_cdr_user_seller_with_non_ecl_email(client: TestClient):
     response = client.patch(
-        f"/cdr/users/{cdr_user.id}",
+        f"/cdr/users/{user.id}",
         json={"email": "some.email@test.fr"},
         headers={"Authorization": f"Bearer {token_admin}"},
     )
@@ -456,8 +482,8 @@ def test_update_cdr_user_seller_with_non_ecl_email(client: TestClient):
 
 def test_update_cdr_user_seller_with_already_existing_email(client: TestClient):
     response = client.patch(
-        f"/cdr/users/{cdr_user.id}",
-        json={"email": "cdr_admin@etu.ec-lyon.fr"},
+        f"/cdr/users/{user.id}",
+        json={"email": "user_admin@etu.ec-lyon.fr"},
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 400
@@ -466,7 +492,7 @@ def test_update_cdr_user_seller_with_already_existing_email(client: TestClient):
 
 def test_update_cdr_user_seller_email(client: TestClient):
     response = client.patch(
-        f"/cdr/users/{cdr_user.id}",
+        f"/cdr/users/{user.id}",
         json={"email": "some.email@etu.ec-lyon.fr"},
         headers={"Authorization": f"Bearer {token_admin}"},
     )
@@ -484,7 +510,7 @@ def test_update_cdr_user_seller_wrong_user(client: TestClient):
 
 def test_update_cdr_user_user(client: TestClient):
     response = client.patch(
-        f"/cdr/users/{cdr_user.id}",
+        f"/cdr/users/{user.id}",
         json={"nickname": "surnom"},
         headers={"Authorization": f"Bearer {token_user}"},
     )
@@ -493,11 +519,11 @@ def test_update_cdr_user_user(client: TestClient):
 
 def test_get_cdr_user(client: TestClient):
     response = client.get(
-        f"/cdr/users/{cdr_user.id}",
+        f"/cdr/users/{user.id}",
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 200
-    assert str(cdr_user.id) == response.json()["id"]
+    assert str(user.id) == response.json()["id"]
 
 
 def test_get_all_sellers_admin(client: TestClient):
@@ -555,12 +581,16 @@ def test_get_online_sellers(client: TestClient):
     assert str(seller.id) not in [x["id"] for x in response.json()]
 
 
-def test_create_seller_admin(client: TestClient):
+async def test_create_seller_admin(client: TestClient):
+    group = await create_groups_with_permissions(
+        [],
+        "ph",
+    )
     response = client.post(
         "/cdr/sellers/",
         json={
             "name": "Seller créé",
-            "group_id": str(GroupType.ph.value),
+            "group_id": group.id,
             "order": 1,
         },
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -582,7 +612,7 @@ def test_create_seller_not_admin(client: TestClient):
         "/cdr/sellers/",
         json={
             "name": "Seller créé",
-            "group_id": str(GroupType.cinema.value),
+            "group_id": GroupType.admin.value,
             "order": 1,
         },
         headers={"Authorization": f"Bearer {token_bde}"},
@@ -1232,7 +1262,7 @@ def test_delete_document_seller(client: TestClient):
 
 def test_get_purchases_by_user_id_user(client: TestClient):
     response = client.get(
-        f"/cdr/users/{cdr_user.id}/purchases/",
+        f"/cdr/users/{user.id}/purchases/",
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 200
@@ -1243,7 +1273,7 @@ def test_get_purchases_by_user_id_user(client: TestClient):
 
 def test_get_purchases_by_user_id_wrong_user(client: TestClient):
     response = client.get(
-        f"/cdr/users/{cdr_bde.id}/purchases/",
+        f"/cdr/users/{user_seller.id}/purchases/",
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 403
@@ -1251,7 +1281,7 @@ def test_get_purchases_by_user_id_wrong_user(client: TestClient):
 
 def test_get_purchases_by_user_id_other_user_purchase(client: TestClient):
     response = client.get(
-        f"/cdr/users/{cdr_bde.id}/purchases/",
+        f"/cdr/users/{user_seller.id}/purchases/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
@@ -1284,7 +1314,7 @@ def test_get_all_my_purchases(client: TestClient):
 
 def test_get_purchases_by_user_id_by_seller_id_user(client: TestClient):
     response = client.get(
-        f"/cdr/sellers/{seller.id}/users/{cdr_user.id}/purchases/",
+        f"/cdr/sellers/{seller.id}/users/{user.id}/purchases/",
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 200
@@ -1295,7 +1325,7 @@ def test_get_purchases_by_user_id_by_seller_id_user(client: TestClient):
 
 def test_get_purchases_by_user_id_by_seller_id_other_user(client: TestClient):
     response = client.get(
-        f"/cdr/sellers/{seller.id}/users/{cdr_bde.id}/purchases/",
+        f"/cdr/sellers/{seller.id}/users/{user_seller.id}/purchases/",
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 403
@@ -1303,7 +1333,7 @@ def test_get_purchases_by_user_id_by_seller_id_other_user(client: TestClient):
 
 def test_get_purchases_by_user_id_by_seller_id_seller(client: TestClient):
     response = client.get(
-        f"/cdr/sellers/{seller.id}/users/{cdr_user.id}/purchases/",
+        f"/cdr/sellers/{seller.id}/users/{user.id}/purchases/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
@@ -1316,7 +1346,7 @@ def test_get_purchases_by_user_id_by_seller_id_other_seller_purchase(
     client: TestClient,
 ):
     response = client.get(
-        f"/cdr/sellers/{online_seller.id}/users/{cdr_user.id}/purchases/",
+        f"/cdr/sellers/{online_seller.id}/users/{user.id}/purchases/",
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 200
@@ -1327,7 +1357,7 @@ def test_get_purchases_by_user_id_by_seller_id_other_seller_purchase(
 
 def test_get_purchases_by_user_id_by_seller_id_other_user_purchase(client: TestClient):
     response = client.get(
-        f"/cdr/sellers/{seller.id}/users/{cdr_bde.id}/purchases/",
+        f"/cdr/sellers/{seller.id}/users/{user_seller.id}/purchases/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
@@ -1338,7 +1368,7 @@ def test_get_purchases_by_user_id_by_seller_id_other_user_purchase(client: TestC
 
 def test_create_purchase_cdr_not_started(client: TestClient):
     response = client.post(
-        f"/cdr/users/{cdr_admin.id}/purchases/{variant.id}/",
+        f"/cdr/users/{user_admin.id}/purchases/{variant.id}/",
         json={
             "quantity": 1,
         },
@@ -1349,7 +1379,7 @@ def test_create_purchase_cdr_not_started(client: TestClient):
 
 def test_patch_purchase_cdr_not_started(client: TestClient):
     response = client.post(
-        f"/cdr/users/{cdr_admin.id}/purchases/{variant.id}/",
+        f"/cdr/users/{user_admin.id}/purchases/{variant.id}/",
         json={
             "quantity": 2,
         },
@@ -1360,7 +1390,7 @@ def test_patch_purchase_cdr_not_started(client: TestClient):
 
 def test_create_signature_cdr_not_started(client: TestClient):
     response = client.post(
-        f"/cdr/users/{cdr_admin.id}/signatures/{document.id}/",
+        f"/cdr/users/{user_admin.id}/signatures/{document.id}/",
         json={
             "signature_type": DocumentSignatureType.material,
         },
@@ -1371,7 +1401,7 @@ def test_create_signature_cdr_not_started(client: TestClient):
 
 def test_create_payment_not_started(client: TestClient):
     response = client.post(
-        f"/cdr/users/{cdr_user.id}/payments/",
+        f"/cdr/users/{user.id}/payments/",
         json={
             "total": 12345,
             "payment_type": PaymentType.card,
@@ -1433,7 +1463,7 @@ def test_change_status_admin_onsite(client: TestClient):
 
 def test_update_cdr_user_seller_onsite(client: TestClient):
     response = client.patch(
-        f"/cdr/users/{cdr_user.id}",
+        f"/cdr/users/{user.id}",
         json={"nickname": "surnom_onsite"},
         headers={"Authorization": f"Bearer {token_admin}"},
     )
@@ -1485,7 +1515,7 @@ def test_delete_product_variant_cdr_started(client: TestClient):
 
 def test_create_purchase_user(client: TestClient):
     response = client.post(
-        f"/cdr/users/{cdr_admin.id}/purchases/{variant.id}/",
+        f"/cdr/users/{user_admin.id}/purchases/{variant.id}/",
         json={
             "quantity": 1,
         },
@@ -1494,7 +1524,7 @@ def test_create_purchase_user(client: TestClient):
     assert response.status_code == 403
 
     response = client.get(
-        f"/cdr/users/{cdr_admin.id}/purchases/",
+        f"/cdr/users/{user_admin.id}/purchases/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
@@ -1503,7 +1533,7 @@ def test_create_purchase_user(client: TestClient):
 
 def test_create_purchase_seller(client: TestClient):
     response = client.post(
-        f"/cdr/users/{cdr_admin.id}/purchases/{variant.id}/",
+        f"/cdr/users/{user_admin.id}/purchases/{variant.id}/",
         json={
             "quantity": 1,
         },
@@ -1512,7 +1542,7 @@ def test_create_purchase_seller(client: TestClient):
     assert response.status_code == 201
 
     response = client.get(
-        f"/cdr/users/{cdr_admin.id}/purchases/",
+        f"/cdr/users/{user_admin.id}/purchases/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
@@ -1521,7 +1551,7 @@ def test_create_purchase_seller(client: TestClient):
 
 def test_create_purchase_wrong_id(client: TestClient):
     response = client.post(
-        f"/cdr/users/{cdr_admin.id}/purchases/{uuid.uuid4()}/",
+        f"/cdr/users/{user_admin.id}/purchases/{uuid.uuid4()}/",
         json={
             "quantity": 1,
         },
@@ -1532,7 +1562,7 @@ def test_create_purchase_wrong_id(client: TestClient):
 
 def test_create_purchase_other_user(client: TestClient):
     response = client.post(
-        f"/cdr/users/{cdr_admin.id}/purchases/{uuid.uuid4()}/",
+        f"/cdr/users/{user_admin.id}/purchases/{uuid.uuid4()}/",
         json={
             "quantity": 1,
         },
@@ -1543,7 +1573,7 @@ def test_create_purchase_other_user(client: TestClient):
 
 def test_patch_purchase_seller(client: TestClient):
     response = client.post(
-        f"/cdr/users/{cdr_admin.id}/purchases/{variant.id}/",
+        f"/cdr/users/{user_admin.id}/purchases/{variant.id}/",
         json={
             "quantity": 2,
         },
@@ -1552,7 +1582,7 @@ def test_patch_purchase_seller(client: TestClient):
     assert response.status_code == 201
 
     response = client.get(
-        f"/cdr/users/{cdr_admin.id}/purchases/",
+        f"/cdr/users/{user_admin.id}/purchases/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
@@ -1564,7 +1594,7 @@ def test_patch_purchase_seller(client: TestClient):
 
 def test_patch_purchase_wrong_purchase(client: TestClient):
     response = client.post(
-        f"/cdr/users/{cdr_admin.id}/purchases/{variant.id}/",
+        f"/cdr/users/{user_admin.id}/purchases/{variant.id}/",
         json={
             "erstrdyfgu": 2,
         },
@@ -1575,7 +1605,7 @@ def test_patch_purchase_wrong_purchase(client: TestClient):
 
 def test_patch_purchase_wrong_purchase_id(client: TestClient):
     response = client.post(
-        f"/cdr/users/{cdr_admin.id}/purchases/{empty_variant.id}/",
+        f"/cdr/users/{user_admin.id}/purchases/{empty_variant.id}/",
         json={
             "quantity": 2,
         },
@@ -1586,7 +1616,7 @@ def test_patch_purchase_wrong_purchase_id(client: TestClient):
 
 def test_patch_purchase_user(client: TestClient):
     response = client.post(
-        f"/cdr/users/{cdr_admin.id}/purchases/{variant.id}/",
+        f"/cdr/users/{user_admin.id}/purchases/{variant.id}/",
         json={
             "quantity": 2,
         },
@@ -1597,7 +1627,7 @@ def test_patch_purchase_user(client: TestClient):
 
 def test_create_signature_user(client: TestClient):
     response = client.post(
-        f"/cdr/users/{cdr_user.id}/signatures/{document.id}/",
+        f"/cdr/users/{user.id}/signatures/{document.id}/",
         json={
             "signature_type": DocumentSignatureType.material,
         },
@@ -1606,7 +1636,7 @@ def test_create_signature_user(client: TestClient):
     assert response.status_code == 403
 
     response = client.get(
-        f"/cdr/users/{cdr_admin.id}/signatures/",
+        f"/cdr/users/{user_admin.id}/signatures/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
@@ -1615,7 +1645,7 @@ def test_create_signature_user(client: TestClient):
 
 def test_create_signature_seller(client: TestClient):
     response = client.post(
-        f"/cdr/users/{cdr_admin.id}/signatures/{document.id}/",
+        f"/cdr/users/{user_admin.id}/signatures/{document.id}/",
         json={
             "signature_type": DocumentSignatureType.material,
         },
@@ -1624,7 +1654,7 @@ def test_create_signature_seller(client: TestClient):
     assert response.status_code == 201
 
     response = client.get(
-        f"/cdr/users/{cdr_admin.id}/signatures/",
+        f"/cdr/users/{user_admin.id}/signatures/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
@@ -1633,13 +1663,13 @@ def test_create_signature_seller(client: TestClient):
 
 def test_validate_purchase_seller(client: TestClient):
     response = client.patch(
-        f"/cdr/users/{cdr_admin.id}/purchases/{variant.id}/validated/?validated=True",
+        f"/cdr/users/{user_admin.id}/purchases/{variant.id}/validated/?validated=True",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
     response = client.get(
-        f"/cdr/users/{cdr_admin.id}/purchases/",
+        f"/cdr/users/{user_admin.id}/purchases/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
@@ -1651,13 +1681,13 @@ def test_validate_purchase_seller(client: TestClient):
 
 def test_validate_purchase_admin(client: TestClient):
     response = client.patch(
-        f"/cdr/users/{cdr_admin.id}/purchases/{variant.id}/validated/?validated=True",
+        f"/cdr/users/{user_admin.id}/purchases/{variant.id}/validated/?validated=True",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 204
 
     response = client.get(
-        f"/cdr/users/{cdr_admin.id}/purchases/",
+        f"/cdr/users/{user_admin.id}/purchases/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
@@ -1669,13 +1699,13 @@ def test_validate_purchase_admin(client: TestClient):
 
 def test_delete_purchase_validates(client: TestClient):
     response = client.delete(
-        f"/cdr/users/{cdr_admin.id}/purchases/{variant.id}/",
+        f"/cdr/users/{user_admin.id}/purchases/{variant.id}/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 403
 
     response = client.get(
-        f"/cdr/users/{cdr_admin.id}/purchases/",
+        f"/cdr/users/{user_admin.id}/purchases/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
@@ -1684,13 +1714,13 @@ def test_delete_purchase_validates(client: TestClient):
 
 def test_unvalidate_purchase(client: TestClient):
     response = client.patch(
-        f"/cdr/users/{cdr_admin.id}/purchases/{variant.id}/validated/?validated=False",
+        f"/cdr/users/{user_admin.id}/purchases/{variant.id}/validated/?validated=False",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 204
 
     response = client.get(
-        f"/cdr/users/{cdr_admin.id}/purchases/",
+        f"/cdr/users/{user_admin.id}/purchases/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
@@ -1702,13 +1732,13 @@ def test_unvalidate_purchase(client: TestClient):
 
 def test_delete_purchase_user(client: TestClient):
     response = client.delete(
-        f"/cdr/users/{cdr_admin.id}/purchases/{variant.id}/",
+        f"/cdr/users/{user_admin.id}/purchases/{variant.id}/",
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 403
 
     response = client.get(
-        f"/cdr/users/{cdr_admin.id}/purchases/",
+        f"/cdr/users/{user_admin.id}/purchases/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
@@ -1717,13 +1747,13 @@ def test_delete_purchase_user(client: TestClient):
 
 def test_delete_purchase_admin(client: TestClient):
     response = client.delete(
-        f"/cdr/users/{cdr_admin.id}/purchases/{variant.id}/",
+        f"/cdr/users/{user_admin.id}/purchases/{variant.id}/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 204
 
     response = client.get(
-        f"/cdr/users/{cdr_admin.id}/purchases/",
+        f"/cdr/users/{user_admin.id}/purchases/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
@@ -1732,7 +1762,7 @@ def test_delete_purchase_admin(client: TestClient):
 
 def test_delete_purchase_wrong_variant(client: TestClient):
     response = client.delete(
-        f"/cdr/users/{cdr_admin.id}/purchases/{uuid.uuid4()}/",
+        f"/cdr/users/{user_admin.id}/purchases/{uuid.uuid4()}/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 404
@@ -1740,7 +1770,7 @@ def test_delete_purchase_wrong_variant(client: TestClient):
 
 def test_get_signatures_by_user_id_user(client: TestClient):
     response = client.get(
-        f"/cdr/users/{cdr_user.id}/signatures/",
+        f"/cdr/users/{user.id}/signatures/",
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 200
@@ -1749,7 +1779,7 @@ def test_get_signatures_by_user_id_user(client: TestClient):
 
 def test_get_signatures_by_user_id_other_user(client: TestClient):
     response = client.get(
-        f"/cdr/users/{cdr_user.id}/signatures/",
+        f"/cdr/users/{user.id}/signatures/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
@@ -1757,7 +1787,7 @@ def test_get_signatures_by_user_id_other_user(client: TestClient):
 
 def test_get_signatures_by_user_id_admin(client: TestClient):
     response = client.get(
-        f"/cdr/users/{cdr_user.id}/signatures/",
+        f"/cdr/users/{user.id}/signatures/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
@@ -1766,7 +1796,7 @@ def test_get_signatures_by_user_id_admin(client: TestClient):
 
 def test_get_signatures_by_user_id_other_signature(client: TestClient):
     response = client.get(
-        f"/cdr/users/{cdr_bde.id}/signatures/",
+        f"/cdr/users/{user_seller.id}/signatures/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
@@ -1775,7 +1805,7 @@ def test_get_signatures_by_user_id_other_signature(client: TestClient):
 
 def test_get_signatures_by_user_id_by_seller_id_user(client: TestClient):
     response = client.get(
-        f"/cdr/sellers/{seller.id}/users/{cdr_user.id}/signatures/",
+        f"/cdr/sellers/{seller.id}/users/{user.id}/signatures/",
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 200
@@ -1784,7 +1814,7 @@ def test_get_signatures_by_user_id_by_seller_id_user(client: TestClient):
 
 def test_get_signatures_by_user_id_by_seller_id_seller(client: TestClient):
     response = client.get(
-        f"/cdr/sellers/{seller.id}/users/{cdr_user.id}/signatures/",
+        f"/cdr/sellers/{seller.id}/users/{user.id}/signatures/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
@@ -1793,7 +1823,7 @@ def test_get_signatures_by_user_id_by_seller_id_seller(client: TestClient):
 
 def test_get_signatures_by_user_id_by_seller_id_other_seller(client: TestClient):
     response = client.get(
-        f"/cdr/sellers/{online_seller.id}/users/{cdr_user.id}/signatures/",
+        f"/cdr/sellers/{online_seller.id}/users/{user.id}/signatures/",
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 200
@@ -1802,7 +1832,7 @@ def test_get_signatures_by_user_id_by_seller_id_other_seller(client: TestClient)
 
 def test_get_signatures_by_user_id_by_seller_id_other_user(client: TestClient):
     response = client.get(
-        f"/cdr/sellers/{seller.id}/users/{cdr_bde.id}/signatures/",
+        f"/cdr/sellers/{seller.id}/users/{user_seller.id}/signatures/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
@@ -1811,7 +1841,7 @@ def test_get_signatures_by_user_id_by_seller_id_other_user(client: TestClient):
 
 def test_create_signature_wrong_document(client: TestClient):
     response = client.post(
-        f"/cdr/users/{cdr_admin.id}/signatures/{uuid.uuid4()}/",
+        f"/cdr/users/{user_admin.id}/signatures/{uuid.uuid4()}/",
         json={
             "signature_type": DocumentSignatureType.material,
         },
@@ -1822,7 +1852,7 @@ def test_create_signature_wrong_document(client: TestClient):
 
 def test_create_signature_numeric_no_id(client: TestClient):
     response = client.post(
-        f"/cdr/users/{cdr_admin.id}/signatures/{document.id}/",
+        f"/cdr/users/{user_admin.id}/signatures/{document.id}/",
         json={
             "signature_type": DocumentSignatureType.numeric,
         },
@@ -1833,13 +1863,13 @@ def test_create_signature_numeric_no_id(client: TestClient):
 
 def test_delete_signature_not_admin(client: TestClient):
     response = client.delete(
-        f"/cdr/users/{cdr_admin.id}/signatures/{document.id}/",
+        f"/cdr/users/{user_admin.id}/signatures/{document.id}/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
     response = client.get(
-        f"/cdr/users/{cdr_admin.id}/signatures/",
+        f"/cdr/users/{user_admin.id}/signatures/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
@@ -1848,13 +1878,13 @@ def test_delete_signature_not_admin(client: TestClient):
 
 def test_delete_signature_admin(client: TestClient):
     response = client.delete(
-        f"/cdr/users/{cdr_admin.id}/signatures/{document.id}/",
+        f"/cdr/users/{user_admin.id}/signatures/{document.id}/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 204
 
     response = client.get(
-        f"/cdr/users/{cdr_admin.id}/signatures/",
+        f"/cdr/users/{user_admin.id}/signatures/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
@@ -1863,7 +1893,7 @@ def test_delete_signature_admin(client: TestClient):
 
 def test_delete_signature_wrong_signature(client: TestClient):
     response = client.delete(
-        f"/cdr/users/{cdr_admin.id}/signatures/{uuid.uuid4()}/",
+        f"/cdr/users/{user_admin.id}/signatures/{uuid.uuid4()}/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 404
@@ -1956,7 +1986,7 @@ def test_delete_curriculum_wrong_id(client: TestClient):
 
 def test_create_curriculum_membership_wrong_user(client: TestClient):
     response = client.post(
-        f"/cdr/users/{cdr_user.id!s}/curriculums/{curriculum.id!s}/",
+        f"/cdr/users/{user.id!s}/curriculums/{curriculum.id!s}/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
@@ -1964,7 +1994,7 @@ def test_create_curriculum_membership_wrong_user(client: TestClient):
 
 def test_create_curriculum_membership_user(client: TestClient):
     response = client.post(
-        f"/cdr/users/{cdr_user.id!s}/curriculums/{curriculum.id!s}/",
+        f"/cdr/users/{user.id!s}/curriculums/{curriculum.id!s}/",
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 201
@@ -1972,7 +2002,7 @@ def test_create_curriculum_membership_user(client: TestClient):
 
 def test_delete_curriculum_membership_wrong_user(client: TestClient):
     response = client.delete(
-        f"/cdr/users/{cdr_user.id!s}/curriculums/{curriculum.id!s}/",
+        f"/cdr/users/{user.id!s}/curriculums/{curriculum.id!s}/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
@@ -1980,7 +2010,7 @@ def test_delete_curriculum_membership_wrong_user(client: TestClient):
 
 def test_delete_curriculum_membership_user(client: TestClient):
     response = client.delete(
-        f"/cdr/users/{cdr_user.id!s}/curriculums/{curriculum.id!s}/",
+        f"/cdr/users/{user.id!s}/curriculums/{curriculum.id!s}/",
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 204
@@ -1988,7 +2018,7 @@ def test_delete_curriculum_membership_user(client: TestClient):
 
 def test_delete_curriculum_membership_wrong_curriculum(client: TestClient):
     response = client.delete(
-        f"/cdr/users/{cdr_user.id!s}/curriculums/{uuid.uuid4()}/",
+        f"/cdr/users/{user.id!s}/curriculums/{uuid.uuid4()}/",
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 404
@@ -1996,7 +2026,7 @@ def test_delete_curriculum_membership_wrong_curriculum(client: TestClient):
 
 def test_get_payments_by_user_id_user(client: TestClient):
     response = client.get(
-        f"/cdr/users/{cdr_user.id}/payments/",
+        f"/cdr/users/{user.id}/payments/",
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 200
@@ -2005,7 +2035,7 @@ def test_get_payments_by_user_id_user(client: TestClient):
 
 def test_get_payments_by_user_id_wrong_user(client: TestClient):
     response = client.get(
-        f"/cdr/users/{cdr_bde.id}/payments/",
+        f"/cdr/users/{user_seller.id}/payments/",
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 403
@@ -2013,7 +2043,7 @@ def test_get_payments_by_user_id_wrong_user(client: TestClient):
 
 def test_get_payments_by_user_id_other_user_payment(client: TestClient):
     response = client.get(
-        f"/cdr/users/{cdr_bde.id}/payments/",
+        f"/cdr/users/{user_seller.id}/payments/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
@@ -2022,7 +2052,7 @@ def test_get_payments_by_user_id_other_user_payment(client: TestClient):
 
 def test_create_payment_not_admin(client: TestClient):
     response = client.post(
-        f"/cdr/users/{cdr_admin.id}/payments/",
+        f"/cdr/users/{user_admin.id}/payments/",
         json={
             "total": 12345,
             "payment_type": PaymentType.card,
@@ -2032,7 +2062,7 @@ def test_create_payment_not_admin(client: TestClient):
     assert response.status_code == 403
 
     response = client.get(
-        f"/cdr/users/{cdr_user.id}/payments/",
+        f"/cdr/users/{user.id}/payments/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
@@ -2041,7 +2071,7 @@ def test_create_payment_not_admin(client: TestClient):
 
 def test_create_payment_admin(client: TestClient):
     response = client.post(
-        f"/cdr/users/{cdr_user.id}/payments/",
+        f"/cdr/users/{user.id}/payments/",
         json={
             "total": 12345,
             "payment_type": PaymentType.card,
@@ -2052,7 +2082,7 @@ def test_create_payment_admin(client: TestClient):
     payment_id = uuid.UUID(response.json()["id"])
 
     response = client.get(
-        f"/cdr/users/{cdr_user.id}/payments/",
+        f"/cdr/users/{user.id}/payments/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
@@ -2061,13 +2091,13 @@ def test_create_payment_admin(client: TestClient):
 
 def test_delete_payment_not_admin(client: TestClient):
     response = client.delete(
-        f"/cdr/users/{cdr_user.id}/payments/{payment.id}/",
+        f"/cdr/users/{user.id}/payments/{payment.id}/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
     response = client.get(
-        f"/cdr/users/{cdr_user.id}/payments/",
+        f"/cdr/users/{user.id}/payments/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
@@ -2076,7 +2106,7 @@ def test_delete_payment_not_admin(client: TestClient):
 
 def test_delete_payment_wrong_id(client: TestClient):
     response = client.delete(
-        f"/cdr/users/{cdr_user.id}/payments/{uuid.uuid4()}/",
+        f"/cdr/users/{user.id}/payments/{uuid.uuid4()}/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 404
@@ -2084,7 +2114,7 @@ def test_delete_payment_wrong_id(client: TestClient):
 
 def test_delete_payment_wrong_user(client: TestClient):
     response = client.delete(
-        f"/cdr/users/{cdr_bde.id}/payments/{payment.id}/",
+        f"/cdr/users/{user_seller.id}/payments/{payment.id}/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 403
@@ -2092,13 +2122,13 @@ def test_delete_payment_wrong_user(client: TestClient):
 
 def test_delete_payment_admin(client: TestClient):
     response = client.delete(
-        f"/cdr/users/{cdr_user.id}/payments/{payment.id}/",
+        f"/cdr/users/{user.id}/payments/{payment.id}/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 204
 
     response = client.get(
-        f"/cdr/users/{cdr_user.id}/payments/",
+        f"/cdr/users/{user.id}/payments/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
@@ -2252,7 +2282,7 @@ async def test_pay(mocker: MockerFixture, client: TestClient):
     )
     await add_object_to_db(variant_new)
     purchase_bde = models_cdr.Purchase(
-        user_id=cdr_bde.id,
+        user_id=user_seller.id,
         product_variant_id=variant_new.id,
         quantity=5,
         validated=False,
@@ -2283,7 +2313,7 @@ async def test_pay(mocker: MockerFixture, client: TestClient):
 
 def test_get_user_tickets(client: TestClient):
     response = client.get(
-        f"/cdr/users/{cdr_user.id}/tickets/",
+        f"/cdr/users/{user.id}/tickets/",
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 200
@@ -2293,7 +2323,7 @@ def test_get_user_tickets(client: TestClient):
 
 def test_get_user_tickets_other_user(client: TestClient):
     response = client.get(
-        f"/cdr/users/{cdr_user.id}/tickets/",
+        f"/cdr/users/{user.id}/tickets/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
@@ -2408,7 +2438,7 @@ async def test_scan_ticket_no_scan_left(client: TestClient):
         generator_id=ticket_generator.id,
         name="Ticket",
         product_variant_id=ticket_variant.id,
-        user_id=cdr_user.id,
+        user_id=user.id,
         scan_left=0,
         tags="",
         expiration=datetime.now(UTC) + timedelta(days=1),
@@ -2430,7 +2460,7 @@ async def test_scan_ticket_expired(client: TestClient):
         name="Ticket",
         generator_id=ticket_generator.id,
         product_variant_id=ticket_variant.id,
-        user_id=cdr_user.id,
+        user_id=user.id,
         scan_left=1,
         tags="",
         expiration=datetime.now(UTC) - timedelta(days=1),
@@ -2458,7 +2488,7 @@ def test_get_ticket_list(client: TestClient):
         f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/lists/Bus 2/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
-    assert str(cdr_user.id) in [user["id"] for user in response.json()]
+    assert str(user.id) in [user["id"] for user in response.json()]
 
 
 async def test_validate_purchase(client: TestClient):
@@ -2522,7 +2552,7 @@ async def test_validate_purchase(client: TestClient):
     )
     await add_object_to_db(purchase_product_constraint)
     purchase = models_cdr.Purchase(
-        user_id=cdr_user.id,
+        user_id=user.id,
         product_variant_id=variant_purchased.id,
         quantity=2,
         validated=False,
@@ -2530,7 +2560,7 @@ async def test_validate_purchase(client: TestClient):
     )
     await add_object_to_db(purchase)
     purchase_to_validate = models_cdr.Purchase(
-        user_id=cdr_user.id,
+        user_id=user.id,
         product_variant_id=variant_to_validate.id,
         quantity=2,
         validated=False,
@@ -2539,7 +2569,7 @@ async def test_validate_purchase(client: TestClient):
     await add_object_to_db(purchase_to_validate)
     membership = models_memberships.CoreAssociationUserMembership(
         id=uuid.uuid4(),
-        user_id=cdr_user.id,
+        user_id=user.id,
         association_membership_id=association_membership.id,
         start_date=date(2022, 9, 1),
         end_date=datetime.now(UTC).date() + timedelta(days=100),
@@ -2547,25 +2577,25 @@ async def test_validate_purchase(client: TestClient):
     await add_object_to_db(membership)
 
     response = client.patch(
-        f"/cdr/users/{cdr_user.id}/purchases/{variant_to_validate.id}/validated/?validated=True",
+        f"/cdr/users/{user.id}/purchases/{variant_to_validate.id}/validated/?validated=True",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 204
 
     response = client.delete(
-        f"/cdr/users/{cdr_user.id}/purchases/{variant_purchased.id}/",
+        f"/cdr/users/{user.id}/purchases/{variant_purchased.id}/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 403
 
     response = client.patch(
-        f"/cdr/users/{cdr_user.id}/purchases/{variant_to_validate.id}/validated/?validated=False",
+        f"/cdr/users/{user.id}/purchases/{variant_to_validate.id}/validated/?validated=False",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 204
 
     response = client.delete(
-        f"/cdr/users/{cdr_user.id}/purchases/{variant_purchased.id}/",
+        f"/cdr/users/{user.id}/purchases/{variant_purchased.id}/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 204
@@ -2620,7 +2650,7 @@ async def test_create_customdata(client: TestClient):
     )
     await add_object_to_db(customdata_field)
     response = client.post(
-        f"/cdr/sellers/{seller.id}/products/{product.id}/users/{cdr_user.id}/data/{customdata_field.id}/",
+        f"/cdr/sellers/{seller.id}/products/{product.id}/users/{user.id}/data/{customdata_field.id}/",
         json={"value": "ABCD"},
         headers={"Authorization": f"Bearer {token_bde}"},
     )
@@ -2636,7 +2666,7 @@ async def test_create_customdata_user(client: TestClient):
     )
     await add_object_to_db(customdata_field)
     response = client.post(
-        f"/cdr/sellers/{seller.id}/products/{product.id}/users/{cdr_user.id}/data/{customdata_field.id}/",
+        f"/cdr/sellers/{seller.id}/products/{product.id}/users/{user.id}/data/{customdata_field.id}/",
         json={"value": "ABCD"},
         headers={"Authorization": f"Bearer {token_user}"},
     )
@@ -2653,20 +2683,20 @@ async def test_update_customdata(client: TestClient):
     await add_object_to_db(field)
     customdata = models_cdr.CustomData(
         field_id=field.id,
-        user_id=cdr_user.id,
+        user_id=user.id,
         value="Edit",
     )
     await add_object_to_db(customdata)
 
     response = client.patch(
-        f"/cdr/sellers/{seller.id}/products/{product.id}/users/{cdr_user.id}/data/{field.id}/",
+        f"/cdr/sellers/{seller.id}/products/{product.id}/users/{user.id}/data/{field.id}/",
         json={"value": "ABCD"},
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 204
 
     response = client.get(
-        f"/cdr/sellers/{seller.id}/products/{product.id}/users/{cdr_user.id}/data/{field.id}/",
+        f"/cdr/sellers/{seller.id}/products/{product.id}/users/{user.id}/data/{field.id}/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
@@ -2683,13 +2713,13 @@ async def test_update_customdata_user(client: TestClient):
     await add_object_to_db(field)
     customdata = models_cdr.CustomData(
         field_id=field.id,
-        user_id=cdr_user.id,
+        user_id=user.id,
         value="Edit",
     )
     await add_object_to_db(customdata)
 
     response = client.patch(
-        f"/cdr/sellers/{seller.id}/products/{product.id}/users/{cdr_user.id}/data/{field.id}/",
+        f"/cdr/sellers/{seller.id}/products/{product.id}/users/{user.id}/data/{field.id}/",
         json={"value": "ABCD"},
         headers={"Authorization": f"Bearer {token_user}"},
     )
@@ -2706,19 +2736,19 @@ async def test_delete_customdata(client: TestClient):
     await add_object_to_db(field)
     customdata = models_cdr.CustomData(
         field_id=field.id,
-        user_id=cdr_user.id,
+        user_id=user.id,
         value="Edit",
     )
     await add_object_to_db(customdata)
 
     response = client.delete(
-        f"/cdr/sellers/{seller.id}/products/{product.id}/users/{cdr_user.id}/data/{field.id}/",
+        f"/cdr/sellers/{seller.id}/products/{product.id}/users/{user.id}/data/{field.id}/",
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 403
 
     response = client.delete(
-        f"/cdr/sellers/{seller.id}/products/{product.id}/users/{cdr_user.id}/data/{field.id}/",
+        f"/cdr/sellers/{seller.id}/products/{product.id}/users/{user.id}/data/{field.id}/",
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 204
@@ -2734,19 +2764,19 @@ async def test_customdata_deletion_on_purchase_deletion(client: TestClient):
     await add_object_to_db(field)
     customdata = models_cdr.CustomData(
         field_id=field.id,
-        user_id=cdr_user.id,
+        user_id=user.id,
         value="Edit",
     )
     await add_object_to_db(customdata)
 
     response = client.delete(
-        f"/cdr/users/{cdr_user.id}/purchases/{variant.id}/",
+        f"/cdr/users/{user.id}/purchases/{variant.id}/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 204
 
     response = client.get(
-        f"/cdr/sellers/{seller.id}/products/{product.id}/users/{cdr_user.id}/data/{field.id}/",
+        f"/cdr/sellers/{seller.id}/products/{product.id}/users/{user.id}/data/{field.id}/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 404

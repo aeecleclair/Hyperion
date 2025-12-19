@@ -4,6 +4,7 @@ from uuid import uuid4
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
+from app.core.groups import models_groups
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import models_memberships
 from app.core.users import models_users
@@ -12,6 +13,9 @@ from tests.commons import (
     create_api_access_token,
     create_user_with_groups,
 )
+
+group1: models_groups.CoreGroup
+group2: models_groups.CoreGroup
 
 admin_user: models_users.CoreUser
 student_user_to_delete: models_users.CoreUser
@@ -31,17 +35,31 @@ FABRISTPP_EMAIL_2 = "fabristpp.eclair3@ecl21.ec-lyon.fr"
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
+    global group1, group2
+    group1 = models_groups.CoreGroup(
+        id=str(uuid4()),
+        name="BDE",
+        description=None,
+    )
+    await add_object_to_db(group1)
+    group2 = models_groups.CoreGroup(
+        id=str(uuid4()),
+        name="CAA",
+        description=None,
+    )
+    await add_object_to_db(group2)
+
     global admin_user, student_user_to_delete, student_user_to_keep
 
     admin_user = await create_user_with_groups(
-        [GroupType.admin, GroupType.admin_cdr],
+        [GroupType.admin],
     )
     student_user_to_keep = await create_user_with_groups(
-        [GroupType.BDE],
+        [group1.id],
         email=FABRISTPP_EMAIL_1,
     )
     student_user_to_delete = await create_user_with_groups(
-        [GroupType.BDE, GroupType.CAA],
+        [group1.id, group2.id],
         email=FABRISTPP_EMAIL_2,
     )
 
@@ -49,7 +67,7 @@ async def init_objects() -> None:
     core_association_membership = models_memberships.CoreAssociationMembership(
         id=uuid4(),
         name="AEECL",
-        manager_group_id=GroupType.BDE,
+        manager_group_id=group1.id,
     )
     await add_object_to_db(core_association_membership)
 
@@ -114,7 +132,7 @@ def test_fusion_users(client: TestClient) -> None:
     assert response.status_code == 200
 
     response = client.get(
-        f"/groups/{GroupType.CAA.value}",
+        f"/groups/{group1.id}",
         headers={"Authorization": f"Bearer {token_admin_user}"},
     )
     assert response.status_code == 200

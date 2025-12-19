@@ -5,9 +5,13 @@ from fastapi import Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import AccountType, GroupType
+from app.core.groups.groups_type import AccountType
+from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users
-from app.dependencies import get_db, is_user_an_ecl_member, is_user_in
+from app.dependencies import (
+    get_db,
+    is_user_allowed_to,
+)
 from app.modules.calendar import (
     cruds_calendar,
     models_calendar,
@@ -16,13 +20,21 @@ from app.modules.calendar import (
 from app.modules.calendar.factory_calendar import CalendarFactory
 from app.modules.calendar.types_calendar import Decision
 from app.types.module import Module
-from app.utils.tools import is_user_member_of_any_group
+from app.utils.tools import has_user_permission
+
+
+class CalendarPermissions(ModulePermissions):
+    access_calendar = "access_calendar"
+    manage_events = "manage_events"
+    create_ical = "create_ical"
+
 
 module = Module(
     root="event",
     tag="Calendar",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
     factory=CalendarFactory(),
+    permissions=CalendarPermissions,
 )
 
 ical_file_path = "data/ics/ae_calendar.ics"
@@ -35,7 +47,9 @@ ical_file_path = "data/ics/ae_calendar.ics"
 )
 async def get_events(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.BDE)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.manage_events]),
+    ),
 ):
     """Get all events from the database."""
     return await cruds_calendar.get_all_events(db=db)
@@ -48,7 +62,9 @@ async def get_events(
 )
 async def get_confirmed_events(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.access_calendar]),
+    ),
 ):
     """
     Get all confirmed events.
@@ -66,16 +82,19 @@ async def get_confirmed_events(
 async def get_applicant_bookings(
     applicant_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.access_calendar]),
+    ),
 ):
     """
     Get one user bookings.
 
     **Usable by the user or admins**
     """
-    if user.id == applicant_id or is_user_member_of_any_group(
+    if user.id == applicant_id or await has_user_permission(
         user,
-        [GroupType.BDE],
+        CalendarPermissions.manage_events,
+        db,
     ):
         return await cruds_calendar.get_applicant_events(
             db=db,
@@ -92,7 +111,9 @@ async def get_applicant_bookings(
 async def get_event_by_id(
     event_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.access_calendar]),
+    ),
 ):
     """Get an event's information by its id."""
 
@@ -110,7 +131,9 @@ async def get_event_by_id(
 async def get_event_applicant(
     event_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.BDE)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.manage_events]),
+    ),
 ):
     event = await cruds_calendar.get_event(db=db, event_id=event_id)
     if event is not None:
@@ -126,7 +149,9 @@ async def get_event_applicant(
 async def add_event(
     event: schemas_calendar.EventBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.access_calendar]),
+    ),
 ):
     """Add an event to the calendar."""
 
@@ -150,7 +175,9 @@ async def edit_bookings_id(
     event_id: str,
     event_edit: schemas_calendar.EventEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.access_calendar]),
+    ),
 ):
     """
     Edit an event.
@@ -161,7 +188,11 @@ async def edit_bookings_id(
 
     if event is not None and not (
         (user.id == event.applicant_id and event.decision == Decision.pending)
-        or is_user_member_of_any_group(user, [GroupType.BDE])
+        or await has_user_permission(
+            user,
+            CalendarPermissions.manage_events,
+            db,
+        )
     ):
         raise HTTPException(
             status_code=403,
@@ -179,7 +210,9 @@ async def confirm_booking(
     event_id: str,
     decision: Decision,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.BDE)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.manage_events]),
+    ),
 ):
     """
     Give a decision to an event.
@@ -196,7 +229,9 @@ async def confirm_booking(
 async def delete_bookings_id(
     event_id,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.access_calendar]),
+    ),
 ):
     """
     Remove an event.
@@ -207,7 +242,11 @@ async def delete_bookings_id(
 
     if event is not None and (
         (user.id == event.applicant_id and event.decision == Decision.pending)
-        or is_user_member_of_any_group(user, [GroupType.BDE])
+        or await has_user_permission(
+            user,
+            CalendarPermissions.manage_events,
+            db,
+        )
     ):
         await cruds_calendar.delete_event(event_id=event_id, db=db)
 
@@ -224,7 +263,9 @@ async def delete_bookings_id(
 )
 async def recreate_ical_file(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.create_ical]),
+    ),
 ):
     """
     Create manually the icalendar file

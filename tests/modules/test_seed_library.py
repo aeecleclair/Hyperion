@@ -4,14 +4,18 @@ from datetime import UTC, datetime
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.groups.groups_type import GroupType
+from app.core.groups import models_groups
 from app.core.users import models_users
 from app.modules.seed_library import models_seed_library, types_seed_library
+from app.modules.seed_library.endpoints_seed_library import SeedLibraryPermissions
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
 )
+
+admin_group: models_groups.CoreGroup
 
 admin_user: models_users.CoreUser
 simple_user: models_users.CoreUser
@@ -31,6 +35,7 @@ token_admin: str
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
     global \
+        admin_group, \
         admin_user, \
         simple_user, \
         species1, \
@@ -43,7 +48,12 @@ async def init_objects() -> None:
         token_simple, \
         token_admin
 
-    admin_user = await create_user_with_groups([GroupType.seed_library])
+    admin_group = await create_groups_with_permissions(
+        [SeedLibraryPermissions.manage_seed_library],
+        "Seed Library Admin Group",
+    )
+
+    admin_user = await create_user_with_groups([admin_group.id])
 
     simple_user = await create_user_with_groups(
         [],
@@ -836,7 +846,7 @@ def test_borrow(client: TestClient):
         f"/seed_library/plants/{plant_from_1_update_test.id}/borrow",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
-    assert response.status_code == 204
+    assert response.status_code == 204, response.text
     ############## Check Update ###############
     response_updated_get = client.get(
         f"/seed_library/plants/{plant_from_1_update_test.id}",
