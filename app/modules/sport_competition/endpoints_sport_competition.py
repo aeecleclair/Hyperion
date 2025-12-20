@@ -2321,9 +2321,8 @@ async def withdraw_from_sport(
         participant.team_id,
         db,
     )
-    if team is not None:
-        if len(team.participants) == 0:
-            await cruds_sport_competition.delete_team_by_id(team.id, db)
+    if team is not None and len(team.participants) == 0:
+        await cruds_sport_competition.delete_team_by_id(team.id, db)
 
 
 @module.router.delete(
@@ -2390,9 +2389,8 @@ async def delete_participant(
         participant.team_id,
         db,
     )
-    if team is not None:
-        if len(team.participants) == 0:
-            await cruds_sport_competition.delete_team_by_id(team.id, db)
+    if team is not None and len(team.participants) == 0:
+        await cruds_sport_competition.delete_team_by_id(team.id, db)
 
 
 @module.router.delete(
