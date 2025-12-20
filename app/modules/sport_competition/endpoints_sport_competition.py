@@ -2322,7 +2322,6 @@ async def withdraw_from_sport(
         db,
     )
     if team is not None:
-        hyperion_error_logger.error(f"Found {team}")
         if len(team.participants) == 0:
             await cruds_sport_competition.delete_team_by_id(team.id, db)
 
