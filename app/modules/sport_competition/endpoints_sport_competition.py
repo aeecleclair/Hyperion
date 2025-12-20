@@ -822,9 +822,6 @@ async def delete_competition_user(
             None,
         )
         if next_user is None:
-            hyperion_error_logger.error(
-                f"Team {captain_team.id} in edition {edition.id} has no participants other than the captain {user_id}",
-            )
             await cruds_sport_competition.delete_team_by_id(
                 captain_team.id,
                 db,
@@ -2320,6 +2317,14 @@ async def withdraw_from_sport(
             directory="sport_competition/certificates",
             filename=str(participant.certificate_file_id),
         )
+    team = await cruds_sport_competition.load_team_by_id(
+        participant.team_id,
+        db,
+    )
+    if team is not None:
+        hyperion_error_logger.error(f"Found {team}")
+        if len(team.participants) == 0:
+            await cruds_sport_competition.delete_team_by_id(team.id, db)
 
 
 @module.router.delete(
@@ -2382,6 +2387,13 @@ async def delete_participant(
             directory="sport_competition/certificates",
             filename=str(participant.certificate_file_id),
         )
+    team = await cruds_sport_competition.load_team_by_id(
+        participant.team_id,
+        db,
+    )
+    if team is not None:
+        if len(team.participants) == 0:
+            await cruds_sport_competition.delete_team_by_id(team.id, db)
 
 
 @module.router.delete(
