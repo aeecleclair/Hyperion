@@ -10,7 +10,8 @@ calypsso==2.2.1
 Faker==37.1.0
 fastapi[standard]==0.122.0
 firebase-admin==7.1.0               # Firebase is used for push notification
-google-auth-oauthlib==1.2.3
+google-api-python-client==2.187.0
+google-auth-oauthlib==1.2.1
 helloasso-python==1.0.5
 httpx==0.28.1
 icalendar==5.0.13
