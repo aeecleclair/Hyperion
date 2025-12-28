@@ -25,7 +25,7 @@ from app.core.auth import schemas_auth
 from app.core.groups.groups_type import AccountType, GroupType, get_ecl_account_types
 from app.core.payment.payment_tool import PaymentTool
 from app.core.payment.types_payment import HelloAssoConfigName
-from app.core.permissions import cruds_permissions, schemas_permissions
+from app.core.permissions import cruds_permissions
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users, models_users
 from app.core.utils import security
