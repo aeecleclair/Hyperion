@@ -174,7 +174,12 @@ ignore_missing_imports = true
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "module"
 asyncio_default_test_loop_scope = "module"
-filterwarnings = ["error"]
+filterwarnings = [
+    "error",
+    "ignore:'setName' deprecated:DeprecationWarning"
+]
+    
+
 
 [tool.coverage.run]
 source_pkgs = ["app"]
