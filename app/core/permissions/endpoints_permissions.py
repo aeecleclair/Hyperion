@@ -53,7 +53,7 @@ async def read_permissions_list(
 
 @router.get(
     "/permissions/",
-    response_model=schemas_permissions.CorePermissions,
+    response_model=list[schemas_permissions.CorePermissions],
     status_code=200,
 )
 async def read_permissions(
@@ -63,8 +63,9 @@ async def read_permissions(
     """
     Return all permissions from database
     """
+    from app.module import permissions_list
 
-    return await cruds_permissions.get_permissions(db)
+    return await cruds_permissions.get_permissions(permissions_list, db)
 
 
 @router.get(

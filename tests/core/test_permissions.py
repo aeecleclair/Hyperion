@@ -70,7 +70,7 @@ def test_read_permission_by_name(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 200
-    assert len(response.json()["group_permissions"]) == 2
+    assert len(response.json()["groups"]) == 2
 
 
 def test_create_permission(client: TestClient) -> None:
@@ -89,7 +89,7 @@ def test_create_permission(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 200
-    assert len(response.json()["group_permissions"]) == 3
+    assert len(response.json()["groups"]) == 3
 
 
 async def test_delete_permission(client: TestClient) -> None:

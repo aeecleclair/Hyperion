@@ -10,8 +10,9 @@ from app.core.permissions.type_permissions import ModulePermissions
 
 
 async def get_permissions(
+    permission_list: list[str],
     db: AsyncSession,
-) -> schemas_permissions.CorePermissions:
+) -> list[schemas_permissions.CorePermissions]:
     """Return all permissions from database"""
 
     result_group = (
@@ -25,22 +26,22 @@ async def get_permissions(
         .all()
     )
 
-    return schemas_permissions.CorePermissions(
-        group_permissions=[
-            schemas_permissions.CoreGroupPermission(
-                permission_name=permission.permission_name,
-                group_id=permission.group_id,
-            )
-            for permission in result_group
-        ],
-        account_type_permissions=[
-            schemas_permissions.CoreAccountTypePermission(
-                permission_name=permission.permission_name,
-                account_type=permission.account_type,
-            )
-            for permission in result_account_type
-        ],
-    )
+    return [
+        schemas_permissions.CorePermissions(
+            permission_name=permission_name,
+            groups=[
+                permission.group_id
+                for permission in result_group
+                if permission.permission_name == permission_name
+            ],
+            account_types=[
+                permission.account_type
+                for permission in result_account_type
+                if permission.permission_name == permission_name
+            ],
+        )
+        for permission_name in permission_list
+    ]
 
 
 async def get_permissions_by_permission_name(
@@ -73,20 +74,9 @@ async def get_permissions_by_permission_name(
         .all()
     )
     return schemas_permissions.CorePermissions(
-        group_permissions=[
-            schemas_permissions.CoreGroupPermission(
-                permission_name=permission.permission_name,
-                group_id=permission.group_id,
-            )
-            for permission in result_group
-        ],
-        account_type_permissions=[
-            schemas_permissions.CoreAccountTypePermission(
-                permission_name=permission.permission_name,
-                account_type=permission.account_type,
-            )
-            for permission in result_account_type
-        ],
+        permission_name=permission_name,
+        groups=[permission.group_id for permission in result_group],
+        account_types=[permission.account_type for permission in result_account_type],
     )
 
 

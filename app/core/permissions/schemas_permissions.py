@@ -14,5 +14,6 @@ class CoreAccountTypePermission(BaseModel):
 
 
 class CorePermissions(BaseModel):
-    group_permissions: list[CoreGroupPermission] = []
-    account_type_permissions: list[CoreAccountTypePermission] = []
+    permission_name: str
+    groups: list[str]
+    account_types: list[AccountType]
