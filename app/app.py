@@ -716,7 +716,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         )
 
         return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content=jsonable_encoder({"detail": exc.errors(), "body": exc.body}),
         )
 
