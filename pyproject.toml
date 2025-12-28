@@ -176,7 +176,7 @@ asyncio_default_fixture_loop_scope = "module"
 asyncio_default_test_loop_scope = "module"
 filterwarnings = [
     "error",
-    "ignore::DeprecationWarning:pyparsing.*",
+    "ignore::DeprecationWarning:pyparsing",
 ]
     
 
