@@ -146,12 +146,13 @@ async def has_user_permission(
         permission_name=permission_name,
         db=db,
     )
-    return is_user_member_of_any_group(
-        user,
-        [perm.group_id for perm in permissions.group_permissions],
-    ) or user.account_type in [
-        perm.account_type for perm in permissions.account_type_permissions
-    ]
+    return (
+        is_user_member_of_any_group(
+            user,
+            permissions.groups,
+        )
+        or user.account_type in permissions.account_types
+    )
 
 
 async def save_file_as_data(
