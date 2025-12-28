@@ -343,7 +343,7 @@ async def update_list(
 
 @module.router.get(
     "/campaign/voters",
-    response_model=schemas_permissions.CorePermissions,
+    response_model=schemas_permissions.CorePermission,
     status_code=200,
 )
 async def get_voters(

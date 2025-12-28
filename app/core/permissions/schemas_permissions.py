@@ -13,7 +13,7 @@ class CoreAccountTypePermission(BaseModel):
     account_type: AccountType
 
 
-class CorePermissions(BaseModel):
+class CorePermission(BaseModel):
     permission_name: str
     groups: list[str]
     account_types: list[AccountType]

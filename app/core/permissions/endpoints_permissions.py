@@ -53,7 +53,7 @@ async def read_permissions_list(
 
 @router.get(
     "/permissions/",
-    response_model=list[schemas_permissions.CorePermissions],
+    response_model=list[schemas_permissions.CorePermission],
     status_code=200,
 )
 async def read_permissions(
@@ -70,7 +70,7 @@ async def read_permissions(
 
 @router.get(
     "/permissions/{permission_name}",
-    response_model=schemas_permissions.CorePermissions,
+    response_model=schemas_permissions.CorePermission,
     status_code=200,
 )
 async def read_permission(

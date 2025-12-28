@@ -12,7 +12,7 @@ from app.core.permissions.type_permissions import ModulePermissions
 async def get_permissions(
     permission_list: list[str],
     db: AsyncSession,
-) -> list[schemas_permissions.CorePermissions]:
+) -> list[schemas_permissions.CorePermission]:
     """Return all permissions from database"""
 
     result_group = (
@@ -27,7 +27,7 @@ async def get_permissions(
     )
 
     return [
-        schemas_permissions.CorePermissions(
+        schemas_permissions.CorePermission(
             permission_name=permission_name,
             groups=[
                 permission.group_id
@@ -47,7 +47,7 @@ async def get_permissions(
 async def get_permissions_by_permission_name(
     db: AsyncSession,
     permission_name: ModulePermissions,
-) -> schemas_permissions.CorePermissions:
+) -> schemas_permissions.CorePermission:
     """Return permissions with name from database"""
     result_group = (
         (
@@ -73,7 +73,7 @@ async def get_permissions_by_permission_name(
         .scalars()
         .all()
     )
-    return schemas_permissions.CorePermissions(
+    return schemas_permissions.CorePermission(
         permission_name=permission_name,
         groups=[permission.group_id for permission in result_group],
         account_types=[permission.account_type for permission in result_account_type],
