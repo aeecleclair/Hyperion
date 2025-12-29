@@ -2456,6 +2456,39 @@ async def test_user_withdraw_participation(
     assert user_participation is None, participants_json
 
 
+async def test_user_withdraw_participation_delete_team(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        f"/competition/sports/{sport_free_quota.id}/participate",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json=ParticipantInfo(
+            license="12345670089",
+            substitute=False,
+        ).model_dump(exclude_none=True, mode="json"),
+    )
+    assert response.status_code == 201, response.json()
+    team_id = response.json()["team_id"]
+
+    response = client.delete(
+        f"/competition/sports/{sport_free_quota.id}/withdraw",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 204, response.json()
+
+    teams = client.get(
+        f"/competition/teams/sports/{sport_free_quota.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert teams.status_code == 200, teams.json()
+    teams_json = teams.json()
+    deleted_team_check = next(
+        (t for t in teams_json if t["id"] == str(team_id)),
+        None,
+    )
+    assert deleted_team_check is None, teams_json
+
+
 # endregion
 # region: Locations
 
