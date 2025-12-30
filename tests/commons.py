@@ -239,7 +239,12 @@ def create_api_access_token(
     Create a JWT access token for the `user` with the scope `API`
     """
 
-    access_token_data = schemas_auth.TokenData(sub=user.id, scopes="API")
+    access_token_data = schemas_auth.TokenData(
+        sub=user.id,
+        scopes="API",
+        account_type=user.account_type,
+        group_ids=[group.id for group in user.groups],
+    )
     return security.create_access_token(
         data=access_token_data,
         settings=override_get_settings(),
