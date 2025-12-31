@@ -120,6 +120,7 @@ async def webhook(
             id=uuid.uuid4(),
             checkout_id=checkout.id,
             paid_amount=content.data.amount,
+            tip_amount=content.data.amountTip,
             hello_asso_payment_id=content.data.id,
         )
         await cruds_payment.create_checkout_payment(
