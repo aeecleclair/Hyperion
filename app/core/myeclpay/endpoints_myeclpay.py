@@ -14,6 +14,7 @@ from fastapi import (
     Header,
     HTTPException,
     Query,
+    Response,
 )
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,6 +49,7 @@ from app.core.myeclpay.types_myeclpay import (
     WalletDeviceStatus,
     WalletType,
 )
+from app.core.myeclpay.utils.data_exporter import generate_store_history_csv
 from app.core.myeclpay.utils_myeclpay import (
     LATEST_TOS,
     QRCODE_EXPIRATION,
@@ -654,7 +656,6 @@ async def get_store_history(
                 ),
             )
 
-    # TODO: do we accept transfers to empty a store wallet?
     transfers = await cruds_myeclpay.get_transfers_by_wallet_id(
         wallet_id=store.wallet_id,
         db=db,
@@ -693,6 +694,113 @@ async def get_store_history(
         )
 
     return history
+
+
+@router.get(
+    "/myeclpay/stores/{store_id}/history/data-export",
+    status_code=200,
+    response_model=None,
+)
+async def export_store_history(
+    store_id: UUID,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user()),
+):
+    """
+    Export store payment history as a CSV file.
+    """
+    store = await cruds_myeclpay.get_store(
+        store_id=store_id,
+        db=db,
+    )
+    if store is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Store does not exist",
+        )
+
+    seller = await cruds_myeclpay.get_seller(
+        user_id=user.id,
+        store_id=store_id,
+        db=db,
+    )
+    if seller is None or not seller.can_see_history:
+        raise HTTPException(
+            status_code=403,
+            detail="User is not authorized to see the store history",
+        )
+
+    transactions_with_sellers = (
+        await cruds_myeclpay.get_transactions_and_sellers_by_wallet_id(
+            wallet_id=store.wallet_id,
+            db=db,
+            start_datetime=start_date,
+            end_datetime=end_date,
+        )
+    )
+
+    transfers_with_sellers = (
+        await cruds_myeclpay.get_transfers_and_sellers_by_wallet_id(
+            wallet_id=store.wallet_id,
+            db=db,
+            start_datetime=start_date,
+            end_datetime=end_date,
+        )
+    )
+    if len(transfers_with_sellers) > 0:
+        hyperion_error_logger.error(
+            f"Store {store.id} should never have transfers",
+        )
+
+    # We add refunds
+    refunds_with_sellers = await cruds_myeclpay.get_refunds_and_sellers_by_wallet_id(
+        wallet_id=store.wallet_id,
+        db=db,
+        start_datetime=start_date,
+        end_datetime=end_date,
+    )
+
+    # Create refunds map
+    refunds_map = {
+        refund.transaction_id: (refund, seller_name)
+        for refund, seller_name in refunds_with_sellers
+    }
+
+    # Generate CSV content
+    csv_content = generate_store_history_csv(
+        transactions_with_sellers=list(transactions_with_sellers),
+        refunds_map=refunds_map,
+        store_wallet_id=store.wallet_id,
+    )
+
+    # Generate filename
+    date_range = ""
+    if start_date and end_date:
+        date_range = (
+            f"_{start_date.strftime('%Y-%m-%d')}_to_{end_date.strftime('%Y-%m-%d')}"
+        )
+    elif start_date:
+        date_range = f"_from_{start_date.strftime('%Y-%m-%d')}"
+    elif end_date:
+        date_range = f"_until_{end_date.strftime('%Y-%m-%d')}"
+
+    # Sanitize store name for filename
+    safe_store_name = "".join(
+        c for c in store.name if c.isalnum() or c in (" ", "-", "_")
+    ).rstrip()
+
+    filename = f"store_history_{safe_store_name}{date_range}.csv"
+
+    headers = {
+        "Content-Disposition": f'attachment; filename="{filename}"',
+    }
+    return Response(
+        csv_content,
+        headers=headers,
+        media_type="text/csv; charset=utf-8",
+    )
 
 
 @router.get(
