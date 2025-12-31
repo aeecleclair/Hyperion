@@ -656,7 +656,6 @@ async def get_store_history(
                 ),
             )
 
-    # TODO: do we accept transfers to empty a store wallet?
     transfers = await cruds_myeclpay.get_transfers_by_wallet_id(
         wallet_id=store.wallet_id,
         db=db,
@@ -742,7 +741,6 @@ async def export_store_history(
         )
     )
 
-    # TODO: do we accept transfers to empty a store wallet?
     transfers_with_sellers = (
         await cruds_myeclpay.get_transfers_and_sellers_by_wallet_id(
             wallet_id=store.wallet_id,
