@@ -4,14 +4,21 @@ from datetime import UTC, date, datetime, timedelta
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
+from app.core.groups import models_groups
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import models_memberships
 from app.core.users import models_users
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
 )
+
+bde_group: models_groups.CoreGroup
+bds_group: models_groups.CoreGroup
+dummy_group_1: models_groups.CoreGroup
+dummy_group_2: models_groups.CoreGroup
 
 user: models_users.CoreUser
 admin_user: models_users.CoreUser
@@ -28,13 +35,31 @@ useecl_user_membership: models_memberships.CoreAssociationUserMembership
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
+    global bde_group, bds_group, dummy_group_1, dummy_group_2
+    bde_group = await create_groups_with_permissions(
+        [],
+        "BDE Group",
+    )
+    bds_group = await create_groups_with_permissions(
+        [],
+        "BDS Group",
+    )
+    dummy_group_1 = await create_groups_with_permissions(
+        [],
+        "Dummy Group 1",
+    )
+    dummy_group_2 = await create_groups_with_permissions(
+        [],
+        "Dummy Group 2",
+    )
+
     global user, admin_user, bde_user
     user = await create_user_with_groups([])
     admin_user = await create_user_with_groups(
         [GroupType.admin],
     )
     bde_user = await create_user_with_groups(
-        [GroupType.BDE],
+        [bde_group.id],
     )
 
     global token_user, token_admin, token_bde
@@ -46,13 +71,13 @@ async def init_objects():
     aeecl_association_membership = models_memberships.CoreAssociationMembership(
         id=uuid.uuid4(),
         name="AEECL",
-        manager_group_id=GroupType.BDE,
+        manager_group_id=bde_group.id,
     )
     await add_object_to_db(aeecl_association_membership)
     useecl_association_membership = models_memberships.CoreAssociationMembership(
         id=uuid.uuid4(),
         name="USEECL",
-        manager_group_id=GroupType.BDS,
+        manager_group_id=bds_group.id,
     )
     await add_object_to_db(useecl_association_membership)
 
@@ -91,7 +116,7 @@ def test_create_association_membership_user(client: TestClient):
         "/memberships",
         json={
             "name": "Random Association",
-            "manager_group_id": GroupType.AE,
+            "manager_group_id": dummy_group_1.id,
         },
         headers={"Authorization": f"Bearer {token_user}"},
     )
@@ -103,7 +128,7 @@ def test_create_association_membership_admin(client: TestClient):
         "/memberships",
         json={
             "name": "Random Association",
-            "manager_group_id": GroupType.AE,
+            "manager_group_id": dummy_group_1.id,
         },
         headers={"Authorization": f"Bearer {token_admin}"},
     )
@@ -164,7 +189,7 @@ async def test_delete_association_membership_admin(client: TestClient):
     new_membership = models_memberships.CoreAssociationMembership(
         id=uuid.uuid4(),
         name="Random Association1",
-        manager_group_id=GroupType.AE,
+        manager_group_id=dummy_group_1.id,
     )
     await add_object_to_db(new_membership)
 
@@ -187,7 +212,7 @@ def test_patch_association_membership_user(client: TestClient):
         f"/memberships/{aeecl_association_membership.id}",
         json={
             "name": "Random Association",
-            "manager_group_id": GroupType.eclair.value,
+            "manager_group_id": dummy_group_2.id,
         },
         headers={"Authorization": f"Bearer {token_user}"},
     )
@@ -208,12 +233,12 @@ async def test_patch_association_membership_admin(client: TestClient):
     new_membership = models_memberships.CoreAssociationMembership(
         id=uuid.uuid4(),
         name="Random Association2",
-        manager_group_id=GroupType.AE,
+        manager_group_id=dummy_group_1.id,
     )
     await add_object_to_db(new_membership)
 
     new_name = "Random Association3"
-    new_group_id = GroupType.eclair.value
+    new_group_id = dummy_group_2.id
     response = client.patch(
         f"/memberships/{new_membership.id}",
         json={

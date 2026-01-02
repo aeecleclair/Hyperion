@@ -25,6 +25,8 @@ from app.core.auth import schemas_auth
 from app.core.groups.groups_type import AccountType, GroupType, get_ecl_account_types
 from app.core.payment.payment_tool import PaymentTool
 from app.core.payment.types_payment import HelloAssoConfigName
+from app.core.permissions import cruds_permissions
+from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users, models_users
 from app.core.utils import security
 from app.core.utils.config import Settings, construct_prod_settings
@@ -375,8 +377,8 @@ def get_user_from_token_with_scopes(
 
 
 def is_user(
-    excluded_groups: list[GroupType] | None = None,
-    included_groups: list[GroupType] | None = None,
+    excluded_groups: list[GroupType | str] | None = None,
+    included_groups: list[GroupType | str] | None = None,
     excluded_account_types: list[AccountType] | None = None,
     included_account_types: list[AccountType] | None = None,
     exclude_external: bool = False,
@@ -497,3 +499,60 @@ def is_user_in(
         return user
 
     return is_user_in
+
+
+def is_user_allowed_to(
+    permissions_name: list[ModulePermissions],
+    db: AsyncSession = Depends(get_db),
+) -> Callable[[models_users.CoreUser], Coroutine[Any, Any, models_users.CoreUser]]:
+    """
+    Generate a dependency which will:
+        * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
+        * make sure the user making the request exists
+        * make sure the user has the permission with the given name
+        * return the corresponding user `models_users.CoreUser` object
+    """
+
+    async def is_user_allowed_to(
+        user: models_users.CoreUser = Depends(
+            is_user(),
+        ),
+        db: AsyncSession = Depends(get_db),
+    ) -> models_users.CoreUser:
+        """
+        A dependency that checks that user has the permission with the given name then returns the corresponding user.
+        """
+        if GroupType.admin in [group.id for group in user.groups]:
+            return user
+
+        allowed_group_ids: list[str] = []
+        allowed_account_types: list[AccountType] = []
+        for permission_name in permissions_name:
+            allowed_group_ids += (
+                await cruds_permissions.get_permissions_by_permission_name(
+                    db,
+                    permission_name,
+                )
+            ).groups
+            allowed_account_types += (
+                await cruds_permissions.get_permissions_by_permission_name(
+                    db,
+                    permission_name,
+                )
+            ).account_types
+
+        if (
+            not any(
+                group_id in [group.id for group in user.groups]
+                for group_id in allowed_group_ids
+            )
+            and user.account_type not in allowed_account_types
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Unauthorized, user does not have the required permission",
+            )
+
+        return user
+
+    return is_user_allowed_to

@@ -4,15 +4,22 @@ import uuid
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.groups.groups_type import GroupType
+from app.core.groups import models_groups
 from app.core.users import models_users
 from app.modules.booking import models_booking
+from app.modules.booking.endpoints_booking import BookingPermissions
 from app.modules.booking.types_booking import Decision
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
 )
+
+admin_group: models_groups.CoreGroup
+manager_group: models_groups.CoreGroup
+manager_to_delete_group: models_groups.CoreGroup
+dummy_group: models_groups.CoreGroup
 
 booking_id: str
 
@@ -33,15 +40,24 @@ token_simple: str
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
+    global admin_group, manager_group, manager_to_delete_group, dummy_group
+    admin_group = await create_groups_with_permissions(
+        [BookingPermissions.manage_managers, BookingPermissions.manage_rooms],
+        "booking_manager",
+    )
+    manager_group = await create_groups_with_permissions([], "BDE")
+    manager_to_delete_group = await create_groups_with_permissions([], "amap")
+    dummy_group = await create_groups_with_permissions([], "dummy")
+
     global admin_user
-    admin_user = await create_user_with_groups([GroupType.admin])
+    admin_user = await create_user_with_groups([admin_group.id])
 
     global token_admin
     token_admin = create_api_access_token(admin_user)
 
     global manager_user
     manager_user = await create_user_with_groups(
-        [GroupType.BDE],
+        [manager_group.id],
     )
 
     global token_manager
@@ -57,7 +73,7 @@ async def init_objects() -> None:
     manager = models_booking.Manager(
         id=str(uuid.uuid4()),
         name="BDE",
-        group_id=GroupType.BDE,
+        group_id=manager_group.id,
     )
     await add_object_to_db(manager)
 
@@ -65,7 +81,7 @@ async def init_objects() -> None:
     manager_to_delete = models_booking.Manager(
         id=str(uuid.uuid4()),
         name="Planet",
-        group_id=GroupType.amap,
+        group_id=manager_to_delete_group.id,
     )
     await add_object_to_db(manager_to_delete)
 
@@ -137,14 +153,15 @@ def test_post_manager(client: TestClient) -> None:
         json={
             "id": str(uuid.uuid4()),
             "name": "Admin",
-            "group_id": GroupType.admin.value,
+            "group_id": dummy_group.id,
         },
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 201
 
 
-def test_edit_manager(client: TestClient) -> None:
+async def test_edit_manager(client: TestClient) -> None:
+    temp_group = await create_groups_with_permissions([], "temp")
     response = client.patch(
         f"/booking/managers/{manager_to_delete.id}",
         json={"name": "Test"},
@@ -153,7 +170,7 @@ def test_edit_manager(client: TestClient) -> None:
     assert response.status_code == 204
     response = client.patch(
         f"/booking/managers/{manager_to_delete.id}",
-        json={"group_id": GroupType.cinema.value},
+        json={"group_id": temp_group.id},
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 204

@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import GroupType
+from app.core.groups.factory_groups import CoreGroupsFactory
 from app.core.memberships import cruds_memberships
 from app.core.memberships.schemas_memberships import (
     MembershipSimple,
@@ -25,11 +25,11 @@ class CoreMembershipsFactory(Factory):
         "USEECL",
     ]
     memberships_manager_group_id = [
-        GroupType.BDE.value,
-        GroupType.BDS.value,
+        CoreGroupsFactory.groups_ids[0],
+        CoreGroupsFactory.groups_ids[1],
     ]
 
-    depends_on = [CoreUsersFactory]
+    depends_on = [CoreUsersFactory, CoreGroupsFactory]
 
     @classmethod
     async def run(cls, db: AsyncSession, settings: Settings) -> None:

@@ -31,43 +31,10 @@ async def get_status(
         # Since this is the only place a row can be added to the status table, there should never be more than one row in the table
         status_model = models_campaign.Status(status=StatusType.waiting, id="id")
         db.add(status_model)
-        await db.flush()
         return StatusType.waiting
 
     # The status is contained in the only result returned by the database
     return status[0].status
-
-
-async def get_voters(db: AsyncSession) -> Sequence[models_campaign.VoterGroups]:
-    result = await db.execute(select(models_campaign.VoterGroups))
-    return result.scalars().all()
-
-
-async def add_voter(
-    voter: models_campaign.VoterGroups,
-    db: AsyncSession,
-) -> None:
-    db.add(voter)
-    await db.flush()
-
-
-async def delete_voter_by_group_id(
-    group_id: str,
-    db: AsyncSession,
-) -> None:
-    await db.execute(
-        delete(models_campaign.VoterGroups).where(
-            models_campaign.VoterGroups.group_id == group_id,
-        ),
-    )
-    await db.flush()
-
-
-async def delete_voters(
-    db: AsyncSession,
-) -> None:
-    await db.execute(delete(models_campaign.VoterGroups))
-    await db.flush()
 
 
 async def set_status(
@@ -75,7 +42,6 @@ async def set_status(
     new_status: StatusType,
 ):
     await db.execute(update(models_campaign.Status).values(status=new_status))
-    await db.flush()
 
 
 async def get_vote_count(db: AsyncSession, section_id: str):
@@ -103,7 +69,6 @@ async def add_blank_option(db: AsyncSession):
                 members=[],
             ),
         )
-    await db.flush()
 
 
 async def get_sections(db: AsyncSession) -> Sequence[models_campaign.Sections]:
@@ -130,7 +95,6 @@ async def get_section_by_id(db: AsyncSession, section_id: str):
 async def add_section(db: AsyncSession, section: models_campaign.Sections) -> None:
     """Add a section of AEECL."""
     db.add(section)
-    await db.flush()
 
 
 async def delete_section(db: AsyncSession, section_id: str) -> None:
@@ -155,7 +119,6 @@ async def delete_section(db: AsyncSession, section_id: str) -> None:
                     models_campaign.Sections.id == section_id,
                 ),
             )
-            await db.flush()
         else:
             raise HTTPException(status_code=400, detail="This section still has lists")
     else:
@@ -168,7 +131,7 @@ async def delete_lists_from_section(db: AsyncSession, section_id: str) -> None:
             models_campaign.Lists.section_id == section_id,
         ),
     )
-    await db.flush()
+    await db.commit()
 
 
 async def get_lists(db: AsyncSession) -> Sequence[models_campaign.Lists]:
@@ -210,7 +173,6 @@ async def add_list(
 ) -> None:
     """Add a list to a section then add the members to the list."""
     db.add(campaign_list)
-    await db.flush()
 
 
 async def remove_members_from_list(
@@ -225,7 +187,6 @@ async def remove_members_from_list(
             models_campaign.ListMemberships.list_id == list_id,
         ),
     )
-    await db.flush()
 
 
 async def delete_list(db: AsyncSession, list_id: str) -> None:
@@ -234,7 +195,6 @@ async def delete_list(db: AsyncSession, list_id: str) -> None:
     await db.execute(
         delete(models_campaign.Lists).where(models_campaign.Lists.id == list_id),
     )
-    await db.flush()
 
 
 async def delete_list_by_type(list_type: ListType, db: AsyncSession) -> None:
@@ -248,7 +208,6 @@ async def delete_list_by_type(list_type: ListType, db: AsyncSession) -> None:
     await db.execute(
         delete(models_campaign.Lists).where(models_campaign.Lists.type == list_type),
     )
-    await db.flush()
 
 
 async def update_list(
@@ -285,13 +244,10 @@ async def update_list(
             ),
         )
 
-    await db.flush()
-
 
 async def add_vote(db: AsyncSession, vote: models_campaign.Votes) -> None:
     """Add a vote."""
     db.add(vote)
-    await db.flush()
 
 
 async def has_user_voted_for_section(
@@ -314,7 +270,6 @@ async def mark_has_voted(db: AsyncSession, user_id: str, section_id: str) -> Non
     """Mark user has having vote for the given section."""
     has_voted = models_campaign.HasVoted(user_id=user_id, section_id=section_id)
     db.add(has_voted)
-    await db.flush()
 
 
 async def get_has_voted(
@@ -339,7 +294,6 @@ async def delete_votes(db: AsyncSession) -> None:
     """Delete all votes in the db."""
     await db.execute(delete(models_campaign.Votes))
     await db.execute(delete(models_campaign.HasVoted))
-    await db.flush()
 
 
 async def reset_campaign(db: AsyncSession) -> None:
@@ -347,5 +301,4 @@ async def reset_campaign(db: AsyncSession) -> None:
     This will delete all the votes and blank list lists."""
     await db.execute(delete(models_campaign.Votes))
     await db.execute(delete(models_campaign.HasVoted))
-    await db.flush()
     await delete_list_by_type(ListType.blank, db)

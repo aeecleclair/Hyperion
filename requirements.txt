@@ -9,10 +9,11 @@ broadcaster==0.3.1                  # Working with websockets with multiple work
 calypsso==2.2.1
 Faker==37.1.0
 fastapi[standard]==0.122.0
-firebase-admin==6.5.0               # Firebase is used for push notification
+firebase-admin==7.1.0               # Firebase is used for push notification
+google-api-python-client==2.187.0
 google-auth-oauthlib==1.2.1
 helloasso-python==1.0.5
-httpx==0.27.0
+httpx==0.28.1
 icalendar==5.0.13
 jellyfish==1.2.1                    # String Matching
 Jinja2==3.1.6                       # template engine for html files
@@ -21,7 +22,7 @@ psutil==7.0.0                       # psutil is used to determine the number of 
 psycopg[binary]==3.2.13              # PostgreSQL adapter for *synchronous* operations at startup (database initializations & migrations)
 pydantic-settings==2.3.4
 pydantic==2.12.5
-pyjwt[crypto]==2.8.0                # generate and verify the JWT tokens, imported as `jwt`
+pyjwt[crypto]==2.10.1                # generate and verify the JWT tokens, imported as `jwt`
 PyMuPDF==1.26.6                     # PDF processing, imported as `fitz`
 pypdf==6.4.0
 python-multipart==0.0.18             # a form data parser, as oauth flow requires form-data parameters

@@ -6,14 +6,18 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
+from app.core.groups import models_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.schools.schools_type import SchoolType
 from app.core.users import models_users
 from app.dependencies import is_user
 from tests.commons import (
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
 )
+
+group_amap: models_groups.CoreGroup
 
 admin_user: models_users.CoreUser
 student_user: models_users.CoreUser
@@ -35,6 +39,12 @@ student_user_password = "password"
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
+    global group_amap
+    group_amap = await create_groups_with_permissions(
+        permissions=["manage_amap"],
+        group_name="AMAP",
+    )
+
     global admin_user, student_user, student_user_with_old_email, external_user
 
     admin_user = await create_user_with_groups(
@@ -54,7 +64,7 @@ async def init_objects() -> None:
     )
 
     global user_with_group
-    user_with_group = await create_user_with_groups([GroupType.amap])
+    user_with_group = await create_user_with_groups([group_amap.id])
 
     global token_admin_user
     token_admin_user = create_api_access_token(admin_user)
@@ -116,7 +126,7 @@ def test_restrict_access_on_group(client: TestClient) -> None:
         match="Unauthorized, user is a member of any of the groups ",
     ):
         is_user(
-            excluded_groups=[GroupType.amap],
+            excluded_groups=[group_amap.id],
         )(user_with_group)
 
 

@@ -5,14 +5,21 @@ from datetime import timedelta
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.groups.groups_type import GroupType
+from app.core.groups import models_groups
 from app.core.users import models_users
 from app.modules.loan import models_loan
+from app.modules.loan.endpoints_loan import LoanPermissions
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
 )
+
+admin_group: models_groups.CoreGroup
+loaner_group: models_groups.CoreGroup
+loaner_group_to_delete: models_groups.CoreGroup
+loaner_group_to_create: models_groups.CoreGroup
 
 admin_user: models_users.CoreUser
 loan_user_loaner: models_users.CoreUser
@@ -29,6 +36,7 @@ token_admin: str
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
+    global admin_group, loaner_group, loaner_group_to_delete, loaner_group_to_create
     global admin_user
     global loan_user_loaner
     global loaner
@@ -37,26 +45,44 @@ async def init_objects() -> None:
     global loan
     global item
     global item_to_delete
-    admin_user = await create_user_with_groups([GroupType.admin])
+
+    admin_group = await create_groups_with_permissions(
+        [LoanPermissions.manage_loaners],
+        "loaner",
+    )
+    loaner_group = await create_groups_with_permissions(
+        [],
+        "BDE",
+    )
+    loaner_group_to_delete = await create_groups_with_permissions(
+        [],
+        "cinema",
+    )
+    loaner_group_to_create = await create_groups_with_permissions(
+        [],
+        "ECLAIR",
+    )
+
+    admin_user = await create_user_with_groups([admin_group.id])
 
     loan_user_loaner = await create_user_with_groups(
-        [GroupType.CAA],
+        [loaner_group.id],
     )
     loaner = models_loan.Loaner(
         id=str(uuid.uuid4()),
-        name="CAA",
-        group_manager_id="6c6d7e88-fdb8-4e42-b2b5-3d3cfd12e7d6",
+        name="BDE",
+        group_manager_id=loaner_group.id,
     )
     await add_object_to_db(loaner)
 
     loan_user_simple = await create_user_with_groups(
-        [GroupType.amap],
+        [],
     )
 
     loaner_to_delete = models_loan.Loaner(
         id=str(uuid.uuid4()),
         name="cinema",
-        group_manager_id="ce5f36e6-5377-489f-9696-de70e2477300",
+        group_manager_id=loan_user_simple.id,
     )
     await add_object_to_db(loaner_to_delete)
 
@@ -118,8 +144,8 @@ def test_create_loaners(client: TestClient) -> None:
     response = client.post(
         "/loans/loaners/",
         json={
-            "name": "BDE",
-            "group_manager_id": "ce5f36e6-5377-489f-9696-de70e2477300",
+            "name": "ECLAIR",
+            "group_manager_id": loaner_group_to_create.id,
         },
         headers={"Authorization": f"Bearer {token_admin}"},
     )
@@ -131,7 +157,7 @@ def test_update_loaners(client: TestClient) -> None:
         f"/loans/loaners/{loaner_to_delete.id}",
         json={
             "name": "AE",
-            "group_manager_id": "45649735-866a-49df-b04b-a13c74fd5886",
+            "group_manager_id": loaner_group_to_delete.id,
         },
         headers={"Authorization": f"Bearer {token_admin}"},
     )

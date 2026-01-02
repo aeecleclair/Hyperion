@@ -7,12 +7,16 @@ from app.core.groups import models_groups
 from app.core.groups.groups_type import GroupType
 from app.core.users import models_users
 from app.modules.phonebook import models_phonebook
+from app.modules.phonebook.endpoints_phonebook import PhonebookPermissions
 from app.modules.phonebook.types_phonebook import Kinds, RoleTags
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
 )
+
+admin_group: models_groups.CoreGroup
 
 association1: models_phonebook.Association
 association2: models_phonebook.Association
@@ -43,6 +47,8 @@ token_simple: str
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects():
+    global admin_group
+
     global phonebook_user_BDE
     global token_BDE
     global phonebook_user_president
@@ -69,8 +75,13 @@ async def init_objects():
 
     global association2_group2
 
+    admin_group = await create_groups_with_permissions(
+        [PhonebookPermissions.manage_phonebook],
+        "phonebook_admin",
+    )
+
     phonebook_user_BDE = await create_user_with_groups(
-        [GroupType.BDE],
+        [admin_group.id],
     )
     token_BDE = create_api_access_token(phonebook_user_BDE)
 
