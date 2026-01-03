@@ -295,7 +295,7 @@ def initialize_module_visibility(
 ) -> None:
     """Add the default module visibilities for Titan"""
     AUTH_PERMISSIONS_CONSTANT = [AuthPermissions.app, AuthPermissions.api]
-    AUTH_PERMISSIONS_LIST =[ list(AccountType), list(AccountType)]
+    AUTH_PERMISSIONS_LIST = [list(AccountType), list(AccountType)]
 
     with Session(sync_engine) as db:
         module_awareness = initialization.get_core_data_sync(
@@ -308,7 +308,9 @@ def initialize_module_visibility(
             if module.root not in module_awareness.roots
         ]
         new_auth = [
-            auth for auth in AUTH_PERMISSIONS_CONSTANT if auth.value not in module_awareness.roots
+            auth
+            for auth in AUTH_PERMISSIONS_CONSTANT
+            if auth.value not in module_awareness.roots
         ]
         # Is run to create default module visibilities or when the table is empty
         if new_modules or new_auth:
@@ -348,7 +350,7 @@ def initialize_module_visibility(
                                 hyperion_error_logger.fatal(
                                     f"Startup: Could not add module visibility {module.root} in the database: {error}",
                                 )
-            for i,auth in enumerate(new_auth):
+            for i, auth in enumerate(new_auth):
                 for account_type in AUTH_PERMISSIONS_LIST[i]:
                     try:
                         initialization.create_account_type_permission_sync(
@@ -362,12 +364,13 @@ def initialize_module_visibility(
                         )
             initialization.set_core_data_sync(
                 coredata_core.ModuleVisibilityAwareness(
-                    roots=[module.root for module in module_list] + AUTH_PERMISSIONS_CONSTANT,
+                    roots=[module.root for module in module_list]
+                    + AUTH_PERMISSIONS_CONSTANT,
                 ),
                 db,
             )
             hyperion_error_logger.info(
-                f"Startup: Modules visibility settings initialized for {[module.root for module in new_modules ] + new_auth}",
+                f"Startup: Modules visibility settings initialized for {[module.root for module in new_modules] + new_auth}",
             )
         else:
             hyperion_error_logger.info(
