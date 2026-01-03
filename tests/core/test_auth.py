@@ -43,9 +43,9 @@ async def init_objects() -> None:
         ),
     )
     await add_object_to_db(
-        models_permissions.CorePermissionAccountType(
-            account_type=AccountType.student,
-            permission_name=AuthPermissions.app.name,
+        models_permissions.CorePermissionGroup(
+            group_id=group.id,
+            permission_name=AuthPermissions.nextcloud.name,
         ),
     )
 

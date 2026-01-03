@@ -95,7 +95,7 @@ AUTH_CLIENTS:
     secret: "secret"
     redirect_uri:
       - http://127.0.0.1:8000/docs
-    auth_client: "AppAuthClient"
+    auth_client: "NextcloudAuthClient"
   AccountTypePermissionAuthClient:
     secret: "secret"
     redirect_uri:
