@@ -306,7 +306,7 @@ def initialize_module_visibility(
             module
             for module in module_list
             if module.root not in module_awareness.roots
-        ] 
+        ]
         new_auth = [
             auth for auth in AUTH_PERMISSIONS_CONSTANT if auth.value not in module_awareness.roots
         ]
