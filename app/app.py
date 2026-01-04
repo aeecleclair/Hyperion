@@ -295,7 +295,6 @@ def initialize_module_visibility(
 ) -> None:
     """Add the default module visibilities for Titan"""
     AUTH_PERMISSIONS_CONSTANT = [AuthPermissions.app, AuthPermissions.api]
-    AUTH_PERMISSIONS_LIST = [list(AccountType), list(AccountType)]
 
     with Session(sync_engine) as db:
         module_awareness = initialization.get_core_data_sync(
@@ -350,8 +349,8 @@ def initialize_module_visibility(
                                 hyperion_error_logger.fatal(
                                     f"Startup: Could not add module visibility {module.root} in the database: {error}",
                                 )
-            for i, auth in enumerate(new_auth):
-                for account_type in AUTH_PERMISSIONS_LIST[i]:
+            for auth in new_auth:
+                for account_type in list(AccountType):
                     try:
                         initialization.create_account_type_permission_sync(
                             account_type=account_type,
