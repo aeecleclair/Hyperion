@@ -28,7 +28,7 @@ from app import api
 from app.core.core_endpoints import coredata_core
 from app.core.google_api.google_api import GoogleAPI
 from app.core.groups import models_groups
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification.cruds_notification import get_notification_topic
 from app.core.schools import models_schools
 from app.core.schools.schools_type import SchoolType
@@ -49,6 +49,7 @@ from app.types.exceptions import (
 )
 from app.types.sqlalchemy import Base
 from app.utils import initialization
+from app.utils.auth.providers import AuthPermissions
 from app.utils.communication.notifications import NotificationManager
 from app.utils.redis import limiter
 from app.utils.state import LifespanState
@@ -293,6 +294,7 @@ def initialize_module_visibility(
     hyperion_error_logger: logging.Logger,
 ) -> None:
     """Add the default module visibilities for Titan"""
+    AUTH_PERMISSIONS_CONSTANT = [AuthPermissions.app, AuthPermissions.api]
 
     with Session(sync_engine) as db:
         module_awareness = initialization.get_core_data_sync(
@@ -304,10 +306,15 @@ def initialize_module_visibility(
             for module in module_list
             if module.root not in module_awareness.roots
         ]
+        new_auth = [
+            auth
+            for auth in AUTH_PERMISSIONS_CONSTANT
+            if auth.value not in module_awareness.roots
+        ]
         # Is run to create default module visibilities or when the table is empty
-        if new_modules:
+        if new_modules or new_auth:
             hyperion_error_logger.info(
-                f"Startup: Some modules visibility settings are empty, initializing them : ({[module.root for module in new_modules]})",
+                f"Startup: Some modules visibility or auth settings are empty, initializing them : ({[module.root for module in new_modules] + new_auth})",
             )
             for module in new_modules:
                 module_permissions = (
@@ -342,14 +349,27 @@ def initialize_module_visibility(
                                 hyperion_error_logger.fatal(
                                     f"Startup: Could not add module visibility {module.root} in the database: {error}",
                                 )
+            for auth in new_auth:
+                for account_type in list(AccountType):
+                    try:
+                        initialization.create_account_type_permission_sync(
+                            account_type=account_type,
+                            permission_name=auth,
+                            db=db,
+                        )
+                    except ValueError as error:
+                        hyperion_error_logger.fatal(
+                            f"Startup: Could not add auth visibility {auth} in the database: {error}",
+                        )
             initialization.set_core_data_sync(
                 coredata_core.ModuleVisibilityAwareness(
-                    roots=[module.root for module in module_list],
+                    roots=[module.root for module in module_list]
+                    + AUTH_PERMISSIONS_CONSTANT,
                 ),
                 db,
             )
             hyperion_error_logger.info(
-                f"Startup: Modules visibility settings initialized for {[module.root for module in new_modules]}",
+                f"Startup: Modules visibility settings initialized for {[module.root for module in new_modules] + new_auth}",
             )
         else:
             hyperion_error_logger.info(
