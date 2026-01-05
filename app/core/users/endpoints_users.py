@@ -16,7 +16,6 @@ from fastapi import (
     UploadFile,
 )
 from fastapi.responses import FileResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import cruds_auth
@@ -65,7 +64,6 @@ core_module = CoreModule(
 hyperion_error_logger = logging.getLogger("hyperion.error")
 hyperion_security_logger = logging.getLogger("hyperion.security")
 hyperion_s3_logger = logging.getLogger("hyperion.s3")
-templates = Jinja2Templates(directory="assets/templates")
 
 S3_USER_SUBFOLDER = "users"
 
@@ -958,13 +956,14 @@ async def merge_users(
         kept_mail=user_kept.email,
     )
 
-    background_tasks.add_task(
-        send_email,
-        recipient=[user_kept.email, user_deleted.email],
-        subject="MyECL - Accounts merged",
-        content=mail,
-        settings=settings,
-    )
+    if settings.SMTP_ACTIVE:
+        background_tasks.add_task(
+            send_email,
+            recipient=[user_kept.email, user_deleted.email],
+            subject="MyECL - Accounts merged",
+            content=mail,
+            settings=settings,
+        )
     hyperion_security_logger.info(
         f"User {user_kept.email} - {user_kept.id} has been merged with {user_deleted.email} - {user_deleted.id}",
     )

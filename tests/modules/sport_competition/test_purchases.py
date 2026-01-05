@@ -5,7 +5,7 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.groups.groups_type import GroupType
+from app.core.groups import models_groups
 from app.core.payment import models_payment
 from app.core.schools import models_schools
 from app.core.schools.schools_type import SchoolType
@@ -15,6 +15,9 @@ from app.modules.sport_competition import (
     models_sport_competition,
     schemas_sport_competition,
 )
+from app.modules.sport_competition.permissions_sport_competition import (
+    SportCompetitionPermissions,
+)
 from app.modules.sport_competition.types_sport_competition import (
     ProductPublicType,
     ProductSchoolType,
@@ -23,10 +26,13 @@ from app.modules.sport_competition.types_sport_competition import (
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
     get_TestingSessionLocal,
     mocked_checkout_id,
 )
+
+admin_group: models_groups.CoreGroup
 
 school_from_lyon: models_schools.CoreSchool
 school_others: models_schools.CoreSchool
@@ -48,7 +54,6 @@ user_others_token: str
 user_cameraman_token: str
 user_pompom_token: str
 user_fanfare_token: str
-user_volunteer_token: str
 user_multiple_token: str
 
 competition_user_admin: models_sport_competition.CompetitionUser
@@ -57,7 +62,6 @@ competition_user_others: models_sport_competition.CompetitionUser
 competition_user_cameraman: models_sport_competition.CompetitionUser
 competition_user_pompom: models_sport_competition.CompetitionUser
 competition_user_fanfare: models_sport_competition.CompetitionUser
-competition_user_volunteer: models_sport_competition.CompetitionUser
 competition_user_multiple: models_sport_competition.CompetitionUser
 
 ecl_extension: models_sport_competition.SchoolExtension
@@ -74,7 +78,6 @@ variant_for_athlete: models_sport_competition.CompetitionProductVariant
 variant_for_cameraman: models_sport_competition.CompetitionProductVariant
 variant_for_pompom: models_sport_competition.CompetitionProductVariant
 variant_for_fanfare: models_sport_competition.CompetitionProductVariant
-variant_for_volunteer: models_sport_competition.CompetitionProductVariant
 variant_for_centrale: models_sport_competition.CompetitionProductVariant
 variant_for_from_lyon: models_sport_competition.CompetitionProductVariant
 variant_for_others: models_sport_competition.CompetitionProductVariant
@@ -97,7 +100,6 @@ def users():
         "cameraman": user_cameraman,
         "pompom": user_pompom,
         "fanfare": user_fanfare,
-        "volunteer": user_volunteer,
         "multiple": user_multiple,
     }
 
@@ -111,7 +113,6 @@ def user_tokens():
         "cameraman": user_cameraman_token,
         "pompom": user_pompom_token,
         "fanfare": user_fanfare_token,
-        "volunteer": user_volunteer_token,
         "multiple": user_multiple_token,
     }
 
@@ -123,7 +124,6 @@ def variants():
         "cameraman": variant_for_cameraman,
         "pompom": variant_for_pompom,
         "fanfare": variant_for_fanfare,
-        "volunteer": variant_for_volunteer,
         "centrale": variant_for_centrale,
         "from_lyon": variant_for_from_lyon,
         "others": variant_for_others,
@@ -135,6 +135,12 @@ def variants():
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def setup():
+    global admin_group
+    admin_group = await create_groups_with_permissions(
+        [SportCompetitionPermissions.manage_sport_competition],
+        "competition_admin_group",
+    )
+
     global school_from_lyon, school_others
 
     school_from_lyon = models_schools.CoreSchool(
@@ -180,10 +186,9 @@ async def setup():
         user_cameraman, \
         user_pompom, \
         user_fanfare, \
-        user_volunteer, \
         user_multiple
     admin_user = await create_user_with_groups(
-        [GroupType.competition_admin],
+        [admin_group.id],
         email="Admin User",
     )
     user_from_lyon = await create_user_with_groups(
@@ -208,10 +213,7 @@ async def setup():
         [],
         email="Fanfare User",
     )
-    user_volunteer = await create_user_with_groups(
-        [],
-        email="Volunteer User",
-    )
+
     user_multiple = await create_user_with_groups(
         [],
         email="Multiple Roles User",
@@ -224,7 +226,6 @@ async def setup():
         user_cameraman_token, \
         user_pompom_token, \
         user_fanfare_token, \
-        user_volunteer_token, \
         user_multiple_token
 
     admin_token = create_api_access_token(admin_user)
@@ -233,7 +234,6 @@ async def setup():
     user_cameraman_token = create_api_access_token(user_cameraman)
     user_pompom_token = create_api_access_token(user_pompom)
     user_fanfare_token = create_api_access_token(user_fanfare)
-    user_volunteer_token = create_api_access_token(user_volunteer)
     user_multiple_token = create_api_access_token(user_multiple)
 
     global \
@@ -243,7 +243,6 @@ async def setup():
         competition_user_cameraman, \
         competition_user_pompom, \
         competition_user_fanfare, \
-        competition_user_volunteer, \
         competition_user_multiple
 
     competition_user_admin = models_sport_competition.CompetitionUser(
@@ -300,22 +299,12 @@ async def setup():
         created_at=datetime.now(UTC),
     )
     await add_object_to_db(competition_user_fanfare)
-    competition_user_volunteer = models_sport_competition.CompetitionUser(
-        user_id=user_volunteer.id,
-        sport_category=SportCategory.masculine,
-        edition_id=active_edition.id,
-        is_volunteer=True,
-        validated=False,
-        created_at=datetime.now(UTC),
-    )
-    await add_object_to_db(competition_user_volunteer)
     competition_user_multiple = models_sport_competition.CompetitionUser(
         user_id=user_multiple.id,
         sport_category=SportCategory.masculine,
         edition_id=active_edition.id,
         is_athlete=True,
         is_cameraman=True,
-        is_volunteer=True,
         validated=False,
         created_at=datetime.now(UTC),
     )
@@ -382,8 +371,7 @@ async def setup():
         variant_for_athlete, \
         variant_for_cameraman, \
         variant_for_pompom, \
-        variant_for_fanfare, \
-        variant_for_volunteer
+        variant_for_fanfare
     variant_for_athlete = models_sport_competition.CompetitionProductVariant(
         id=uuid4(),
         product_id=product1.id,
@@ -436,19 +424,6 @@ async def setup():
         public_type=ProductPublicType.fanfare,
     )
     await add_object_to_db(variant_for_fanfare)
-    variant_for_volunteer = models_sport_competition.CompetitionProductVariant(
-        id=uuid4(),
-        product_id=product1.id,
-        edition_id=active_edition.id,
-        name="Volunteer Variant",
-        description="Variant for volunteers",
-        price=200,
-        enabled=True,
-        unique=True,
-        school_type=ProductSchoolType.centrale,
-        public_type=ProductPublicType.volunteer,
-    )
-    await add_object_to_db(variant_for_volunteer)
 
     global variant_for_centrale, variant_for_from_lyon, variant_for_others
     variant_for_centrale = models_sport_competition.CompetitionProductVariant(
@@ -591,6 +566,22 @@ async def test_get_products(
     assert len(data) > 0
     assert all("id" in item for item in data)
     assert all("name" in item for item in data)
+    product1_data = next(
+        (item for item in data if item["id"] == str(product1.id)),
+        None,
+    )
+    assert product1_data is not None
+    variant_for_athlete_data = next(
+        (
+            v
+            for v in product1_data["variants"]
+            if v["id"] == str(variant_for_athlete.id)
+        ),
+        None,
+    )
+    assert variant_for_athlete_data is not None
+    assert variant_for_athlete_data["booked"] == 1
+    assert variant_for_athlete_data["paid"] == 0
 
 
 async def test_create_product(
@@ -821,14 +812,9 @@ async def test_delete_school_product_quota(
         ("pompom", ["pompom", "centrale", "unique"]),
         ("fanfare", ["fanfare", "centrale", "unique"]),
         (
-            "volunteer",
-            ["volunteer", "centrale", "unique"],
-        ),
-        (
             "multiple",
             [
                 "athlete",
-                "volunteer",
                 "centrale",
                 "unique",
             ],
@@ -1111,17 +1097,13 @@ async def test_get_own_purchases(
         ("cameraman", "cameraman", 1, 201),
         ("pompom", "pompom", 1, 201),
         ("fanfare", "fanfare", 1, 201),
-        ("volunteer", "volunteer", 2, 403),
-        ("volunteer", "volunteer", 1, 201),
         ("multiple", "athlete", 1, 201),
         ("from_lyon", "others", 1, 403),
         ("others", "from_lyon", 1, 403),
         ("cameraman", "athlete", 1, 403),
         ("pompom", "athlete", 1, 403),
         ("fanfare", "athlete", 1, 403),
-        ("volunteer", "athlete", 1, 403),
         ("multiple", "cameraman", 1, 201),
-        ("multiple", "volunteer", 1, 201),
         ("multiple", "fanfare", 1, 403),
         ("admin", "disabled", 1, 403),
         ("admin", "old_edition", 1, 403),
@@ -1318,6 +1300,28 @@ async def test_create_payment(
     )
     assert invalid_purchase is not None
     assert invalid_purchase["validated"] is False
+
+    products = client.get(
+        "/competition/products",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    products_data = products.json()
+    product1_data = next(
+        (item for item in products_data if item["id"] == str(product1.id)),
+        None,
+    )
+    assert product1_data is not None
+    variant_for_athlete_data = next(
+        (
+            variant
+            for variant in product1_data["variants"]
+            if variant["id"] == str(variant_for_athlete.id)
+        ),
+        None,
+    )
+    assert variant_for_athlete_data is not None
+    assert variant_for_athlete_data["booked"] == 2
+    assert variant_for_athlete_data["paid"] == 1
 
 
 async def test_delete_payment(

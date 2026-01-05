@@ -4,15 +4,20 @@ from pathlib import Path
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.groups.groups_type import GroupType
+from app.core.groups import models_groups
 from app.core.users import models_users
 from app.modules.raffle import models_raffle
+from app.modules.raffle.endpoints_raffle import RafflePermissions
 from app.modules.raffle.types_raffle import RaffleStatusType
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
 )
+
+admin_group: models_groups.CoreGroup
+raffle_group: models_groups.CoreGroup
 
 BDE_user: models_users.CoreUser
 admin_user: models_users.CoreUser
@@ -33,6 +38,8 @@ cash: models_raffle.Cash
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
     global \
+        admin_group, \
+        raffle_group, \
         admin_user, \
         BDE_user, \
         student_user, \
@@ -48,17 +55,26 @@ async def init_objects() -> None:
         raffle_to_delete, \
         packticket_to_delete
 
-    BDE_user = await create_user_with_groups([GroupType.BDE])
+    admin_group = await create_groups_with_permissions(
+        [RafflePermissions.manage_raffle],
+        "raffle_admin",
+    )
+    raffle_group = await create_groups_with_permissions(
+        [],
+        "BDE",
+    )
+
+    BDE_user = await create_user_with_groups([raffle_group.id])
     student_user = await create_user_with_groups(
         [],
     )
-    admin_user = await create_user_with_groups([GroupType.admin])
+    admin_user = await create_user_with_groups([admin_group.id])
 
     raffle_to_delete = models_raffle.Raffle(
         id=str(uuid.uuid4()),
         name="Antoine's raffle",
         status=RaffleStatusType.creation,
-        group_id=GroupType.BDE,
+        group_id=raffle_group.id,
         description=None,
     )
     await add_object_to_db(raffle_to_delete)
@@ -66,7 +82,7 @@ async def init_objects() -> None:
         id=str(uuid.uuid4()),
         name="The best raffle",
         status=RaffleStatusType.creation,
-        group_id=GroupType.BDE,
+        group_id=raffle_group.id,
         description="Description of the raffle",
     )
     await add_object_to_db(raffle)
@@ -75,7 +91,7 @@ async def init_objects() -> None:
         id=str(uuid.uuid4()),
         name="The best raffle to draw",
         status=RaffleStatusType.lock,
-        group_id=GroupType.BDE,
+        group_id=raffle_group.id,
         description="Description of the raffle",
     )
     await add_object_to_db(raffle_to_draw)
@@ -157,7 +173,7 @@ def test_create_raffle(client: TestClient) -> None:
         "/tombola/raffles",
         json={
             "name": "test",
-            "group_id": GroupType.BDE,
+            "group_id": raffle_group.id,
             "description": "Raffle's description",
         },
         headers={"Authorization": f"Bearer {token}"},

@@ -95,7 +95,7 @@ def alembic_engine(alembic_connection: Connection) -> Connection:
 
 
 @pytest.fixture
-def alembic_connection() -> Generator[Connection, None, None]:
+def alembic_connection() -> Generator[Connection]:
     """
     The fixture yields a SQLAlchemy connection object. This fixture should be run before each tests, to ensure that the database is empty.
 

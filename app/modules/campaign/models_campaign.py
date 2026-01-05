@@ -59,16 +59,6 @@ class Lists(Base):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
-class VoterGroups(Base):
-    """
-    VoterGroups are groups allowed to vote for a campaign
-    """
-
-    __tablename__ = "campaign_voter_groups"
-
-    group_id: Mapped[str] = mapped_column(primary_key=True)
-
-
 class Votes(Base):
     __tablename__ = "campaign_votes"
 

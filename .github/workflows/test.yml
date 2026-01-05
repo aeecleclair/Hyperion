@@ -32,7 +32,7 @@ jobs:
           - 6379:6379
       postgres:
         # Docker Hub image
-        image: postgres
+        image: "postgres:15.1"
         # Provide the password for postgres
         env:
           POSTGRES_PASSWORD: "somerealpassword"
@@ -60,14 +60,14 @@ jobs:
         uses: actions/setup-python@v6
         id: setup-python
         with:
-          python-version: "3.11"
+          python-version: "3.14"
 
       - name: Cache uv folder
         id: cache-uv
         uses: actions/cache@v4.3.0
         with:
           path: ~/.cache/uv
-          key: ${{ runner.os }}-python-${{ steps.setup-python.outputs.python-version }}-uv-${{ hashFiles('requirements-common.txt', 'requirements-dev.txt') }}
+          key: ${{ runner.os }}-python-${{ steps.setup-python.outputs.python-version }}-uv-${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}
 
       - name: Install uv
         run: curl -LsSf https://astral.sh/uv/install.sh | sh

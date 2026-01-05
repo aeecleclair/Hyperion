@@ -7,13 +7,19 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.core.auth import models_auth
-from app.core.groups.groups_type import AccountType, GroupType
+from app.core.groups import models_groups
+from app.core.groups.groups_type import AccountType
+from app.core.permissions import models_permissions
 from app.core.users import models_users
+from app.utils.auth.providers import AuthPermissions
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
 )
+
+group: models_groups.CoreGroup
 
 user: models_users.CoreUser
 external_user: models_users.CoreUser
@@ -27,6 +33,22 @@ revoked_refresh_token = "RevokedRefreshToken"
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
+    global group
+    group = await create_groups_with_permissions([AuthPermissions.app], "auth_group")
+
+    await add_object_to_db(
+        models_permissions.CorePermissionAccountType(
+            account_type=AccountType.student,
+            permission_name=AuthPermissions.rallly.name,
+        ),
+    )
+    await add_object_to_db(
+        models_permissions.CorePermissionGroup(
+            group_id=group.id,
+            permission_name=AuthPermissions.nextcloud.name,
+        ),
+    )
+
     global user
     user = await create_user_with_groups(
         groups=[],
@@ -36,7 +58,7 @@ async def init_objects() -> None:
 
     global ecl_user
     ecl_user = await create_user_with_groups(
-        groups=[GroupType.eclair],
+        groups=[group.id],
         email="email@etu.ec-lyon.fr",
         password="azerty",
     )
@@ -274,7 +296,7 @@ def test_authorization_code_flow_secret(client: TestClient) -> None:
 def test_get_user_info(client: TestClient) -> None:
     # We first need an access token to query user info endpoints #
     data = {
-        "client_id": "BaseAuthClient",
+        "client_id": "AccountTypePermissionAuthClient",
         "client_secret": "secret",
         "redirect_uri": "http://127.0.0.1:8000/docs",
         "response_type": "code",
@@ -298,7 +320,7 @@ def test_get_user_info(client: TestClient) -> None:
         "grant_type": "authorization_code",
         "code": code,
         "redirect_uri": "http://127.0.0.1:8000/docs",
-        "client_id": "BaseAuthClient",
+        "client_id": "AccountTypePermissionAuthClient",
         "client_secret": "secret",
     }
 
@@ -314,16 +336,16 @@ def test_get_user_info(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {access_token}"},
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 200, response.text
     json = response.json()
 
-    assert json["name"] == user.firstname
+    assert json["name"] == user.full_name
 
 
 def test_get_user_info_in_id_token(client: TestClient) -> None:
     # We first need an access token to query user info endpoints #
     data = {
-        "client_id": "RalllyAuthClient",
+        "client_id": "AccountTypePermissionAuthClient",
         "client_secret": "secret",
         "redirect_uri": "http://127.0.0.1:8000/docs",
         "response_type": "code",
@@ -347,7 +369,7 @@ def test_get_user_info_in_id_token(client: TestClient) -> None:
         "grant_type": "authorization_code",
         "code": code,
         "redirect_uri": "http://127.0.0.1:8000/docs",
-        "client_id": "RalllyAuthClient",
+        "client_id": "AccountTypePermissionAuthClient",
         "client_secret": "secret",
     }
 
@@ -469,12 +491,12 @@ def test_authorization_code_flow_with_invalid_user_credentials(
 
 
 # Valid user response
-def test_authorization_code_flow_with_auth_client_restricting_allowed_groups_and_user_member_of_an_allowed_group(
+def test_authorization_code_flow_with_group_permission_and_user_member_of_an_allowed_group(
     client: TestClient,
 ) -> None:
     # For an user that is a member of a required group #
     data_with_invalid_client_id = {
-        "client_id": "RestrictingUsersGroupsAuthClient",
+        "client_id": "GroupPermissionAuthClient",
         "client_secret": "secret",
         "redirect_uri": "http://127.0.0.1:8000/docs",
         "response_type": "code",
@@ -496,12 +518,12 @@ def test_authorization_code_flow_with_auth_client_restricting_allowed_groups_and
     assert query["code"][0] != ""
 
 
-def test_authorization_code_flow_with_auth_client_restricting_allowed_groups_and_user_not_member_of_an_allowed_group(
+def test_authorization_code_flow_with_group_permission_and_user_not_member_of_an_allowed_group(
     client: TestClient,
 ) -> None:
     # For an user that is not a member of a required group #
     data_with_invalid_client_id = {
-        "client_id": "RestrictingUsersGroupsAuthClient",
+        "client_id": "GroupPermissionAuthClient",
         "client_secret": "secret",
         "redirect_uri": "http://127.0.0.1:8000/docs",
         "response_type": "code",
@@ -523,12 +545,12 @@ def test_authorization_code_flow_with_auth_client_restricting_allowed_groups_and
     )
 
 
-def test_authorization_code_flow_with_auth_client_restricting_external_users_and_user_external(
+def test_authorization_code_flow_with_account_type_permission_and_wrong_account_type(
     client: TestClient,
 ) -> None:
     # For an user that is not a member of a required group #
     data_with_invalid_client_id = {
-        "client_id": "RalllyAuthClient",
+        "client_id": "AccountTypePermissionAuthClient",
         "client_secret": "secret",
         "redirect_uri": "http://127.0.0.1:8000/docs",
         "response_type": "code",
@@ -546,7 +568,7 @@ def test_authorization_code_flow_with_auth_client_restricting_external_users_and
 
     assert response.next_request is not None
     assert str(response.next_request.url).endswith(
-        "calypsso/message?type=user_account_type_not_allowed",
+        "calypsso/message?type=user_not_member_of_allowed_group",
     )
 
 
@@ -583,7 +605,7 @@ def test_token_introspection_with_invalid_client_secret(
     client: TestClient,
 ):
     data = {
-        "client_id": "BaseAuthClient",
+        "client_id": "TokenIntrospectionAuthClient",
         "client_secret": "invalid_secret",
         "token": access_token,
     }
@@ -598,7 +620,7 @@ def test_token_introspection_with_access_token(
     client: TestClient,
 ):
     data = {
-        "client_id": "SynapseAuthClient",
+        "client_id": "TokenIntrospectionAuthClient",
         "client_secret": "secret",
         "token": access_token,
     }
@@ -618,7 +640,7 @@ def test_token_introspection_with_access_token_and_auth_in_header(
     data = {
         "token": access_token,
     }
-    client_id = "SynapseAuthClient"
+    client_id = "TokenIntrospectionAuthClient"
     client_secret = "secret"
     basic_header = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
     response = client.post(
@@ -640,7 +662,7 @@ def test_token_introspection_with_an_expired_access_token(
         expires_delta=timedelta(seconds=-1),
     )
     data = {
-        "client_id": "SynapseAuthClient",
+        "client_id": "TokenIntrospectionAuthClient",
         "client_secret": "secret",
         "token": expired_access_token,
     }
@@ -658,7 +680,7 @@ def test_token_introspection_with_invalid_refresh_token(
     client: TestClient,
 ):
     data = {
-        "client_id": "SynapseAuthClient",
+        "client_id": "TokenIntrospectionAuthClient",
         "client_secret": "secret",
         "token": "InvalidRefreshToken",
     }
@@ -676,7 +698,7 @@ def test_token_introspection_with_valid_refresh_token(
     client: TestClient,
 ):
     data = {
-        "client_id": "SynapseAuthClient",
+        "client_id": "TokenIntrospectionAuthClient",
         "client_secret": "secret",
         "token": valid_refresh_token,
     }
@@ -694,7 +716,7 @@ def test_token_introspection_with_expired_refresh_token(
     client: TestClient,
 ):
     data = {
-        "client_id": "SynapseAuthClient",
+        "client_id": "TokenIntrospectionAuthClient",
         "client_secret": "secret",
         "token": expired_refresh_token,
     }
@@ -712,7 +734,7 @@ def test_token_introspection_with_revoked_refresh_token(
     client: TestClient,
 ):
     data = {
-        "client_id": "SynapseAuthClient",
+        "client_id": "TokenIntrospectionAuthClient",
         "client_secret": "secret",
         "token": revoked_refresh_token,
     }

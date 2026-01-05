@@ -1,36 +1,36 @@
 aiofiles==24.1.0                    # Asynchronous file manipulation
 alembic==1.13.2                     # database migrations
 arq==0.26.3                         # Scheduler 
-asyncpg==0.29.0                     # PostgreSQL adapter for asynchronous operations
+asyncpg==0.31.0                     # PostgreSQL adapter for asynchronous operations
 authlib==1.6.5
 bcrypt==4.1.3                       # password hashing
 boto3==1.38.23
 broadcaster==0.3.1                  # Working with websockets with multiple workers.
 calypsso==2.7.0
 Faker==37.1.0
-fastapi[standard]==0.115.6
-firebase-admin==6.5.0               # Firebase is used for push notification
+fastapi[standard]==0.122.0
+firebase-admin==7.1.0               # Firebase is used for push notification
+google-api-python-client==2.187.0
 google-auth-oauthlib==1.2.1
 helloasso-python==1.0.5
+httpx==0.28.1
 icalendar==5.0.13
-jellyfish==1.0.4                    # String Matching
+jellyfish==1.2.1                    # String Matching
 Jinja2==3.1.6                       # template engine for html files
 phonenumbers==8.13.43               # Used for phone number validation
 psutil==7.0.0                       # psutil is used to determine the number of Hyperion workers
-pydantic-extra-types==2.10.5
+psycopg[binary]==3.2.13             # PostgreSQL adapter for *synchronous* operations at startup (database initializations & migrations)
 pydantic-settings==2.3.4
-pydantic==2.7.4
-pyjwt[crypto]==2.8.0                # generate and verify the JWT tokens, imported as `jwt`
-PyMuPDF==1.24.9                     # PDF processing, imported as `fitz`
+pydantic==2.12.5
+pyjwt[crypto]==2.10.1                # generate and verify the JWT tokens, imported as `jwt`
+PyMuPDF==1.26.6                     # PDF processing, imported as `fitz`
 pypdf==6.4.0
-python-dotenv==1.0.1                # load environment variables from .env file
 python-multipart==0.0.18             # a form data parser, as oauth flow requires form-data parameters
 redis==5.0.8
 requests==2.32.4
 sqlalchemy-utils == 0.41.2
-SQLAlchemy[asyncio]==2.0.32         # [asyncio] allows greenlet to be installed on Apple M1 devices.
+SQLAlchemy[asyncio]==2.0.44         # [asyncio] allows greenlet to be installed on Apple M1 devices.
 unidecode==1.3.8
 uvicorn[standard]==0.30.6
 weasyprint==65.1                    # HTML to PDF converter
 xlsxwriter==3.2.0
-psycopg[binary]==3.1.19                  # PostgreSQL adapter for synchronous operations at startup (database initializations & migrations), local installation is recommended for a production site

@@ -18,7 +18,7 @@ from app.core.mypayment.utils_mypayment import (
     refund_model_to_schema,
     structure_model_to_schema,
 )
-from app.core.users import schemas_users
+from app.core.users import models_users, schemas_users
 
 
 async def create_structure(
@@ -640,6 +640,49 @@ async def get_transactions_by_wallet_id(
     return result.scalars().all()
 
 
+async def get_transactions_and_sellers_by_wallet_id(
+    wallet_id: UUID,
+    db: AsyncSession,
+    start_datetime: datetime | None = None,
+    end_datetime: datetime | None = None,
+) -> Sequence[tuple[models_myeclpay.Transaction, str | None]]:
+    result = await db.execute(
+        select(
+            models_myeclpay.Transaction,
+            models_users.CoreUser,
+        )
+        .outerjoin(
+            models_users.CoreUser,
+            models_users.CoreUser.id == models_myeclpay.Transaction.seller_user_id,
+        )
+        .where(
+            or_(
+                models_myeclpay.Transaction.debited_wallet_id == wallet_id,
+                models_myeclpay.Transaction.credited_wallet_id == wallet_id,
+            ),
+            models_myeclpay.Transaction.creation >= start_datetime
+            if start_datetime
+            else and_(True),
+            models_myeclpay.Transaction.creation <= end_datetime
+            if end_datetime
+            else and_(True),
+        )
+        .options(
+            selectinload(models_myeclpay.Transaction.debited_wallet),
+            selectinload(models_myeclpay.Transaction.credited_wallet),
+        ),
+    )
+
+    transactions_with_sellers = []
+    for row in result.all():
+        transaction = row[0]
+        user = row[1]
+
+        transactions_with_sellers.append((transaction, user.full_name))
+
+    return transactions_with_sellers
+
+
 async def get_transfers(
     db: AsyncSession,
     last_checked: datetime | None = None,
@@ -715,6 +758,42 @@ async def get_transfers_by_wallet_id(
         ),
     )
     return result.scalars().all()
+
+
+async def get_transfers_and_sellers_by_wallet_id(
+    wallet_id: UUID,
+    db: AsyncSession,
+    start_datetime: datetime | None = None,
+    end_datetime: datetime | None = None,
+) -> Sequence[tuple[models_myeclpay.Transfer, str | None]]:
+    result = await db.execute(
+        select(
+            models_myeclpay.Transfer,
+            models_users.CoreUser,
+        )
+        .outerjoin(
+            models_users.CoreUser,
+            models_users.CoreUser.id == models_myeclpay.Transfer.approver_user_id,
+        )
+        .where(
+            models_myeclpay.Transfer.wallet_id == wallet_id,
+            models_myeclpay.Transfer.creation >= start_datetime
+            if start_datetime
+            else and_(True),
+            models_myeclpay.Transfer.creation <= end_datetime
+            if end_datetime
+            else and_(True),
+        ),
+    )
+
+    transfers_with_users = []
+    for row in result.all():
+        transfer = row[0]
+        user = row[1]
+
+        transfers_with_users.append((transfer, user.full_name))
+
+    return transfers_with_users
 
 
 async def get_transfer_by_transfer_identifier(
@@ -825,6 +904,49 @@ async def get_refunds_by_wallet_id(
         .all()
     )
     return [refund_model_to_schema(refund) for refund in result]
+
+
+async def get_refunds_and_sellers_by_wallet_id(
+    wallet_id: UUID,
+    db: AsyncSession,
+    start_datetime: datetime | None = None,
+    end_datetime: datetime | None = None,
+) -> Sequence[tuple[models_myeclpay.Refund, str | None]]:
+    result = await db.execute(
+        select(
+            models_myeclpay.Refund,
+            models_users.CoreUser,
+        )
+        .outerjoin(
+            models_users.CoreUser,
+            models_users.CoreUser.id == models_myeclpay.Refund.seller_user_id,
+        )
+        .where(
+            or_(
+                models_myeclpay.Refund.debited_wallet_id == wallet_id,
+                models_myeclpay.Refund.credited_wallet_id == wallet_id,
+            ),
+            models_myeclpay.Refund.creation >= start_datetime
+            if start_datetime
+            else and_(True),
+            models_myeclpay.Refund.creation <= end_datetime
+            if end_datetime
+            else and_(True),
+        )
+        .options(
+            selectinload(models_myeclpay.Refund.debited_wallet),
+            selectinload(models_myeclpay.Refund.credited_wallet),
+        ),
+    )
+
+    refunds_with_sellers = []
+    for row in result.all():
+        refund = row[0]
+        user = row[1]
+
+        refunds_with_sellers.append((refund, user.full_name))
+
+    return refunds_with_sellers
 
 
 async def get_store(

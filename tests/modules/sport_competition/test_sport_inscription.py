@@ -5,15 +5,20 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import delete, update
 
-from app.core.groups.groups_type import GroupType
+from app.core.groups import models_groups
+from app.core.groups.groups_type import AccountType
 from app.core.schools import models_schools
 from app.core.schools.schools_type import SchoolType
 from app.core.users import models_users
 from app.modules.sport_competition import models_sport_competition
+from app.modules.sport_competition.permissions_sport_competition import (
+    SportCompetitionPermissions,
+)
 from app.modules.sport_competition.schemas_sport_competition import (
     LocationBase,
     MatchBase,
     ParticipantInfo,
+    SchoolResult,
     SportPodiumRankings,
     TeamInfo,
     TeamSportResultBase,
@@ -24,11 +29,15 @@ from app.modules.sport_competition.types_sport_competition import (
     SportCategory,
 )
 from tests.commons import (
+    add_account_type_permission,
     add_object_to_db,
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
     get_TestingSessionLocal,
 )
+
+admin_group: models_groups.CoreGroup
 
 school1: models_schools.CoreSchool
 school2: models_schools.CoreSchool
@@ -107,6 +116,17 @@ async def create_competition_user(
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
+    await add_account_type_permission(
+        SportCompetitionPermissions.volunteer_sport_competition,
+        AccountType.student,
+    )
+
+    global admin_group
+    admin_group = await create_groups_with_permissions(
+        [SportCompetitionPermissions.manage_sport_competition],
+        "competition_admin_group",
+    )
+
     global school1, school2, active_edition, old_edition
     school1 = models_schools.CoreSchool(
         id=uuid4(),
@@ -143,7 +163,7 @@ async def init_objects() -> None:
 
     global admin_user, school_bds_user, sport_manager_user, user3, user4
     admin_user = await create_user_with_groups(
-        [GroupType.competition_admin],
+        [admin_group.id],
         email="Admin User",
     )
     school_bds_user = await create_user_with_groups(
@@ -180,7 +200,6 @@ async def init_objects() -> None:
         sport_category=SportCategory.masculine,
         edition_id=active_edition.id,
         is_athlete=True,
-        is_volunteer=True,
         validated=True,
         created_at=datetime.now(UTC),
     )
@@ -512,12 +531,27 @@ async def init_objects() -> None:
     await add_object_to_db(podium_sport_free_quota[0])
     await add_object_to_db(podium_sport_free_quota[1])
     await add_object_to_db(podium_sport_free_quota[2])
+    podium_pompom = [
+        models_sport_competition.PompomPodium(
+            school_id=school1.id,
+            edition_id=active_edition.id,
+            points=10,
+        ),
+        models_sport_competition.PompomPodium(
+            school_id=SchoolType.centrale_lyon.value,
+            edition_id=active_edition.id,
+            points=5,
+        ),
+    ]
+    await add_object_to_db(podium_pompom[0])
+    await add_object_to_db(podium_pompom[1])
 
     global volunteer_shift, volunteer_registration
     volunteer_shift = models_sport_competition.VolunteerShift(
         id=uuid4(),
         edition_id=active_edition.id,
         name="Morning Shift",
+        manager_id=admin_user.id,
         description="Help with setup and registration",
         value=2,
         start_time=datetime(2024, 6, 15, 8, 0, tzinfo=UTC),
@@ -1854,11 +1888,11 @@ async def test_create_team(
         name="New Team",
         school_id=SchoolType.centrale_lyon.value,
         sport_id=sport_with_team.id,
-        captain_id=user3.id,
+        captain_id=admin_user.id,
     )
     response = client.post(
         "/competition/teams",
-        headers={"Authorization": f"Bearer {user3_token}"},
+        headers={"Authorization": f"Bearer {admin_token}"},
         json=team_info.model_dump(exclude_none=True, mode="json"),
     )
     assert response.status_code == 201, response.json()
@@ -2441,6 +2475,39 @@ async def test_user_withdraw_participation(
     assert user_participation is None, participants_json
 
 
+async def test_user_withdraw_participation_delete_team(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        f"/competition/sports/{sport_free_quota.id}/participate",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json=ParticipantInfo(
+            license="12345670089",
+            substitute=False,
+        ).model_dump(exclude_none=True, mode="json"),
+    )
+    assert response.status_code == 201, response.json()
+    team_id = response.json()["team_id"]
+
+    response = client.delete(
+        f"/competition/sports/{sport_free_quota.id}/withdraw",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 204, response.json()
+
+    teams = client.get(
+        f"/competition/teams/sports/{sport_free_quota.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert teams.status_code == 200, teams.json()
+    teams_json = teams.json()
+    deleted_team_check = next(
+        (t for t in teams_json if t["id"] == str(team_id)),
+        None,
+    )
+    assert deleted_team_check is None, teams_json
+
+
 # endregion
 # region: Locations
 
@@ -2934,13 +3001,13 @@ async def test_get_global_podiums(
         None,
     )
     assert centrale_score is not None
-    assert centrale_score["total_points"] == 30
+    assert centrale_score["total_points"] == 35
     other_school_score = next(
         (p for p in podiums if p["school_id"] == str(school1.id)),
         None,
     )
     assert other_school_score is not None
-    assert other_school_score["total_points"] == 4
+    assert other_school_score["total_points"] == 14
 
 
 async def test_get_sport_podiums(
@@ -3082,6 +3149,147 @@ async def test_delete_podium_as_sport_manager(
 
 
 # endregion
+# region: Pompom Podiums
+
+
+async def test_get_pompom_podiums(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        "/competition/podiums/pompoms",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 200, response.json()
+    podiums = response.json()
+    assert len(podiums) == 2
+
+
+async def test_post_pompom_podium_as_random(
+    client: TestClient,
+) -> None:
+    podium_infos = [
+        SchoolResult(
+            school_id=SchoolType.centrale_lyon.value,
+            total_points=20,
+        ),
+        SchoolResult(
+            school_id=school1.id,
+            total_points=10,
+        ),
+    ]
+
+    response = client.post(
+        "/competition/podiums/pompoms",
+        headers={"Authorization": f"Bearer {user3_token}"},
+        json=[
+            podium.model_dump(exclude_none=True, mode="json") for podium in podium_infos
+        ],
+    )
+    assert response.status_code == 403, response.json()
+
+    podiums = client.get(
+        "/competition/podiums/pompoms",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert podiums.status_code == 200, podiums.json()
+    podiums_json = podiums.json()
+    podium_check = next(
+        (p for p in podiums_json if p["total_points"] == 20),
+        None,
+    )
+    assert podium_check is None, podiums_json
+
+
+async def test_post_pompom_podium_as_admin(
+    client: TestClient,
+) -> None:
+    podium_infos = [
+        SchoolResult(
+            school_id=SchoolType.centrale_lyon.value,
+            total_points=40,
+        ),
+        SchoolResult(
+            school_id=school1.id,
+            total_points=20,
+        ),
+    ]
+
+    response = client.post(
+        "/competition/podiums/pompoms",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json=[
+            podium.model_dump(exclude_none=True, mode="json") for podium in podium_infos
+        ],
+    )
+    assert response.status_code == 201, response.json()
+
+    podiums = client.get(
+        "/competition/podiums/pompoms",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert podiums.status_code == 200, podiums.json()
+    podiums_json = podiums.json()
+    podium_check = next(
+        (p for p in podiums_json if p["total_points"] == 20),
+        None,
+    )
+    assert podium_check is not None, podiums_json
+
+    global_podiums = client.get(
+        "/competition/podiums/global",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert global_podiums.status_code == 200, global_podiums.json()
+    global_podiums_json = global_podiums.json()
+    centrale = next(
+        (
+            p
+            for p in global_podiums_json
+            if p["school_id"] == str(SchoolType.centrale_lyon.value)
+        ),
+        None,
+    )
+    assert centrale is not None, global_podiums_json
+    assert centrale["total_points"] == 55, global_podiums_json
+
+
+async def test_delete_pompom_podium_as_random(
+    client: TestClient,
+) -> None:
+    response = client.delete(
+        "/competition/podiums/pompoms",
+        headers={"Authorization": f"Bearer {user3_token}"},
+    )
+    assert response.status_code == 403, response.json()
+
+    podiums = client.get(
+        "/competition/podiums/pompoms",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert podiums.status_code == 200, podiums.json()
+    podiums_json = podiums.json()
+    assert len(podiums_json) == 2, podiums_json
+
+
+async def test_delete_pompom_podium_as_admin(
+    client: TestClient,
+) -> None:
+    response = client.delete(
+        "/competition/podiums/pompoms",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 204, response.json()
+
+    podiums = client.get(
+        "/competition/podiums/pompoms",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert podiums.status_code == 200, podiums.json()
+    podiums_json = podiums.json()
+    assert len(podiums_json) == 0, podiums_json
+
+
+# endregion
 # region: Volunteers Shifts
 
 
@@ -3104,6 +3312,7 @@ async def test_create_volunteer_shift_as_random(
 ) -> None:
     shift_info = VolunteerShiftBase(
         name="New Shift",
+        manager_id=admin_user.id,
         description="A new shift for testing",
         value=1,
         start_time=datetime.now(UTC),
@@ -3136,6 +3345,7 @@ async def test_create_volunteer_shift_as_admin(
 ) -> None:
     shift_info = VolunteerShiftBase(
         name="New Shift",
+        manager_id=admin_user.id,
         description="A new shift for testing",
         value=1,
         start_time=datetime.now(UTC),
@@ -3244,6 +3454,7 @@ async def test_delete_volunteer_shift_as_admin(
     new_shift = models_sport_competition.VolunteerShift(
         id=uuid4(),
         name="Shift to Delete",
+        manager_id=admin_user.id,
         description="A shift to delete",
         value=1,
         start_time=datetime.now(UTC),
@@ -3310,32 +3521,6 @@ async def test_get_own_volunteer_registrations(
     assert registrations[0]["shift_id"] == str(volunteer_shift.id)
 
 
-async def test_register_to_shift_as_non_volunteer(
-    client: TestClient,
-) -> None:
-    response = client.post(
-        f"/competition/volunteers/shifts/{volunteer_shift.id}/register",
-        headers={"Authorization": f"Bearer {user3_token}"},
-    )
-    assert response.status_code == 403, response.json()
-    assert (
-        "You must be registered for the competition as a volunteer to register for a volunteer shift"
-        in response.json()["detail"]
-    )
-
-    registrations = client.get(
-        "/competition/volunteers/me",
-        headers={"Authorization": f"Bearer {user3_token}"},
-    )
-    assert registrations.status_code == 200, registrations.json()
-    registrations_json = registrations.json()
-    registration_check = next(
-        (r for r in registrations_json if r["shift_id"] == str(volunteer_shift.id)),
-        None,
-    )
-    assert registration_check is None, registrations_json
-
-
 async def test_register_already_registered_to_shift(
     client: TestClient,
 ) -> None:
@@ -3353,14 +3538,6 @@ async def test_register_already_registered_to_shift(
 async def test_register_to_full_shift(
     client: TestClient,
 ) -> None:
-    async with get_TestingSessionLocal()() as db:
-        await db.execute(
-            update(models_sport_competition.CompetitionUser)
-            .where(models_sport_competition.CompetitionUser.user_id == user3.id)
-            .values(is_volunteer=True),
-        )
-        await db.commit()
-
     response = client.post(
         f"/competition/volunteers/shifts/{volunteer_shift.id}/register",
         headers={"Authorization": f"Bearer {user3_token}"},
@@ -3387,6 +3564,7 @@ async def test_register_to_volunteer_shift(
     new_shift = models_sport_competition.VolunteerShift(
         id=uuid4(),
         name="Another Shift",
+        manager_id=admin_user.id,
         description="Another shift for testing",
         value=1,
         start_time=datetime.now(UTC) + timedelta(days=1),
@@ -3424,3 +3602,13 @@ async def test_data_exporter(
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 200
+
+
+async def test_delete_competition_user(
+    client: TestClient,
+) -> None:
+    response = client.delete(
+        f"/competition/users/{user3.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 204

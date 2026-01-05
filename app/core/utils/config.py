@@ -1,10 +1,10 @@
-import tomllib
 from functools import cached_property
 from pathlib import Path
 from re import Pattern
 from typing import Any, ClassVar
 
 import jwt
+import tomllib
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from pydantic import BaseModel, computed_field, model_validator
@@ -167,10 +167,9 @@ class Settings(BaseSettings):
     ###############################################
     # Authorization using OAuth or Openid connect #
     ###############################################
-
-    # ACCESS_TOKEN_SECRET_KEY should contain a random string with enough entropy (at least 32 bytes long) to securely sign all access_tokens for OAuth and Openid connect
+    # ACCESS_TOKEN_SECRET_KEY should contain a strong random string with enough entropy (at least 32 bytes long) to securely sign all JWT access_tokens for OAuth2 and OpenID Connect
     ACCESS_TOKEN_SECRET_KEY: str
-    # RSA_PRIVATE_PEM_STRING should be a string containing the PEM certificate of a private RSA key. It will be used to sign id_tokens for Openid connect authentication
+    # RSA_PRIVATE_PEM_STRING should be a string containing the PEM certificate of a private RSA key. It will be used to sign JWS id_tokens for OpenID Connect authentication
     # In the pem certificates newlines can be replaced by `\n`
     RSA_PRIVATE_PEM_STRING: bytes
 
@@ -224,12 +223,12 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = ""
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = ""
-    POSTGRES_TZ: str = ""
     DATABASE_DEBUG: bool = False  # If True, the database will log all queries
     USE_FACTORIES: bool = (
         False  # If True, the database will be populated with fake data
     )
     FACTORIES_DEMO_USERS: list[UserDemoFactoryConfig] = []
+    USE_NULL_POOL: bool = False  # Set to true only for tests
     #####################################
     # SMTP configuration using starttls #
     #####################################
@@ -364,7 +363,7 @@ class Settings(BaseSettings):
     def MINIMAL_TITAN_VERSION_CODE(cls) -> str:
         with Path("pyproject.toml").open("rb") as pyproject_binary:
             pyproject = tomllib.load(pyproject_binary)
-        return str(pyproject["project"]["minimal-titan-version-code"])
+        return str(pyproject["tool"]["titan"]["minimal-titan-version-code"])
 
     ######################################
     # Automatically generated parameters #
@@ -441,7 +440,7 @@ class Settings(BaseSettings):
     @computed_field  # type: ignore[prop-decorator]
     @cached_property
     def REDIS_URL(cls) -> str | None:
-        if cls.REDIS_HOST:
+        if cls.REDIS_HOST is not None and cls.REDIS_HOST != "":
             # We need to include `:` before the password
             return (
                 f"redis://:{cls.REDIS_PASSWORD or ''}@{cls.REDIS_HOST}:{cls.REDIS_PORT}"

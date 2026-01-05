@@ -13,6 +13,7 @@ class CheckoutPayment(Base):
     checkout_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("checkout_checkout.id"))
 
     paid_amount: Mapped[int]
+    tip_amount: Mapped[int | None]
     hello_asso_payment_id: Mapped[int] = mapped_column(index=True, unique=True)
 
 

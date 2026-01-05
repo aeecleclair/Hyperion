@@ -5,13 +5,19 @@ from pathlib import Path
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.groups.groups_type import GroupType
+from app.core.groups import models_groups
 from app.modules.recommendation import models_recommendation
+from app.modules.recommendation.endpoints_recommendation import (
+    RecommendationPermissions,
+)
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
 )
+
+admin_group: models_groups.CoreGroup
 
 token_simple: str
 token_BDE: str
@@ -20,6 +26,11 @@ recommendation: models_recommendation.Recommendation
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
+    global admin_group
+    admin_group = await create_groups_with_permissions(
+        [RecommendationPermissions.manage_recommendation],
+        "recommendation_admin",
+    )
     user_simple = await create_user_with_groups(
         [],
     )
@@ -27,7 +38,7 @@ async def init_objects() -> None:
     global token_simple
     token_simple = create_api_access_token(user_simple)
 
-    user_BDE = await create_user_with_groups([GroupType.BDE])
+    user_BDE = await create_user_with_groups([admin_group.id])
 
     global token_BDE
     token_BDE = create_api_access_token(user_BDE)
