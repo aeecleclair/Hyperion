@@ -21,7 +21,6 @@ from jellyfish import jaro_winkler_similarity
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
-from weasyprint import CSS, HTML
 
 from app.core.core_endpoints import cruds_core, models_core
 from app.core.groups import cruds_groups
@@ -386,6 +385,7 @@ async def generate_pdf_from_template(
     You should only provide thrusted templates to this function.
     See [WeasyPrint security consideration](https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#security)
     """
+    from weasyprint import CSS, HTML
     templates = Environment(
         loader=FileSystemLoader("assets/templates"),
         autoescape=select_autoescape(["html"]),

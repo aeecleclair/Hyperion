@@ -92,7 +92,9 @@ jellyfish==0.10.0                    # String Matching
 
 ### About Weasyprint and Pango
 
-Follow the installation steps at https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation.
+Weasyprint is only used to generate PDF files from HTML for some modules. As such, it is rarely needed for development, and its installation can be skipped.
+
+If you need to use it, follow the installation steps at https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation.
 
 For Windows, the best way is through MSYS2, Mac users can simply install using Homebrew.
 
