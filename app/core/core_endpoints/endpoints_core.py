@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import FileResponse
 
 from app.core.core_endpoints import schemas_core
@@ -9,7 +9,7 @@ from app.dependencies import (
     get_settings,
 )
 from app.types.module import CoreModule
-from app.utils.tools import is_group_id_valid, patch_identity_in_text
+from app.utils.tools import patch_identity_in_text
 
 router = APIRouter(tags=["Core"])
 
