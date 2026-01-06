@@ -1,2 +1,2 @@
--r requirements-dev.txt
+-r requirements.txt
 weasyprint==65.1                    # HTML to PDF converter
