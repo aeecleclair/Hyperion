@@ -986,7 +986,7 @@ async def test_get_store_history_with_date(client: TestClient):
 
 async def test_export_store_history_for_non_existing_store(client: TestClient):
     response = client.get(
-        f"/myeclpay/stores/{uuid4()}/history/data-export",
+        f"/mypayment/stores/{uuid4()}/history/data-export",
         headers={"Authorization": f"Bearer {ecl_user2_access_token}"},
     )
 
@@ -996,7 +996,7 @@ async def test_export_store_history_for_non_existing_store(client: TestClient):
 
 async def test_export_store_history_when_not_seller_can_see_history(client: TestClient):
     response = client.get(
-        f"/myeclpay/stores/{store.id}/history/data-export",
+        f"/mypayment/stores/{store.id}/history/data-export",
         headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
     )
 
@@ -1008,7 +1008,7 @@ async def test_export_store_history_when_not_seller_can_see_history(client: Test
 
 async def test_export_store_history(client: TestClient):
     response = client.get(
-        f"/myeclpay/stores/{store.id}/history/data-export",
+        f"/mypayment/stores/{store.id}/history/data-export",
         headers={
             "Authorization": f"Bearer {store_seller_can_see_history_user_access_token}",
         },
@@ -1048,7 +1048,7 @@ async def test_export_store_history(client: TestClient):
 
 async def test_export_store_history_with_date(client: TestClient):
     response = client.get(
-        f"/myeclpay/stores/{store.id}/history/data-export",
+        f"/mypayment/stores/{store.id}/history/data-export",
         params={
             "start_date": "2025-05-18T00:00:00Z",
             "end_date": "2025-05-19T00:00:00Z",
@@ -1075,7 +1075,7 @@ async def test_export_store_history_with_date(client: TestClient):
 
 async def test_export_store_history_with_refund(client: TestClient):
     # Create a transaction and its refund
-    transaction_to_refund = models_myeclpay.Transaction(
+    transaction_to_refund = models_mypayment.Transaction(
         id=uuid4(),
         debited_wallet_id=ecl_user_wallet.id,
         debited_wallet_device_id=ecl_user_wallet_device.id,
@@ -1090,7 +1090,7 @@ async def test_export_store_history_with_refund(client: TestClient):
     )
     await add_object_to_db(transaction_to_refund)
 
-    refund_test = models_myeclpay.Refund(
+    refund_test = models_mypayment.Refund(
         id=uuid4(),
         transaction_id=transaction_to_refund.id,
         debited_wallet_id=store_wallet.id,
@@ -1102,7 +1102,7 @@ async def test_export_store_history_with_refund(client: TestClient):
     await add_object_to_db(refund_test)
 
     response = client.get(
-        f"/myeclpay/stores/{store.id}/history/data-export",
+        f"/mypayment/stores/{store.id}/history/data-export",
         headers={
             "Authorization": f"Bearer {store_seller_can_see_history_user_access_token}",
         },
@@ -1119,7 +1119,7 @@ async def test_export_store_history_with_refund(client: TestClient):
 async def test_export_store_history_encoding(client: TestClient):
     # Test that special characters (accents, etc.) are properly encoded
     response = client.get(
-        f"/myeclpay/stores/{store.id}/history/data-export",
+        f"/mypayment/stores/{store.id}/history/data-export",
         headers={
             "Authorization": f"Bearer {store_seller_can_see_history_user_access_token}",
         },

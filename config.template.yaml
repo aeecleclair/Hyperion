@@ -233,7 +233,6 @@ school:
 
   # If event should be confirmed by a moderator before being added to the calendar
   #require_event_confirmation: bool = False
-
 ########################
 # Matrix configuration #
 ########################
@@ -310,4 +309,4 @@ school:
 # MyPayment requires an external service to recurrently check for transactions and state integrity, this service needs an access to all the data related to the transactions and the users involved
 # This service will use a special token to access the data
 # If this token is not set, the service will not be able to access the data and no integrity check will be performed
-#MYPAYMENT_DATA_VERIFIER_ACCESS_TOKEN: 
+#MYPAYMENT_DATA_VERIFIER_ACCESS_TOKEN:

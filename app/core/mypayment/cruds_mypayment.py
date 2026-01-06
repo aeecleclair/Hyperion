@@ -645,31 +645,31 @@ async def get_transactions_and_sellers_by_wallet_id(
     db: AsyncSession,
     start_datetime: datetime | None = None,
     end_datetime: datetime | None = None,
-) -> Sequence[tuple[models_myeclpay.Transaction, str | None]]:
+) -> Sequence[tuple[models_mypayment.Transaction, str | None]]:
     result = await db.execute(
         select(
-            models_myeclpay.Transaction,
+            models_mypayment.Transaction,
             models_users.CoreUser,
         )
         .outerjoin(
             models_users.CoreUser,
-            models_users.CoreUser.id == models_myeclpay.Transaction.seller_user_id,
+            models_users.CoreUser.id == models_mypayment.Transaction.seller_user_id,
         )
         .where(
             or_(
-                models_myeclpay.Transaction.debited_wallet_id == wallet_id,
-                models_myeclpay.Transaction.credited_wallet_id == wallet_id,
+                models_mypayment.Transaction.debited_wallet_id == wallet_id,
+                models_mypayment.Transaction.credited_wallet_id == wallet_id,
             ),
-            models_myeclpay.Transaction.creation >= start_datetime
+            models_mypayment.Transaction.creation >= start_datetime
             if start_datetime
             else and_(True),
-            models_myeclpay.Transaction.creation <= end_datetime
+            models_mypayment.Transaction.creation <= end_datetime
             if end_datetime
             else and_(True),
         )
         .options(
-            selectinload(models_myeclpay.Transaction.debited_wallet),
-            selectinload(models_myeclpay.Transaction.credited_wallet),
+            selectinload(models_mypayment.Transaction.debited_wallet),
+            selectinload(models_mypayment.Transaction.credited_wallet),
         ),
     )
 
@@ -765,22 +765,22 @@ async def get_transfers_and_sellers_by_wallet_id(
     db: AsyncSession,
     start_datetime: datetime | None = None,
     end_datetime: datetime | None = None,
-) -> Sequence[tuple[models_myeclpay.Transfer, str | None]]:
+) -> Sequence[tuple[models_mypayment.Transfer, str | None]]:
     result = await db.execute(
         select(
-            models_myeclpay.Transfer,
+            models_mypayment.Transfer,
             models_users.CoreUser,
         )
         .outerjoin(
             models_users.CoreUser,
-            models_users.CoreUser.id == models_myeclpay.Transfer.approver_user_id,
+            models_users.CoreUser.id == models_mypayment.Transfer.approver_user_id,
         )
         .where(
-            models_myeclpay.Transfer.wallet_id == wallet_id,
-            models_myeclpay.Transfer.creation >= start_datetime
+            models_mypayment.Transfer.wallet_id == wallet_id,
+            models_mypayment.Transfer.creation >= start_datetime
             if start_datetime
             else and_(True),
-            models_myeclpay.Transfer.creation <= end_datetime
+            models_mypayment.Transfer.creation <= end_datetime
             if end_datetime
             else and_(True),
         ),
@@ -911,31 +911,31 @@ async def get_refunds_and_sellers_by_wallet_id(
     db: AsyncSession,
     start_datetime: datetime | None = None,
     end_datetime: datetime | None = None,
-) -> Sequence[tuple[models_myeclpay.Refund, str | None]]:
+) -> Sequence[tuple[models_mypayment.Refund, str | None]]:
     result = await db.execute(
         select(
-            models_myeclpay.Refund,
+            models_mypayment.Refund,
             models_users.CoreUser,
         )
         .outerjoin(
             models_users.CoreUser,
-            models_users.CoreUser.id == models_myeclpay.Refund.seller_user_id,
+            models_users.CoreUser.id == models_mypayment.Refund.seller_user_id,
         )
         .where(
             or_(
-                models_myeclpay.Refund.debited_wallet_id == wallet_id,
-                models_myeclpay.Refund.credited_wallet_id == wallet_id,
+                models_mypayment.Refund.debited_wallet_id == wallet_id,
+                models_mypayment.Refund.credited_wallet_id == wallet_id,
             ),
-            models_myeclpay.Refund.creation >= start_datetime
+            models_mypayment.Refund.creation >= start_datetime
             if start_datetime
             else and_(True),
-            models_myeclpay.Refund.creation <= end_datetime
+            models_mypayment.Refund.creation <= end_datetime
             if end_datetime
             else and_(True),
         )
         .options(
-            selectinload(models_myeclpay.Refund.debited_wallet),
-            selectinload(models_myeclpay.Refund.credited_wallet),
+            selectinload(models_mypayment.Refund.debited_wallet),
+            selectinload(models_mypayment.Refund.credited_wallet),
         ),
     )
 
