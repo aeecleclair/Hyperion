@@ -599,3 +599,17 @@ async def execute_async_or_sync_method(
     if iscoroutinefunction(job_function):
         return await job_function(**kwargs)
     return job_function(**kwargs)
+
+
+def patch_identity_in_text(
+    text: str,
+    settings: "Settings",
+):
+    """
+    Patch the given text with the identity of the school.
+    This is used to replace the identity placeholders in the legal texts with the values defined in the settings.
+    """
+    for key, value in settings.school.model_dump().items():
+        if isinstance(value, str):
+            text = text.replace(f"{{{key}}}", value)
+    return text

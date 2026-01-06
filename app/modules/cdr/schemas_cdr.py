@@ -10,7 +10,6 @@ from app.modules.cdr.types_cdr import (
     DocumentSignatureType,
     PaymentType,
 )
-from app.types.floors_type import FloorsType
 from app.types.websocket import WSMessageModel
 from app.utils import validators
 
@@ -45,7 +44,7 @@ class CdrUser(CdrUserPreview):
     email: str
     birthday: date | None = None
     phone: str | None = None
-    floor: FloorsType | None = None
+    floor: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -56,7 +55,7 @@ class CdrUserUpdate(BaseModel):
     email: str | None = None
     birthday: date | None = None
     phone: str | None = None
-    floor: FloorsType | None = None
+    floor: str | None = None
 
     _normalize_nickname = field_validator("nickname")(
         validators.trailing_spaces_remover,
@@ -259,7 +258,7 @@ class PaymentUrl(BaseModel):
 
 class UserTicket(CoreUserSimple):
     promo: int | None = None
-    floor: FloorsType | None = None
+    floor: str | None = None
     created_on: datetime | None = None
 
 

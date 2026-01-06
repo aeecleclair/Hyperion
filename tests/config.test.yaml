@@ -128,12 +128,49 @@ SMTP_PASSWORD: ""
 SMTP_EMAIL: ""
 
 ##########################
-# Firebase Configuration #
+# Firebase configuration #
 ##########################
 
 # To enable Firebase push notification capabilities, a JSON key file named `firebase.json` should be placed at Hyperion root.
 # This file can be created and downloaded from [Google cloud, IAM and administration, Service account](https://console.cloud.google.com/iam-admin/serviceaccounts) page.
 USE_FIREBASE: False
+
+########################
+# School configuration #
+########################
+
+school:
+  school_name: "École Centrale Lyon"
+  application_name: Tests MyECL
+  payment_name: Tests MyECLPay
+  application_domain_name: myecl.fr
+  entity_name: ÉCLAIR
+  entity_site_url: "https://myecl.fr/"
+  entity_email: "eclair@myecl.fr"
+  end_of_support: "2030-01-01"
+  email_placeholder: prenom.nom@etu.ec-lyon.fr
+  main_activation_form:
+    fields:
+      - birthdate
+      - promotion
+      - phone
+      - floor
+      - nickname
+    floor_choices:
+      - V3
+      - V45
+      - T21
+      - X3
+      - Adoma
+      - "Exté"
+      - X2
+    promotion_offset: 0
+
+  primary_color: "#F97315"
+
+  student_email_regex: '^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$'
+  staff_email_regex: '^[\w\-.]*@(enise\.)?ec-lyon\.fr$'
+  former_student_email_regex: '^[\w\-.]*@centraliens-lyon\.net$'
 
 ###########################
 # HelloAsso configuration #
@@ -144,6 +181,7 @@ USE_FIREBASE: False
 # HELLOASSO_API_BASE should have the format: `api.helloasso-sandbox.com`
 # HelloAsso only allow 20 simultaneous active access token. Note that each Hyperion worker will need its own access token.
 
+MYPAYMENT_MAXIMUM_WALLET_BALANCE: 5000
 HELLOASSO_CONFIGURATIONS: {} # [["name", "helloasso_client_id", "helloasso_client_secret", "helloasso_slug", "redirection_uri"]]
 #  MYECLPAY:
 #    helloasso_client_id: ...
@@ -153,7 +191,7 @@ HELLOASSO_CONFIGURATIONS: {} # [["name", "helloasso_client_id", "helloasso_clien
 HELLOASSO_API_BASE: api.helloasso-sandbox.com
 
 # Maximum wallet balance for MyECLPay in cents, we will prevent user from adding more money to their wallet if it will make their balance exceed this value
-MYECLPAY_MAXIMUM_WALLET_BALANCE: 8000
+MYPAYMENT_MAXIMUM_WALLET_BALANCE: 5000
 
 # Trusted urls is a list of redirect payment url that can be trusted by Hyperion.
 # These urls will be used to validate the redirect url provided by the front

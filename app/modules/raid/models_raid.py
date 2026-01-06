@@ -306,4 +306,4 @@ class RaidParticipantCheckout(Base):
     participant_id: Mapped[str] = mapped_column(
         ForeignKey("raid_participant.id"),
     )
-    checkout_id: Mapped[str] = mapped_column(ForeignKey("payment_checkout.id"))
+    checkout_id: Mapped[str] = mapped_column(ForeignKey("checkout_checkout.id"))

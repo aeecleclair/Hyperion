@@ -437,7 +437,7 @@ class CompetitionCheckout(Base):
     edition_id: Mapped[UUID] = mapped_column(
         ForeignKey("competition_edition.id"),
     )
-    checkout_id: Mapped[UUID] = mapped_column(ForeignKey("payment_checkout.id"))
+    checkout_id: Mapped[UUID] = mapped_column(ForeignKey("checkout_checkout.id"))
 
 
 class VolunteerShift(Base):
