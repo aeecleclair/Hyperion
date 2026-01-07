@@ -333,8 +333,8 @@ def initialize_module_visibility(
                                     permission_name=access_permission,
                                     db=db,
                                 )
-                            except ValueError as error:
-                                hyperion_error_logger.fatal(
+                            except IntegrityError as error:
+                                hyperion_error_logger.error(
                                     f"Startup: Could not add module visibility {module.root} in the database: {error}",
                                 )
                     if module.default_allowed_account_types is not None:
@@ -345,8 +345,8 @@ def initialize_module_visibility(
                                     permission_name=access_permission,
                                     db=db,
                                 )
-                            except ValueError as error:
-                                hyperion_error_logger.fatal(
+                            except IntegrityError as error:
+                                hyperion_error_logger.error(
                                     f"Startup: Could not add module visibility {module.root} in the database: {error}",
                                 )
             for auth in new_auth:
@@ -357,8 +357,8 @@ def initialize_module_visibility(
                             permission_name=auth,
                             db=db,
                         )
-                    except ValueError as error:
-                        hyperion_error_logger.fatal(
+                    except IntegrityError as error:
+                        hyperion_error_logger.error(
                             f"Startup: Could not add auth visibility {auth} in the database: {error}",
                         )
             initialization.set_core_data_sync(
