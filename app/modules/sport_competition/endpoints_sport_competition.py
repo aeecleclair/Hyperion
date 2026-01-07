@@ -35,7 +35,7 @@ from app.modules.sport_competition.types_sport_competition import (
     ExcelExportParams,
     ProductSchoolType,
 )
-from app.modules.sport_competition.utils.data_exporter import (
+from app.modules.sport_competition.utils.data_exporter.global_exporter import (
     construct_users_excel_with_parameters,
 )
 from app.modules.sport_competition.utils.validation_checker import (
