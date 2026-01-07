@@ -500,7 +500,7 @@ async def buy_ticket(
             user_id=user.id,
         )
         balance = models_raffle.Cash(
-            **new_cash_db.dict(),
+            **new_cash_db.model_dump(),
         )
         await cruds_raffle.create_cash_of_user(
             cash=balance,
