@@ -5,20 +5,27 @@ from pathlib import Path
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.groups.groups_type import GroupType
+from app.core.groups import models_groups
 from app.core.users import models_users
 from app.modules.advert import models_advert
+from app.modules.advert.endpoints_advert import AdvertPermissions
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
 )
 
+admin_group: models_groups.CoreGroup
+advertiser_group: models_groups.CoreGroup
+
 advert: models_advert.Advert
 advertiser: models_advert.Advertiser
+
 user_admin: models_users.CoreUser
 user_advertiser: models_users.CoreUser
 user_simple: models_users.CoreUser
+
 token_admin: str = ""
 token_advertiser: str = ""
 token_simple: str = ""
@@ -26,8 +33,18 @@ token_simple: str = ""
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
+    global admin_group, advertiser_group
+    admin_group = await create_groups_with_permissions(
+        [AdvertPermissions.manage_advertisers],
+        "advert_admin",
+    )
+    advertiser_group = await create_groups_with_permissions(
+        [],
+        "CAA advertiser",
+    )
+
     global user_admin
-    user_admin = await create_user_with_groups([GroupType.admin])
+    user_admin = await create_user_with_groups([admin_group.id])
 
     global token_admin
     token_admin = create_api_access_token(user_admin)
@@ -37,12 +54,12 @@ async def init_objects() -> None:
     advertiser = models_advert.Advertiser(
         id=str(uuid.uuid4()),
         name="CAA",
-        group_manager_id=GroupType.CAA.value,
+        group_manager_id=advertiser_group.id,
     )
     await add_object_to_db(advertiser)
 
     user_advertiser = await create_user_with_groups(
-        [GroupType.CAA],
+        [advertiser_group.id],
     )
 
     global token_advertiser

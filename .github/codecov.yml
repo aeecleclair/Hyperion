@@ -5,6 +5,8 @@ coverage:
         target: auto
         # Codecov should allow coverage to be reduced by a few percent
         threshold: 2%
+        branches:
+          - main
     patch:
       default:
         informational: true

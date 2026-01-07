@@ -85,7 +85,7 @@ def init_redis_client(
     Returns None if Redis is not configured.
     """
     redis_client: redis.Redis | None = None
-    if settings.REDIS_HOST:
+    if settings.REDIS_HOST is not None and settings.REDIS_HOST != "":
         try:
             redis_client = redis.Redis(
                 host=settings.REDIS_HOST,
@@ -110,7 +110,7 @@ async def init_scheduler(
     settings: Settings,
     _dependency_overrides: dict[Callable[..., Any], Callable[..., Any]],
 ) -> Scheduler:
-    if settings.REDIS_HOST:
+    if settings.REDIS_HOST is not None and settings.REDIS_HOST != "":
         scheduler = Scheduler()
 
         await scheduler.start(
@@ -152,7 +152,7 @@ def init_payment_tools(
     hyperion_error_logger: logging.Logger,
 ) -> dict[HelloAssoConfigName, PaymentTool]:
     if settings.HELLOASSO_API_BASE is None:
-        hyperion_error_logger.error(
+        hyperion_error_logger.warning(
             "HelloAsso API base URL is not set in settings, payment won't be available",
         )
         return {}
@@ -172,7 +172,7 @@ def init_mail_templates(
 ) -> calypsso.MailTemplates:
     return calypsso.MailTemplates(
         product_name="MyECL",
-        payment_product_name="MyECLPay",
+        payment_product_name=settings.school.payment_name,
         entity_name="ÉCLAIR",
         entity_site_url="https://myecl.fr/",
         api_base_url=settings.CLIENT_URL,

@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification.schemas_notification import Topic
 from app.core.payment import schemas_payment
+from app.core.permissions.type_permissions import ModulePermissions
 from app.types.factory import Factory
 
 
@@ -22,6 +23,7 @@ class CoreModule:
         ]
         | None = None,
         registred_topics: list[Topic] | None = None,
+        permissions: type[ModulePermissions] | None = None,
     ):
         """
         Initialize a new Module object.
@@ -32,6 +34,7 @@ class CoreModule:
         :param payment_callback: an optional method to call when a payment is notified by HelloAsso. A CheckoutPayment and the database will be provided during the call
         :param registred_topics: an optionnal list of Topics that should be registered by the module. Modules can also register topics dynamically.
             Once the Topic was registred, removing it from this list won't delete it
+        :param permissions: enum declaring permissions strings used by module
         """
         self.root = root
         self.router = router or APIRouter(tags=[tag])
@@ -41,6 +44,7 @@ class CoreModule:
         ) = payment_callback
         self.registred_topics = registred_topics
         self.factory = factory
+        self.permissions = permissions
 
 
 class Module(CoreModule):
@@ -58,6 +62,7 @@ class Module(CoreModule):
         ]
         | None = None,
         registred_topics: list[Topic] | None = None,
+        permissions: type[ModulePermissions] | None = None,
     ):
         """
         Initialize a new Module object.
@@ -70,6 +75,7 @@ class Module(CoreModule):
         :param payment_callback: an optional method to call when a payment is notified by HelloAsso. A CheckoutPayment and the database will be provided during the call
         :param registred_topics: an optionnal list of Topics that should be registered by the module. Modules can also register topics dynamically.
             Once the Topic was registred, removing it from this list won't delete it
+        :param permissions: enum declaring permissions strings used by module
         """
         self.root = root
         self.default_allowed_groups_ids = default_allowed_groups_ids
@@ -81,3 +87,4 @@ class Module(CoreModule):
         ) = payment_callback
         self.registred_topics = registred_topics
         self.factory = factory
+        self.permissions = permissions

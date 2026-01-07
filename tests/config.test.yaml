@@ -2,65 +2,124 @@
 #   This dotenv file and its values should NEVER be used in PRODUCTION!   #
 ###########################################################################
 
-# SQLITE_DB: "test.db" # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (should not be used if possible)
+###############################################
+# Authorization using OAuth or Openid connect #
+###############################################
 
-# Authorization using JWT #
-ACCESS_TOKEN_SECRET_KEY: "YWZOHliiI53lJMJc5BI_WbGbA4GF2T7Wbt1airIhOXEa3c021c4-1c55-4182-b141-7778bcc8fac4" # Note: modifing this token requires to update the common `test_check_settings_mocking` test
-RSA_PRIVATE_PEM_STRING: "-----BEGIN RSA PRIVATE KEY-----\nMIIEpQIBAAKCAQEA1tpj3TZDkJakp2RygsM392pQbcmNBOGFT8FlETcRG/JVFT7k\niClJu+CVOJSVD0epfpYp93cYepfw74SezYnBCyuoLJ2yg5Qh4KlCrWmvwM7vhFIN\nx0xddIQi+Gm0T3dxGtv4Ga50TYX4SV4FE3ctJG9m3pyNF6POODp5tMJvShQWYTto\nW9qNhltZ8Z+14bq2INV/efpT47WuMT+VD/fa9/WwopAtgBcQOvq57fv5+DaPOIVR\n9BiP7F+pv+v6wQ373hI22QzCMsA4Whl+BmWFKcFoBDOBRjlW5VqhJWJkWZIRP0q+\nVAZHk2xJK+0YFc9jmaC+ExMtuyHYK0RnQK/8LQIDAQABAoIBABxJ8v4sZ+cAvrs/\nkYhAFf1gpShfck7jNr9SknEa1Aje9m7usf5vmULAhkVF4v55DAsb0HjB2JpDqTiQ\nOKyNZ7qFzAXb2aZTecZv4tScZsS3OngsqZ3FI0T1JPmaSWBxNJY5wkf3XV7btd5L\nH9X5ShtTA7Np33XuXneu01mGhEq3boLro+vfXMHV5QHyle1F4LUFWEqtP0UmZ5wA\nrro0Y7pA8R88tu5X4iWEjQPnAsbRixwFQ9LNMD8+40e1UIguobRySnP5umErHaIh\nKui7ZijLjbZh/dPS0IfpgahL1K6s9XhT3mD9WMvAvMkNtLewHIZZukG45mOQBrjF\nvvyYxoECgYEA+EY6YimGw0IKnUuf+5uZRXST7kDMENz1Flkcj8oZvo47hdX8/lDN\ni0y7gm3VNfHAK2R2KZPmSbtXA0DvS7kmx1/CFcmwkaakhuU5dyCHldWwSaTME3IE\nxjSZfTvlAiq9i6nUflgfkKo3Bdsiq8TYOUAv25S2SwYDH9Tx0fQwwGECgYEA3Ynt\nCHc8e4YRlGT65UQmEZ8cptmqVRyY4ClMU1xht7Pn0G1JwKRraiEL5/LndwscWf3h\nDygQuArJ28pp4d22FEW1LeXozXYUjJoz3anIA45IZ1OihS7Cx7tJB51/QNJeFdF4\nEX/XHaVukHyYSsAxkwCUYOw3cSgZOSEddL5Wf00CgYEA7JlIlDmMwtFR+jqSmJ3c\n//Kr8zZvAnb/Xa/IZ0MrK4yyLsYR1m48o06Ztx9iO4lKIFAZx1+563QL5P7hzOEC\nkqev90GA8hzD2AXksKEgdOrymAvjq3hSEm0YBN+qS1ldzxYmec0TL7L2wq7lqJnr\nkQuZUAG1g2OUYKZ3WSUDvKECgYEAv24NSkFuG/avfiD7w9xtYNCye2KekskROLG2\n6FltfsWQTEQDdNkekChaF2WHqRAKwaBlNymRuNZpsuhnMerZCQ9rDWwbDF86RnyA\n0MuCr7/kxJQ6XQcY/GnTIydu7F5bOlM0gzqKcW2f6m4fUohczf+0N0QmbDsQAJOi\n1lwadgkCgYEA3tkCBJIPTQecfjWiLqSocS6SrwXU+r3Jw6kI3/IB6ban/nsFdHSb\nnADST7f2zZatN6XALwsLU7f2R09R39ub0AJPyfToxo7MngR1rvaUYooF3rLlaU32\n8DqGvGpLkZkwbtcDmcX1zQoHjUo7RvoShZoapr59ihfrkiiEsXOkuGw=\n-----END RSA PRIVATE KEY-----\n"
+# ACCESS_TOKEN_SECRET_KEY should contain a random string with enough entropy (at least 32 bytes long) to securely sign all access_tokens for OAuth and Openid connect
+# Note: modifing this token requires to update the common `test_check_settings_mocking` test
+ACCESS_TOKEN_SECRET_KEY: "YWZOHliiI53lJMJc5BI_WbGbA4GF2T7Wbt1airIhOXEa3c021c4-1c55-4182-b141-7778bcc8fac4"
 
-# Host or url of the API, used for Openid connect discovery endpoint
-# NOTE: A trailing / is required
-CLIENT_URL: "http://127.0.0.1:8000/"
+# RSA_PRIVATE_PEM_STRING should be a string containing the PEM certificate of a private RSA key. It will be used to sign id_tokens for Openid connect authentication
+# The 2048-bit-long PEM certificate example below was generated using a 2048-bit RSA key generator online.
+# If you want to generate a PEM certificate and save in a file, the following openssl command may be used:
+# openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out certificate.pem
+RSA_PRIVATE_PEM_STRING: |
+  -----BEGIN RSA PRIVATE KEY-----
+  MIIEpQIBAAKCAQEA1tpj3TZDkJakp2RygsM392pQbcmNBOGFT8FlETcRG/JVFT7k
+  iClJu+CVOJSVD0epfpYp93cYepfw74SezYnBCyuoLJ2yg5Qh4KlCrWmvwM7vhFIN
+  x0xddIQi+Gm0T3dxGtv4Ga50TYX4SV4FE3ctJG9m3pyNF6POODp5tMJvShQWYTto
+  W9qNhltZ8Z+14bq2INV/efpT47WuMT+VD/fa9/WwopAtgBcQOvq57fv5+DaPOIVR
+  9BiP7F+pv+v6wQ373hI22QzCMsA4Whl+BmWFKcFoBDOBRjlW5VqhJWJkWZIRP0q+
+  VAZHk2xJK+0YFc9jmaC+ExMtuyHYK0RnQK/8LQIDAQABAoIBABxJ8v4sZ+cAvrs/
+  kYhAFf1gpShfck7jNr9SknEa1Aje9m7usf5vmULAhkVF4v55DAsb0HjB2JpDqTiQ
+  OKyNZ7qFzAXb2aZTecZv4tScZsS3OngsqZ3FI0T1JPmaSWBxNJY5wkf3XV7btd5L
+  H9X5ShtTA7Np33XuXneu01mGhEq3boLro+vfXMHV5QHyle1F4LUFWEqtP0UmZ5wA
+  rro0Y7pA8R88tu5X4iWEjQPnAsbRixwFQ9LNMD8+40e1UIguobRySnP5umErHaIh
+  Kui7ZijLjbZh/dPS0IfpgahL1K6s9XhT3mD9WMvAvMkNtLewHIZZukG45mOQBrjF
+  vvyYxoECgYEA+EY6YimGw0IKnUuf+5uZRXST7kDMENz1Flkcj8oZvo47hdX8/lDN
+  i0y7gm3VNfHAK2R2KZPmSbtXA0DvS7kmx1/CFcmwkaakhuU5dyCHldWwSaTME3IE
+  xjSZfTvlAiq9i6nUflgfkKo3Bdsiq8TYOUAv25S2SwYDH9Tx0fQwwGECgYEA3Ynt
+  CHc8e4YRlGT65UQmEZ8cptmqVRyY4ClMU1xht7Pn0G1JwKRraiEL5/LndwscWf3h
+  DygQuArJ28pp4d22FEW1LeXozXYUjJoz3anIA45IZ1OihS7Cx7tJB51/QNJeFdF4
+  EX/XHaVukHyYSsAxkwCUYOw3cSgZOSEddL5Wf00CgYEA7JlIlDmMwtFR+jqSmJ3c
+  //Kr8zZvAnb/Xa/IZ0MrK4yyLsYR1m48o06Ztx9iO4lKIFAZx1+563QL5P7hzOEC
+  kqev90GA8hzD2AXksKEgdOrymAvjq3hSEm0YBN+qS1ldzxYmec0TL7L2wq7lqJnr
+  kQuZUAG1g2OUYKZ3WSUDvKECgYEAv24NSkFuG/avfiD7w9xtYNCye2KekskROLG2
+  6FltfsWQTEQDdNkekChaF2WHqRAKwaBlNymRuNZpsuhnMerZCQ9rDWwbDF86RnyA
+  0MuCr7/kxJQ6XQcY/GnTIydu7F5bOlM0gzqKcW2f6m4fUohczf+0N0QmbDsQAJOi
+  1lwadgkCgYEA3tkCBJIPTQecfjWiLqSocS6SrwXU+r3Jw6kI3/IB6ban/nsFdHSb
+  nADST7f2zZatN6XALwsLU7f2R09R39ub0AJPyfToxo7MngR1rvaUYooF3rLlaU32
+  8DqGvGpLkZkwbtcDmcX1zQoHjUo7RvoShZoapr59ihfrkiiEsXOkuGw=
+  -----END RSA PRIVATE KEY-----
 
+# Host or URL of the instance of Hyperion
+# This url will be especially used for OIDC/OAuth2 discovery endpoint and links send by email
+CLIENT_URL: http://127.0.0.1:8000/ # NOTE: A trailing / is required
+
+# Sometimes, when running third services with oidc inside Docker containers, and running Hyperion on your local device
+# you may need to use a different url for call made from docker and call made from your device
+# For exemple:
+# - you will access the login page from your browser http://localhost:8000/auth/authorize
+# - but the docker container should call http://host.docker.internal:8000/auth/token and not your localhost address
+#OVERRIDDEN_CLIENT_URL_FOR_OIDC: "http://host.docker.internal:8000/" # NOTE: A trailing / is required
+
+# Origins for the CORS middleware. `["http://localhost:3000"]` can be used for development.
+# See https://fastapi.tiangolo.com/tutorial/cors/
+# It should begin with 'http://' or 'https:// and should never end with a '/'
+CORS_ORIGINS:
+  - https://test-authorized-origin.com
+#  - "*" # For a local instance, using a wildcard "*" is convenient
+#  - http://localhost:3000
+#  - http://127.0.0.1:3000
+
+################
+# Auth Clients #
+################
+
+# Configure AuthClients, to allow services to authenticate users using OAuth2 or OpenID Connect
+# The Python-expected type is `dict[str, AuthClientConfig]` where the class `AuthClientConfig` is from `app.core.utils.config`.
+# Thus, the following format should be used in yaml config files:
+# ```yml
+# AUTH_CLIENTS:
+#   <ClientId>:
+#     secret: <ClientSecret> (or <null> to use PKCE instead of a client secret)
+#     redirect_uri:
+#       - <RedirectUri1>
+#       - <RedirectUri2>
+#     auth_client: <AuthClientClassName>
+# ```
+# `AuthClientClassName` should be a class from `app.utils.auth.providers`
 AUTH_CLIENTS:
   AppAuthClientWithPKCE:
+    secret: null
     redirect_uri:
-      - "http://127.0.0.1:8000/docs"
-    auth_client: "AppAuthClient"
+      - http://127.0.0.1:8000/docs
+    auth_client: AppAuthClient
   AppAuthClientWithClientSecret:
-    secret: "secret"
+    secret: secret
     redirect_uri:
-      - "http://127.0.0.1:8000/docs"
+      - http://127.0.0.1:8000/docs
     auth_client: "AppAuthClient"
-  BaseAuthClient:
+  GroupPermissionAuthClient:
     secret: "secret"
     redirect_uri:
-      - "http://127.0.0.1:8000/docs"
-    auth_client: "BaseAuthClient"
-  RalllyAuthClient:
+      - http://127.0.0.1:8000/docs
+    auth_client: "NextcloudAuthClient"
+  AccountTypePermissionAuthClient:
     secret: "secret"
     redirect_uri:
       - "http://127.0.0.1:8000/docs"
     auth_client: "RalllyAuthClient"
-  SynapseAuthClient:
+  TokenIntrospectionAuthClient:
     secret: "secret"
     redirect_uri:
       - "http://127.0.0.1:8000/docs"
     auth_client: "SynapseAuthClient"
-  AcceptingOnlyECLUsersAuthClient:
-    secret: "secret"
-    redirect_uri:
-      - "http://127.0.0.1:8000/docs"
-    auth_client: "NextcloudAuthClient"
-  RestrictingUsersGroupsAuthClient:
-    secret: "secret"
-    redirect_uri:
-      - "http://127.0.0.1:8000/docs"
-    auth_client: "DocumensoAuthClient"
 
-# Logging configuration #
+#####################
+# Hyperion settings #
+#####################
 
-LOG_DEBUG_MESSAGES: true
-ENABLE_RATE_LIMITER: false
+#SQLITE_DB: app.db # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (if possible PostgreSQL should be used instead)
+DATABASE_DEBUG: False # If True, will print all SQL queries in the console
+LOG_DEBUG_MESSAGES: True
+ENABLE_RATE_LIMITER: False
 
-# CORS_ORIGINS should be a list of urls allowed to make requests to the API
-# It should begin with 'http://' or 'https:// and should never end with a '/'
-CORS_ORIGINS: ["https://test-authorized-origin.com"]
-
-# If True, will print all SQL queries in the console
-DATABASE_DEBUG: False
-
+#####################################
 # SMTP configuration using starttls #
+#####################################
+
 SMTP_ACTIVE: False
 SMTP_PORT: 587
 SMTP_SERVER: ""
@@ -68,14 +127,77 @@ SMTP_USERNAME: ""
 SMTP_PASSWORD: ""
 SMTP_EMAIL: ""
 
-# Push notifications using Firebase Cloud Messaging
-USE_FIREBASE: false
+##########################
+# Firebase configuration #
+##########################
 
-# Payment configuration #
+# To enable Firebase push notification capabilities, a JSON key file named `firebase.json` should be placed at Hyperion root.
+# This file can be created and downloaded from [Google cloud, IAM and administration, Service account](https://console.cloud.google.com/iam-admin/serviceaccounts) page.
+USE_FIREBASE: False
 
-TRUSTED_PAYMENT_REDIRECT_URLS: ["http://localhost:3000/payment_callback"]
+########################
+# School configuration #
+########################
 
-HELLOASSO_API_BASE: "https://api.helloasso.com/v3"
-HELLOASSO_CONFIGURATIONS: {}
+school:
+  school_name: "École Centrale Lyon"
+  application_name: Tests MyECL
+  payment_name: Tests MyECLPay
+  application_domain_name: myecl.fr
+  entity_name: ÉCLAIR
+  entity_site_url: "https://myecl.fr/"
+  entity_email: "eclair@myecl.fr"
+  end_of_support: "2030-01-01"
+  email_placeholder: prenom.nom@etu.ec-lyon.fr
+  main_activation_form:
+    fields:
+      - birthdate
+      - promotion
+      - phone
+      - floor
+      - nickname
+    floor_choices:
+      - V3
+      - V45
+      - T21
+      - X3
+      - Adoma
+      - "Exté"
+      - X2
+    promotion_offset: 0
 
-MYECLPAY_MAXIMUM_WALLET_BALANCE: 5000
+  primary_color: "#F97315"
+
+  student_email_regex: '^[\w\-.]*@etu(-enise)?\.ec-lyon\.fr$'
+  staff_email_regex: '^[\w\-.]*@(enise\.)?ec-lyon\.fr$'
+  former_student_email_regex: '^[\w\-.]*@centraliens-lyon\.net$'
+
+###########################
+# HelloAsso configuration #
+###########################
+
+# To be able to use payment features using HelloAsso, you need to set a client id, secret for their API
+# HelloAsso provide a sandbox to be able to realize tests
+# HELLOASSO_API_BASE should have the format: `api.helloasso-sandbox.com`
+# HelloAsso only allow 20 simultaneous active access token. Note that each Hyperion worker will need its own access token.
+
+MYPAYMENT_MAXIMUM_WALLET_BALANCE: 5000
+HELLOASSO_CONFIGURATIONS: {} # [["name", "helloasso_client_id", "helloasso_client_secret", "helloasso_slug", "redirection_uri"]]
+#  MYECLPAY:
+#    helloasso_client_id: ...
+#    helloasso_client_secret: ...
+#    helloasso_slug: "AEECL"
+#    redirection_uri: null
+HELLOASSO_API_BASE: api.helloasso-sandbox.com
+
+# Maximum wallet balance for MyECLPay in cents, we will prevent user from adding more money to their wallet if it will make their balance exceed this value
+MYPAYMENT_MAXIMUM_WALLET_BALANCE: 5000
+
+# Trusted urls is a list of redirect payment url that can be trusted by Hyperion.
+# These urls will be used to validate the redirect url provided by the front
+TRUSTED_PAYMENT_REDIRECT_URLS:
+  - http://localhost:3000/payment_callback
+# MyECLPay requires an external service to recurrently check for transactions and state integrity, this service needs an access to all the data related to the transactions and the users involved
+# This service will use a special token to access the data
+# If this token is not set, the service will not be able to access the data and no integrity check will be performed
+#MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN: ""

@@ -3,10 +3,9 @@ name: Build and Publish Preprod
 on:
   workflow_dispatch:
     inputs:
-      branch:
-        description: "Branch to deploy in preprod"
+      pr:
+        description: "PR to deploy in preprod"
         required: true
-        default: "main"
       preprod_env:
         description: "Preprod environment"
         required: true
@@ -28,10 +27,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Branch name from input PR number
+        id: branch
+        run: |
+          branch=$(curl -fs ${{ github.api_url }}/repos/${{ github.repository }}/pulls/${{ github.event.inputs.pr }} | jq -r '.head.ref')
+          echo "branch=${branch:?'PR #${{ github.event.inputs.pr }} does not exist'}" >> "$GITHUB_OUTPUT"
       - name: Checkout code
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.inputs.branch }}
+          ref: ${{ steps.branch.outputs.branch }}
 
       - name: Docker metadata
         id: meta
@@ -44,7 +48,7 @@ jobs:
             type=sha,prefix={{branch}}-
           labels: |
             preprod.environment=${{ github.event.inputs.preprod_env }}
-            preprod.branch=${{ github.event.inputs.branch }}
+            preprod.pr=${{ github.event.inputs.pr }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3.11.1

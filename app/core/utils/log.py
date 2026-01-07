@@ -74,16 +74,16 @@ class LogConfig:
 
     LOG_FORMAT: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     MATRIX_LOG_FORMAT: str = "%(asctime)s - %(name)s - <code>%(levelname)s</code> - <font color ='green'>%(message)s</font>"
-    MYECLPAY_LOG_FORMAT: str = "%(message)s"  # Do not change at any cost
+    MYPAYMENT_LOG_FORMAT: str = "%(message)s"  # Do not change at any cost
 
     # Logging config
     # See https://docs.python.org/3/library/logging.config.html#logging-config-dictschema
-    def get_config_dict(self, settings: Settings):
+    def _get_config_dict(self, settings: Settings):
         # We can't use a dependency to access settings as this function is not an endpoint. The object must thus be passed as a parameter.
 
         # /!\ WARNING /!\
         # MINIMUM_LOG_LEVEL should never be set higher than INFO
-        # as it would prevent important information to be logged, like MyECLPay operations
+        # as it would prevent important information to be logged, like MyPayment operations
         MINIMUM_LOG_LEVEL: str = (
             "DEBUG" if settings.LOG_DEBUG_MESSAGES else "INFO"
         )  # /!\ read warning before modifying this /!\
@@ -104,8 +104,8 @@ class LogConfig:
                     "format": self.MATRIX_LOG_FORMAT,
                     "datefmt": "%d-%b-%y %H:%M:%S",
                 },
-                "myeclpay": {
-                    "format": self.MYECLPAY_LOG_FORMAT,
+                "mypayment": {
+                    "format": self.MYPAYMENT_LOG_FORMAT,
                 },
             },
             "handlers": {
@@ -141,17 +141,17 @@ class LogConfig:
                     ),
                     "level": "INFO",
                 },
-                "myeclpay_s3": {
-                    "formatter": "myeclpay",
+                "mypayment_s3": {
+                    "formatter": "mypayment",
                     "class": "app.utils.loggers_tools.s3_handler.S3LogHandler",
-                    "failure_logger": "hyperion.myeclpay.fallback",
+                    "failure_logger": "hyperion.mypayment.fallback",
                     "s3_bucket_name": settings.S3_BUCKET_NAME,
                     "s3_access_key_id": settings.S3_ACCESS_KEY_ID,
                     "s3_secret_access_key": settings.S3_SECRET_ACCESS_KEY,
-                    "folder": "myeclpay",
+                    "folder": "mypayment",
                 },
                 "s3": {
-                    "formatter": "myeclpay",
+                    "formatter": "mypayment",
                     "class": "app.utils.loggers_tools.s3_handler.S3LogHandler",
                     "failure_logger": "hyperion.s3.fallback",
                     "s3_bucket_name": settings.S3_BUCKET_NAME,
@@ -190,17 +190,17 @@ class LogConfig:
                     "backupCount": 50,
                     "level": "INFO",
                 },
-                "file_myeclpay": {
-                    # file_myeclpay is there to log all operations related to MyECLPay that failed to be logged in the S3 bucket
+                "file_mypayment": {
+                    # file_mypayment is there to log all operations related to MyPayment that failed to be logged in the S3 bucket
                     "formatter": "default",
                     "class": "logging.handlers.RotatingFileHandler",
-                    "filename": "logs/myeclpay.log",
+                    "filename": "logs/mypayment.log",
                     "maxBytes": 1024 * 1024 * 40,  # ~ 40 MB
                     "backupCount": 100,
                     "level": "DEBUG",
                 },
                 "file_s3": {
-                    # file_myeclpay is there to log all operations related to MyECLPay that failed to be logged in the S3 bucket
+                    # file_mypayment is there to log all operations related to MyPayment that failed to be logged in the S3 bucket
                     "formatter": "default",
                     "class": "logging.handlers.RotatingFileHandler",
                     "filename": "logs/s3.log",
@@ -266,18 +266,18 @@ class LogConfig:
                     ],
                     "level": MINIMUM_LOG_LEVEL,
                 },
-                "hyperion.myeclpay.fallback": {
+                "hyperion.mypayment.fallback": {
                     "handlers": [
-                        "file_myeclpay",
+                        "file_mypayment",
                         "matrix_errors",
                         "console",
                     ],
                     "level": MINIMUM_LOG_LEVEL,
                     "propagate": False,
                 },
-                "hyperion.myeclpay": {
+                "hyperion.mypayment": {
                     "handlers": [
-                        "myeclpay_s3",
+                        "mypayment_s3",
                     ],
                     "level": MINIMUM_LOG_LEVEL,
                 },
@@ -398,7 +398,7 @@ class LogConfig:
         # If logs/ folder does not exist, the logging module won't be able to create file handlers
         Path("logs/").mkdir(parents=True, exist_ok=True)
 
-        config_dict = self.get_config_dict(settings=settings)
+        config_dict = self._get_config_dict(settings=settings)
         logging.config.dictConfig(config_dict)
 
         loggers = [logging.getLogger(name) for name in config_dict["loggers"]]

@@ -7,8 +7,9 @@ from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import AccountType, GroupType
+from app.core.groups.groups_type import AccountType
 from app.core.notification.schemas_notification import Message, Topic
+from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users
 from app.core.utils.config import Settings
 from app.dependencies import (
@@ -16,8 +17,7 @@ from app.dependencies import (
     get_notification_tool,
     get_scheduler,
     get_settings,
-    is_user_a_member,
-    is_user_in,
+    is_user_allowed_to,
 )
 from app.modules.cinema import cruds_cinema, schemas_cinema
 from app.modules.cinema.factory_cinema import CinemaFactory
@@ -42,12 +42,20 @@ cinema_topic = Topic(
     restrict_to_group_id=None,
     restrict_to_members=True,
 )
+
+
+class CinemaPermissions(ModulePermissions):
+    access_cinema = "access_cinema"
+    manage_sessions = "manage_sessions"
+
+
 module = Module(
     root=root,
     tag="Cinema",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
     registred_topics=[cinema_topic],
     factory=CinemaFactory(),
+    permissions=CinemaPermissions,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -60,7 +68,9 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 async def get_movie(
     themoviedb_id: str,
     settings: Settings = Depends(get_settings),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.cinema)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CinemaPermissions.manage_sessions]),
+    ),
 ):
     """
     Makes a HTTP request to The Movie Database (TMDB)
@@ -117,7 +127,9 @@ async def get_movie(
 )
 async def get_sessions(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CinemaPermissions.access_cinema]),
+    ),
 ):
     return await cruds_cinema.get_sessions(db=db)
 
@@ -130,7 +142,9 @@ async def get_sessions(
 async def create_session(
     session: schemas_cinema.CineSessionBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.cinema)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CinemaPermissions.manage_sessions]),
+    ),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     scheduler: Scheduler = Depends(get_scheduler),
 ):
@@ -178,7 +192,9 @@ async def update_session(
     session_id: str,
     session_update: schemas_cinema.CineSessionUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.cinema)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CinemaPermissions.manage_sessions]),
+    ),
 ):
     await cruds_cinema.update_session(
         session_id=session_id,
@@ -191,7 +207,9 @@ async def update_session(
 async def delete_session(
     session_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.cinema)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CinemaPermissions.manage_sessions]),
+    ),
 ):
     await cruds_cinema.delete_session(session_id=session_id, db=db)
 
@@ -204,7 +222,9 @@ async def delete_session(
 async def create_campaigns_logo(
     session_id: str,
     image: UploadFile = File(...),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.cinema)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CinemaPermissions.manage_sessions]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     session = await cruds_cinema.get_session_by_id(db=db, session_id=session_id)
@@ -236,7 +256,9 @@ async def create_campaigns_logo(
 )
 async def read_session_poster(
     session_id: str,
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CinemaPermissions.access_cinema]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     session = await cruds_cinema.get_session_by_id(db=db, session_id=session_id)

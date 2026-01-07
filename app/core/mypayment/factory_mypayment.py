@@ -5,8 +5,8 @@ from datetime import UTC, datetime, timedelta
 from faker import Faker
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.myeclpay import cruds_myeclpay, models_myeclpay, schemas_myeclpay
-from app.core.myeclpay.types_myeclpay import WalletType
+from app.core.mypayment import cruds_mypayment, models_mypayment, schemas_mypayment
+from app.core.mypayment.types_mypayment import WalletType
 from app.core.users.factory_users import CoreUsersFactory
 from app.core.utils.config import Settings
 from app.types.factory import Factory
@@ -16,7 +16,7 @@ faker = Faker()
 OTHER_STRUCTURES = 2
 
 
-class MyECLPayFactory(Factory):
+class MyPaymentFactory(Factory):
     depends_on = [CoreUsersFactory]
 
     demo_structures_id: list[uuid.UUID]
@@ -29,8 +29,8 @@ class MyECLPayFactory(Factory):
     async def create_structures(cls, db: AsyncSession):
         cls.demo_structures_id = [uuid.uuid4() for _ in CoreUsersFactory.demo_users_id]
         for i, user_id in enumerate(CoreUsersFactory.demo_users_id):
-            await cruds_myeclpay.create_structure(
-                schemas_myeclpay.StructureSimple(
+            await cruds_mypayment.create_structure(
+                schemas_mypayment.StructureSimple(
                     id=uuid.uuid4(),
                     short_id="".join(faker.random_letters(3)).upper(),
                     name=CoreUsersFactory.demo_users[i].nickname,
@@ -47,8 +47,8 @@ class MyECLPayFactory(Factory):
             )
         cls.other_structures_id = [uuid.uuid4() for _ in range(OTHER_STRUCTURES)]
         for i, structure_id in enumerate(cls.other_structures_id):
-            await cruds_myeclpay.create_structure(
-                schemas_myeclpay.StructureSimple(
+            await cruds_mypayment.create_structure(
+                schemas_mypayment.StructureSimple(
                     id=structure_id,
                     short_id="".join(faker.random_letters(3)).upper(),
                     name=faker.company(),
@@ -74,14 +74,14 @@ class MyECLPayFactory(Factory):
                 wallet_id = uuid.uuid4()
                 structure_store_ids.append(store_id)
                 structure_wallet_ids.append(wallet_id)
-                await cruds_myeclpay.create_wallet(
+                await cruds_mypayment.create_wallet(
                     wallet_id=wallet_id,
                     wallet_type=WalletType.STORE,
                     balance=100000,
                     db=db,
                 )
-                await cruds_myeclpay.create_store(
-                    models_myeclpay.Store(
+                await cruds_mypayment.create_store(
+                    models_mypayment.Store(
                         id=store_id,
                         structure_id=structure_id,
                         name=faker.company(),
@@ -97,8 +97,8 @@ class MyECLPayFactory(Factory):
     async def create_other_structures_invoices(cls, db: AsyncSession):
         for i, structure_id in enumerate(cls.other_structures_id):
             invoice_id = uuid.uuid4()
-            await cruds_myeclpay.create_invoice(
-                schemas_myeclpay.InvoiceInfo(
+            await cruds_mypayment.create_invoice(
+                schemas_mypayment.InvoiceInfo(
                     id=invoice_id,
                     structure_id=structure_id,
                     reference=faker.bothify(text="MYPAY2025???####"),
@@ -109,7 +109,7 @@ class MyECLPayFactory(Factory):
                     end_date=datetime.now(UTC),
                     creation=datetime.now(UTC),
                     details=[
-                        schemas_myeclpay.InvoiceDetailBase(
+                        schemas_mypayment.InvoiceDetailBase(
                             invoice_id=invoice_id,
                             store_id=store_id,
                             total=1000,
@@ -128,4 +128,4 @@ class MyECLPayFactory(Factory):
 
     @classmethod
     async def should_run(cls, db: AsyncSession):
-        return len(await cruds_myeclpay.get_structures(db=db)) == 0
+        return len(await cruds_mypayment.get_structures(db=db)) == 0

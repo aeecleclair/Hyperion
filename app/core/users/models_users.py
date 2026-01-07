@@ -7,7 +7,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.groups.groups_type import AccountType
 from app.core.schools.models_schools import CoreSchool
-from app.types.floors_type import FloorsType
 from app.types.sqlalchemy import Base
 
 if TYPE_CHECKING:
@@ -36,7 +35,7 @@ class CoreUser(Base):
     birthday: Mapped[date | None]
     promo: Mapped[int | None]
     phone: Mapped[str | None]
-    floor: Mapped[FloorsType | None]
+    floor: Mapped[str | None]
     created_on: Mapped[datetime | None]
 
     # We use list["CoreGroup"] with quotes as CoreGroup is only defined after this class

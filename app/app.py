@@ -25,10 +25,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from app import api
-from app.core.core_endpoints import coredata_core, models_core
+from app.core.core_endpoints import coredata_core
 from app.core.google_api.google_api import GoogleAPI
 from app.core.groups import models_groups
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification.cruds_notification import get_notification_topic
 from app.core.schools import models_schools
 from app.core.schools.schools_type import SchoolType
@@ -41,7 +41,7 @@ from app.dependencies import (
     get_redis_client,
     init_state,
 )
-from app.module import all_modules, module_list
+from app.module import all_modules, module_list, permissions_list
 from app.types.exceptions import (
     ContentHTTPException,
     GoogleAPIInvalidCredentialsError,
@@ -49,6 +49,7 @@ from app.types.exceptions import (
 )
 from app.types.sqlalchemy import Base
 from app.utils import initialization
+from app.utils.auth.providers import AuthPermissions
 from app.utils.communication.notifications import NotificationManager
 from app.utils.redis import limiter
 from app.utils.state import LifespanState
@@ -293,64 +294,82 @@ def initialize_module_visibility(
     hyperion_error_logger: logging.Logger,
 ) -> None:
     """Add the default module visibilities for Titan"""
+    AUTH_PERMISSIONS_CONSTANT = [AuthPermissions.app, AuthPermissions.api]
 
     with Session(sync_engine) as db:
         module_awareness = initialization.get_core_data_sync(
             coredata_core.ModuleVisibilityAwareness,
             db,
         )
-
         new_modules = [
             module
             for module in module_list
             if module.root not in module_awareness.roots
         ]
+        new_auth = [
+            auth
+            for auth in AUTH_PERMISSIONS_CONSTANT
+            if auth.value not in module_awareness.roots
+        ]
         # Is run to create default module visibilities or when the table is empty
-        if new_modules:
+        if new_modules or new_auth:
             hyperion_error_logger.info(
-                f"Startup: Some modules visibility settings are empty, initializing them ({[module.root for module in new_modules]})",
+                f"Startup: Some modules visibility or auth settings are empty, initializing them : ({[module.root for module in new_modules] + new_auth})",
             )
             for module in new_modules:
-                if module.default_allowed_groups_ids is not None:
-                    for group_id in module.default_allowed_groups_ids:
-                        module_group_visibility = models_core.ModuleGroupVisibility(
-                            root=module.root,
-                            allowed_group_id=group_id,
+                module_permissions = (
+                    list(module.permissions) if module.permissions else []
+                )
+                access_permission = next(
+                    (p for p in module_permissions if p.startswith("access_")),
+                    None,
+                )
+                if access_permission:
+                    if module.default_allowed_groups_ids is not None:
+                        for group_id in module.default_allowed_groups_ids:
+                            try:
+                                initialization.create_group_permission_sync(
+                                    group_id=group_id,
+                                    permission_name=access_permission,
+                                    db=db,
+                                )
+                            except ValueError as error:
+                                hyperion_error_logger.fatal(
+                                    f"Startup: Could not add module visibility {module.root} in the database: {error}",
+                                )
+                    if module.default_allowed_account_types is not None:
+                        for account_type in module.default_allowed_account_types:
+                            try:
+                                initialization.create_account_type_permission_sync(
+                                    account_type=account_type,
+                                    permission_name=access_permission,
+                                    db=db,
+                                )
+                            except ValueError as error:
+                                hyperion_error_logger.fatal(
+                                    f"Startup: Could not add module visibility {module.root} in the database: {error}",
+                                )
+            for auth in new_auth:
+                for account_type in list(AccountType):
+                    try:
+                        initialization.create_account_type_permission_sync(
+                            account_type=account_type,
+                            permission_name=auth,
+                            db=db,
                         )
-                        try:
-                            initialization.create_module_group_visibility_sync(
-                                module_visibility=module_group_visibility,
-                                db=db,
-                            )
-                        except ValueError as error:
-                            hyperion_error_logger.fatal(
-                                f"Startup: Could not add module visibility {module.root} in the database: {error}",
-                            )
-                if module.default_allowed_account_types is not None:
-                    for account_type in module.default_allowed_account_types:
-                        module_account_type_visibility = (
-                            models_core.ModuleAccountTypeVisibility(
-                                root=module.root,
-                                allowed_account_type=account_type,
-                            )
+                    except ValueError as error:
+                        hyperion_error_logger.fatal(
+                            f"Startup: Could not add auth visibility {auth} in the database: {error}",
                         )
-                        try:
-                            initialization.create_module_account_type_visibility_sync(
-                                module_visibility=module_account_type_visibility,
-                                db=db,
-                            )
-                        except ValueError as error:
-                            hyperion_error_logger.fatal(
-                                f"Startup: Could not add module visibility {module.root} in the database: {error}",
-                            )
             initialization.set_core_data_sync(
                 coredata_core.ModuleVisibilityAwareness(
-                    roots=[module.root for module in module_list],
+                    roots=[module.root for module in module_list]
+                    + AUTH_PERMISSIONS_CONSTANT,
                 ),
                 db,
             )
             hyperion_error_logger.info(
-                f"Startup: Modules visibility settings initialized for {[module.root for module in new_modules]}",
+                f"Startup: Modules visibility settings initialized for {[module.root for module in new_modules] + new_auth}",
             )
         else:
             hyperion_error_logger.info(
@@ -438,6 +457,8 @@ def init_db(
         sync_engine=sync_engine,
         hyperion_error_logger=hyperion_error_logger,
     )
+    with Session(sync_engine) as db:
+        initialization.clean_permissions_sync(db, permissions_list)
 
 
 async def init_google_API(
@@ -544,7 +565,7 @@ async def init_lifespan(
 
     get_db_dependency: Callable[
         [],
-        AsyncGenerator[AsyncSession, None],
+        AsyncGenerator[AsyncSession],
     ] = app.dependency_overrides.get(
         get_db,
         get_db,
@@ -604,7 +625,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     # Creating a lifespan which will be called when the application starts then shuts down
     # https://fastapi.tiangolo.com/advanced/events/
     @asynccontextmanager
-    async def lifespan(app: FastAPI) -> AsyncGenerator[LifespanState, None]:
+    async def lifespan(app: FastAPI) -> AsyncGenerator[LifespanState]:
         state = await init_lifespan(
             app=app,
             settings=settings,

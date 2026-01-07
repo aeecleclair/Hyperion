@@ -4,17 +4,20 @@ from datetime import UTC, datetime
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.core.groups.groups_type import GroupType
+from app.core.groups import models_groups
 from app.core.users import models_users
 from app.modules.amap import models_amap
+from app.modules.amap.endpoints_amap import AmapPermissions
 from app.modules.amap.types_amap import AmapSlotType, DeliveryStatusType
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
 )
 
-amap_user: models_users.CoreUser
+admin_group: models_groups.CoreGroup
+admin_user: models_users.CoreUser
 student_user: models_users.CoreUser
 product: models_amap.Product
 deletable_product: models_amap.Product
@@ -28,7 +31,8 @@ deletable_order_by_admin: models_amap.Order
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
     global \
-        amap_user, \
+        admin_group, \
+        admin_user, \
         student_user, \
         product, \
         deletable_product, \
@@ -38,7 +42,12 @@ async def init_objects() -> None:
         order, \
         deletable_order_by_admin
 
-    amap_user = await create_user_with_groups([GroupType.amap])
+    admin_group = await create_groups_with_permissions(
+        [AmapPermissions.manage_amap],
+        "AMAP",
+    )
+
+    admin_user = await create_user_with_groups([admin_group.id])
     student_user = await create_user_with_groups(
         [],
     )
@@ -110,7 +119,7 @@ async def init_objects() -> None:
 
 
 def test_get_products(client: TestClient) -> None:
-    token = create_api_access_token(amap_user)
+    token = create_api_access_token(admin_user)
 
     response = client.get(
         "/amap/products",
@@ -120,7 +129,7 @@ def test_get_products(client: TestClient) -> None:
 
 
 def test_create_product(client: TestClient) -> None:
-    token = create_api_access_token(amap_user)
+    token = create_api_access_token(admin_user)
 
     response = client.post(
         "/amap/products",
@@ -142,7 +151,7 @@ def test_get_product_by_id(client: TestClient) -> None:
 
 
 def test_edit_product(client: TestClient) -> None:
-    token = create_api_access_token(amap_user)
+    token = create_api_access_token(admin_user)
 
     response = client.patch(
         f"/amap/products/{product.id}",
@@ -153,7 +162,7 @@ def test_edit_product(client: TestClient) -> None:
 
 
 def test_delete_product(client: TestClient) -> None:
-    token = create_api_access_token(amap_user)
+    token = create_api_access_token(admin_user)
 
     response = client.delete(
         f"/amap/products/{deletable_product.id}",
@@ -174,7 +183,7 @@ def test_get_deliveries(client: TestClient) -> None:
 
 
 def test_create_delivery(client: TestClient) -> None:
-    token = create_api_access_token(amap_user)
+    token = create_api_access_token(admin_user)
 
     response = client.post(
         "/amap/deliveries",
@@ -190,7 +199,7 @@ def test_create_delivery(client: TestClient) -> None:
 
 
 def test_delete_delivery(client: TestClient) -> None:
-    token = create_api_access_token(amap_user)
+    token = create_api_access_token(admin_user)
 
     response = client.delete(
         f"/amap/deliveries/{deletable_delivery.id}",
@@ -200,7 +209,7 @@ def test_delete_delivery(client: TestClient) -> None:
 
 
 def test_edit_delivery(client: TestClient) -> None:
-    token = create_api_access_token(amap_user)
+    token = create_api_access_token(admin_user)
 
     response = client.patch(
         f"/amap/deliveries/{delivery.id}",
@@ -215,7 +224,7 @@ def test_edit_delivery(client: TestClient) -> None:
 
 
 def test_add_product_to_delivery(client: TestClient) -> None:
-    token = create_api_access_token(amap_user)
+    token = create_api_access_token(admin_user)
 
     response = client.post(
         f"/amap/deliveries/{delivery.id}/products",
@@ -226,7 +235,7 @@ def test_add_product_to_delivery(client: TestClient) -> None:
 
 
 def test_remove_product_from_delivery(client: TestClient) -> None:
-    token = create_api_access_token(amap_user)
+    token = create_api_access_token(admin_user)
     response = client.request(
         method="DELETE",
         url=f"/amap/deliveries/{delivery.id}/products",
@@ -245,7 +254,7 @@ def test_remove_product_from_delivery(client: TestClient) -> None:
 
 
 def test_get_orders_from_delivery(client: TestClient) -> None:
-    token = create_api_access_token(amap_user)
+    token = create_api_access_token(admin_user)
 
     response = client.get(
         f"/amap/deliveries/{delivery.id}/orders",
@@ -255,7 +264,7 @@ def test_get_orders_from_delivery(client: TestClient) -> None:
 
 
 def test_get_order_by_id(client: TestClient) -> None:
-    token = create_api_access_token(amap_user)
+    token = create_api_access_token(admin_user)
     response = client.get(
         f"/amap/orders/{order.order_id}",
         headers={"Authorization": f"Bearer {token}"},
@@ -264,7 +273,7 @@ def test_get_order_by_id(client: TestClient) -> None:
 
 
 def test_make_delivery_orderable(client: TestClient) -> None:
-    token = create_api_access_token(amap_user)
+    token = create_api_access_token(admin_user)
     response = client.post(
         f"/amap/deliveries/{delivery.id}/openordering",
         headers={"Authorization": f"Bearer {token}"},
@@ -324,7 +333,7 @@ def test_remove_order(client: TestClient) -> None:
 
 def test_remove_order_by_admin(client: TestClient) -> None:
     token = create_api_access_token(student_user)
-    token_amap = create_api_access_token(amap_user)
+    token_amap = create_api_access_token(admin_user)
 
     response = client.delete(
         f"/amap/orders/{deletable_order_by_admin.order_id}",
@@ -340,7 +349,7 @@ def test_remove_order_by_admin(client: TestClient) -> None:
 
 
 def test_get_users_cash(client: TestClient) -> None:
-    token = create_api_access_token(amap_user)
+    token = create_api_access_token(admin_user)
 
     response = client.get(
         "/amap/users/cash",
@@ -350,7 +359,7 @@ def test_get_users_cash(client: TestClient) -> None:
 
 
 def test_get_cash_by_id(client: TestClient) -> None:
-    amap_token = create_api_access_token(amap_user)
+    amap_token = create_api_access_token(admin_user)
     student_token = create_api_access_token(student_user)
 
     # The student user who is not part of AMAP group
@@ -364,7 +373,7 @@ def test_get_cash_by_id(client: TestClient) -> None:
     # The student user who is not part of AMAP group
     # should not be able to access an other user cash
     response = client.get(
-        f"/amap/users/{amap_user.id}/cash",
+        f"/amap/users/{admin_user.id}/cash",
         headers={"Authorization": f"Bearer {student_token}"},
     )
     assert response.status_code == 403
@@ -378,27 +387,27 @@ def test_get_cash_by_id(client: TestClient) -> None:
 
 
 def test_create_cash_of_user(client: TestClient) -> None:
-    token = create_api_access_token(amap_user)
+    token = create_api_access_token(admin_user)
 
     response = client.post(
-        f"/amap/users/{amap_user.id}/cash",
-        json={"balance": 50, "user_id": amap_user.id},
+        f"/amap/users/{admin_user.id}/cash",
+        json={"balance": 50, "user_id": admin_user.id},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 201
 
 
 def test_edit_cash_by_id(client: TestClient) -> None:
-    token = create_api_access_token(amap_user)
+    token = create_api_access_token(admin_user)
 
     response = client.post(
-        f"/amap/users/{amap_user.id}/cash",
-        json={"balance": 50, "user_id": amap_user.id},
+        f"/amap/users/{admin_user.id}/cash",
+        json={"balance": 50, "user_id": admin_user.id},
         headers={"Authorization": f"Bearer {token}"},
     )
 
     response = client.patch(
-        f"/amap/users/{amap_user.id}/cash",
+        f"/amap/users/{admin_user.id}/cash",
         json={"balance": 45},
         headers={"Authorization": f"Bearer {token}"},
     )

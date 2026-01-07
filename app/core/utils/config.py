@@ -1,12 +1,14 @@
-import tomllib
 from functools import cached_property
 from pathlib import Path
+from re import Pattern
 from typing import Any, ClassVar
 
 import jwt
+import tomllib
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from pydantic import BaseModel, computed_field, model_validator
+from pydantic_extra_types.color import Color
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -14,6 +16,7 @@ from pydantic_settings import (
     YamlConfigSettingsSource,
 )
 
+from app.core.core_endpoints.schemas_core import MainActivationForm
 from app.core.payment.types_payment import HelloAssoConfig, HelloAssoConfigName
 from app.types.exceptions import (
     DotenvInvalidAuthClientNameInError,
@@ -22,6 +25,52 @@ from app.types.exceptions import (
     InvalidRSAKeyInDotenvError,
 )
 from app.utils.auth import providers
+
+
+class School(BaseModel):
+    """
+    Configuration for a school.
+    This class is used to store the configuration of a school.
+    It is used to create an instance of the school.
+    """
+
+    # Name of the school (ex: École Centrale Lyon)
+    school_name: str
+    # Name of the application (ex: MyECL)
+    application_name: str
+    # Name of the payment solution (ex: MyECLPay)
+    payment_name: str
+    # Domain name of the application (ex: myecl.fr)
+    application_domain_name: str
+    # Name of the entity managing the application (ex: ÉCLAIR)
+    entity_name: str
+    # The entity website url, used for promotion (ex: "https://myecl.fr/")
+    entity_site_url: str
+    # The entity email, used for contact
+    entity_email: str
+    # Date of the end of support for the application (ex: 2025-08-25)
+    end_of_support: str
+    # Colors used for the application
+    primary_color: Color
+    # Email placeholder
+    email_placeholder: str
+    # Main activation form configuration
+    main_activation_form: MainActivationForm
+    # Apple Store URL
+    app_store_url: str | None = None
+    # Google Play Store URL
+    play_store_url: str | None = None
+
+    # Regex for email account type validation
+    # On registration, user whose email match these regex will be automatically assigned to the corresponding account type
+    # Use simple quotes to avoid escaping the regex
+    # Ex: `student_email_regex: '^[\w\-.]*@domain.fr$'`
+    student_email_regex: Pattern
+    staff_email_regex: Pattern | None = None
+    former_student_email_regex: Pattern | None = None
+
+    # If event should be confirmed by a moderator before being added to the calendar
+    require_event_confirmation: bool = True
 
 
 class AuthClientConfig(BaseModel):
@@ -118,10 +167,9 @@ class Settings(BaseSettings):
     ###############################################
     # Authorization using OAuth or Openid connect #
     ###############################################
-
-    # ACCESS_TOKEN_SECRET_KEY should contain a random string with enough entropy (at least 32 bytes long) to securely sign all access_tokens for OAuth and Openid connect
+    # ACCESS_TOKEN_SECRET_KEY should contain a strong random string with enough entropy (at least 32 bytes long) to securely sign all JWT access_tokens for OAuth2 and OpenID Connect
     ACCESS_TOKEN_SECRET_KEY: str
-    # RSA_PRIVATE_PEM_STRING should be a string containing the PEM certificate of a private RSA key. It will be used to sign id_tokens for Openid connect authentication
+    # RSA_PRIVATE_PEM_STRING should be a string containing the PEM certificate of a private RSA key. It will be used to sign JWS id_tokens for OpenID Connect authentication
     # In the pem certificates newlines can be replaced by `\n`
     RSA_PRIVATE_PEM_STRING: bytes
 
@@ -175,12 +223,12 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = ""
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = ""
-    POSTGRES_TZ: str = ""
     DATABASE_DEBUG: bool = False  # If True, the database will log all queries
     USE_FACTORIES: bool = (
         False  # If True, the database will be populated with fake data
     )
     FACTORIES_DEMO_USERS: list[UserDemoFactoryConfig] = []
+    USE_NULL_POOL: bool = False  # Set to true only for tests
     #####################################
     # SMTP configuration using starttls #
     #####################################
@@ -216,6 +264,11 @@ class Settings(BaseSettings):
     USE_FIREBASE: bool = False
 
     ########################
+    # School Configuration #
+    ########################
+    school: School
+
+    ########################
     # Matrix configuration #
     ########################
     # Matrix configuration is optional. If configured, Hyperion will be able to send messages to a Matrix server.
@@ -238,7 +291,7 @@ class Settings(BaseSettings):
     ####################
     # S3 configuration #
     ####################
-    # S3 configuration is needed to use the S3 storage for MyECLPay logs
+    # S3 configuration is needed to use the S3 storage for MyPayment logs
 
     S3_BUCKET_NAME: str | None = None
     S3_ACCESS_KEY_ID: str | None = None
@@ -271,17 +324,17 @@ class Settings(BaseSettings):
     HELLOASSO_CONFIGURATIONS: dict[HelloAssoConfigName, HelloAssoConfig] = {}
     HELLOASSO_API_BASE: str | None = None
 
-    # Maximum wallet balance for MyECLPay in cents, we will prevent user from adding more money to their wallet if it will make their balance exceed this value
-    MYECLPAY_MAXIMUM_WALLET_BALANCE: int = 1000
+    # Maximum wallet balance for MyPayment in cents, we will prevent user from adding more money to their wallet if it will make their balance exceed this value
+    MYPAYMENT_MAXIMUM_WALLET_BALANCE: int = 1000
 
     # Trusted urls is a list of redirect payment url that can be trusted by Hyperion.
     # These urls will be used to validate the redirect url provided by the front
     TRUSTED_PAYMENT_REDIRECT_URLS: list[str] = []
 
-    # MyECLPay requires an external service to recurrently check for transactions and state integrity, this service needs an access to all the data related to the transactions and the users involved
+    # MyPayment requires an external service to recurrently check for transactions and state integrity, this service needs an access to all the data related to the transactions and the users involved
     # This service will use a special token to access the data
     # If this token is not set, the service will not be able to access the data and no integrity check will be performed
-    MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN: str | None = None
+    MYPAYMENT_DATA_VERIFIER_ACCESS_TOKEN: str | None = None
 
     ###################
     # Tokens validity #
@@ -292,7 +345,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 14  # 14 days
     AUTHORIZATION_CODE_EXPIRE_MINUTES: int = 7
-    MYECLPAY_MANAGER_TRANSFER_TOKEN_EXPIRES_MINUTES: int = 20
+    MYPAYMENT_MANAGER_TRANSFER_TOKEN_EXPIRES_MINUTES: int = 20
 
     #############################
     # pyproject.toml parameters #
@@ -310,7 +363,7 @@ class Settings(BaseSettings):
     def MINIMAL_TITAN_VERSION_CODE(cls) -> str:
         with Path("pyproject.toml").open("rb") as pyproject_binary:
             pyproject = tomllib.load(pyproject_binary)
-        return str(pyproject["project"]["minimal-titan-version-code"])
+        return str(pyproject["tool"]["titan"]["minimal-titan-version-code"])
 
     ######################################
     # Automatically generated parameters #
@@ -387,7 +440,7 @@ class Settings(BaseSettings):
     @computed_field  # type: ignore[prop-decorator]
     @cached_property
     def REDIS_URL(cls) -> str | None:
-        if cls.REDIS_HOST:
+        if cls.REDIS_HOST is not None and cls.REDIS_HOST != "":
             # We need to include `:` before the password
             return (
                 f"redis://:{cls.REDIS_PASSWORD or ''}@{cls.REDIS_HOST}:{cls.REDIS_PORT}"

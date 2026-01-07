@@ -63,7 +63,7 @@ class CompetitionUser(Base):
     is_fanfare: Mapped[bool] = mapped_column(default=False)
     is_cameraman: Mapped[bool] = mapped_column(default=False)
     is_athlete: Mapped[bool] = mapped_column(default=False)
-    is_volunteer: Mapped[bool] = mapped_column(default=False)
+    allow_pictures: Mapped[bool] = mapped_column(default=True)
 
     user: Mapped[CoreUser] = relationship(
         "CoreUser",
@@ -312,6 +312,20 @@ class SportPodium(Base):
     )
 
 
+class PompomPodium(Base):
+    __tablename__ = "competition_pompom_podium"
+
+    edition_id: Mapped[UUID] = mapped_column(
+        ForeignKey("competition_edition.id"),
+        primary_key=True,
+    )
+    school_id: Mapped[UUID] = mapped_column(
+        ForeignKey("competition_school_extension.school_id"),
+        primary_key=True,
+    )
+    points: Mapped[int]
+
+
 class CompetitionProduct(Base):
     __tablename__ = "competition_product"
 
@@ -345,13 +359,19 @@ class CompetitionProductVariant(Base):
     price: Mapped[int]
     enabled: Mapped[bool]
     unique: Mapped[bool]
-    school_type: Mapped[ProductSchoolType]
+    school_type: Mapped[ProductSchoolType | None]
     public_type: Mapped[ProductPublicType | None]
     description: Mapped[str | None] = mapped_column(default=None)
 
     product: Mapped["CompetitionProduct"] = relationship(
         "CompetitionProduct",
         lazy="joined",
+        init=False,
+        viewonly=True,
+    )
+    purchases: Mapped[list["CompetitionPurchase"]] = relationship(
+        "CompetitionPurchase",
+        lazy="selectin",
         init=False,
         viewonly=True,
     )
@@ -417,7 +437,7 @@ class CompetitionCheckout(Base):
     edition_id: Mapped[UUID] = mapped_column(
         ForeignKey("competition_edition.id"),
     )
-    checkout_id: Mapped[UUID] = mapped_column(ForeignKey("payment_checkout.id"))
+    checkout_id: Mapped[UUID] = mapped_column(ForeignKey("checkout_checkout.id"))
 
 
 class VolunteerShift(Base):
@@ -428,6 +448,7 @@ class VolunteerShift(Base):
         ForeignKey("competition_edition.id"),
     )
     name: Mapped[str]
+    manager_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
     description: Mapped[str | None]
     value: Mapped[int]
     start_time: Mapped[datetime]
@@ -441,12 +462,18 @@ class VolunteerShift(Base):
         init=False,
         viewonly=True,
     )
+    manager: Mapped[CoreUser] = relationship(
+        "CoreUser",
+        lazy="joined",
+        init=False,
+    )
 
 
 class VolunteerRegistration(Base):
     __tablename__ = "competition_volunteer_registration"
 
     user_id: Mapped[str] = mapped_column(
+        ForeignKey("core_user.id"),
         primary_key=True,
     )
     shift_id: Mapped[UUID] = mapped_column(
@@ -457,8 +484,8 @@ class VolunteerRegistration(Base):
     registered_at: Mapped[datetime]
     validated: Mapped[bool]
 
-    user: Mapped[CompetitionUser] = relationship(
-        "CompetitionUser",
+    user: Mapped[CoreUser] = relationship(
+        "CoreUser",
         lazy="joined",
         init=False,
     )
@@ -466,12 +493,4 @@ class VolunteerRegistration(Base):
         "VolunteerShift",
         lazy="joined",
         init=False,
-    )
-
-    __table_args__ = (
-        ForeignKeyConstraint(
-            ["user_id", "edition_id"],
-            ["competition_user.user_id", "competition_user.edition_id"],
-            name="fk_volunteer_registration_user",
-        ),
     )
