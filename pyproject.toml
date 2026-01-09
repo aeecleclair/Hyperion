@@ -18,7 +18,7 @@ license-files = [
 ]
 
 [tool.titan]
-minimal-titan-version-code = 157
+minimal-titan-version-code = 158
 
 [tool.ruff]
 # By default ruff also respect gitignore files
