@@ -297,12 +297,14 @@ async def remove_user_from_group(
     edition_id: UUID,
     db: AsyncSession,
 ) -> None:
-    await db.execute(delete(
-        models_sport_competition.CompetitionGroupMembership,
+    await db.execute(
+        delete(
+            models_sport_competition.CompetitionGroupMembership,
         ).where(
             models_sport_competition.CompetitionGroupMembership.user_id == user_id,
             models_sport_competition.CompetitionGroupMembership.group == group,
-            models_sport_competition.CompetitionGroupMembership.edition_id == edition_id,
+            models_sport_competition.CompetitionGroupMembership.edition_id
+            == edition_id,
         ),
     )
     await db.flush()
