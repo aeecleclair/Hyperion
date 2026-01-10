@@ -92,7 +92,7 @@ jellyfish==0.10.0                    # String Matching
 
 ### About Weasyprint and Pango
 
-Weasyprint is only used to generate PDF files from HTML for some modules. As such, it is rarely needed for development, and its installation can be skipped.
+Weasyprint is only used to generate PDF files from HTML for some modules. As such, it is rarely needed for development, and its installation can be skipped. To do so, simply comment the line importing it (add a #) in the requirements.txt file.
 
 If you need to use it, follow the installation steps at https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation.
 
