@@ -21,10 +21,10 @@ RUN groupadd --gid 10101 hyperion && \
 WORKDIR /hyperion
 
 # First copy only the requirements to leverage Docker cache
-COPY requirements-prod.txt .
+COPY requirements.txt .
 
 # Install dependencies using uv (way faster than pip)
-RUN uv pip install --system --no-cache -r requirements-prod.txt
+RUN uv pip install --system --no-cache -r requirements.txt
 
 # Then copy the rest of the application code
 COPY alembic.ini .
