@@ -45,4 +45,3 @@ EXPOSE 8000
 # Use fastapi cli as the entrypoint
 # Use sh -c to allow environment variable expansion
 ENTRYPOINT ["sh", "-c", "fastapi run --workers $WORKERS --host 0.0.0.0 --port 8000"]
-
