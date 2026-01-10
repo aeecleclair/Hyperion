@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.users.models_users import CoreUser
-from app.dependencies import is_user, is_user_in
+from app.dependencies import get_db, is_user, is_user_in
 from app.modules.pmf import cruds_pmf, schemas_pmf, types_pmf
 from app.types.module import Module
 from app.utils.tools import is_user_member_of_any_group
@@ -32,7 +32,7 @@ module = Module(
 )
 async def get_offer(
     offer_id: UUID,
-    db: AsyncSession,
+    db: AsyncSession = Depends(get_db),
     # Allow only former students to access this endpoint
     # user: CoreUser = Depends(is_user(included_account_types=[AccountType.former_student])),
 ):
@@ -53,7 +53,7 @@ async def get_offer(
     status_code=200,
 )
 async def get_offers(
-    db: AsyncSession,
+    db: AsyncSession = Depends(get_db),
     includedOfferTypes: list[types_pmf.OfferType] = Query(default=[]),
     includedTags: list[str] = Query(default=[]),
     includedLocationTypes: list[types_pmf.LocationType] = Query(default=[]),
@@ -67,6 +67,8 @@ async def get_offers(
         included_offer_types=includedOfferTypes,
         included_tags=includedTags,
         included_location_types=includedLocationTypes,
+        limit=limit,
+        offset=offset,
     )
 
 
@@ -76,8 +78,8 @@ async def get_offers(
     status_code=200,
 )
 async def create_offer(
-    db: AsyncSession,
     offer: schemas_pmf.OfferBase,
+    db: AsyncSession = Depends(get_db),
     # Allow only former students to create offer
     user: CoreUser = Depends(
         is_user(included_account_types=[AccountType.former_student]),
@@ -110,8 +112,8 @@ async def create_offer(
 )
 async def update_offer(
     offer_id: UUID,
-    db: AsyncSession,
     offer_update: schemas_pmf.OfferUpdate,
+    db: AsyncSession = Depends(get_db),
     # Allow only former students to update offer
     user: CoreUser = Depends(
         is_user(included_account_types=[AccountType.former_student]),
@@ -147,7 +149,7 @@ async def update_offer(
 )
 async def delete_offer(
     offer_id: UUID,
-    db: AsyncSession,
+    db: AsyncSession = Depends(get_db),
     # Allow only former students to delete offer
     user: CoreUser = Depends(
         is_user(included_account_types=[AccountType.former_student]),
@@ -178,7 +180,7 @@ async def delete_offer(
     status_code=200,
 )
 async def get_all_tags(
-    db: AsyncSession,
+    db: AsyncSession = Depends(get_db),
 ) -> list[schemas_pmf.TagComplete]:
     return await cruds_pmf.get_all_tags(db=db)
 
@@ -190,7 +192,7 @@ async def get_all_tags(
 )
 async def get_tag(
     tag_id: UUID,
-    db: AsyncSession,
+    db: AsyncSession = Depends(get_db),
 ) -> schemas_pmf.TagComplete | None:
     tags = await cruds_pmf.get_all_tags(db=db)
     for tag in tags:
@@ -206,7 +208,7 @@ async def get_tag(
 )
 async def create_tag(
     tag: schemas_pmf.TagBase,
-    db: AsyncSession,
+    db: AsyncSession = Depends(get_db),
     # Allow only admin to create tags
     user: CoreUser = Depends(
         is_user_in(group_id=GroupType.admin),
@@ -232,7 +234,7 @@ async def create_tag(
 async def update_tag(
     tag_id: UUID,
     tag_update: schemas_pmf.TagBase,
-    db: AsyncSession,
+    db: AsyncSession = Depends(get_db),
     # Allow only admin to update tags
     user: CoreUser = Depends(
         is_user_in(group_id=GroupType.admin),
@@ -252,7 +254,7 @@ async def update_tag(
 )
 async def delete_tag(
     tag_id: UUID,
-    db: AsyncSession,
+    db: AsyncSession = Depends(get_db),
     # Allow only admin to delete tags
     user: CoreUser = Depends(
         is_user_in(group_id=GroupType.admin),
