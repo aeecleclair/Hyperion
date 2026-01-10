@@ -48,7 +48,7 @@ class PmfOffer(Base):
 
     created_at: Mapped[date] = mapped_column(insert_default=date.today)
 
-    tags: Mapped[list["OfferTags"]] = relationship(
+    tags: Mapped[list["Tags"]] = relationship(
         "Tags",
         back_populates="offers",
         lazy="selectin",  # Small collection
@@ -65,7 +65,7 @@ class Tags(Base):
 
     created_at: Mapped[date] = mapped_column(insert_default=date.today)
 
-    offers: Mapped[list["OfferTags"]] = relationship(
+    offers: Mapped[list["PmfOffer"]] = relationship(
         "PmfOffer",
         back_populates="tags",
         secondary="pmf_offer_tags",
