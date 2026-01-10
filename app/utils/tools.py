@@ -386,6 +386,7 @@ async def generate_pdf_from_template(
     See [WeasyPrint security consideration](https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#security)
     """
     from weasyprint import CSS, HTML
+
     templates = Environment(
         loader=FileSystemLoader("assets/templates"),
         autoescape=select_autoescape(["html"]),
