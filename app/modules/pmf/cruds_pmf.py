@@ -60,6 +60,8 @@ async def get_offers(
     included_offer_types: list[types_pmf.OfferType] | None = None,
     included_tags: list[str] | None = None,
     included_location_types: list[types_pmf.LocationType] | None = None,
+    limit: int | None = None,
+    offset: int | None = None,
 ) -> list[schemas_pmf.OfferComplete]:
     where_clause = (
         (
@@ -80,7 +82,7 @@ async def get_offers(
     )
 
     offers = await db.execute(
-        select(models_pmf.PmfOffer).where(where_clause),
+        select(models_pmf.PmfOffer).where(where_clause).limit(limit).offset(offset),
     )
     return [
         schemas_pmf.OfferComplete(
