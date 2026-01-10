@@ -101,14 +101,13 @@ async def get_offers(
         for offer in offers.scalars().all()
     ]
 
+
 async def get_all_tags(db: AsyncSession) -> list[schemas_pmf.TagComplete]:
     tags = await db.execute(
         select(models_pmf.Tags).distinct(models_pmf.Tags.tag),
     )
-    return [
-        schemas_pmf.TagComplete.model_validate(tag)
-        for tag in tags.scalars().all()
-    ]
+    return [schemas_pmf.TagComplete.model_validate(tag) for tag in tags.scalars().all()]
+
 
 async def get_tag_by_name(
     tag_name: str,
@@ -119,6 +118,7 @@ async def get_tag_by_name(
     )
     return schemas_pmf.TagComplete.model_validate(result.scalars().first())
 
+
 async def get_tag_by_id(
     tag_id: UUID,
     db: AsyncSession,
@@ -127,6 +127,7 @@ async def get_tag_by_id(
         select(models_pmf.Tags).where(models_pmf.Tags.id == tag_id),
     )
     return schemas_pmf.TagComplete.model_validate(result.scalars().first())
+
 
 async def create_tag(
     tag: schemas_pmf.TagComplete,
@@ -137,6 +138,7 @@ async def create_tag(
         tag=tag.tag,
     )
     db.add(tag_db)
+
 
 async def update_tag(
     tag_id: UUID,
@@ -149,12 +151,11 @@ async def update_tag(
         .values(**tag_update.model_dump(exclude_unset=True)),
     )
 
+
 async def delete_tag(
     tag_id: UUID,
     db: AsyncSession,
 ) -> None:
-
     await db.execute(
         delete(models_pmf.Tags).where(models_pmf.Tags.id == tag_id),
     )
-
