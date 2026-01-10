@@ -46,6 +46,8 @@ class PmfOffer(Base):
     end_date: Mapped[date]
     duration: Mapped[int]  # days
 
+    created_at: Mapped[date] = mapped_column(insert_default=date.today)
+
     tags: Mapped[list["OfferTags"]] = relationship(
         "Tags",
         back_populates="offers",
@@ -61,7 +63,7 @@ class Tags(Base):
     id: Mapped[PrimaryKey]
     tag: Mapped[str]
 
-    created_at: Mapped[date] = mapped_column(default=date.today)
+    created_at: Mapped[date] = mapped_column(insert_default=date.today)
 
     offers: Mapped[list["OfferTags"]] = relationship(
         "PmfOffer",
