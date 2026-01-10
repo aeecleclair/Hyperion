@@ -39,7 +39,7 @@ def upgrade() -> None:
         sa.Column("description", sa.String(), nullable=False),
         sa.Column(
             "offer_type",
-            sa.Enum("TFE", "S_APP", "EXE", "CDI", "CDD", name="offertype"),
+            sa.Enum("TFE", "APP", "EXE", "CDI", "CDD", name="offertype"),
             nullable=False,
         ),
         sa.Column("location", sa.String(), nullable=False),
