@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -13,6 +13,7 @@ class TagBase(BaseModel):
 
 class TagComplete(TagBase):
     id: UUID
+    created_at: date
 
 
 class OfferBase(BaseModel):
@@ -25,8 +26,8 @@ class OfferBase(BaseModel):
     location: str
     location_type: LocationType
 
-    start_date: datetime
-    end_date: datetime
+    start_date: date
+    end_date: date
     duration: int  # days
 
 
@@ -42,8 +43,8 @@ class OfferUpdate(BaseModel):
     offer_type: OfferType | None = None
     location: str | None = None
     location_type: LocationType | None = None
-    start_date: datetime | None = None
-    end_date: datetime | None = None
+    start_date: date | None = None
+    end_date: date | None = None
     duration: int | None = None  # days
 
     tags: list[TagBase] | None = None

@@ -1,3 +1,4 @@
+from datetime import date
 from uuid import UUID
 
 from sqlalchemy import delete, select, true, update
@@ -22,6 +23,7 @@ async def create_offer(offer: schemas_pmf.OfferSimple, db: AsyncSession) -> None
             start_date=offer.start_date,
             end_date=offer.end_date,
             duration=offer.duration,
+            created_at=date.today(),
             tags=[],
         ),
     )
@@ -98,7 +100,14 @@ async def get_offers(
             end_date=offer.end_date,
             duration=offer.duration,
             author=schemas_users.CoreUserSimple.model_validate(offer.author),
-            tags=[schemas_pmf.TagComplete.model_validate(tag) for tag in offer.tags],
+            tags=[
+                schemas_pmf.TagComplete(
+                    id=tag.id,
+                    tag=tag.tag,
+                    created_at=tag.created_at,
+                )
+                for tag in offer.tags
+            ],
         )
         for offer in offers.scalars().all()
     ]
@@ -138,6 +147,7 @@ async def create_tag(
     tag_db = models_pmf.Tags(
         id=tag.id,
         tag=tag.tag,
+        created_at=tag.created_at,
     )
     db.add(tag_db)
 
