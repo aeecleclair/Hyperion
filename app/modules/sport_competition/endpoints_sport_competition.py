@@ -258,7 +258,7 @@ async def enable_inscription(
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
-    enable: bool = Body(),
+    enable: bool = Body(embed=True),
 ) -> None:
     """
     Enable inscription for a competition edition.
