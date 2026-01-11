@@ -385,7 +385,7 @@ async def generate_pdf_from_template(
     You should only provide thrusted templates to this function.
     See [WeasyPrint security consideration](https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#security)
     """
-    from weasyprint import CSS, HTML  # type: ignore  # noqa: PGH003, PLC0415
+    from weasyprint import CSS, HTML
 
     templates = Environment(
         loader=FileSystemLoader("assets/templates"),
