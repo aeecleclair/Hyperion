@@ -259,6 +259,7 @@ async def create_user_with_groups(
         email=email or (get_random_string() + "@etu.ec-lyon.fr"),
         school_id=school_id,
         password_hash=password_hash,
+        should_change_password=False,
         name=name or get_random_string(),
         firstname=firstname or get_random_string(),
         nickname=nickname,
