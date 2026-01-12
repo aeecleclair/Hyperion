@@ -82,6 +82,7 @@ class Loan(Base):
         viewonly=True,
         secondary="loan_content",
         lazy="joined",
+        init=False,
     )
 
     returned_date: Mapped[date | None] = mapped_column(default=None)

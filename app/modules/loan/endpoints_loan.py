@@ -615,7 +615,6 @@ async def create_loan(
         notes=loan_creation.notes,
         caution=loan_creation.caution,
         returned=False,  # A newly created loan is still not returned
-        items=[],
     )
 
     try:
