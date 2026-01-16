@@ -782,11 +782,9 @@ async def update_loan(
             items.append((item, quantity))
 
     try:
-        # We need to remove the item_ids list from the schema before calling the update_loan crud function
-        loan_in_db_update = schemas_loan.LoanInDBUpdate(**loan_update.model_dump())
         await cruds_loan.update_loan(
             loan_id=loan_id,
-            loan_update=loan_in_db_update,
+            loan_update=loan_update,
             db=db,
         )
     except ValueError as error:

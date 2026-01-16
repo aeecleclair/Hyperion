@@ -165,13 +165,15 @@ async def create_loan(
 
 async def update_loan(
     loan_id: str,
-    loan_update: schemas_loan.LoanInDBUpdate,
+    loan_update: schemas_loan.LoanUpdate,
     db: AsyncSession,
 ):
     await db.execute(
         update(models_loan.Loan)
         .where(models_loan.Loan.id == loan_id)
-        .values(**loan_update.model_dump(exclude_none=True)),
+        .values(
+            **loan_update.model_dump(exclude_none=True, exclude={"items_borrowed"}),
+        ),
     )
     await db.flush()
 
