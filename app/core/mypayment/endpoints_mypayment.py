@@ -1,7 +1,6 @@
 import base64
 import logging
 import re
-import urllib
 import urllib.parse
 import uuid
 from datetime import UTC, datetime, timedelta
