@@ -354,7 +354,7 @@ async def create_wallet(
 
 async def get_wallets(
     db: AsyncSession,
-) -> Sequence[schemas_mypayment.WalletBase]:
+) -> list[schemas_mypayment.WalletBase]:
     result = await db.execute(select(models_mypayment.Wallet))
     return [
         schemas_mypayment.WalletBase(
@@ -583,7 +583,7 @@ async def get_transactions(
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     exclude_canceled: bool = False,
-) -> Sequence[schemas_mypayment.TransactionBase]:
+) -> list[schemas_mypayment.TransactionBase]:
     result = await db.execute(
         select(models_mypayment.Transaction).where(
             models_mypayment.Transaction.creation >= start_date
@@ -686,7 +686,7 @@ async def get_transactions_and_sellers_by_wallet_id(
 async def get_transfers(
     db: AsyncSession,
     last_checked: datetime | None = None,
-) -> Sequence[schemas_mypayment.Transfer]:
+) -> list[schemas_mypayment.Transfer]:
     result = await db.execute(
         select(models_mypayment.Transfer).where(
             models_mypayment.Transfer.creation >= last_checked
@@ -811,7 +811,7 @@ async def get_transfer_by_transfer_identifier(
 async def get_refunds(
     db: AsyncSession,
     last_checked: datetime | None = None,
-) -> Sequence[schemas_mypayment.RefundBase]:
+) -> list[schemas_mypayment.RefundBase]:
     result = await db.execute(
         select(models_mypayment.Refund).where(
             models_mypayment.Refund.creation >= last_checked
