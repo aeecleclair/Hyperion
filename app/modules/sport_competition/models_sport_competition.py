@@ -157,7 +157,7 @@ class SchoolProductQuota(Base):
         ForeignKey("competition_edition.id"),
         primary_key=True,
     )
-    quota: Mapped[int | None]
+    quota: Mapped[int]
 
 
 class CompetitionTeam(Base):

@@ -102,7 +102,7 @@ async def create_sport(
             status_code=400,
             detail="A sport with this name already exists",
         )
-    sport = schemas_sport_competition.Sport(**sport.model_dump(), id=str(uuid4()))
+    sport = schemas_sport_competition.Sport(**sport.model_dump(), id=uuid4())
     await cruds_sport_competition.add_sport(sport, db)
     return sport
 
@@ -2274,7 +2274,6 @@ async def join_sport(
         substitute=participant_info.substitute,
         is_license_valid=False,
         team_id=participant_info.team_id or new_team.id,
-        created_at=datetime.now(UTC),
     )
     await cruds_sport_competition.add_participant(
         participant,

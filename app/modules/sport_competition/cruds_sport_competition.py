@@ -337,6 +337,7 @@ async def load_all_competition_users_by_school(
     school_id: UUID,
     edition_id: UUID,
     db: AsyncSession,
+    exclude_non_validated: bool = False,
 ) -> list[schemas_sport_competition.CompetitionUser]:
     competition_users = await db.execute(
         select(models_sport_competition.CompetitionUser)
@@ -348,6 +349,7 @@ async def load_all_competition_users_by_school(
         .where(
             models_sport_competition.CompetitionUser.edition_id == edition_id,
             models_users.CoreUser.school_id == school_id,
+            models_sport_competition.CompetitionUser.validated,
         ),
     )
     return [
@@ -2853,9 +2855,7 @@ async def load_volunteer_registrations_by_user_id(
                     nickname=registration.shift.manager.nickname,
                     account_type=registration.shift.manager.account_type,
                 ),
-            )
-            if registration.shift
-            else None,
+            ),
         )
         for registration in registrations.scalars().all()
     ]

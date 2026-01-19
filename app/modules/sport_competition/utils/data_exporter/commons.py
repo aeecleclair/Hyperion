@@ -1,11 +1,6 @@
 import logging
-from io import BytesIO
 
 import xlsxwriter
-
-from app.modules.sport_competition import schemas_sport_competition
-from app.modules.sport_competition.types_sport_competition import ExcelExportParams
-from app.types.exceptions import MissingDataError
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 

@@ -2742,8 +2742,6 @@ async def test_create_match_as_random(
         name="New Match",
         team1_id=team1.id,
         team2_id=team2.id,
-        description="A new match for testing",
-        sport_id=sport_with_team.id,
         location_id=location.id,
         date=datetime.now(UTC),
     )
@@ -2774,8 +2772,6 @@ async def test_create_match_as_admin(
         name="New Match",
         team1_id=team1.id,
         team2_id=team2.id,
-        description="A new match for testing",
-        sport_id=sport_with_team.id,
         location_id=location.id,
         date=datetime(2024, 6, 15, 15, 0, 0, tzinfo=UTC),
     )

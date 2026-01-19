@@ -330,6 +330,10 @@ def write_data_rows(
             )
 
 
+def write():
+    pass
+
+
 def write_to_excel(
     parameters: list[ExcelExportParams],
     workbook: xlsxwriter.Workbook,
@@ -399,7 +403,7 @@ def construct_users_excel_with_parameters(
     if users_participant is None and ExcelExportParams.participants in parameters:
         raise MissingDataError("users_participant")
 
-    product_structure: tuple = ()
+    product_structure: tuple[list, int] = ()  # ty: ignore
     col_idx = len(FIXED_COLUMNS)
     if ExcelExportParams.purchases in parameters and products is not None:
         product_structure = build_product_structure(
