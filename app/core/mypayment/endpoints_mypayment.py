@@ -1,5 +1,6 @@
 import base64
 import logging
+import re
 import urllib
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -2870,12 +2871,15 @@ async def create_structure_invoice(
         structure_id=structure_id,
         db=db,
     )
-    last_invoice_number = (
-        int(last_structure_invoice.reference[-4:])
-        if last_structure_invoice
-        and int(last_structure_invoice.reference[5:9]) == security_now.year
-        else 0
-    )
+    if last_structure_invoice:
+        year, last_invoice_number = re.findall(
+            r"[a-zA-Z]*(\d{4})[a-zA-Z]*(\d{4})",
+            last_structure_invoice.reference,
+        )[0]
+        if int(year) != security_now.year:
+            last_invoice_number = 0
+    else:
+        last_invoice_number = 0
     invoice = schemas_mypayment.InvoiceInfo(
         id=invoice_id,
         reference=f"PAY{security_now.year}{structure.short_id}{last_invoice_number + 1:04d}",
