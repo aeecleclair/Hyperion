@@ -227,8 +227,12 @@ def construct_school_quotas_excel(
     school_product_quotas: list[schemas_sport_competition.SchoolProductQuota],
     export_io: BytesIO,
 ):
-    sports.sort(key=lambda sport: sport.name)
-    products.sort(key=lambda product: product.name)
+    sports.sort(
+        key=lambda sport: sport.name.lower(),
+    )
+    products.sort(
+        key=lambda product: product.name.lower(),
+    )
     data_rows, thick_columns = build_data_rows(
         school_sports_quotas,
         school_general_quotas,

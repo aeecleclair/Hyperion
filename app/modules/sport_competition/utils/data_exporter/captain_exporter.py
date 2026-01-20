@@ -96,6 +96,13 @@ def construct_captains_excel(
     captains: list[schemas_sport_competition.ParticipantComplete],
     export_io: BytesIO,
 ):
+    captains.sort(
+        key=lambda c: (
+            next(s for s in sports if s.id == c.sport_id).name.lower(),
+            c.user.user.name.lower(),
+            c.user.user.firstname.lower(),
+        ),
+    )
     data_rows, thick_columns = build_data_rows(
         captains,
         sports,

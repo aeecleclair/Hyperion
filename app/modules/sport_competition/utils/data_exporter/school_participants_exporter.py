@@ -19,14 +19,25 @@ if TYPE_CHECKING:
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
-FIXED_COLUMNS = ["Nom", "Prénom", "Email", "École", "Type", "Statut"]
+FIXED_COLUMNS = ["Nom", "Prénom", "Email", "Type", "Statut"]
 PARTICIPANTS_COLUMNS = ["Sport", "Licence", "Licence valide", "Équipe"]
 PAYMENTS_COLUMNS = ["Total à payer", "Total payé", "Tout payé"]
 
 
 def build_product_structure(
     products: list[schemas_sport_competition.ProductComplete],
+    users_purchases: dict[str, list[schemas_sport_competition.PurchaseComplete]],
 ):
+    # Filter products to only keep variants that have been purchased
+    variant_purcased = {
+        p.product_variant_id
+        for purchases in users_purchases.values()
+        for p in purchases
+    }
+    for product in products:
+        product.variants = [v for v in product.variants if v.id in variant_purcased]
+    products = [p for p in products if p.variants]
+
     col_idx = 0
 
     product_structure = []
@@ -60,7 +71,6 @@ def build_product_structure(
 def build_data_rows(
     parameters: list[ExcelExportParams],
     users: list[schemas_sport_competition.CompetitionUser],
-    schools: list[schemas_sport_competition.SchoolExtension],
     sports: list[schemas_sport_competition.Sport],
     users_participant: dict[str, schemas_sport_competition.ParticipantComplete] | None,
     users_purchases: dict[str, list[schemas_sport_competition.PurchaseComplete]],
@@ -75,10 +85,6 @@ def build_data_rows(
         row[0] = user.user.name
         row[1] = user.user.firstname
         row[2] = user.user.email
-        row[3] = next(
-            (s.school.name for s in schools if s.school_id == user.user.school_id),
-            str(user.user.school_id),
-        )
         row[4] = ", ".join(get_user_types(user))
         if user.validated and all(p.validated for p in user_purchases):
             row[5] = "Validé et payé"
@@ -335,10 +341,9 @@ def write_to_excel(
     worksheet.freeze_panes(5, 4)
 
 
-def construct_users_excel_with_parameters(
+def construct_school_users_excel_with_parameters(
     parameters: list[ExcelExportParams],
     sports: list[schemas_sport_competition.Sport],
-    schools: list[schemas_sport_competition.SchoolExtension],
     users: list[schemas_sport_competition.CompetitionUser],
     users_participant: dict[str, schemas_sport_competition.ParticipantComplete] | None,
     users_purchases: dict[str, list[schemas_sport_competition.PurchaseComplete]],
@@ -352,15 +357,13 @@ def construct_users_excel_with_parameters(
         raise MissingDataError("users_payments")
     if users_participant is None and ExcelExportParams.participants in parameters:
         raise MissingDataError("users_participant")
-
     users.sort(
         key=lambda u: (
-            u.user.school.name.lower(),
+            u.user.school.name.lower() if u.user.school else "",
             u.user.name.lower(),
             u.user.firstname.lower(),
         ),
     )
-
     product_structure: tuple[list, int] = ()  # ty: ignore
     col_idx = len(FIXED_COLUMNS)
     if ExcelExportParams.purchases in parameters and products is not None:
@@ -369,6 +372,7 @@ def construct_users_excel_with_parameters(
         )
         product_structure = build_product_structure(
             products,
+            users_purchases,
         )
         col_idx += sum(
             len(prod_struct["variants_info"]) * 2
@@ -383,7 +387,6 @@ def construct_users_excel_with_parameters(
     data_rows, thick_columns = build_data_rows(
         parameters,
         users,
-        schools,
         sports,
         users_participant,
         users_purchases,

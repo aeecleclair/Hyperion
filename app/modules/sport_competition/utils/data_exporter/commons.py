@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import xlsxwriter
 
+    from app.modules.sport_competition import schemas_sport_competition
+
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
@@ -189,3 +191,16 @@ def autosize_columns(
 ):
     for i, length in enumerate(columns_max_length):
         worksheet.set_column(i, i, length + 3)
+
+
+def get_user_types(user: schemas_sport_competition.CompetitionUser) -> list[str]:
+    types = []
+    if user.is_athlete:
+        types.append("Athlète")
+    if user.is_pompom:
+        types.append("Pom-pom")
+    if user.is_cameraman:
+        types.append("Cameraman")
+    if user.is_fanfare:
+        types.append("Fanfare")
+    return types

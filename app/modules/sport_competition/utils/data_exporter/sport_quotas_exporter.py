@@ -86,6 +86,9 @@ def construct_sport_quotas_excel(
     school_sports_quotas: list[schemas_sport_competition.SchoolSportQuota],
     export_io: BytesIO,
 ):
+    schools.sort(
+        key=lambda s: s.school.name.lower(),
+    )
     data_rows, thick_columns = build_data_rows(
         school_sports_quotas,
         schools,
