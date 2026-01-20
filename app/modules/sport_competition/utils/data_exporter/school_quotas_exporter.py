@@ -6,12 +6,12 @@ import xlsxwriter
 from app.modules.sport_competition.utils.data_exporter.commons import (
     autosize_columns,
     generate_format,
+    write_data_rows,
 )
 from app.types.exceptions import MissingDataError
 
 if TYPE_CHECKING:
     from io import BytesIO
-    from uuid import UUID
 
     from app.modules.sport_competition import schemas_sport_competition
 
@@ -22,9 +22,7 @@ GENERAL_COLUMNS: list[str] = [
     "Type de Quota",
     "Quota",
 ]
-SPORT_COLUMNS: list[str] = [
-    "Sport",
-]
+SPORT_COLUMNS: list[str] = ["Sport", "Quota Sportif", "Quota Équipe"]
 PRODUCT_COLUMNS: list[str] = [
     "Produit",
     "Quota",
@@ -32,11 +30,11 @@ PRODUCT_COLUMNS: list[str] = [
 
 
 def build_data_rows(
-    school_sports_quotas: dict[UUID, schemas_sport_competition.SchoolSportQuota],
+    school_sports_quotas: list[schemas_sport_competition.SchoolSportQuota],
     school_general_quotas: schemas_sport_competition.SchoolGeneralQuota | None,
-    school_product_quotas: dict[UUID, schemas_sport_competition.SchoolProductQuota],
+    school_product_quotas: list[schemas_sport_competition.SchoolProductQuota],
     sports: list[schemas_sport_competition.Sport],
-    products: list[schemas_sport_competition.Product],
+    products: list[schemas_sport_competition.ProductComplete],
 ) -> tuple[list[list], list[list[int]]]:
     data_rows = [[], [], []]
     thick_columns = [[], [], []]  # First column index
@@ -59,15 +57,15 @@ def build_data_rows(
         }
         for quota in school_general_quotas.model_dump(
             exclude={"school_id", "edition_id"},
-        ).values():
+        ).items():
             row = [
                 attribute_mapping[quota[0]],
                 quota[1] if quota[1] is not None else "Aucun",
             ]
             data_rows[0].append(row)
-        thick_columns[0].append(1)
+        thick_columns[0].append(len(GENERAL_COLUMNS) - 1)
 
-    for quota in school_sports_quotas.values():
+    for quota in school_sports_quotas:
         try:
             sport = sport_dict[quota.sport_id]
         except KeyError as e:
@@ -84,9 +82,9 @@ def build_data_rows(
             quota.team_quota if quota.team_quota is not None else "Aucun",
         ]
         data_rows[1].append(row)
-    thick_columns[1].append(2)
+    thick_columns[1].append(len(SPORT_COLUMNS) - 1)
 
-    for quota in school_product_quotas.values():
+    for quota in school_product_quotas:
         try:
             product = product_dict[quota.product_id]
         except KeyError as e:
@@ -99,47 +97,9 @@ def build_data_rows(
 
         row = [product.name, quota.quota]
         data_rows[2].append(row)
-    thick_columns[2].append(1)
+    thick_columns[2].append(len(PRODUCT_COLUMNS) - 1)
 
     return data_rows, thick_columns
-
-
-def write_data_rows(
-    worksheet: xlsxwriter.Workbook.worksheet_class,
-    data_rows: list,
-    thick_columns: list[int],
-    formats: dict,
-    columns_max_length: list[int],
-    start_row: int = 5,
-):
-    for row_idx, row in enumerate(data_rows, start=start_row):
-        is_last_row = row_idx == start_row + len(data_rows) - 1
-        for col_idx, val in enumerate(row):
-            # Choix du format selon la colonne
-            if col_idx in thick_columns:
-                base = (
-                    formats["validated"]
-                    if val == "OUI"
-                    else formats["not_validated"]
-                    if val == "NON"
-                    else formats["other"]
-                )
-                fmt = base["bottom_thick"] if is_last_row else base["thick"]
-            else:
-                base = (
-                    formats["validated"]
-                    if val == "OUI"
-                    else formats["not_validated"]
-                    if val == "NON"
-                    else formats["other"]
-                )
-                fmt = base["bottom"] if is_last_row else base["base"]
-
-            worksheet.write(row_idx, col_idx, val, fmt)
-            columns_max_length[col_idx] = max(
-                columns_max_length[col_idx],
-                len(str(val)),
-            )
 
 
 def write_sports_headers(
@@ -259,12 +219,12 @@ def write_to_excel(
         )
 
 
-def construct_users_excel_with_parameters(
+def construct_school_quotas_excel(
     sports: list[schemas_sport_competition.Sport],
-    products: list[schemas_sport_competition.Product],
-    school_sports_quotas: dict[UUID, schemas_sport_competition.SchoolSportQuota],
+    products: list[schemas_sport_competition.ProductComplete],
+    school_sports_quotas: list[schemas_sport_competition.SchoolSportQuota],
     school_general_quotas: schemas_sport_competition.SchoolGeneralQuota | None,
-    school_product_quotas: dict[UUID, schemas_sport_competition.SchoolProductQuota],
+    school_product_quotas: list[schemas_sport_competition.SchoolProductQuota],
     export_io: BytesIO,
 ):
     sports.sort(key=lambda sport: sport.name)

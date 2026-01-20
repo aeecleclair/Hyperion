@@ -1,15 +1,13 @@
 from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 import pytest_asyncio
-from fastapi.testclient import TestClient
 from sqlalchemy import delete, update
 
-from app.core.groups import models_groups
 from app.core.groups.groups_type import AccountType
 from app.core.schools import models_schools
 from app.core.schools.schools_type import SchoolType
-from app.core.users import models_users
 from app.modules.sport_competition import models_sport_competition
 from app.modules.sport_competition.permissions_sport_competition import (
     SportCompetitionPermissions,
@@ -36,6 +34,12 @@ from tests.commons import (
     create_user_with_groups,
     get_TestingSessionLocal,
 )
+
+if TYPE_CHECKING:
+    from fastapi.testclient import TestClient
+
+    from app.core.groups import models_groups
+    from app.core.users import models_users
 
 admin_group: models_groups.CoreGroup
 
@@ -3590,14 +3594,50 @@ async def test_register_to_volunteer_shift(
     assert registration_check is not None, registrations_json
 
 
-async def test_data_exporter(
+# endregion
+# region: Data Export
+async def test_data_exporter_users(
     client: TestClient,
 ):
     response = client.get(
-        "/competition/users/data-export?included_fields=purchases&included_fields=payments&included_fields=participants",
+        "/competition/data-export/users?included_fields=purchases&included_fields=payments&included_fields=participants",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 200
+
+
+async def test_data_exporter_captains(
+    client: TestClient,
+):
+    response = client.get(
+        "/competition/data-export/participants/captains",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+
+
+async def test_data_exporter_school_quotas(
+    client: TestClient,
+):
+    response = client.get(
+        f"/competition/data-export/schools/{school1.id}/quotas",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+
+
+async def test_data_exporter_sport_quotas(
+    client: TestClient,
+):
+    response = client.get(
+        f"/competition/data-export/sports/{sport_with_team.id}/quotas",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+
+
+# endregion
+# region: Competition Users Deletion
 
 
 async def test_delete_competition_user(

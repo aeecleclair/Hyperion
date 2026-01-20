@@ -145,6 +145,44 @@ def generate_format(workbook: xlsxwriter.Workbook):
     }
 
 
+def write_data_rows(
+    worksheet: xlsxwriter.Workbook.worksheet_class,
+    data_rows: list,
+    thick_columns: list[int],
+    formats: dict,
+    columns_max_length: list[int],
+    start_row: int = 5,
+):
+    for row_idx, row in enumerate(data_rows, start=start_row):
+        is_last_row = row_idx == start_row + len(data_rows) - 1
+        for col_idx, val in enumerate(row):
+            # Choix du format selon la colonne
+            if col_idx in thick_columns:
+                base = (
+                    formats["validated"]
+                    if val == "OUI"
+                    else formats["not_validated"]
+                    if val == "NON"
+                    else formats["other"]
+                )
+                fmt = base["bottom_thick"] if is_last_row else base["thick"]
+            else:
+                base = (
+                    formats["validated"]
+                    if val == "OUI"
+                    else formats["not_validated"]
+                    if val == "NON"
+                    else formats["other"]
+                )
+                fmt = base["bottom"] if is_last_row else base["base"]
+
+            worksheet.write(row_idx, col_idx, val, fmt)
+            columns_max_length[col_idx] = max(
+                columns_max_length[col_idx],
+                len(str(val)),
+            )
+
+
 def autosize_columns(
     worksheet: xlsxwriter.Workbook.worksheet_class,
     columns_max_length: list[int],

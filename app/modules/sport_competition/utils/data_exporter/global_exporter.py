@@ -8,6 +8,7 @@ from app.modules.sport_competition.types_sport_competition import ExcelExportPar
 from app.modules.sport_competition.utils.data_exporter.commons import (
     autosize_columns,
     generate_format,
+    write_data_rows,
 )
 from app.types.exceptions import MissingDataError
 
@@ -295,55 +296,16 @@ def write_product_headers(
     return product_end_cols, list(variant_end_cols)
 
 
-def write_data_rows(
-    worksheet: xlsxwriter.Workbook.worksheet_class,
-    data_rows: list,
-    thick_columns: list[int],
-    formats: dict,
-    columns_max_length: list[int],
-    start_row: int = 5,
-):
-    for row_idx, row in enumerate(data_rows, start=start_row):
-        is_last_row = row_idx == start_row + len(data_rows) - 1
-        for col_idx, val in enumerate(row):
-            # Choix du format selon la colonne
-            if col_idx in thick_columns:
-                base = (
-                    formats["validated"]
-                    if val == "OUI"
-                    else formats["not_validated"]
-                    if val == "NON"
-                    else formats["other"]
-                )
-                fmt = base["bottom_thick"] if is_last_row else base["thick"]
-            else:
-                base = (
-                    formats["validated"]
-                    if val == "OUI"
-                    else formats["not_validated"]
-                    if val == "NON"
-                    else formats["other"]
-                )
-                fmt = base["bottom"] if is_last_row else base["base"]
-
-            worksheet.write(row_idx, col_idx, val, fmt)
-            columns_max_length[col_idx] = max(
-                columns_max_length[col_idx],
-                len(str(val)),
-            )
-
-
 def write_to_excel(
     parameters: list[ExcelExportParams],
     workbook: xlsxwriter.Workbook,
-    worksheet_name: str,
     product_structure: tuple[list, int],
     data_rows: list,
     thick_columns: list[int],
     col_idx: int,
     formats: dict,
 ):
-    worksheet = workbook.add_worksheet(worksheet_name)
+    worksheet = workbook.add_worksheet("Données")
     columns_max_length = [len(c) for c in FIXED_COLUMNS] + [0] * (
         col_idx - len(FIXED_COLUMNS)
     )
@@ -436,7 +398,6 @@ def construct_users_excel_with_parameters(
     write_to_excel(
         parameters,
         workbook,
-        "Données",
         product_structure,
         data_rows,
         thick_columns,
