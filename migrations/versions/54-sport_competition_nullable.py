@@ -34,6 +34,12 @@ def upgrade() -> None:
         WHERE quota IS NULL
         """),
     )
+    conn.execute(
+        sa.text("""
+        DELETE FROM competition_users
+        WHERE is_athlete IS FALSE and is_pompom IS FALSE and is_cameraman IS FALSE and is_fanfare IS FALSE
+        """),
+    )
     op.alter_column("competition_match", "date", nullable=False)
     op.alter_column(
         "competition_school_product_quota",
