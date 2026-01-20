@@ -1,14 +1,18 @@
 import logging
-from io import BytesIO
+from typing import TYPE_CHECKING
 
 import xlsxwriter
 
-from app.modules.sport_competition import schemas_sport_competition
 from app.modules.sport_competition.utils.data_exporter.commons import (
     autosize_columns,
     generate_format,
 )
 from app.types.exceptions import MissingDataError
+
+if TYPE_CHECKING:
+    from io import BytesIO
+
+    from app.modules.sport_competition import schemas_sport_competition
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 

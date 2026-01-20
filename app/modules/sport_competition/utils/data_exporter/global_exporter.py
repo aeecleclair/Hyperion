@@ -1,5 +1,5 @@
 import logging
-from io import BytesIO
+from typing import TYPE_CHECKING
 
 import xlsxwriter
 
@@ -10,6 +10,9 @@ from app.modules.sport_competition.utils.data_exporter.commons import (
     generate_format,
 )
 from app.types.exceptions import MissingDataError
+
+if TYPE_CHECKING:
+    from io import BytesIO
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -328,10 +331,6 @@ def write_data_rows(
                 columns_max_length[col_idx],
                 len(str(val)),
             )
-
-
-def write():
-    pass
 
 
 def write_to_excel(

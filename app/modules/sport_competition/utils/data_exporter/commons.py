@@ -1,6 +1,8 @@
 import logging
+from typing import TYPE_CHECKING
 
-import xlsxwriter
+if TYPE_CHECKING:
+    import xlsxwriter
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
