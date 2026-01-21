@@ -1,10 +1,14 @@
+from typing import TYPE_CHECKING
+
 from fastapi import HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.sport_competition import (
     cruds_sport_competition,
     schemas_sport_competition,
 )
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def check_validation_consistency(

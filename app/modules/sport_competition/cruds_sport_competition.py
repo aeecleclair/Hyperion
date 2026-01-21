@@ -1,9 +1,8 @@
 import logging
 from datetime import UTC, datetime
-from uuid import UUID
+from typing import TYPE_CHECKING
 
 from sqlalchemy import and_, delete, func, or_, select, update
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.core.schools import models_schools
@@ -12,11 +11,6 @@ from app.core.users import models_users, schemas_users
 from app.modules.sport_competition import (
     models_sport_competition,
     schemas_sport_competition,
-)
-from app.modules.sport_competition.types_sport_competition import (
-    CompetitionGroupType,
-    ProductPublicType,
-    ProductSchoolType,
 )
 from app.modules.sport_competition.utils.schemas_converters import (
     competition_user_model_to_schema,
@@ -27,6 +21,17 @@ from app.modules.sport_competition.utils.schemas_converters import (
     team_model_to_schema,
     volunteer_shift_model_to_schema,
 )
+
+if TYPE_CHECKING:
+    from uuid import UUID
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.modules.sport_competition.types_sport_competition import (
+        CompetitionGroupType,
+        ProductPublicType,
+        ProductSchoolType,
+    )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -2387,6 +2392,39 @@ async def load_all_purchases(
     return users_purchases
 
 
+async def load_school_purchases(
+    school_id: UUID,
+    edition_id: UUID,
+    db: AsyncSession,
+) -> dict[str, list[schemas_sport_competition.PurchaseComplete]]:
+    purchases = await db.execute(
+        select(models_sport_competition.CompetitionPurchase)
+        .join(
+            models_sport_competition.CompetitionUser,
+            models_sport_competition.CompetitionPurchase.user_id
+            == models_sport_competition.CompetitionUser.user_id,
+        )
+        .join(
+            models_users.CoreUser,
+            models_sport_competition.CompetitionUser.user_id
+            == models_users.CoreUser.id,
+        )
+        .where(
+            models_sport_competition.CompetitionPurchase.edition_id == edition_id,
+            models_users.CoreUser.school_id == school_id,
+        )
+        .options(
+            selectinload(models_sport_competition.CompetitionPurchase.product_variant),
+        ),
+    )
+    users_purchases: dict[str, list[schemas_sport_competition.PurchaseComplete]] = {}
+    for purchase in purchases.scalars().all():
+        if purchase.user_id not in users_purchases:
+            users_purchases[purchase.user_id] = []
+        users_purchases[purchase.user_id].append(purchase_model_to_schema(purchase))
+    return users_purchases
+
+
 async def load_purchases_by_user_id(
     user_id: str,
     edition_id: UUID,
@@ -2581,6 +2619,43 @@ async def load_all_payments(
     payments = await db.execute(
         select(models_sport_competition.CompetitionPayment).where(
             models_sport_competition.CompetitionPayment.edition_id == edition_id,
+        ),
+    )
+    users_payments: dict[str, list[schemas_sport_competition.PaymentComplete]] = {}
+    for payment in payments.scalars().all():
+        if payment.user_id not in users_payments:
+            users_payments[payment.user_id] = []
+        users_payments[payment.user_id].append(
+            schemas_sport_competition.PaymentComplete(
+                id=payment.id,
+                user_id=payment.user_id,
+                edition_id=payment.edition_id,
+                total=payment.total,
+            ),
+        )
+    return users_payments
+
+
+async def load_school_payments(
+    school_id: UUID,
+    edition_id: UUID,
+    db: AsyncSession,
+) -> dict[str, list[schemas_sport_competition.PaymentComplete]]:
+    payments = await db.execute(
+        select(models_sport_competition.CompetitionPayment)
+        .join(
+            models_sport_competition.CompetitionUser,
+            models_sport_competition.CompetitionPayment.user_id
+            == models_sport_competition.CompetitionUser.user_id,
+        )
+        .join(
+            models_users.CoreUser,
+            models_sport_competition.CompetitionUser.user_id
+            == models_users.CoreUser.id,
+        )
+        .where(
+            models_sport_competition.CompetitionPayment.edition_id == edition_id,
+            models_users.CoreUser.school_id == school_id,
         ),
     )
     users_payments: dict[str, list[schemas_sport_competition.PaymentComplete]] = {}

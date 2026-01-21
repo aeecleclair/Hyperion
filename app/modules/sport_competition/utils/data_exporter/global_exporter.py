@@ -123,9 +123,9 @@ def build_data_rows(
 
         if ExcelExportParams.payments in parameters and users_payments is not None:
             user_payments = users_payments.get(user.user.id, [])
-            offset = 6
+            offset = len(FIXED_COLUMNS)
             if ExcelExportParams.participants in parameters:
-                offset += 4
+                offset += len(PARTICIPANTS_COLUMNS)
             if (
                 ExcelExportParams.purchases in parameters
                 and product_structure is not None
@@ -314,7 +314,7 @@ def write_to_excel(
     if ExcelExportParams.payments in parameters:
         start_index = len(FIXED_COLUMNS)
         if ExcelExportParams.participants in parameters:
-            start_index += 4
+            start_index += len(PARTICIPANTS_COLUMNS)
         if ExcelExportParams.purchases in parameters:
             start_index += product_structure[1]
         write_payment_headers(
@@ -353,9 +353,11 @@ def construct_users_excel_with_parameters(
     if users_participant is None and ExcelExportParams.participants in parameters:
         raise MissingDataError("users_participant")
 
+    school_dict = {school.school_id: school for school in schools}
+
     users.sort(
         key=lambda u: (
-            u.user.school.name.lower(),
+            school_dict[u.user.school_id].school.name.lower(),
             u.user.name.lower(),
             u.user.firstname.lower(),
         ),
@@ -377,9 +379,9 @@ def construct_users_excel_with_parameters(
         hyperion_error_logger.debug(f"Product structure: {product_structure}")
 
     if ExcelExportParams.participants in parameters:
-        col_idx += 4
+        col_idx += len(PARTICIPANTS_COLUMNS)
     if ExcelExportParams.payments in parameters:
-        col_idx += 3
+        col_idx += len(PAYMENTS_COLUMNS)
     data_rows, thick_columns = build_data_rows(
         parameters,
         users,

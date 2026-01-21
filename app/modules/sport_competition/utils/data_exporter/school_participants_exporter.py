@@ -129,9 +129,9 @@ def build_data_rows(
 
         if ExcelExportParams.payments in parameters and users_payments is not None:
             user_payments = users_payments.get(user.user.id, [])
-            offset = 6
+            offset = len(FIXED_COLUMNS)
             if ExcelExportParams.participants in parameters:
-                offset += 4
+                offset += len(PARTICIPANTS_COLUMNS)
             if (
                 ExcelExportParams.purchases in parameters
                 and product_structure is not None
@@ -381,9 +381,9 @@ def construct_school_users_excel_with_parameters(
         hyperion_error_logger.debug(f"Product structure: {product_structure}")
 
     if ExcelExportParams.participants in parameters:
-        col_idx += 4
+        col_idx += len(PARTICIPANTS_COLUMNS)
     if ExcelExportParams.payments in parameters:
-        col_idx += 3
+        col_idx += len(PAYMENTS_COLUMNS)
     data_rows, thick_columns = build_data_rows(
         parameters,
         users,

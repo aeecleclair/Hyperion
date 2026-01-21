@@ -3616,6 +3616,16 @@ async def test_data_exporter_captains(
     assert response.status_code == 200
 
 
+async def test_data_exporter_school_users(
+    client: TestClient,
+):
+    response = client.get(
+        f"/competition/data-export/schools/{school1.id}/users?included_fields=purchases&included_fields=payments&included_fields=participants",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+
+
 async def test_data_exporter_school_quotas(
     client: TestClient,
 ):
@@ -3631,6 +3641,16 @@ async def test_data_exporter_sport_quotas(
 ):
     response = client.get(
         f"/competition/data-export/sports/{sport_with_team.id}/quotas",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+
+
+async def test_data_exporter_sport_participants(
+    client: TestClient,
+):
+    response = client.get(
+        f"/competition/data-export/sports/{sport_with_team.id}/participants",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 200
