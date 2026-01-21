@@ -708,15 +708,19 @@ async def change_password(
         raise HTTPException(status_code=403, detail="The old password is invalid")
 
     if user.should_change_password:
-        # we control whether we check if the new password is different
-        if security.verify_password(
-            change_password_request.new_password,
-            user.password_hash,
-        ):
-            raise HTTPException(
-                status_code=403,
-                detail="The new password should not be identical to the current password",
-            )
+        # # we control whether we check if the new password is different
+        # if security.verify_password(
+        #     change_password_request.new_password,
+        #     user.password_hash,
+        # ):
+        #     raise HTTPException(
+        #         status_code=403,
+        #         detail="The new password should not be identical to the current password",
+        #     )
+        raise HTTPException(
+            status_code=403,
+            detail="User must reset password via email recovery",
+        )
 
     new_password_hash = security.get_password_hash(change_password_request.new_password)
     await cruds_users.update_user_password_by_id(
@@ -724,11 +728,11 @@ async def change_password(
         user_id=user.id,
         new_password_hash=new_password_hash,
     )
-    await cruds_users.update_should_user_change_password_by_id(
-        db=db,
-        user_id=user.id,
-        should_change_password=False,
-    )
+    # await cruds_users.update_should_user_change_password_by_id(
+    #     db=db,
+    #     user_id=user.id,
+    #     should_change_password=False,
+    # )
 
     # Revoke existing auth refresh tokens
     # to force the user to reauthenticate on all services and devices
