@@ -19,6 +19,7 @@ from app.modules.sport_competition.permissions_sport_competition import (
     SportCompetitionPermissions,
 )
 from app.modules.sport_competition.types_sport_competition import (
+    PaiementMethodType,
     ProductPublicType,
     ProductSchoolType,
     SportCategory,
@@ -532,6 +533,7 @@ async def setup():
         user_id=admin_user.id,
         edition_id=active_edition.id,
         total=2000,
+        method=PaiementMethodType.manual,
         created_at=datetime.now(UTC),
     )
     await add_object_to_db(payment)
@@ -1332,6 +1334,7 @@ async def test_delete_payment(
         user_id=admin_user.id,
         edition_id=active_edition.id,
         total=500,
+        method=PaiementMethodType.helloasso,
         created_at=datetime.now(UTC),
     )
     await add_object_to_db(payment_to_delete)

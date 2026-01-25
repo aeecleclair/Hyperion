@@ -309,7 +309,7 @@ async def create_user(
     # After adding the unconfirmed user to the database, we got an activation token that need to be send by email,
     # in order to make sure the email address is valid
 
-    account_type, school_id = await get_account_type_and_school_id_from_email(
+    account_type, _ = await get_account_type_and_school_id_from_email(
         email=email,
         db=db,
     )

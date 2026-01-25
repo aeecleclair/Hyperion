@@ -8,6 +8,7 @@ from app.core.schools.models_schools import CoreSchool
 from app.core.users.models_users import CoreUser
 from app.modules.sport_competition.types_sport_competition import (
     CompetitionGroupType,
+    PaiementMethodType,
     ProductPublicType,
     ProductSchoolType,
     SportCategory,
@@ -417,6 +418,7 @@ class CompetitionPayment(Base):
         ForeignKey("competition_edition.id"),
     )
     total: Mapped[int]
+    method: Mapped[PaiementMethodType]
     created_at: Mapped[datetime]
 
     __table_args__ = (

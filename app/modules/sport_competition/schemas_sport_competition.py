@@ -8,6 +8,7 @@ from app.core.users import schemas_users
 from app.modules.sport_competition.types_sport_competition import (
     CompetitionGroupType,
     InvalidUserType,
+    PaiementMethodType,
     ProductPublicType,
     ProductSchoolType,
     SportCategory,
@@ -418,6 +419,7 @@ class PaymentComplete(PaymentBase):
     id: UUID
     user_id: str
     edition_id: UUID
+    method: PaiementMethodType
 
 
 class PaymentUrl(BaseModel):

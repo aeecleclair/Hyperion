@@ -2722,6 +2722,7 @@ async def add_payment(
             user_id=payment.user_id,
             edition_id=payment.edition_id,
             total=payment.total,
+            method=payment.method,
             created_at=datetime.now(UTC),
         ),
     )

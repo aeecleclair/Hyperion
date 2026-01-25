@@ -4,6 +4,7 @@ Create Date: 2025-10-21 19:53:38.521697
 """
 
 from collections.abc import Sequence
+from enum import Enum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -17,6 +18,11 @@ revision: str = "562adbd796ae"
 down_revision: str | None = "9fc3dc926600"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
+
+
+class PaiementMethodType(Enum):
+    manual = "manual"
+    helloasso = "helloasso"
 
 
 def upgrade() -> None:
@@ -46,6 +52,18 @@ def upgrade() -> None:
         "quota",
         nullable=False,
     )
+    op.add_column(
+        "competition_payments",
+        sa.Column(
+            "method",
+            sa.Enum(
+                PaiementMethodType,
+                name="paiementmethodtype",
+            ),
+            nullable=False,
+            server_default="helloasso",
+        ),
+    )
 
 
 def downgrade() -> None:
@@ -55,6 +73,7 @@ def downgrade() -> None:
         nullable=True,
     )
     op.alter_column("competition_match", "date", nullable=True)
+    op.drop_column("competition_payments", "method")
 
 
 def pre_test_upgrade(

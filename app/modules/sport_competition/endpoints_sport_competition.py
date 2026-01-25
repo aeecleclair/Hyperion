@@ -33,6 +33,7 @@ from app.modules.sport_competition.permissions_sport_competition import (
 from app.modules.sport_competition.types_sport_competition import (
     CompetitionGroupType,
     ExcelExportParams,
+    PaiementMethodType,
     ProductSchoolType,
 )
 from app.modules.sport_competition.utils.data_exporter.captain_exporter import (
@@ -61,6 +62,7 @@ from app.modules.sport_competition.utils_sport_competition import (
     get_public_type_from_user,
     validate_payment,
     validate_product_variant_purchase,
+    validate_purchases,
 )
 from app.types.content_type import ContentType
 from app.types.module import Module
@@ -3868,6 +3870,7 @@ async def create_payment(
         user_id=user_id,
         total=payment.total,
         edition_id=edition.id,
+        method=PaiementMethodType.manual,
     )
 
     purchases = await cruds_sport_competition.load_purchases_by_user_id(
@@ -3881,36 +3884,7 @@ async def create_payment(
         db,
     )
 
-    purchases_total = sum(
-        purchase.product_variant.price * purchase.quantity for purchase in purchases
-    )
-    payments_total = sum(payment.total for payment in payments)
-    total_paid = payments_total + db_payment.total
-
-    if total_paid == purchases_total:
-        for purchase in purchases:
-            await cruds_sport_competition.mark_purchase_as_validated(
-                purchase.user_id,
-                purchase.product_variant_id,
-                True,
-                db,
-            )
-    else:
-        purchases.sort(key=lambda x: x.purchased_on)
-        for purchase in purchases:
-            if total_paid <= 0:
-                break
-            if purchase.validated:
-                total_paid -= purchase.product_variant.price * purchase.quantity
-                continue
-            if purchase.product_variant.price * purchase.quantity <= total_paid:
-                await cruds_sport_competition.mark_purchase_as_validated(
-                    purchase.user_id,
-                    purchase.product_variant_id,
-                    True,
-                    db,
-                )
-                total_paid -= purchase.product_variant.price * purchase.quantity
+    await validate_purchases(purchases, [*payments, db_payment], db)
     await cruds_sport_competition.add_payment(db_payment, db)
     return db_payment
 

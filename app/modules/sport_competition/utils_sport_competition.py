@@ -151,6 +151,7 @@ async def validate_payment(
         user_id=checkout.user_id,
         total=paid_amount,
         edition_id=checkout.edition_id,
+        method=types_sport_competition.PaiementMethodType.helloasso,
     )
     purchases = await cruds_sport_competition.load_purchases_by_user_id(
         checkout.user_id,
@@ -163,11 +164,26 @@ async def validate_payment(
         db,
     )
 
+    await validate_purchases(purchases, [*payments, db_payment], db)
+    await cruds_sport_competition.add_payment(db_payment, db)
+    await db.flush()
+
+
+async def validate_purchases(
+    purchases: list[schemas_sport_competition.PurchaseComplete],
+    payments: list[schemas_sport_competition.PaymentComplete],
+    db: AsyncSession,
+) -> None:
+    if not purchases or len(purchases) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="At least one purchase must be provided",
+        )
     purchases_total = sum(
         purchase.product_variant.price * purchase.quantity for purchase in purchases
     )
     payments_total = sum(payment.total for payment in payments)
-    total_paid = payments_total + db_payment.total
+    total_paid = payments_total
 
     if total_paid == purchases_total:
         for purchase in purchases:
@@ -193,5 +209,3 @@ async def validate_payment(
                     db,
                 )
                 total_paid -= purchase.product_variant.price * purchase.quantity
-    await cruds_sport_competition.add_payment(db_payment, db)
-    await db.flush()
