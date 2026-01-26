@@ -1365,8 +1365,12 @@ dependencies = [
     { name = "sqlalchemy-utils" },
     { name = "unidecode" },
     { name = "uvicorn", extra = ["standard"] },
-    { name = "weasyprint" },
     { name = "xlsxwriter" },
+]
+
+[package.optional-dependencies]
+weasyprint = [
+    { name = "weasyprint" },
 ]
 
 [package.dev-dependencies]
@@ -1426,9 +1430,10 @@ requires-dist = [
     { name = "sqlalchemy-utils", specifier = "==0.41.2" },
     { name = "unidecode", specifier = "==1.3.8" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.30.6" },
-    { name = "weasyprint", specifier = "==65.1" },
+    { name = "weasyprint", marker = "extra == 'weasyprint'", specifier = "==65.1" },
     { name = "xlsxwriter", specifier = "==3.2.0" },
 ]
+provides-extras = ["weasyprint"]
 
 [package.metadata.requires-dev]
 dev = [
