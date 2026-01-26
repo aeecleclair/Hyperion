@@ -315,8 +315,8 @@ async def check_product_quotas(
         )
         if product_quota and product_quota.quota is not None:
             nb_purchased = await cruds_sport_competition.count_validated_purchases_by_product_id_and_school_id(
-                user.user.school_id,
                 product_id,
+                user.user.school_id,
                 db,
             )
             if nb_purchased >= product_quota.quota:
