@@ -82,6 +82,29 @@ def upgrade() -> None:
         ["name"],
         unique=True,
     )
+    conn = op.get_bind()
+    group = conn.execute(
+        sa.text(
+            "SELECT * FROM core_group WHERE id=:id",
+        ).bindparams(id=GroupType.admin.value),
+    ).first()
+    if not group:
+        op.execute(
+            sa.insert(
+                sa.table(
+                    "core_group",
+                    sa.column("id", sa.String()),
+                    sa.column("name", sa.String()),
+                    sa.column("description", sa.String()),
+                ),
+            ).values(
+                {
+                    "id": GroupType.admin.value,
+                    "name": "admin",
+                    "description": "GroupType",
+                },
+            ),
+        )
     for i, kind in enumerate(Kinds):
         op.execute(
             sa.insert(groupement_table).values(
