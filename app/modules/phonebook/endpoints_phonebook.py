@@ -79,24 +79,24 @@ async def get_all_role_tags(
 
 
 @module.router.get(
-    "/phonebook/groupements",
+    "/phonebook/groupements/",
     response_model=list[schemas_phonebook.AssociationGroupement],
     status_code=200,
 )
-async def get_groupements(
+async def get_all_groupements(
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Return all available kinds of from Kinds enum.
+    Return all groupements from database as a list of AssociationGroupement schemas
     """
     return await cruds_phonebook.get_all_groupements(db)
 
 
 @module.router.post(
-    "/phonebook/groupements",
+    "/phonebook/groupements/",
     response_model=schemas_phonebook.AssociationGroupement,
     status_code=201,
 )
