@@ -1,7 +1,9 @@
 from collections.abc import Sequence
+from uuid import UUID
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.users import models_users
 from app.modules.phonebook import models_phonebook, schemas_phonebook, types_phonebook
@@ -36,51 +38,176 @@ async def is_user_president(
 # ---------------------------------------------------------------------------- #
 async def get_all_associations(
     db: AsyncSession,
-) -> Sequence[models_phonebook.Association]:
+) -> Sequence[schemas_phonebook.AssociationComplete]:
     """Return all Associations from database"""
 
-    result = await db.execute(select(models_phonebook.Association))
-    return result.scalars().all()
+    result = await db.execute(
+        select(models_phonebook.Association).options(
+            selectinload(models_phonebook.Association.associated_groups),
+        ),
+    )
+    return [
+        schemas_phonebook.AssociationComplete(
+            id=association.id,
+            name=association.name,
+            description=association.description,
+            groupement_id=association.groupement_id,
+            mandate_year=association.mandate_year,
+            deactivated=association.deactivated,
+            associated_groups=[group.id for group in association.associated_groups],
+        )
+        for association in result.scalars().all()
+    ]
 
 
-async def get_all_role_tags() -> Sequence[str]:
+async def get_all_role_tags() -> list[str]:
     """Return all RoleTags from Enum"""
 
     return [tag.value for tag in types_phonebook.RoleTags]
 
 
-async def get_all_kinds() -> Sequence[str]:
-    """Return all Kinds from Enum"""
-
-    return [kind.value for kind in types_phonebook.Kinds]
-
-
-async def get_all_memberships(
-    mandate_year: int,
+async def get_all_groupements(
     db: AsyncSession,
-) -> Sequence[models_phonebook.Membership]:
-    """Return all Memberships from database"""
+) -> Sequence[schemas_phonebook.AssociationGroupement]:
+    """Return all Groupements from database"""
 
     result = await db.execute(
-        select(models_phonebook.Membership).where(
-            models_phonebook.Membership.mandate_year == mandate_year,
+        select(models_phonebook.AssociationGroupement).order_by(
+            models_phonebook.AssociationGroupement.name,
         ),
     )
-    return result.scalars().all()
+    return [
+        schemas_phonebook.AssociationGroupement(
+            id=groupement.id,
+            name=groupement.name,
+        )
+        for groupement in result.scalars().all()
+    ]
+
+
+# ---------------------------------------------------------------------------- #
+#                                  Groupement                                  #
+# ---------------------------------------------------------------------------- #
+
+
+async def get_groupement_by_id(
+    groupement_id: UUID,
+    db: AsyncSession,
+) -> schemas_phonebook.AssociationGroupement | None:
+    """Return Groupement with id from database"""
+
+    result = (
+        (
+            await db.execute(
+                select(models_phonebook.AssociationGroupement).where(
+                    models_phonebook.AssociationGroupement.id == groupement_id,
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return (
+        schemas_phonebook.AssociationGroupement(
+            id=result.id,
+            name=result.name,
+        )
+        if result
+        else None
+    )
+
+
+async def get_groupement_by_name(
+    groupement_name: str,
+    db: AsyncSession,
+) -> schemas_phonebook.AssociationGroupement | None:
+    """Return Groupement with name from database"""
+
+    result = (
+        (
+            await db.execute(
+                select(models_phonebook.AssociationGroupement).where(
+                    models_phonebook.AssociationGroupement.name == groupement_name,
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return (
+        schemas_phonebook.AssociationGroupement(
+            id=result.id,
+            name=result.name,
+        )
+        if result
+        else None
+    )
+
+
+async def create_groupement(
+    groupement: schemas_phonebook.AssociationGroupement,
+    db: AsyncSession,
+) -> None:
+    """Create a new Groupement in database and return it"""
+
+    db.add(
+        models_phonebook.AssociationGroupement(
+            id=groupement.id,
+            name=groupement.name,
+        ),
+    )
+    await db.flush()
+
+
+async def update_groupement(
+    groupement_id: UUID,
+    groupement_edit: schemas_phonebook.AssociationGroupementBase,
+    db: AsyncSession,
+) -> None:
+    """Update a Groupement in database"""
+
+    await db.execute(
+        update(models_phonebook.AssociationGroupement)
+        .where(models_phonebook.AssociationGroupement.id == groupement_id)
+        .values(**groupement_edit.model_dump(exclude_none=True)),
+    )
+    await db.flush()
+
+
+async def delete_groupement(
+    groupement_id: UUID,
+    db: AsyncSession,
+) -> None:
+    """Delete a Groupement from database"""
+
+    await db.execute(
+        delete(models_phonebook.AssociationGroupement).where(
+            models_phonebook.AssociationGroupement.id == groupement_id,
+        ),
+    )
+    await db.flush()
 
 
 # ---------------------------------------------------------------------------- #
 #                                  Association                                 #
 # ---------------------------------------------------------------------------- #
 async def create_association(
-    association: models_phonebook.Association,
+    association: schemas_phonebook.AssociationComplete,
     db: AsyncSession,
-) -> models_phonebook.Association:
+) -> None:
     """Create a new Association in database and return it"""
 
-    db.add(association)
+    db.add(
+        models_phonebook.Association(
+            id=association.id,
+            name=association.name,
+            description=association.description,
+            groupement_id=association.groupement_id,
+            mandate_year=association.mandate_year,
+            deactivated=association.deactivated,
+        ),
+    )
     await db.flush()
-    return association
 
 
 async def update_association(
@@ -157,38 +284,87 @@ async def delete_association(association_id: str, db: AsyncSession):
 async def get_association_by_id(
     association_id: str,
     db: AsyncSession,
-) -> models_phonebook.Association | None:
+) -> schemas_phonebook.AssociationComplete | None:
     """Return Association with id from database"""
 
-    result = await db.execute(
-        select(models_phonebook.Association).where(
-            models_phonebook.Association.id == association_id,
-        ),
+    result = (
+        (
+            await db.execute(
+                select(models_phonebook.Association)
+                .where(
+                    models_phonebook.Association.id == association_id,
+                )
+                .options(selectinload(models_phonebook.Association.associated_groups)),
+            )
+        )
+        .scalars()
+        .first()
     )
-    return result.scalars().first()
+    return (
+        schemas_phonebook.AssociationComplete(
+            id=result.id,
+            name=result.name,
+            description=result.description,
+            groupement_id=result.groupement_id,
+            mandate_year=result.mandate_year,
+            deactivated=result.deactivated,
+            associated_groups=[group.id for group in result.associated_groups],
+        )
+        if result
+        else None
+    )
 
 
-async def get_associated_groups_by_association_id(
-    association_id: str,
+async def get_associations_by_groupement_id(
+    groupement_id: UUID,
     db: AsyncSession,
-) -> Sequence[models_phonebook.AssociationAssociatedGroups]:
-    """Return all AssociatedGroups with association_id from database"""
+) -> Sequence[schemas_phonebook.AssociationComplete]:
+    """Return all Associations with groupement_id from database"""
 
-    result = await db.execute(
-        select(models_phonebook.AssociationAssociatedGroups).where(
-            models_phonebook.AssociationAssociatedGroups.association_id
-            == association_id,
-        ),
+    result = (
+        (
+            await db.execute(
+                select(models_phonebook.Association).where(
+                    models_phonebook.Association.groupement_id == groupement_id,
+                ),
+            )
+        )
+        .scalars()
+        .all()
     )
-    return result.scalars().all()
+    return [
+        schemas_phonebook.AssociationComplete(
+            id=association.id,
+            name=association.name,
+            description=association.description,
+            groupement_id=association.groupement_id,
+            mandate_year=association.mandate_year,
+            deactivated=association.deactivated,
+            associated_groups=[],
+        )
+        for association in result
+    ]
 
 
 # ---------------------------------------------------------------------------- #
 #                                  Membership                                  #
 # ---------------------------------------------------------------------------- #
-async def create_membership(membership: models_phonebook.Membership, db: AsyncSession):
+async def create_membership(
+    membership: schemas_phonebook.MembershipComplete,
+    db: AsyncSession,
+):
     """Create a Membership in database"""
-    db.add(membership)
+    db.add(
+        models_phonebook.Membership(
+            id=membership.id,
+            user_id=membership.user_id,
+            association_id=membership.association_id,
+            mandate_year=membership.mandate_year,
+            role_name=membership.role_name,
+            role_tags=membership.role_tags or "",
+            member_order=membership.member_order,
+        ),
+    )
     await db.flush()
 
 
@@ -268,47 +444,98 @@ async def delete_membership(membership_id: str, db: AsyncSession):
 async def get_memberships_by_user_id(
     user_id: str,
     db: AsyncSession,
-) -> Sequence[models_phonebook.Membership]:
+) -> list[schemas_phonebook.MembershipComplete]:
     """Return all Memberships with user_id from database"""
-    result = await db.execute(
-        select(models_phonebook.Membership).where(
-            models_phonebook.Membership.user_id == user_id,
-        ),
+    result = (
+        (
+            await db.execute(
+                select(models_phonebook.Membership).where(
+                    models_phonebook.Membership.user_id == user_id,
+                ),
+            )
+        )
+        .scalars()
+        .all()
     )
-    return result.scalars().all()
+    return [
+        schemas_phonebook.MembershipComplete(
+            id=membership.id,
+            user_id=membership.user_id,
+            association_id=membership.association_id,
+            mandate_year=membership.mandate_year,
+            role_name=membership.role_name,
+            role_tags=membership.role_tags,
+            member_order=membership.member_order,
+        )
+        for membership in result
+    ]
 
 
 async def get_memberships_by_association_id(
     association_id: str,
     db: AsyncSession,
-) -> Sequence[models_phonebook.Membership]:
+) -> Sequence[schemas_phonebook.MembershipComplete]:
     """Return all Memberships with association_id from database"""
 
-    result = await db.execute(
-        select(models_phonebook.Membership)
-        .where(
-            models_phonebook.Membership.association_id == association_id,
+    result = (
+        (
+            await db.execute(
+                select(models_phonebook.Membership)
+                .where(
+                    models_phonebook.Membership.association_id == association_id,
+                )
+                .order_by(models_phonebook.Membership.member_order),
+            )
         )
-        .order_by(models_phonebook.Membership.member_order),
+        .scalars()
+        .all()
     )
-    return result.scalars().all()
+    return [
+        schemas_phonebook.MembershipComplete(
+            id=membership.id,
+            user_id=membership.user_id,
+            association_id=membership.association_id,
+            mandate_year=membership.mandate_year,
+            role_name=membership.role_name,
+            role_tags=membership.role_tags,
+            member_order=membership.member_order,
+        )
+        for membership in result
+    ]
 
 
 async def get_memberships_by_association_id_and_mandate_year(
     association_id: str,
     mandate_year: int,
     db: AsyncSession,
-) -> Sequence[models_phonebook.Membership]:
+) -> Sequence[schemas_phonebook.MembershipComplete]:
     """Return all Memberships with association_id and mandate_year from database"""
-    result = await db.execute(
-        select(models_phonebook.Membership)
-        .where(
-            models_phonebook.Membership.association_id == association_id,
-            models_phonebook.Membership.mandate_year == mandate_year,
+    result = (
+        (
+            await db.execute(
+                select(models_phonebook.Membership)
+                .where(
+                    models_phonebook.Membership.association_id == association_id,
+                    models_phonebook.Membership.mandate_year == mandate_year,
+                )
+                .order_by(models_phonebook.Membership.member_order),
+            )
         )
-        .order_by(models_phonebook.Membership.member_order),
+        .scalars()
+        .all()
     )
-    return result.scalars().all()
+    return [
+        schemas_phonebook.MembershipComplete(
+            id=membership.id,
+            user_id=membership.user_id,
+            association_id=membership.association_id,
+            mandate_year=membership.mandate_year,
+            role_name=membership.role_name,
+            role_tags=membership.role_tags,
+            member_order=membership.member_order,
+        )
+        for membership in result
+    ]
 
 
 async def get_membership_by_association_id_user_id_and_mandate_year(
@@ -316,28 +543,64 @@ async def get_membership_by_association_id_user_id_and_mandate_year(
     user_id: str,
     mandate_year: int,
     db: AsyncSession,
-) -> models_phonebook.Membership | None:
+) -> schemas_phonebook.MembershipComplete | None:
     """Return all Memberships with association_id user_id and_mandate_year from database"""
 
-    result = await db.execute(
-        select(models_phonebook.Membership).where(
-            models_phonebook.Membership.association_id == association_id,
-            models_phonebook.Membership.user_id == user_id,
-            models_phonebook.Membership.mandate_year == mandate_year,
-        ),
+    result = (
+        (
+            await db.execute(
+                select(models_phonebook.Membership).where(
+                    models_phonebook.Membership.association_id == association_id,
+                    models_phonebook.Membership.user_id == user_id,
+                    models_phonebook.Membership.mandate_year == mandate_year,
+                ),
+            )
+        )
+        .scalars()
+        .first()
     )
-    return result.scalars().unique().first()
+    return (
+        schemas_phonebook.MembershipComplete(
+            id=result.id,
+            user_id=result.user_id,
+            association_id=result.association_id,
+            mandate_year=result.mandate_year,
+            role_name=result.role_name,
+            role_tags=result.role_tags,
+            member_order=result.member_order,
+        )
+        if result
+        else None
+    )
 
 
 async def get_membership_by_id(
     membership_id: str,
     db: AsyncSession,
-) -> models_phonebook.Membership | None:
-    """Return the Membership with id from database"""
+) -> schemas_phonebook.MembershipComplete | None:
+    """Return Membership with id from database"""
 
-    result = await db.execute(
-        select(models_phonebook.Membership).where(
-            models_phonebook.Membership.id == membership_id,
-        ),
+    result = (
+        (
+            await db.execute(
+                select(models_phonebook.Membership).where(
+                    models_phonebook.Membership.id == membership_id,
+                ),
+            )
+        )
+        .scalars()
+        .first()
     )
-    return result.scalars().first()
+    return (
+        schemas_phonebook.MembershipComplete(
+            id=result.id,
+            user_id=result.user_id,
+            association_id=result.association_id,
+            mandate_year=result.mandate_year,
+            role_name=result.role_name,
+            role_tags=result.role_tags,
+            member_order=result.member_order,
+        )
+        if result
+        else None
+    )

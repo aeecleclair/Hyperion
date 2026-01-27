@@ -14,11 +14,7 @@ from app.dependencies import (
     is_user_allowed_to,
     is_user_in,
 )
-from app.modules.phonebook import (
-    cruds_phonebook,
-    models_phonebook,
-    schemas_phonebook,
-)
+from app.modules.phonebook import cruds_phonebook, schemas_phonebook
 from app.modules.phonebook.factory_phonebook import PhonebookFactory
 from app.modules.phonebook.types_phonebook import RoleTags
 from app.types import standard_responses
@@ -61,19 +57,7 @@ async def get_all_associations(
     """
     Return all associations from database as a list of AssociationComplete schemas
     """
-    associations = await cruds_phonebook.get_all_associations(db)
-    return [
-        schemas_phonebook.AssociationComplete(
-            id=association.id,
-            name=association.name,
-            kind=association.kind,
-            mandate_year=association.mandate_year,
-            description=association.description,
-            associated_groups=[group.id for group in association.associated_groups],
-            deactivated=association.deactivated,
-        )
-        for association in associations
-    ]
+    return await cruds_phonebook.get_all_associations(db)
 
 
 @module.router.get(
@@ -95,20 +79,125 @@ async def get_all_role_tags(
 
 
 @module.router.get(
-    "/phonebook/associations/kinds",
-    response_model=schemas_phonebook.KindsReturn,
+    "/phonebook/groupements",
+    response_model=list[schemas_phonebook.AssociationGroupement],
     status_code=200,
 )
-async def get_all_kinds(
+async def get_groupements(
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Return all available kinds of from Kinds enum.
     """
-    kinds = await cruds_phonebook.get_all_kinds()
-    return schemas_phonebook.KindsReturn(kinds=kinds)
+    return await cruds_phonebook.get_all_groupements(db)
+
+
+@module.router.post(
+    "/phonebook/groupements",
+    response_model=schemas_phonebook.AssociationGroupement,
+    status_code=201,
+)
+async def create_groupement(
+    groupement_base: schemas_phonebook.AssociationGroupementBase,
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PhonebookPermissions.manage_phonebook]),
+    ),
+    db: AsyncSession = Depends(get_db),
+):
+    groupement_db = await cruds_phonebook.get_groupement_by_name(
+        groupement_name=groupement_base.name,
+        db=db,
+    )
+    if groupement_db is not None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Groupement with name {groupement_base.name} already exists.",
+        )
+
+    groupement = schemas_phonebook.AssociationGroupement(
+        id=uuid.uuid4(),
+        name=groupement_base.name,
+    )
+    await cruds_phonebook.create_groupement(
+        groupement=groupement,
+        db=db,
+    )
+    return groupement
+
+
+@module.router.patch(
+    "/phonebook/groupements/{groupement_id}",
+    status_code=204,
+)
+async def update_groupement(
+    groupement_id: uuid.UUID,
+    groupement_edit: schemas_phonebook.AssociationGroupementBase,
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PhonebookPermissions.manage_phonebook]),
+    ),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Update a groupement
+
+    **This endpoint is only usable by CAA and BDE**
+    """
+    groupement = await cruds_phonebook.get_groupement_by_id(
+        groupement_id=groupement_id,
+        db=db,
+    )
+    if groupement is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Groupement not found.",
+        )
+    if groupement.name != groupement_edit.name:
+        existing_groupement = await cruds_phonebook.get_groupement_by_name(
+            groupement_name=groupement_edit.name,
+            db=db,
+        )
+        if existing_groupement is not None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Groupement with name {groupement_edit.name} already exists.",
+            )
+
+    await cruds_phonebook.update_groupement(
+        groupement_id=groupement_id,
+        groupement_edit=groupement_edit,
+        db=db,
+    )
+
+
+@module.router.delete(
+    "/phonebook/groupements/{groupement_id}",
+    status_code=204,
+)
+async def delete_groupement(
+    groupement_id: uuid.UUID,
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([PhonebookPermissions.manage_phonebook]),
+    ),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Delete a groupement
+
+    **This endpoint is only usable by CAA and BDE**
+    """
+    associations = await cruds_phonebook.get_associations_by_groupement_id(
+        groupement_id=groupement_id,
+        db=db,
+    )
+    if associations:
+        raise HTTPException(
+            status_code=400,
+            detail="You cannot delete a groupement that has associations linked to it.",
+        )
+    await cruds_phonebook.delete_groupement(groupement_id, db)
 
 
 @module.router.post(
@@ -129,11 +218,11 @@ async def create_association(
     **This endpoint is only usable by CAA, BDE**
     """
     association_id = str(uuid.uuid4())
-    association_model = models_phonebook.Association(
+    association_model = schemas_phonebook.AssociationComplete(
         id=association_id,
         name=association.name,
         description=association.description,
-        kind=association.kind,
+        groupement_id=association.groupement_id,
         mandate_year=association.mandate_year,
         deactivated=association.deactivated,
     )
@@ -182,14 +271,11 @@ async def update_association(
             detail=f"You are not allowed to update association {association_id}",
         )
 
-    try:
-        await cruds_phonebook.update_association(
-            association_id=association_id,
-            association_edit=association_edit,
-            db=db,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+    await cruds_phonebook.update_association(
+        association_id=association_id,
+        association_edit=association_edit,
+        db=db,
+    )
 
 
 @module.router.patch(
@@ -453,20 +539,25 @@ async def create_membership(
         )
 
     membershipId = str(uuid.uuid4())
-    membership_model = models_phonebook.Membership(
+    membership_model = schemas_phonebook.MembershipComplete(
         id=membershipId,
-        **membership.model_dump(),
+        user_id=membership.user_id,
+        association_id=membership.association_id,
+        mandate_year=membership.mandate_year,
+        role_name=membership.role_name,
+        role_tags=membership.role_tags,
+        member_order=membership.member_order,
     )
 
     await cruds_phonebook.create_membership(membership_model, db)
 
     user_groups_id = [group.id for group in user_added.groups]
-    for associated_group in association.associated_groups:
-        if associated_group.id not in user_groups_id:
+    for associated_group_id in association.associated_groups:
+        if associated_group_id not in user_groups_id:
             await cruds_groups.create_membership(
                 models_groups.CoreMembership(
                     user_id=membership.user_id,
-                    group_id=associated_group.id,
+                    group_id=associated_group_id,
                     description=None,
                 ),
                 db,

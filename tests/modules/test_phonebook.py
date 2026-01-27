@@ -8,7 +8,7 @@ from app.core.groups.groups_type import GroupType
 from app.core.users import models_users
 from app.modules.phonebook import models_phonebook
 from app.modules.phonebook.endpoints_phonebook import PhonebookPermissions
-from app.modules.phonebook.types_phonebook import Kinds, RoleTags
+from app.modules.phonebook.types_phonebook import RoleTags
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
@@ -17,6 +17,9 @@ from tests.commons import (
 )
 
 admin_group: models_groups.CoreGroup
+section_ae: models_phonebook.AssociationGroupement
+association_independant: models_phonebook.AssociationGroupement
+club_ae: models_phonebook.AssociationGroupement
 
 association1: models_phonebook.Association
 association2: models_phonebook.Association
@@ -58,6 +61,10 @@ async def init_objects():
     global phonebook_user_simple3
     global token_simple
     global token_admin
+
+    global section_ae
+    global association_independant
+    global club_ae
 
     global association1
     global association2
@@ -117,9 +124,25 @@ async def init_objects():
         description="description",
     )
 
+    section_ae = models_phonebook.AssociationGroupement(
+        id=uuid.uuid4(),
+        name="Section AE",
+    )
+    association_independant = models_phonebook.AssociationGroupement(
+        id=uuid.uuid4(),
+        name="Association Indépendante",
+    )
+    club_ae = models_phonebook.AssociationGroupement(
+        id=uuid.uuid4(),
+        name="Club AE",
+    )
+    await add_object_to_db(section_ae)
+    await add_object_to_db(association_independant)
+    await add_object_to_db(club_ae)
+
     association1 = models_phonebook.Association(
         id=str(uuid.uuid4()),
-        kind=Kinds.section_ae,
+        groupement_id=section_ae.id,
         name="ECLAIR",
         mandate_year=2023,
         deactivated=False,
@@ -128,7 +151,7 @@ async def init_objects():
 
     association2 = models_phonebook.Association(
         id=str(uuid.uuid4()),
-        kind=Kinds.association_independant,
+        groupement_id=association_independant.id,
         name="Nom",
         mandate_year=2023,
         deactivated=False,
@@ -137,7 +160,7 @@ async def init_objects():
 
     association3 = models_phonebook.Association(
         id=str(uuid.uuid4()),
-        kind=Kinds.club_ae,
+        groupement_id=club_ae.id,
         name="Test prez",
         mandate_year=2023,
         deactivated=False,
@@ -229,6 +252,15 @@ async def init_objects():
 # ---------------------------------------------------------------------------- #
 #                              Get tests                                       #
 # ---------------------------------------------------------------------------- #
+def get_all_groupements(client: TestClient):
+    response = client.get(
+        "/phonebook/groupements/",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 3
+
+
 def test_get_all_associations(client: TestClient):
     response = client.get(
         "/phonebook/associations/",
@@ -236,14 +268,6 @@ def test_get_all_associations(client: TestClient):
     )
     assert response.status_code == 200
     assert len(response.json()) == 3
-
-
-def test_get_all_association_kinds_simple(client: TestClient):
-    response = client.get(
-        "/phonebook/associations/kinds",
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.json()["kinds"] == [kind.value for kind in Kinds]
 
 
 def test_get_all_roletags_simple(client: TestClient):
@@ -289,12 +313,50 @@ def test_get_member_by_id_simple(client: TestClient):
 # ---------------------------------------------------------------------------- #
 
 
+def test_create_association_groupement_simple(client: TestClient):
+    response = client.post(
+        "/phonebook/groupements/",
+        json={
+            "name": "Section AE",
+        },
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    assert response.status_code == 403
+
+    groupements = client.get(
+        "/phonebook/groupements/",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    ).json()
+    assert len(groupements) == 3
+
+
+def test_create_association_groupement_BDE(client: TestClient):
+    response = client.post(
+        "/phonebook/groupements/",
+        json={
+            "name": "Section USE",
+        },
+        headers={"Authorization": f"Bearer {token_BDE}"},
+    )
+    assert response.status_code == 201
+
+    groupement = response.json()
+    assert groupement["name"] == "Section USE"
+    assert isinstance(groupement["id"], str)
+
+    groupements = client.get(
+        "/phonebook/groupements/",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    ).json()
+    assert len(groupements) == 4
+
+
 def test_create_association_simple(client: TestClient):
     response = client.post(
         "/phonebook/associations/",
         json={
             "name": "Bazar",
-            "kind": "Section USE",
+            "groupement_id": str(section_ae.id),
             "mandate_year": 2023,
             "description": "Bazar description",
         },
@@ -314,7 +376,7 @@ def test_create_association_admin(client: TestClient):
         "/phonebook/associations/",
         json={
             "name": "Bazar",
-            "kind": "Section USE",
+            "groupement_id": str(section_ae.id),
             "mandate_year": 2023,
             "description": "Bazar description",
         },
@@ -325,7 +387,7 @@ def test_create_association_admin(client: TestClient):
 
     assert response.status_code == 201
     assert association["name"] == "Bazar"
-    assert association["kind"] == "Section USE"
+    assert association["groupement_id"] == str(section_ae.id)
     assert association["mandate_year"] == 2023
     assert association["description"] == "Bazar description"
     assert isinstance(association["id"], str)
@@ -336,7 +398,7 @@ def test_create_association_with_related_groups(client: TestClient):
         "/phonebook/associations/",
         json={
             "name": "Bazar2",
-            "kind": "Section USE",
+            "groupement_id": str(section_ae.id),
             "mandate_year": 2023,
             "description": "Bazar description",
             "associated_groups": [association1_group.id],
@@ -354,7 +416,7 @@ def test_create_association_with_related_groups(client: TestClient):
 
     assert response.status_code == 201
     assert association["name"] == "Bazar2"
-    assert association["kind"] == "Section USE"
+    assert association["groupement_id"] == str(section_ae.id)
     assert association["mandate_year"] == 2023
     assert association["description"] == "Bazar description"
     assert association["associated_groups"] == [association1_group.id]
@@ -562,6 +624,58 @@ def test_add_association_group_admin(client: TestClient):
 # ---------------------------------------------------------------------------- #
 #                              Update tests                                    #
 # ---------------------------------------------------------------------------- #
+def test_update_association_groupement_simple(client: TestClient):
+    response = client.patch(
+        f"/phonebook/groupements/{section_ae.id}",
+        json={
+            "name": "Section AE modifié",
+        },
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    assert response.status_code == 403
+
+    groupements = client.get(
+        "/phonebook/groupements/",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    ).json()
+    section = next(
+        (
+            groupement
+            for groupement in groupements
+            if groupement["id"] == str(section_ae.id)
+        ),
+        None,
+    )
+    assert section is not None
+    assert section["name"] == "Section AE"
+
+
+def test_update_association_groupement_BDE(client: TestClient):
+    response = client.patch(
+        f"/phonebook/groupements/{section_ae.id}",
+        json={
+            "name": "Section AE modifié",
+        },
+        headers={"Authorization": f"Bearer {token_BDE}"},
+    )
+    assert response.status_code == 204
+
+    groupements = client.get(
+        "/phonebook/groupements/",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    ).json()
+    section = next(
+        (
+            groupement
+            for groupement in groupements
+            if groupement["id"] == str(section_ae.id)
+        ),
+        None,
+    )
+    assert section is not None
+    assert section["name"] == "Section AE modifié"
+
+
 def test_update_association_simple(client: TestClient):
     response = client.patch(
         f"/phonebook/associations/{association1.id}/",
@@ -931,6 +1045,66 @@ def test_update_membership_order(client: TestClient):
 # ---------------------------------------------------------------------------- #
 #                              Delete tests                                    #
 # ---------------------------------------------------------------------------- #
+def test_delete_groupement_simple(client: TestClient):
+    response = client.delete(
+        f"/phonebook/groupements/{section_ae.id}",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    )
+    assert response.status_code == 403
+
+    groupements = client.get(
+        "/phonebook/groupements/",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    ).json()
+    section = next(
+        (
+            groupement
+            for groupement in groupements
+            if groupement["id"] == str(section_ae.id)
+        ),
+        None,
+    )
+    assert section is not None
+
+
+def test_delete_groupement_BDE(client: TestClient):
+    response = client.delete(
+        f"/phonebook/groupements/{section_ae.id}",
+        headers={"Authorization": f"Bearer {token_BDE}"},
+    )
+    assert response.status_code == 400
+
+    groupements = client.get(
+        "/phonebook/groupements/",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    ).json()
+    section = next(
+        (
+            groupement
+            for groupement in groupements
+            if groupement["id"] == str(section_ae.id)
+        ),
+        None,
+    )
+    assert section is not None
+
+
+async def test_delete_empty_groupement_BDE(client: TestClient):
+    empty_groupement = models_phonebook.AssociationGroupement(
+        id=uuid.uuid4(),
+        name="Empty Groupement",
+    )
+    await add_object_to_db(empty_groupement)
+    response = client.delete(
+        f"/phonebook/groupements/{empty_groupement.id}",
+        headers={"Authorization": f"Bearer {token_BDE}"},
+    )
+    assert response.status_code == 204
+    groupements = client.get(
+        "/phonebook/groupements/",
+        headers={"Authorization": f"Bearer {token_simple}"},
+    ).json()
+    assert not any(g["id"] == str(empty_groupement.id) for g in groupements)
 
 
 def test_delete_membership_simple(client: TestClient):
