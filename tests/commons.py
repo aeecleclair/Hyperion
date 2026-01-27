@@ -353,7 +353,6 @@ class MockedPaymentTool(PaymentTool):
     ):
         self.payment_tool = PaymentTool(
             config=HelloAssoConfig(
-                name=HelloAssoConfigName.CDR,
                 helloasso_client_id="client",
                 helloasso_client_secret="secret",
                 helloasso_slug="test",

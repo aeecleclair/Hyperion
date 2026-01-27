@@ -15,7 +15,6 @@ from tests.commons import (
     create_groups_with_permissions,
     create_user_with_groups,
 )
-from tests.modules.test_booking import token_manager
 
 phonebook_admin_group: models_groups.CoreGroup
 group1: models_groups.CoreGroup
@@ -35,6 +34,7 @@ membership4: models_phonebook.Membership
 membership5: models_phonebook.Membership
 membership6: models_phonebook.Membership
 phonebook_user_phonebook_admin: models_users.CoreUser
+phonebook_user_manager: models_users.CoreUser
 phonebook_user_president: models_users.CoreUser
 phonebook_user_simple: models_users.CoreUser
 phonebook_user_simple2: models_users.CoreUser
@@ -46,6 +46,7 @@ association2_group: models_groups.CoreGroup
 association2_group2: models_phonebook.AssociationAssociatedGroups
 
 token_admin: str
+token_manager: str
 token_phonebook_admin: str
 token_president: str
 token_simple: str
@@ -59,6 +60,8 @@ async def init_objects():
 
     global phonebook_user_phonebook_admin
     global token_phonebook_admin
+    global phonebook_user_manager
+    global token_manager
     global phonebook_user_president
     global token_president
     global phonebook_user_simple
@@ -104,6 +107,11 @@ async def init_objects():
         [phonebook_admin_group.id],
     )
     token_phonebook_admin = create_api_access_token(phonebook_user_phonebook_admin)
+
+    phonebook_user_manager = await create_user_with_groups(
+        [group1.id],
+    )
+    token_manager = create_api_access_token(phonebook_user_manager)
 
     phonebook_user_president = await create_user_with_groups(
         [],
