@@ -23,7 +23,7 @@ FROM python:3.14-alpine3.23
 # Create non-root user early for better security
 # Choose an id that is not likely to be a default one
 RUN addgroup --system --gid 10101 hyperion && \
-    adduser --system --uid 10101 --ingroup hyperion --create-home hyperion
+    adduser --system --uid 10101 --ingroup hyperion hyperion
 
 # Change ownership of the application directory to the hyperion user
 COPY --from=builder --chown=hyperion:hyperion /hyperion /hyperion
