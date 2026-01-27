@@ -49,9 +49,9 @@ from app.types.s3_access import S3Access
 from app.utils.communication.notifications import NotificationManager
 from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
+    compress_and_save_image_file,
     create_and_send_email_migration,
     get_file_from_data,
-    save_file_as_data,
     sort_user,
 )
 
@@ -1114,16 +1114,19 @@ async def create_current_user_profile_picture(
     **The user must be authenticated to use this endpoint**
     """
 
-    await save_file_as_data(
+    await compress_and_save_image_file(
         upload_file=image,
         directory="profile-pictures",
         filename=user.id,
-        max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,
             ContentType.png,
             ContentType.webp,
         ],
+        max_file_size=1024 * 1024 * 5,  # 5 MB
+        height=300,
+        width=300,
+        quality=85,
     )
 
     return standard_responses.Result(success=True)

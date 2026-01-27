@@ -28,9 +28,9 @@ from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.tools import (
+    compress_and_save_image_file,
     get_file_from_data,
     is_user_member_of_any_group,
-    save_file_as_data,
 )
 
 module = Module(
@@ -816,16 +816,19 @@ async def create_campaigns_logo(
             detail="The list does not exist.",
         )
 
-    await save_file_as_data(
+    await compress_and_save_image_file(
         upload_file=image,
         directory="campaigns",
         filename=str(list_id),
-        max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,
             ContentType.png,
             ContentType.webp,
         ],
+        max_file_size=1024 * 1024 * 5,  # 5 MB
+        height=300,
+        width=300,
+        quality=85,
     )
 
     return standard_responses.Result(success=True)

@@ -28,10 +28,10 @@ from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.tools import (
+    compress_and_save_image_file,
     get_file_from_data,
     is_user_member_of_an_association,
     is_user_member_of_an_association_id,
-    save_file_as_data,
 )
 
 root = "advert"
@@ -323,14 +323,18 @@ async def create_advert_image(
             detail=f"Unauthorized to manage {advert.advertiser_id} adverts",
         )
 
-    await save_file_as_data(
+    await compress_and_save_image_file(
         upload_file=image,
         directory="adverts",
         filename=advert_id,
-        max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,
             ContentType.png,
             ContentType.webp,
         ],
+        max_file_size=1024 * 1024 * 5,  # 5 MB
+        height=315,
+        width=851,
+        quality=85,
+        fit=True,
     )

@@ -1,16 +1,21 @@
 import shutil
 import uuid
+from io import BytesIO
 from pathlib import Path
 
 import pytest
 import pytest_asyncio
 from fastapi import HTTPException, UploadFile
+from PIL import Image
 from starlette.datastructures import Headers
 
 from app.core.core_endpoints import models_core
+from app.types.content_type import ContentType, PillowImageFormat
 from app.types.core_data import BaseCoreData
 from app.types.exceptions import CoreDataNotFoundError, FileNameIsNotAnUUIDError
 from app.utils.tools import (
+    compress_and_save_image_file,
+    compress_image,
     delete_file_from_data,
     get_core_data,
     get_file_from_data,
@@ -235,6 +240,58 @@ def test_delete_file_raise_a_value_error_if_filename_isnt_an_uuid() -> None:
             directory="test",
             filename=not_a_uuid,
         )
+
+
+@pytest.mark.parametrize(
+    ("height", "width"),
+    [
+        (100, 100),
+        (300, 300),
+        (50, 100),
+        (100, 50),
+        (100, None),
+        (None, 100),
+    ],
+)
+async def test_compress(height: int, width: int) -> None:
+    with Path("assets/images/default_profile_picture.png").open("rb") as file:
+        file_bytes = file.read()
+        res = compress_image(
+            file_bytes,
+            height=height,
+            width=width,
+            quality=70,
+            output_format=PillowImageFormat.webp,
+        )
+
+        res_image = Image.open(BytesIO(res))
+        if height is not None:
+            assert res_image.height == height
+        if width is not None:
+            assert res_image.width == width
+        assert res_image.format == "WEBP"
+
+
+async def test_compress_and_save_image_file() -> None:
+    valid_uuid = str(uuid.uuid4())
+    with Path("assets/images/default_profile_picture.png").open("rb") as file:
+        await compress_and_save_image_file(
+            upload_file=UploadFile(
+                file,
+                headers=Headers({"content-type": "image/png"}),
+            ),
+            directory="test/compressed",
+            filename=valid_uuid,
+            accepted_content_types=[
+                ContentType.png,
+            ],
+            max_file_size=1024 * 1024 * 5,  # 5 MB
+            height=300,
+            width=300,
+            quality=85,
+        )
+        assert Path(f"data/test/compressed/{valid_uuid}.webp").exists()
+        assert Path(f"data/test/compressed/original/{valid_uuid}.png").exists()
 
 
 async def test_save_pdf_first_page_as_image() -> None:

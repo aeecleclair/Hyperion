@@ -19,7 +19,10 @@ from app.dependencies import (
 )
 from app.types.content_type import ContentType
 from app.types.module import CoreModule
-from app.utils.tools import get_file_from_data, save_file_as_data
+from app.utils.tools import (
+    compress_and_save_image_file,
+    get_file_from_data,
+)
 
 router = APIRouter(tags=["Associations"])
 
@@ -173,16 +176,19 @@ async def create_association_logo(
     if not association:
         raise HTTPException(status_code=404, detail="Association not found")
 
-    await save_file_as_data(
+    await compress_and_save_image_file(
         upload_file=image,
         directory="associations/logos",
         filename=association_id,
-        max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,
             ContentType.png,
             ContentType.webp,
         ],
+        max_file_size=1024 * 1024 * 5,  # 5 MB
+        height=300,
+        width=300,
+        quality=85,
     )
 
 

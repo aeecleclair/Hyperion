@@ -217,3 +217,10 @@ class NewlyAddedObjectInDbNotFoundError(Exception):
         super().__init__(
             f"Newly added object {object_name} not found in the database",
         )
+
+
+class UnknownContentTypeExtensionError(Exception):
+    def __init__(self, content_type: str):
+        super().__init__(
+            f"Unknown content type extension for content type: {content_type}",
+        )

@@ -31,7 +31,10 @@ from app.utils.communication.date_manager import (
     get_previous_sunday,
 )
 from app.utils.communication.notifications import NotificationTool
-from app.utils.tools import get_file_from_data, save_file_as_data
+from app.utils.tools import (
+    compress_and_save_image_file,
+    get_file_from_data,
+)
 
 root = "cinema"
 cinema_topic = Topic(
@@ -214,16 +217,20 @@ async def create_campaigns_logo(
             detail="The session does not exist.",
         )
 
-    await save_file_as_data(
+    await compress_and_save_image_file(
         upload_file=image,
         directory="cinemasessions",
         filename=str(session_id),
-        max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,
             ContentType.png,
             ContentType.webp,
         ],
+        max_file_size=1024 * 1024 * 5,  # 5 MB
+        height=750,
+        width=500,
+        quality=85,
+        fit=True,
     )
 
     return standard_responses.Result(success=True)

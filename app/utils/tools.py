@@ -7,6 +7,7 @@ import shutil
 import unicodedata
 from collections.abc import Callable, Sequence
 from inspect import iscoroutinefunction
+from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar
 from uuid import UUID
@@ -19,6 +20,7 @@ from fastapi.responses import FileResponse
 from fastapi.templating import Jinja2Templates
 from jellyfish import jaro_winkler_similarity
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from PIL import Image
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 from weasyprint import CSS, HTML
@@ -31,7 +33,7 @@ from app.core.users import cruds_users, models_users
 from app.core.users.models_users import CoreUser
 from app.core.utils import security
 from app.types import core_data
-from app.types.content_type import ContentType
+from app.types.content_type import ContentType, PillowImageFormat
 from app.types.exceptions import (
     CoreDataNotFoundError,
     FileDoesNotExistError,
@@ -162,6 +164,49 @@ async def is_user_id_valid(user_id: str, db: AsyncSession) -> bool:
     return await cruds_users.get_user_by_id(db=db, user_id=user_id) is not None
 
 
+async def ensure_file_properties(
+    upload_file: UploadFile,
+    accepted_content_types: list[ContentType] | None = None,
+    max_file_size: int = 1024 * 1024 * 5,  # 5 MB
+) -> None:
+    """
+    Ensure that the provided file respects the properties:
+    - Maximum size is 5 MB by default, it can be changed using `max_file_size` (in bytes) parameter.
+    - `accepted_content_types` is a list of accepted content types. By default, all format are accepted.
+        Use: `["image/jpeg", "image/png", "image/webp"]` to accept only images.
+
+    An HTTP Exception will be raised if an error occurs.
+
+    The file will not be saved nor modified.
+    """
+    if accepted_content_types is None:
+        # Accept only images by default
+        accepted_content_types = [
+            ContentType.jpg,
+            ContentType.png,
+            ContentType.webp,
+            ContentType.pdf,
+        ]
+
+    if upload_file.content_type not in accepted_content_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file format, supported {accepted_content_types}",
+        )
+
+    # We need to go to the end of the file to be able to get the size of the file
+    upload_file.file.seek(0, os.SEEK_END)
+    # Use file.tell() to retrieve the cursor's current position
+    file_size = upload_file.file.tell()  # Bytes
+    if file_size > max_file_size:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File size is too big. Limit is {max_file_size / 1024 / 1024} MB",
+        )
+    # We go back to the beginning of the file to save it on the disk
+    await upload_file.seek(0)
+
+
 async def save_file_as_data(
     upload_file: UploadFile,
     directory: str,
@@ -182,7 +227,7 @@ async def save_file_as_data(
     There should only be one file with the same filename, thus, saving a new file will remove the existing even if its extension was different.
     Currently, compatible extensions are defined in the enum `ContentType`
 
-    An HTTP Exception will be raised if an error occurres.
+    An HTTP Exception will be raised if an error occurs.
 
     The filename should be a uuid.
 
@@ -191,38 +236,17 @@ async def save_file_as_data(
     if isinstance(filename, UUID):
         filename = str(filename)
 
-    if accepted_content_types is None:
-        # Accept only images by default
-        accepted_content_types = [
-            ContentType.jpg,
-            ContentType.png,
-            ContentType.webp,
-            ContentType.pdf,
-        ]
-
     if not uuid_regex.match(filename):
         hyperion_error_logger.error(
             f"save_file_as_data: security issue, the filename is not a valid UUID: {filename}.",
         )
         raise FileNameIsNotAnUUIDError()
 
-    if upload_file.content_type not in accepted_content_types:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid file format, supported {accepted_content_types}",
-        )
-
-    # We need to go to the end of the file to be able to get the size of the file
-    upload_file.file.seek(0, os.SEEK_END)
-    # Use file.tell() to retrieve the cursor's current position
-    file_size = upload_file.file.tell()  # Bytes
-    if file_size > max_file_size:
-        raise HTTPException(
-            status_code=413,
-            detail=f"File size is too big. Limit is {max_file_size / 1024 / 1024} MB",
-        )
-    # We go back to the beginning of the file to save it on the disk
-    await upload_file.seek(0)
+    await ensure_file_properties(
+        upload_file=upload_file,
+        accepted_content_types=accepted_content_types,
+        max_file_size=max_file_size,
+    )
 
     extension = ContentType(upload_file.content_type).name
     # Remove the existing file if any and create the new one
@@ -483,6 +507,136 @@ async def save_pdf_first_page_as_image(
             filename=filename,
             extension="jpg",
         )
+
+
+def compress_image(
+    file_bytes: bytes,
+    height: int | None = None,
+    width: int | None = None,
+    quality: int = 85,
+    output_format: PillowImageFormat = PillowImageFormat.webp,
+    fit: bool = False,
+) -> bytes:
+    """
+    Resize, crop and compress an image using Pillow.
+
+    - If `height` or `width` is None, the original image dimension will be used.
+    - The image aspect ratio will be preserved.
+    - The resulting image will be centered if cropping is needed.
+
+    If `fit` is True, the image will be enlarged to fit the whole area defined by `height` and `width`.
+    Otherwise, the image will be reduced to fit inside the area defined by `height` and `width` without cropping.
+
+    Don't forget to take into account the output format when saving the image.
+    """
+    # We want to add an Alpha layer so that cropping does not produce black borders
+    image = Image.open(BytesIO(file_bytes)).convert("RGBA")
+
+    if height is None:
+        height = image.height
+    if width is None:
+        width = image.width
+
+    # Preserve aspect ratio
+    if fit:
+        ratio = max(width / image.width, height / image.height)
+    else:
+        ratio = min(width / image.width, height / image.height)
+    new_size = (int(image.width * ratio), int(image.height * ratio))
+    resized_image = image.resize(new_size)
+
+    # We may want to crop the image, the resulting image will be centered
+    left = (resized_image.width - width) // 2
+    top = (resized_image.height - height) // 2
+    right = (resized_image.width + width) // 2
+    bottom = (resized_image.height + height) // 2
+
+    cropped_image = resized_image.crop(
+        (
+            left,
+            top,
+            right,
+            bottom,
+        ),
+    )
+
+    output = BytesIO()
+    cropped_image.save(output, format=output_format, quality=quality)
+    return output.getvalue()
+
+
+async def compress_and_save_image_file(
+    upload_file: UploadFile,
+    directory: str,
+    filename: str | UUID,
+    accepted_content_types: list[ContentType] | None = None,
+    max_file_size: int = 1024 * 1024 * 5,  # 5 MB
+    height: int | None = None,
+    width: int | None = None,
+    quality: int = 85,
+    fit: bool = False,
+):
+    """
+    Save a compressed webp version of an input image in the data folder.
+
+    The filename should be a uuid.
+    No verifications will be made about the content of the file, it is up to the caller to ensure the content is valid and safe.
+
+    - The file will be saved in the `data` folder: "data/{directory}/{filename}.webp"
+    - An original copy of the file will be saved in "data/{directory}/original/{filename}.{upload_file extension}"
+
+    Ensure that the provided file respects the properties:
+    - Maximum size is 5 MB by default, it can be changed using `max_file_size` (in bytes) parameter.
+    - `accepted_content_types` is a list of accepted content types. By default, all format are accepted.
+        Use: `["image/jpeg", "image/png", "image/webp"]` to accept only images.
+
+    The image will be resized, cropped and compressed using Pillow.
+
+    - If `height` or `width` is None, the original image dimension will be used.
+    - The image aspect ratio will be preserved.
+    - The resulting image will be centered if cropping is needed.
+
+    If `fit` is True, the image will be enlarged to fit the whole area defined by `height` and `width`.
+    Otherwise, the image will be reduced to fit inside the area defined by `height` and `width` without cropping.
+
+    An HTTP Exception will be raised if an error occurs.
+
+    WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
+    """
+    await ensure_file_properties(
+        upload_file=upload_file,
+        accepted_content_types=accepted_content_types,
+        max_file_size=max_file_size,
+    )
+
+    original_file_bytes = await upload_file.read()
+
+    original_directory = (
+        f"{directory}{'/' if not directory.endswith('/') else ''}original"
+    )
+
+    await save_bytes_as_data(
+        file_bytes=original_file_bytes,
+        directory=original_directory,
+        filename=filename,
+        extension=ContentType(upload_file.content_type).extension,
+    )
+
+    file_bytes = compress_image(
+        file_bytes=original_file_bytes,
+        height=height,
+        width=width,
+        quality=quality,
+        output_format=PillowImageFormat.webp,
+        fit=fit,
+    )
+
+    await save_bytes_as_data(
+        file_bytes=file_bytes,
+        directory=directory,
+        filename=filename,
+        extension=ContentType.webp,
+    )
 
 
 def get_random_string(length: int = 5) -> str:
