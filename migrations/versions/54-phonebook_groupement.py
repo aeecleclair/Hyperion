@@ -8,6 +8,8 @@ from enum import Enum
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+from app.core.groups.groups_type import GroupType
+
 if TYPE_CHECKING:
     from pytest_alembic import MigrationContext
 
@@ -36,6 +38,7 @@ groupement_table = sa.Table(
     sa.MetaData(),
     sa.Column("id", sa.UUID(), primary_key=True),
     sa.Column("name", sa.String(), nullable=False),
+    sa.Column("manager_group_id", sa.String(), nullable=False),
 )
 
 association_table = sa.Table(
@@ -63,7 +66,15 @@ def upgrade() -> None:
         "phonebook_association_groupement",
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
+        sa.Column("manager_group_id", sa.String(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_foreign_key(
+        "fk_phonebook_association_groupement_manager_group_id",
+        "phonebook_association_groupement",
+        "core_group",
+        ["manager_group_id"],
+        ["id"],
     )
     op.create_index(
         op.f("ix_phonebook_association_groupement_name"),
@@ -74,7 +85,11 @@ def upgrade() -> None:
     for i, kind in enumerate(Kinds):
         op.execute(
             sa.insert(groupement_table).values(
-                {"id": kind_ids[i], "name": kind.value},
+                {
+                    "id": kind_ids[i],
+                    "name": kind.value,
+                    "manager_group_id": GroupType.admin.value,
+                },
             ),
         )
     op.add_column(
@@ -144,6 +159,11 @@ def downgrade() -> None:
     op.drop_index(
         op.f("ix_phonebook_association_groupement_name"),
         table_name="phonebook_association_groupement",
+    )
+    op.drop_constraint(
+        "fk_phonebook_association_groupement_manager_group_id",
+        "phonebook_association_groupement",
+        type_="foreignkey",
     )
     op.drop_table("phonebook_association_groupement")
     # ### end Alembic commands ###
