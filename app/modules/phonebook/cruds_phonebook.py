@@ -14,17 +14,14 @@ from app.modules.phonebook import models_phonebook, schemas_phonebook, types_pho
 # ---------------------------------------------------------------------------- #
 async def is_user_president(
     association_id: str,
+    mandate_year: int,
     user: models_users.CoreUser,
     db: AsyncSession,
 ) -> bool:
-    association = await get_association_by_id(association_id=association_id, db=db)
-    if association is None:
-        return False
-
     membership = await get_membership_by_association_id_user_id_and_mandate_year(
         association_id=association_id,
         user_id=user.id,
-        mandate_year=association.mandate_year,
+        mandate_year=mandate_year,
         db=db,
     )
     return (
@@ -80,6 +77,7 @@ async def get_all_groupements(
         schemas_phonebook.AssociationGroupement(
             id=groupement.id,
             name=groupement.name,
+            manager_group_id=groupement.manager_group_id,
         )
         for groupement in result.scalars().all()
     ]
@@ -111,6 +109,7 @@ async def get_groupement_by_id(
         schemas_phonebook.AssociationGroupement(
             id=result.id,
             name=result.name,
+            manager_group_id=result.manager_group_id,
         )
         if result
         else None
@@ -138,6 +137,7 @@ async def get_groupement_by_name(
         schemas_phonebook.AssociationGroupement(
             id=result.id,
             name=result.name,
+            manager_group_id=result.manager_group_id,
         )
         if result
         else None
@@ -154,6 +154,7 @@ async def create_groupement(
         models_phonebook.AssociationGroupement(
             id=groupement.id,
             name=groupement.name,
+            manager_group_id=groupement.manager_group_id,
         ),
     )
     await db.flush()
