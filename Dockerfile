@@ -7,6 +7,9 @@ ENV UV_PYTHON_DOWNLOADS=0
 
 WORKDIR /hyperion
 
+# Install psutil dependencies
+RUN apk add --no-cache gcc musl-dev linux-headers
+
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
@@ -22,8 +25,8 @@ FROM python:3.14-alpine3.23
 
 # Create non-root user early for better security
 # Choose an id that is not likely to be a default one
-RUN addgroup --system --gid 10101 hyperion && \
-    adduser --system --uid 10101 --ingroup hyperion hyperion
+RUN addgroup --system --gid 10101 hyperion
+RUN adduser --system --uid 10101 --ingroup hyperion hyperion
 
 # Change ownership of the application directory to the hyperion user
 COPY --from=builder --chown=hyperion:hyperion /hyperion /hyperion
@@ -36,10 +39,8 @@ ENV PYTHONUNBUFFERED=1
 # Default number of workers; can be overridden at runtime
 ENV WORKERS=2
 
-# Update package list and install weasyprint dependencies
-RUN apk add -y \
-    weasyprint \
-    && rm -rf /var/lib/apk/lists/*
+# Install weasyprint dependencies
+RUN apk add --no-cache weasyprint
 
 WORKDIR /hyperion
 
@@ -58,4 +59,5 @@ EXPOSE 8000
 
 # Use FastAPI CLI as the entrypoint
 # Use shell form to allow environment variable expansion
+SHELL ["/bin/sh", "-c"]
 ENTRYPOINT fastapi run --workers "$WORKERS" --host "0.0.0.0" --port 8000
