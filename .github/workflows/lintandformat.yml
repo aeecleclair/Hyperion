@@ -3,7 +3,7 @@ name: Lint and format
 
 on:
   pull_request:
-    types: [opened, edited, ready_for_review, synchronize]
+    types: [opened, ready_for_review, synchronize]
 
 jobs:
   lintandformat:

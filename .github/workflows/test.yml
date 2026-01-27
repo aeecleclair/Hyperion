@@ -23,7 +23,7 @@ jobs:
       # Label used to access the service container
       redis:
         # Docker Hub image
-        image: redis
+        image: redis:7.0-alpine3.17
         # Set health checks to wait until redis has started
         options: >-
           --health-cmd "redis-cli ping"
@@ -35,7 +35,7 @@ jobs:
           - 6379:6379
       postgres:
         # Docker Hub image
-        image: "postgres:15.1"
+        image: postgres:15.1-alpine3.17
         # Provide the password for postgres
         env:
           POSTGRES_PASSWORD: "somerealpassword"
@@ -78,7 +78,7 @@ jobs:
           version: "0.9.27"
 
       - name: Install dependencies
-        run: uv sync --locked
+        run: uv sync --locked --all-extras
 
       - name: Cache .pytest_cache folder
         id: pytest_cache
