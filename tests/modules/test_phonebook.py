@@ -361,6 +361,7 @@ def test_create_association_groupement_phonebook_admin(client: TestClient):
         "/phonebook/groupements/",
         json={
             "name": "Section USE",
+            "manager_group_id": group2.id,
         },
         headers={"Authorization": f"Bearer {token_phonebook_admin}"},
     )
@@ -681,6 +682,7 @@ def test_update_association_groupement_phonebook_admin(client: TestClient):
         f"/phonebook/groupements/{section_ae.id}",
         json={
             "name": "Section AE modifié",
+            "manager_group_id": group1.id,
         },
         headers={"Authorization": f"Bearer {token_phonebook_admin}"},
     )
