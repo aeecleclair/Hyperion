@@ -14,6 +14,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 # First copy only the lockfile to leverage Docker cache
 COPY uv.lock .
+COPY pyproject.toml .
 # Install dependencies using uv with caching
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --all-extras
