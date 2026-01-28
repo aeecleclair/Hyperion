@@ -7,9 +7,6 @@ ENV UV_PYTHON_DOWNLOADS=0
 
 WORKDIR /hyperion
 
-# Install psutil dependencies
-RUN apk add --no-cache gcc musl-dev linux-headers
-
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \

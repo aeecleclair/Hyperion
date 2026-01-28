@@ -38,13 +38,13 @@ dependencies = [
     "jellyfish==1.2.1",                  # String Matching
     "jinja2==3.1.6",                     # Template engine for HTML files
     "phonenumbers==8.13.43",             # For phone number validation
-    "psutil==7.0.0",                     # To determine the number of Hyperion workers
+    "psutil==7.2.1",                     # To determine the number of Hyperion workers
     "psycopg[binary]==3.2.13",           # PostgreSQL adapter for *synchronous* operations at startup (database initializations & migrations)
     "pydantic==2.12.5",
     "pydantic-extra-types==2.10.5",
     "pydantic-settings==2.3.4",
     "pyjwt[crypto]==2.10.1",             # Generate and verify the JWT tokens. Imported as `jwt`
-    "pymupdf==1.26.6",                   # PDF processing. Imported as `fitz`
+    "pymupdf==1.26.7",                   # PDF processing. Imported as `fitz`
     "pypdf==6.4.0",
     "python-multipart==0.0.18",          # A form data parser, as OAuth2 flow requires form-data parameters
     "redis==5.0.8",
