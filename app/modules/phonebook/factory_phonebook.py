@@ -1,79 +1,92 @@
 import random
 import uuid
 
+from faker import Faker
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.groups.factory_groups import CoreGroupsFactory
 from app.core.users import cruds_users
 from app.core.users.factory_users import CoreUsersFactory
 from app.core.utils.config import Settings
-from app.modules.phonebook import cruds_phonebook, models_phonebook
-from app.modules.phonebook.types_phonebook import Kinds, RoleTags
+from app.modules.phonebook import cruds_phonebook, schemas_phonebook
+from app.modules.phonebook.types_phonebook import RoleTags
 from app.types.factory import Factory
+
+faker = Faker("fr_FR")
 
 
 class PhonebookFactory(Factory):
-    depends_on = [CoreUsersFactory]
+    depends_on = [CoreUsersFactory, CoreGroupsFactory]
 
     @classmethod
-    async def create_association(cls, db: AsyncSession):
-        association_id_1 = str(uuid.uuid4())
-        await cruds_phonebook.create_association(
-            association=models_phonebook.Association(
-                id=association_id_1,
-                name="Eclair",
-                description="L'asso d'informatique la plus cool !",
-                deactivated=False,
-                kind=Kinds.section_ae,
-                mandate_year=2025,
+    async def create_association_groupement(cls, db: AsyncSession) -> list[uuid.UUID]:
+        groupement_ids = [uuid.uuid4() for _ in range(3)]
+        await cruds_phonebook.create_groupement(
+            schemas_phonebook.AssociationGroupement(
+                id=groupement_ids[0],
+                name="Section AE",
+                manager_group_id=CoreGroupsFactory.groups_ids[0],
             ),
             db=db,
         )
+        await cruds_phonebook.create_groupement(
+            schemas_phonebook.AssociationGroupement(
+                id=groupement_ids[1],
+                name="Club AE",
+                manager_group_id=CoreGroupsFactory.groups_ids[0],
+            ),
+            db=db,
+        )
+        await cruds_phonebook.create_groupement(
+            schemas_phonebook.AssociationGroupement(
+                id=groupement_ids[2],
+                name="Section USE",
+                manager_group_id=CoreGroupsFactory.groups_ids[1],
+            ),
+            db=db,
+        )
+        return groupement_ids
 
-        await cruds_phonebook.create_membership(
-            membership=models_phonebook.Membership(
-                id=str(uuid.uuid4()),
-                user_id=CoreUsersFactory.demo_users_id[0],
-                association_id=association_id_1,
-                mandate_year=2025,
-                role_name="Prez",
-                role_tags=RoleTags.president.name,
-                member_order=1,
-            ),
-            db=db,
-        )
-
-        association_id_2 = str(uuid.uuid4())
-        await cruds_phonebook.create_association(
-            association=models_phonebook.Association(
-                id=association_id_2,
-                name="Association 2",
-                description="Description de l'asso 2",
-                associated_groups=[],
-                deactivated=False,
-                kind=Kinds.section_use,
-                mandate_year=2025,
-            ),
-            db=db,
-        )
-        users = await cruds_users.get_users(db=db)
-        tags = list(RoleTags)
-        for i, user in enumerate(random.sample(users, 10)):
-            await cruds_phonebook.create_membership(
-                membership=models_phonebook.Membership(
-                    id=str(uuid.uuid4()),
-                    user_id=user.id,
-                    association_id=association_id_2,
+    @classmethod
+    async def create_association(
+        cls,
+        db: AsyncSession,
+        groupement_ids: list[uuid.UUID],
+    ):
+        for i in range(5):
+            association_id = str(uuid.uuid4())
+            await cruds_phonebook.create_association(
+                association=schemas_phonebook.AssociationComplete(
+                    id=association_id,
+                    groupement_id=groupement_ids[i % len(groupement_ids)],
+                    name=faker.company(),
+                    description="Description de l'association",
+                    associated_groups=[],
+                    deactivated=False,
                     mandate_year=2025,
-                    role_name=f"VP {i}",
-                    role_tags=tags[i].name if i < len(tags) else "",
-                    member_order=i,
                 ),
                 db=db,
             )
+            users = await cruds_users.get_users(db=db)
+            tags = list(RoleTags)
+            for j, user in enumerate(random.sample(users, 10)):
+                await cruds_phonebook.create_membership(
+                    membership=schemas_phonebook.MembershipComplete(
+                        id=str(uuid.uuid4()),
+                        user_id=user.id,
+                        association_id=association_id,
+                        mandate_year=2025,
+                        role_name=f"VP {j}",
+                        role_tags=tags[j].name if j < len(tags) else "",
+                        member_order=j,
+                    ),
+                    db=db,
+                )
 
     @classmethod
     async def run(cls, db: AsyncSession, settings: Settings) -> None:
-        await cls.create_association(db)
+        groupement_ids = await cls.create_association_groupement(db=db)
+        await cls.create_association(db, groupement_ids=groupement_ids)
 
     @classmethod
     async def should_run(cls, db: AsyncSession):
