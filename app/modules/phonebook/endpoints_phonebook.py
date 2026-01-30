@@ -168,8 +168,6 @@ async def update_groupement(
 ):
     """
     Update a groupement
-
-    **This endpoint is only usable by CAA and BDE**
     """
     groupement = await cruds_phonebook.get_groupement_by_id(
         groupement_id=groupement_id,
@@ -211,8 +209,6 @@ async def delete_groupement(
 ):
     """
     Delete a groupement
-
-    **This endpoint is only usable by CAA and BDE**
     """
     associations = await cruds_phonebook.get_associations_by_groupement_id(
         groupement_id=groupement_id,
@@ -289,8 +285,6 @@ async def update_association(
 ):
     """
     Update an Association
-
-    **This endpoint is only usable by CAA, BDE and association's president**
     """
     association = await cruds_phonebook.get_association_by_id(association_id, db)
     if association is None:
@@ -336,8 +330,6 @@ async def update_association_groups(
 ):
     """
     Update the groups associated with an Association
-
-    **This endpoint is only usable by Admins (not BDE and CAA)**
     """
     await cruds_phonebook.update_association_groups(
         association_id=association_id,
@@ -698,7 +690,7 @@ async def update_membership(
         ):
             raise HTTPException(
                 status_code=403,
-                detail="Only CAA and BDE can update a membership with the role of president",
+                detail="Only PhonebookAdmin and Groupement manager can update a membership with the role of president",
             )
 
     if updated_membership.member_order is not None:
@@ -727,8 +719,6 @@ async def delete_membership(
 ):
     """
     Delete a membership.
-
-    **This endpoint is only usable by CAA, BDE and association's president**
     """
 
     membership = await cruds_phonebook.get_membership_by_id(membership_id, db)
