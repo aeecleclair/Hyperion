@@ -17,6 +17,70 @@ license-files = [
     "assets/mypayment-terms-of-service.txt",
 ]
 
+dependencies = [
+    "aiofiles==24.1.0",                  # Asynchronous file manipulation
+    "alembic==1.13.2",                   # Database migrations
+    "arq==0.26.3",                       # Scheduler
+    "asyncpg==0.31.0",                   # PostgreSQL adapter for *asynchronous* operations
+    "authlib==1.6.5",
+    "bcrypt==4.1.3",                     # Password hashing
+    "boto3==1.38.23",
+    "broadcaster==0.3.1",                # Working with websockets with multiple workers
+    "calypsso==2.7.0",
+    "faker==37.1.0",
+    "fastapi[standard]==0.122.0",
+    "firebase-admin==7.1.0",             # For push notification
+    "google-api-python-client==2.187.0",
+    "google-auth-oauthlib==1.2.1",
+    "helloasso-python==1.0.5",
+    "httpx==0.28.1",
+    "icalendar==5.0.13",
+    "jellyfish==1.2.1",                  # String Matching
+    "jinja2==3.1.6",                     # Template engine for HTML files
+    "phonenumbers==8.13.43",             # For phone number validation
+    "psutil==7.2.1",                     # To determine the number of Hyperion workers
+    "psycopg[binary]==3.2.13",           # PostgreSQL adapter for *synchronous* operations at startup (database initializations & migrations)
+    "pydantic==2.12.5",
+    "pydantic-extra-types==2.10.5",
+    "pydantic-settings==2.3.4",
+    "pyjwt[crypto]==2.10.1",             # Generate and verify the JWT tokens. Imported as `jwt`
+    "pymupdf==1.26.7",                   # PDF processing. Imported as `fitz`
+    "pypdf==6.4.0",
+    "python-multipart==0.0.18",          # A form data parser, as OAuth2 flow requires form-data parameters
+    "redis==5.0.8",
+    "requests==2.32.4",
+    "sqlalchemy-utils==0.41.2",
+    "sqlalchemy[asyncio]==2.0.44",       # [asyncio] allows greenlet to be installed on Apple M1 devices
+    "unidecode==1.3.8",
+    "uvicorn[standard]==0.30.6",
+    "xlsxwriter==3.2.0",
+]
+
+[project.optional-dependencies]
+weasyprint = [
+    "weasyprint==65.1",                  # HTML to PDF converter
+]
+
+[dependency-groups]
+dev = [
+    "aiosqlite==0.20.0",
+    "boto3-stubs[essential]==1.38.23",
+    "google-auth-stubs==0.3.0",
+    "mypy[faster-cache]==1.16.0",
+    "pytest==9.0.1",
+    "pytest-alembic==0.12.1",
+    "pytest-asyncio==1.3.0",
+    "pytest-cov==6.1.1",
+    "pytest-mock==3.14.1",
+    "ruff==0.11.8",
+    "types-aiofiles==24.1.0.20250516",
+    "types-authlib==1.5.0.20250516",
+    "types-fpdf2==2.8.3.20250516",
+    "types-psutil==7.0.0.20250601",
+    "types-redis==4.6.0.20241004",
+    "types-requests==2.32.0.20250515",
+]
+
 [tool.titan]
 minimal-titan-version-code = 158
 

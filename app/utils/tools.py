@@ -17,10 +17,14 @@ import fitz
 from fastapi import HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.templating import Jinja2Templates
-from jellyfish import jaro_winkler_similarity
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
+
+try:
+    from jellyfish import jaro_winkler_similarity
+except ImportError:
+    from jellyfish._jellyfish import jaro_winkler_similarity
 
 from app.core.core_endpoints import cruds_core, models_core
 from app.core.groups import cruds_groups
