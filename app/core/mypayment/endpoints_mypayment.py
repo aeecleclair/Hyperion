@@ -53,6 +53,7 @@ from app.core.mypayment.types_mypayment import (
 from app.core.mypayment.utils.data_exporter import generate_store_history_csv
 from app.core.mypayment.utils_mypayment import (
     LATEST_TOS,
+    PURCHASE_EXPIRATION,
     QRCODE_EXPIRATION,
     is_user_latest_tos_signed,
     structure_model_to_schema,
@@ -1261,6 +1262,8 @@ async def register_user(
         db=db,
     )
 
+    await db.flush()
+
     hyperion_mypayment_logger.info(
         wallet_id,
         extra={
@@ -2087,13 +2090,14 @@ async def store_scan_qrcode(
 
     `signature` should be a base64 encoded string
      - signed using *ed25519*,
-     - where data are a `QRCodeContentData` object:
+     - where the signed data is a `TransactionRequestInfo` plus the `store boolean` object:
         ```
         {
-            id: UUID
-            tot: int
-            iat: datetime
-            key: UUID
+            id: UUID,
+            tot: int,
+            iat: datetime,
+            key: UUID,
+            store: bool
         }
         ```
 
@@ -2109,8 +2113,8 @@ async def store_scan_qrcode(
     **The user must have the `can_bank` permission for this store**
     """
     # If the QR Code is already used, we return an error
-    already_existing_used_qrcode = await cruds_mypayment.get_used_qrcode(
-        qr_code_id=scan_info.id,
+    already_existing_used_qrcode = await cruds_mypayment.get_used_transaction_request(
+        transaction_request_id=scan_info.id,
         db=db,
     )
     if already_existing_used_qrcode is not None:
@@ -2121,15 +2125,16 @@ async def store_scan_qrcode(
 
     # After scanning a QR Code, we want to add it to the list of already scanned QR Code
     # even if it fail to be banked
-    await cruds_mypayment.create_used_qrcode(
-        qr_code=scan_info,
+    await cruds_mypayment.create_used_transaction_request(
+        transaction_request=scan_info,
+        transaction_type=TransactionType.DIRECT,
         db=db,
     )
 
     await db.flush()
 
     # We start a SAVEPOINT to ensure that even if the following code fails due to a database exception,
-    # after roleback the `used_qrcode` will still be created and committed in db.
+    # after rollback the used QR Code will still be created and committed in db.
     async with db.begin_nested():
         store = await cruds_mypayment.get_store(
             store_id=store_id,
@@ -2300,6 +2305,242 @@ async def store_scan_qrcode(
         message = Message(
             title=f"💳 Paiement - {store.name}",
             content=f"Une transaction de {scan_info.tot / 100} € a été effectuée",
+            action_module=settings.school.payment_name,
+        )
+        await notification_tool.send_notification_to_user(
+            user_id=debited_wallet.user.id,
+            message=message,
+        )
+        return transaction
+
+
+@router.post(
+    "/mypayment/stores/{store_id}/purchase",
+    response_model=standard_responses.Result,
+    status_code=200,
+)
+async def user_purchase_store(
+    store_id: UUID,
+    purchase_info: schemas_mypayment.PurchaseInfo,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user_an_ecl_member),
+    request_id: str = Depends(get_request_id),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
+):
+    """
+    Bank a transaction to a store at the user's request (whereas a scan is performed by a seller)
+
+    `signature` should be a base64 encoded string
+     - signed using *ed25519*,
+     - where the signed data is a `TransactionRequestInfo`:
+        ```
+        {
+            id: UUID
+            tot: int
+            iat: datetime
+            key: UUID
+        }
+        ```
+
+    The provided content is checked to ensure:
+        - the purchase information has not already been used to bank a transfer
+        - the purchase request is very recent (that is, the information is not expired)
+        - the purchase is intended for an existing store
+        - the signature is valid and correspond to `wallet_device_id` public key
+        - the debited's wallet device is active
+        - the debited's Wallet balance greater than the total
+
+    **The user must be authenticated to use this endpoint**
+    """
+    # If the payment is already done, we return an error
+    already_existing_used_payment = await cruds_mypayment.get_used_transaction_request(
+        transaction_request_id=purchase_info.id,
+        db=db,
+    )
+    if already_existing_used_payment is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="Payment already made",
+        )
+
+    # After paying, we want to add it to the list of already made payments
+    # even if it fail to be banked
+    await cruds_mypayment.create_used_transaction_request(
+        transaction_request=purchase_info,
+        transaction_type=TransactionType.INDIRECT,
+        db=db,
+    )
+
+    await db.flush()
+
+    # We start a SAVEPOINT to ensure that even if the following code fails due to a database exception,
+    # after rollback the used purchase will still be created and committed in db.
+    async with db.begin_nested():
+        store = await cruds_mypayment.get_store(
+            store_id=store_id,
+            db=db,
+        )
+        if store is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Store does not exist",
+            )
+
+        # We verify the signature
+        debited_wallet_device = await cruds_mypayment.get_wallet_device(
+            wallet_device_id=purchase_info.key,
+            db=db,
+        )
+
+        if debited_wallet_device is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Wallet device does not exist",
+            )
+
+        if debited_wallet_device.status != WalletDeviceStatus.ACTIVE:
+            raise HTTPException(
+                status_code=400,
+                detail="Wallet device is not active",
+            )
+
+        if not verify_signature(
+            public_key_bytes=debited_wallet_device.ed25519_public_key,
+            signature=purchase_info.signature,
+            data=purchase_info,
+            wallet_device_id=purchase_info.key,
+            request_id=request_id,
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid signature",
+            )
+
+        # We verify the content respect some rules
+        if purchase_info.tot <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Total must be greater than 0",
+            )
+
+        if purchase_info.iat < datetime.now(UTC) - timedelta(
+            seconds=PURCHASE_EXPIRATION,
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Purchase information is expired",
+            )
+
+        # We verify that the debited walled contains enough money
+        debited_wallet = await cruds_mypayment.get_wallet(
+            wallet_id=debited_wallet_device.wallet_id,
+            db=db,
+        )
+        if debited_wallet is None:
+            hyperion_error_logger.error(
+                f"MyPayment: Could not find wallet associated with the debited wallet device {debited_wallet_device.id}, this should never happen",
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="Could not find wallet associated with the debited wallet device",
+            )
+
+        if debited_wallet.user is None:
+            hyperion_error_logger.error(
+                f"MyECLPay: No UserPayment for debited wallet {debited_wallet.id}, this should never happen",
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="MyECLPay: The debited wallet is not associated to a user",
+            )
+        if debited_wallet.user.id != user.id:
+            hyperion_error_logger.error(
+                f"MyPayment: Mismatch between the user {user.id} who sent the request and the user {debited_wallet.user.id} owning the signatory device, this should never happen",
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="MyPayment: Mismatch between the user who sent the request and the user owning the signatory device",
+            )
+
+        debited_user_payment = await cruds_mypayment.get_user_payment(
+            debited_wallet.user.id,
+            db=db,
+        )
+        if debited_user_payment is None or not is_user_latest_tos_signed(
+            debited_user_payment,
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Debited user has not signed the latest TOS",
+            )
+
+        if debited_wallet.balance < purchase_info.tot:
+            raise HTTPException(
+                status_code=400,
+                detail="Insufficient balance in the debited wallet",
+            )
+
+        # In case the store's structure requires a membership,
+        # we check if the user has it, and raise an error if not.
+        # Note: unlike the scan method, bypassing the membership is NOT allowed
+        if store.structure.association_membership_id is not None:
+            current_membership = (
+                await get_user_active_membership_to_association_membership(
+                    user_id=debited_wallet.user.id,
+                    association_membership_id=store.structure.association_membership_id,
+                    db=db,
+                )
+            )
+            if current_membership is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="User is not a member of the association",
+                )
+
+        # We increment the receiving wallet balance
+        await cruds_mypayment.increment_wallet_balance(
+            wallet_id=store.wallet_id,
+            amount=purchase_info.tot,
+            db=db,
+        )
+
+        # We decrement the debited wallet balance
+        await cruds_mypayment.increment_wallet_balance(
+            wallet_id=debited_wallet.id,
+            amount=-purchase_info.tot,
+            db=db,
+        )
+        transaction_id = uuid.uuid4()
+        creation_date = datetime.now(UTC)
+        transaction = schemas_mypayment.TransactionBase(
+            id=transaction_id,
+            debited_wallet_id=debited_wallet_device.wallet_id,
+            credited_wallet_id=store.wallet_id,
+            transaction_type=TransactionType.INDIRECT,
+            seller_user_id=debited_wallet.user.id,
+            total=purchase_info.tot,
+            creation=creation_date,
+            status=TransactionStatus.CONFIRMED,
+            qr_code_id=purchase_info.id,
+        )
+        # We create a transaction
+        await cruds_mypayment.create_transaction(
+            transaction=transaction,
+            debited_wallet_device_id=debited_wallet_device.id,
+            store_note=None,
+            db=db,
+        )
+
+        hyperion_mypayment_logger.info(
+            format_transaction_log(transaction),
+            extra={
+                "s3_subfolder": MYPAYMENT_LOGS_S3_SUBFOLDER,
+                "s3_retention": RETENTION_DURATION,
+            },
+        )
+        message = Message(
+            title=f"💳 Paiement - {store.name}",
+            content=f"Une transaction de {purchase_info.tot / 100} € a été effectuée",
             action_module=settings.school.payment_name,
         )
         await notification_tool.send_notification_to_user(
