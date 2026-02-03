@@ -1,4 +1,4 @@
-FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim
+FROM ghcr.io/astral-sh/uv:0.9.27-python3.14-trixie-slim
 
 # Default number of workers; can be overridden at runtime
 ENV WORKERS=1
