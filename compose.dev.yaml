@@ -12,7 +12,7 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - hyperion_db_data:/var/lib/postgresql/data
+      - hyperion-db:/var/lib/postgresql/data
 
   hyperion-redis:
     image: redis:7.0-alpine3.17
