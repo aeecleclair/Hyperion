@@ -64,7 +64,7 @@ jobs:
 
       - name: Cache uv folder
         id: cache-uv
-        uses: actions/cache@v4.3.0
+        uses: actions/cache@v5.0.3
         with:
           path: ~/.cache/uv
           key: ${{ runner.os }}-python-${{ steps.setup-python.outputs.python-version }}-uv-${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}
@@ -77,7 +77,7 @@ jobs:
 
       - name: Cache .pytest_cache folder
         id: pytest_cache
-        uses: actions/cache@v4.3.0
+        uses: actions/cache@v5.0.3
         with:
           path: .pytest_cache
           key: pytest_cache-${{ github.head_ref }}
@@ -92,6 +92,6 @@ jobs:
         if: github.event_name == 'pull_request'
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5.5.1
+        uses: codecov/codecov-action@v5.5.2
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
