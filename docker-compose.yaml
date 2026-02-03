@@ -1,6 +1,6 @@
 services:
   hyperion-db:
-    image: postgres
+    image: postgres:15.1
     container_name: hyperion-db
     restart: unless-stopped
     healthcheck:
@@ -17,7 +17,7 @@ services:
       - ./hyperion_db_data:/var/lib/postgresql/data:Z
 
   hyperion-redis:
-    image: redis
+    image: redis:7.0-alpine
     container_name: hyperion-redis
     restart: unless-stopped
     command: redis-server --requirepass ${REDIS_PASSWORD}
