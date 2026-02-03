@@ -4,7 +4,8 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 
-# Databases (PostgreSQL and SQLite)
+# Databases (PostgreSQL and SQLite) and Redis volumes
+hyperion-redis/
 hyperion-db/
 *.db
 

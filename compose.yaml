@@ -23,6 +23,8 @@ services:
     command: redis-server --requirepass ${REDIS_PASSWORD}
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
+    volumes:
+      - ./hyperion_redis:/data
 
   hyperion-app:
     build:
