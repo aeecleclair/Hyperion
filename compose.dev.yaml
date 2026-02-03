@@ -22,6 +22,3 @@ services:
       - 6379:6379
     volumes:
       - ./hyperion-redis:/data
-
-volumes:
-  hyperion_db_data:
