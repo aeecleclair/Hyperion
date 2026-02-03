@@ -14,7 +14,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       PGTZ: ${POSTGRES_TZ}
     volumes:
-      - ./hyperion_db_data:/var/lib/postgresql/data:Z
+      - ./hyperion-db:/var/lib/postgresql/data
 
   hyperion-redis:
     image: redis:7.0-alpine3.17
@@ -39,7 +39,7 @@ services:
       - 8000:8000
     env_file: .env
     volumes:
-      - ./logs:/hyperion/logs:Z
-      - ./data:/hyperion/data:Z
-      - ./config.yaml:/hyperion/config.yaml:Z
-      - ./firebase.json:/hyperion/firebase.json:Z
+      - ./logs:/hyperion/logs
+      - ./data:/hyperion/data
+      - ./config.yaml:/hyperion/config.yaml
+      - ./firebase.json:/hyperion/firebase.json
