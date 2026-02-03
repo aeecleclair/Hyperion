@@ -24,7 +24,7 @@ services:
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     volumes:
-      - ./hyperion_redis:/data
+      - ./hyperion-redis:/data
 
   hyperion-app:
     build:
