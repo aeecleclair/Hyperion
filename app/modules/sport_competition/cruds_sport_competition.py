@@ -920,7 +920,9 @@ async def count_validated_participants_by_school_and_sport_ids(
         .join(
             models_sport_competition.CompetitionUser,
             models_sport_competition.CompetitionParticipant.user_id
-            == models_sport_competition.CompetitionUser.user_id,
+            == models_sport_competition.CompetitionUser.user_id
+            and models_sport_competition.CompetitionParticipant.edition_id
+            == models_sport_competition.CompetitionUser.edition_id,
         )
         .where(
             models_sport_competition.CompetitionParticipant.sport_id == sport_id,
@@ -2463,7 +2465,9 @@ async def count_validated_purchases_by_product_id_and_school_id(
         .join(
             models_sport_competition.CompetitionUser,
             models_sport_competition.CompetitionPurchase.user_id
-            == models_sport_competition.CompetitionUser.user_id,
+            == models_sport_competition.CompetitionUser.user_id
+            and models_sport_competition.CompetitionPurchase.edition_id
+            == models_sport_competition.CompetitionUser.edition_id,
         )
         .join(
             models_users.CoreUser,
