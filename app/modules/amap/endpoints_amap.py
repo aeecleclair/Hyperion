@@ -466,7 +466,7 @@ async def add_order_to_delievery(
             detail="You are not allowed to add this order",
         )
 
-    amount = 0.0
+    amount = 0
     for product_id, product_quantity in zip(
         order.products_ids,
         order.products_quantity,
@@ -535,7 +535,7 @@ async def add_order_to_delievery(
         productsret = await cruds_amap.get_products_of_order(db=db, order_id=order_id)
 
         hyperion_amap_logger.info(
-            f"Add_order_to_delivery: An order has been created for user {order.user_id} for an amount of {amount}€. ({request_id})",
+            f"Add_order_to_delivery: An order has been created for user {order.user_id} for an amount of {(amount / 100):.2f}€. ({request_id})",
         )
 
         if orderret is None:
