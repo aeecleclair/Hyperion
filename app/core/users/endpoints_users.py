@@ -404,6 +404,7 @@ async def activate_user(
         school_id=school_id,
         account_type=account_type,
         password_hash=password_hash,
+        should_change_password=False,
         name=user.name,
         firstname=user.firstname,
         nickname=user.nickname,
@@ -640,11 +641,30 @@ async def reset_password(
             ),
         )
 
+    user = await cruds_users.get_user_by_id(db=db, user_id=recover_request.user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="Invalid user ID")
+    if user.should_change_password:
+        # we control whether we check if the new password is different
+        if security.verify_password(
+            reset_password_request.new_password,
+            user.password_hash,
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="The new password should not be identical to the current password",
+            )
+
     new_password_hash = security.get_password_hash(reset_password_request.new_password)
     await cruds_users.update_user_password_by_id(
         db=db,
         user_id=recover_request.user_id,
         new_password_hash=new_password_hash,
+    )
+    await cruds_users.update_should_user_change_password_by_id(
+        db=db,
+        user_id=recover_request.user_id,
+        should_change_password=False,
     )
 
     # As the user has reset its password, all other recovery requests can be deleted from the table
@@ -662,6 +682,82 @@ async def reset_password(
     )
 
     return standard_responses.Result()
+
+
+@router.post(
+    "/users/change-password",
+    response_model=standard_responses.Result,
+    status_code=201,
+)
+async def change_password(
+    change_password_request: schemas_users.ChangePasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Change a user password.
+
+    This endpoint will check the **old_password**, see also the `/users/reset-password` endpoint if the user forgot their password.
+    """
+
+    user = await security.authenticate_user(
+        db=db,
+        email=change_password_request.email,
+        password=change_password_request.old_password,
+    )
+    if user is None:
+        raise HTTPException(status_code=403, detail="The old password is invalid")
+
+    if user.should_change_password:
+        # # we control whether we check if the new password is different
+        # if security.verify_password(
+        #     change_password_request.new_password,
+        #     user.password_hash,
+        # ):
+        #     raise HTTPException(
+        #         status_code=403,
+        #         detail="The new password should not be identical to the current password",
+        #     )
+        raise HTTPException(
+            status_code=403,
+            detail="User must reset password via email recovery",
+        )
+
+    new_password_hash = security.get_password_hash(change_password_request.new_password)
+    await cruds_users.update_user_password_by_id(
+        db=db,
+        user_id=user.id,
+        new_password_hash=new_password_hash,
+    )
+    # await cruds_users.update_should_user_change_password_by_id(
+    #     db=db,
+    #     user_id=user.id,
+    #     should_change_password=False,
+    # )
+
+    # Revoke existing auth refresh tokens
+    # to force the user to reauthenticate on all services and devices
+    # when their token expire
+    await cruds_auth.revoke_refresh_token_by_user_id(
+        db=db,
+        user_id=user.id,
+    )
+
+    return standard_responses.Result()
+
+
+@router.post("/users/invalidate-password/{user_id}", status_code=201)
+async def invalidate_password(
+    user_id: str,
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Invalidate one user's password.
+    The concerned user should change their password with a different one to use our services again.
+
+    **This endpoint is only usable by administrators**
+    """
+    await cruds_users.update_should_user_change_password_by_id(db=db, user_id=user_id)
 
 
 @router.post(
@@ -797,47 +893,6 @@ async def migrate_mail_confirm(
         )
 
     return "The email address has been successfully updated"
-
-
-@router.post(
-    "/users/change-password",
-    response_model=standard_responses.Result,
-    status_code=201,
-)
-async def change_password(
-    change_password_request: schemas_users.ChangePasswordRequest,
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Change a user password.
-
-    This endpoint will check the **old_password**, see also the `/users/reset-password` endpoint if the user forgot their password.
-    """
-
-    user = await security.authenticate_user(
-        db=db,
-        email=change_password_request.email,
-        password=change_password_request.old_password,
-    )
-    if user is None:
-        raise HTTPException(status_code=403, detail="The old password is invalid")
-
-    new_password_hash = security.get_password_hash(change_password_request.new_password)
-    await cruds_users.update_user_password_by_id(
-        db=db,
-        user_id=user.id,
-        new_password_hash=new_password_hash,
-    )
-
-    # Revoke existing auth refresh tokens
-    # to force the user to reauthenticate on all services and devices
-    # when their token expire
-    await cruds_auth.revoke_refresh_token_by_user_id(
-        db=db,
-        user_id=user.id,
-    )
-
-    return standard_responses.Result()
 
 
 # We put the following endpoints at the end of the file to prevent them
