@@ -1,13 +1,15 @@
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 import pytest_asyncio
+from fastapi.testclient import TestClient
 from sqlalchemy import delete, update
 
+from app.core.groups import models_groups
 from app.core.groups.groups_type import AccountType
 from app.core.schools import models_schools
 from app.core.schools.schools_type import SchoolType
+from app.core.users import models_users
 from app.modules.sport_competition import models_sport_competition
 from app.modules.sport_competition.permissions_sport_competition import (
     SportCompetitionPermissions,
@@ -34,12 +36,6 @@ from tests.commons import (
     create_user_with_groups,
     get_TestingSessionLocal,
 )
-
-if TYPE_CHECKING:
-    from fastapi.testclient import TestClient
-
-    from app.core.groups import models_groups
-    from app.core.users import models_users
 
 admin_group: models_groups.CoreGroup
 
