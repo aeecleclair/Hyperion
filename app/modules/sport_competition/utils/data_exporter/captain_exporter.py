@@ -53,7 +53,7 @@ def build_data_rows(
             captain.user.user.name,
             captain.user.user.firstname,
             captain.user.user.email,
-            captain.user.user.phone if captain.user.user.phone else "",
+            captain.user.user.phone or "",
             captain.user.user.school.name if captain.user.user.school else "",
             (captain.user.validated and "OUI") or "NON",
             sport.name,

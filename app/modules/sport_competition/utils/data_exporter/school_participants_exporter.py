@@ -101,7 +101,7 @@ def build_data_rows(
             if participant:
                 sport = next(s for s in sports if s.id == participant.sport_id)
                 row[6] = sport.name
-                row[7] = participant.license if participant.license else "N/A"
+                row[7] = participant.license or "N/A"
                 row[8] = participant.is_license_valid
                 row[9] = (
                     f"{participant.team.name}{' (capitaine)' if participant.team.captain_id == user.user.id else ''}"
@@ -117,7 +117,7 @@ def build_data_rows(
             offset = 10 if ExcelExportParams.participants in parameters else 7
             for prod_struct in product_structure[0]:
                 for vinfo in prod_struct["variants_info"]:
-                    p = purchases_map.get(vinfo["variant"].id, None)
+                    p = purchases_map.get(vinfo["variant"].id)
                     if p and p.quantity > 0:
                         row[vinfo["qty_col"] + offset] = p.quantity
                         row[vinfo["valid_col"] + offset] = (
