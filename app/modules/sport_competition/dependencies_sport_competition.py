@@ -1,5 +1,6 @@
 import logging
-from typing import TYPE_CHECKING, Any
+from collections.abc import Callable, Coroutine
+from typing import Any
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,9 +24,6 @@ from app.modules.sport_competition.types_sport_competition import (
 )
 from app.types.scopes_type import ScopeType
 from app.utils.tools import has_user_permission
-
-if TYPE_CHECKING:
-    from collections.abc import Callable, Coroutine
 
 hyperion_access_logger = logging.getLogger("hyperion.access")
 

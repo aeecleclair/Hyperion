@@ -1,8 +1,9 @@
 import logging
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from uuid import UUID
 
 from sqlalchemy import and_, delete, func, or_, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.core.schools import models_schools
@@ -11,6 +12,11 @@ from app.core.users import models_users, schemas_users
 from app.modules.sport_competition import (
     models_sport_competition,
     schemas_sport_competition,
+)
+from app.modules.sport_competition.types_sport_competition import (
+    CompetitionGroupType,
+    ProductPublicType,
+    ProductSchoolType,
 )
 from app.modules.sport_competition.utils.schemas_converters import (
     competition_user_model_to_schema,
@@ -21,17 +27,6 @@ from app.modules.sport_competition.utils.schemas_converters import (
     team_model_to_schema,
     volunteer_shift_model_to_schema,
 )
-
-if TYPE_CHECKING:
-    from uuid import UUID
-
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-    from app.modules.sport_competition.types_sport_competition import (
-        CompetitionGroupType,
-        ProductPublicType,
-        ProductSchoolType,
-    )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -2631,6 +2626,7 @@ async def load_all_payments(
                 user_id=payment.user_id,
                 edition_id=payment.edition_id,
                 total=payment.total,
+                method=payment.method,
             ),
         )
     return users_payments
@@ -2668,6 +2664,7 @@ async def load_school_payments(
                 user_id=payment.user_id,
                 edition_id=payment.edition_id,
                 total=payment.total,
+                method=payment.method,
             ),
         )
     return users_payments
@@ -2690,6 +2687,7 @@ async def load_user_payments(
             user_id=payment.user_id,
             edition_id=payment.edition_id,
             total=payment.total,
+            method=payment.method,
         )
         for payment in payments.scalars().all()
     ]
@@ -2706,6 +2704,7 @@ async def load_payment_by_id(
             user_id=payment.user_id,
             edition_id=payment.edition_id,
             total=payment.total,
+            method=payment.method,
         )
         if payment
         else None

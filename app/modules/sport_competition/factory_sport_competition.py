@@ -1,22 +1,19 @@
 import random
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
 from uuid import uuid4
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.schools.factory_schools import CoreSchoolsFactory
 from app.core.schools.schools_type import SchoolType
 from app.core.users.factory_users import CoreUsersFactory
+from app.core.utils.config import Settings
 from app.modules.sport_competition import (
     cruds_sport_competition,
     schemas_sport_competition,
     types_sport_competition,
 )
 from app.types.factory import Factory
-
-if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-    from app.core.utils.config import Settings
 
 
 class SportCompetitionFactory(Factory):

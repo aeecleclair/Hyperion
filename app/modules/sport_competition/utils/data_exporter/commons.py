@@ -1,10 +1,8 @@
 import logging
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    import xlsxwriter
+import xlsxwriter
 
-    from app.modules.sport_competition import schemas_sport_competition
+from app.modules.sport_competition import schemas_sport_competition
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
