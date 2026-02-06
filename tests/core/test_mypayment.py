@@ -2127,7 +2127,7 @@ def test_transfer_with_redirect_url_not_trusted(client: TestClient):
     )
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "Redirect URL is not trusted by hyperion"
+    assert response.json()["detail"] == "Redirect URL is not trusted by Hyperion"
 
 
 def test_transfer_with_unregistered_user(client: TestClient):
@@ -2142,7 +2142,7 @@ def test_transfer_with_unregistered_user(client: TestClient):
     )
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "User is not registered for MyECL Pay"
+    assert response.json()["detail"] == "User is not registered for MyECLPay"
 
 
 def test_transfer_with_too_small_amount(client: TestClient):

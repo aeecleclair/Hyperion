@@ -21,7 +21,7 @@ from app.core.payment.payment_tool import PaymentTool
 from app.core.payment.types_payment import HelloAssoConfig, HelloAssoConfigName
 from app.core.permissions import cruds_permissions, schemas_permissions
 from app.core.schools.schools_type import SchoolType
-from app.core.users import cruds_users, models_users, schemas_users
+from app.core.users import cruds_users, models_users
 from app.core.utils import security
 from app.core.utils.config import Settings
 from app.types import core_data
@@ -370,7 +370,7 @@ class MockedPaymentTool(PaymentTool):
         checkout_amount: int,
         checkout_name: str,
         db: AsyncSession,
-        payer_user: schemas_users.CoreUser | None = None,
+        payer_user: schemas_payment.PayerUser,
         redirection_uri: str | None = None,
     ) -> schemas_payment.Checkout:
         exist = await cruds_payment.get_checkout_by_id(mocked_checkout_id, db)
