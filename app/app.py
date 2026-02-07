@@ -528,6 +528,10 @@ async def init_lifespan(
     )()
 
     number_of_workers = initialization.get_number_of_workers()
+    if number_of_workers > 1:
+        hyperion_error_logger.warning(
+            "Multiple workers and no Redis client is configured: using fallback lock instead for app init",
+        )
 
     # We need to run the database initialization only once across all the workers
     await initialization.use_lock_for_workers(
