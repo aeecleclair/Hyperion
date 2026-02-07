@@ -82,21 +82,25 @@ pyenv activate hyperion
 
 ## 2. Install dependencies
 
+Before installing the dependencies, you need to check a few things to make things easier :
+
 ### About Jellyfish and Rust (Windows only)
 
-If you don't have Rust installed on your Windows PC or don't want to install it, decrease the version of `jellyfish` to `0.10.0` in the `requirements.txt` file:
+If you don't have Rust installed on your Windows PC and don't want to install it, decrease the version of `jellyfish` to `0.10.0` in the [`requirements.txt`](requirements.txt) file:
 
 ```
 jellyfish==0.10.0                    # String Matching
 ```
 
+> if you don't know, go ahead with the next steps and see if an error mentioning Rust is raised.
+
 ### About Weasyprint and Pango
 
-Weasyprint is only used to generate PDF files from HTML for some modules. As such, it is rarely needed for development, and its installation can be skipped. To do so, simply comment the line importing it (add a #) in the requirements.txt file.
+Weasyprint is only used to generate PDF files from HTML for some modules. As such, it is rarely needed for development, and its installation can be skipped. To do so, simply comment the line importing it (add a `#`) in the [`requirements.txt`](requirements.txt) file.
 
 If you need to use it, follow the installation steps at https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation.
 
-For Windows, the best way is through MSYS2, Mac users can simply install using Homebrew.
+For Windows, the best way is through MSYS2. Mac users can simply install using Homebrew.
 
 ### Install dependencies (for real)
 
@@ -106,7 +110,8 @@ Install the dependencies you'll need using `pip` (the common requirements are in
 pip install -r requirements-dev.txt
 ```
 
-If you changed the version of Jellyfish, don't forget to set it back:
+> [!WARNING]
+> If you changed the version of Jellyfish or excluded Weasyprint, don't forget to set it back before committing your changes.
 
 ```
 jellyfish==1.0.4                    # String Matching
@@ -231,7 +236,7 @@ services:
 ## 4. Complete the dotenv (`.env`) and the `config.yaml`
 
 > [!IMPORTANT]
-> Copy the `.env.template` file in a new `.env` file, likewise copy `config.template.yaml` in a new `config.yaml`.
+> Copy the [`.env.template`](.env.template) file in a new `.env` file, likewise copy [`config.template.yaml`](config.template.yaml) in a new `config.yaml`.
 
 ```bash
 cp .env.template .env && cp config.template.yaml config.yaml
@@ -240,7 +245,7 @@ cp .env.template .env && cp config.template.yaml config.yaml
 > [!TIP]
 > These template files were carefully crafted to work for you with minimal personal changes to bring, and some preconfigured services.
 
-For later reference, these settings are documented in [app/core/config.py](./app/core/config.py).
+For later reference, these settings are documented in [app/core/utils/config.py](app/core/utils/config.py).
 Check this file to know what can and should be set using these two files.
 
 ### The `.env` file
@@ -486,9 +491,9 @@ insert into core_membership (user_id, group_id) values ('<Your user_id>', '0a25c
 
 Install docker and the compose plugin (https://docs.docker.com/compose/install/)
 
-`docker-compose.yaml` includes the minimal settings required to run Hyperion using docker compose.
+[`docker-compose.yaml`](docker-compose.yaml) includes the minimal settings required to run Hyperion using docker compose.
 
-> During dev, `docker-compose-dev.yaml` can be used to run the database, the redis server etc... If you really want to run the project without docker, you can do it but you will have to install the database, redis, etc ... yourself or disable corresponding features in the .env file (which is not recommended).
+> During dev, [`docker-compose-dev.yaml`](docker-compose-dev.yaml) can be used to run the database, the redis server etc... If you really want to run the project without docker, you can do it but you will have to install the database, redis, etc ... yourself or disable corresponding features in the .env file (which is not recommended).
 
 ## Linting and formating
 
@@ -515,7 +520,7 @@ Hyperion support push notification using Firebase Messaging service.
 
 To enable the service:
 
-1. Add `USE_FIREBASE=true` to dotenv file
+1. Add `USE_FIREBASE=true` to the .env file
 2. Create a service account on Firebase console:
    1. Go to [Google cloud, IAM and administration, Service account](https://console.cloud.google.com/iam-admin/serviceaccounts) and add a new Service Account with Messaging API capabilities.
    2. Choose _Manage keys_ and create a new JSON key.
@@ -528,14 +533,14 @@ When using multiples workers, a Redis server must be configured to broadcast mes
 ## Google API usage
 
 Hyperion can use Google API to run App Script and upload files to Google Drive.
-See [app/core/google_api/README.md](./app/core/google_api/README.md) for more information.
+See [app/core/google_api/README.md](app/core/google_api/README.md) for more information.
 
 ---
 
 ## Hyperion deployment
 
-For production we encourage to use multiple Uvicorn workers. You can use our [docker image](./Dockerfile) and [docker-compose file](./docker-compose.yaml) files to run Hyperion with Unicorn.
+For production we encourage to use multiple Uvicorn workers. You can use our [docker image](Dockerfile) and [docker-compose file](docker-compose.yaml) files to run Hyperion with Unicorn.
 
-You should use our [init file](./init.py) to ensure that database initialization and migrations are only run once.
+You should use our [init file](app/app.py) to ensure that database initialization and migrations are only run once.
 
 </details>
