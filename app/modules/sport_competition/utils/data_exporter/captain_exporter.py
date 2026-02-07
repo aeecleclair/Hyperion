@@ -83,6 +83,7 @@ def write_to_excel(
         thick_columns,
         formats,
         columns_max_length,
+        start_row=2,
     )
     autosize_columns(worksheet, columns_max_length)
 

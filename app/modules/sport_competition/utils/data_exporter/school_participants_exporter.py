@@ -82,36 +82,41 @@ def build_data_rows(
         row[0] = user.user.name
         row[1] = user.user.firstname
         row[2] = user.user.email
-        row[4] = ", ".join(get_user_types(user))
+        row[3] = ", ".join(get_user_types(user))
         if user.validated and all(p.validated for p in user_purchases):
-            row[5] = "Validé et payé"
+            row[4] = "Validé et payé"
         elif user.validated:
-            row[5] = "Validé mais non payé"
+            row[4] = "Validé mais non payé"
         else:
-            row[5] = "Non validé"
-        thick_columns = [5]
+            row[4] = "Non validé"
+        thick_columns = [4]
         purchases_map = {
             p.product_variant_id: p for p in users_purchases.get(user.user.id, [])
         }
         if ExcelExportParams.participants in parameters and users_participant:
+            offset = len(FIXED_COLUMNS)
             participant = users_participant.get(user.user.id, None)
             if participant:
                 sport = next(s for s in sports if s.id == participant.sport_id)
-                row[6] = sport.name
-                row[7] = participant.license or "N/A"
-                row[8] = participant.is_license_valid
-                row[9] = (
+                row[offset] = sport.name
+                row[offset + 1] = participant.license or "N/A"
+                row[offset + 2] = participant.is_license_valid
+                row[offset + 3] = (
                     f"{participant.team.name}{' (capitaine)' if participant.team.captain_id == user.user.id else ''}"
                 )
             else:
-                row[6] = ""
-                row[7] = ""
-                row[8] = ""
-                row[9] = ""
-            thick_columns.append(9)
+                row[offset] = ""
+                row[offset + 1] = ""
+                row[offset + 2] = ""
+                row[offset + 3] = ""
+            thick_columns.append(offset + 3)
 
         if ExcelExportParams.purchases in parameters and product_structure is not None:
-            offset = 10 if ExcelExportParams.participants in parameters else 7
+            offset = (
+                len(FIXED_COLUMNS) + 4
+                if ExcelExportParams.participants in parameters
+                else len(FIXED_COLUMNS)
+            )
             for prod_struct in product_structure[0]:
                 for vinfo in prod_struct["variants_info"]:
                     p = purchases_map.get(vinfo["variant"].id)
@@ -139,9 +144,11 @@ def build_data_rows(
                 )
             total = sum(p.quantity * p.product_variant.price for p in user_purchases)
             paid = sum(p.total for p in user_payments)
-            row[offset] = str(total / 100)
-            row[offset + 1] = str(paid / 100)
-            row[offset + 2] = "OUI" if total == paid else "NON"
+            row[offset] = str(total / 100) if user.validated else ""
+            row[offset + 1] = str(paid / 100) if user.validated else ""
+            row[offset + 2] = (
+                ("OUI" if total == paid else "NON") if user.validated else ""
+            )
             thick_columns.append(offset + 2)
 
         data_rows.append(row)
