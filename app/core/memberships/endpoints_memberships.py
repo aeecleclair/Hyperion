@@ -559,15 +559,17 @@ async def synchronize_membership_with_group(
             minimal_end_date=datetime.now(UTC).date(),
         )
     )
-    group_members_id = {member.id for member in db_group.members}
+    await cruds_groups.delete_membership_by_group_id(
+        group_id=group_id,
+        db=db,
+    )
     for member in membership_members:
-        if member.user_id not in group_members_id:
-            membership = models_groups.CoreMembership(
-                user_id=member.user_id,
-                group_id=group_id,
-                description=None,
-            )
-            await cruds_groups.create_membership(
-                membership=membership,
-                db=db,
-            )
+        membership = models_groups.CoreMembership(
+            user_id=member.user_id,
+            group_id=group_id,
+            description=None,
+        )
+        await cruds_groups.create_membership(
+            membership=membership,
+            db=db,
+        )
