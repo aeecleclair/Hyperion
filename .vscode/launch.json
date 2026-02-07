@@ -5,11 +5,29 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Hyperion",
+      "name": "Hyperion (dev)",
       "type": "debugpy",
       "request": "launch",
       "module": "fastapi_cli",
       "args": ["dev"],
+      "jinja": true,
+      "justMyCode": true
+    },
+    {
+      "name": "Hyperion (run)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "fastapi_cli",
+      "args": ["run"],
+      "jinja": true,
+      "justMyCode": true
+    },
+    {
+      "name": "Hyperion (run, 2 workers)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "fastapi_cli",
+      "args": ["run", "--workers", "2"],
       "jinja": true,
       "justMyCode": true
     }
