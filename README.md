@@ -82,13 +82,17 @@ pyenv activate hyperion
 
 ## 2. Install dependencies
 
+Before installing the dependencies, you need to check a few things to make things easier :
+
 ### About Jellyfish and Rust (Windows only)
 
-If you don't have Rust installed on your Windows PC or don't want to install it, decrease the version of `jellyfish` to `0.10.0` in the [`requirements.txt`](requirements.txt) file:
+If you don't have Rust installed on your Windows PC and don't want to install it, decrease the version of `jellyfish` to `0.10.0` in the [`requirements.txt`](requirements.txt) file:
 
 ```
 jellyfish==0.10.0                    # String Matching
 ```
+
+> if you don't know, go ahead with the next steps and see if an error mentioning Rust is raised.
 
 ### About Weasyprint and Pango
 
@@ -96,7 +100,7 @@ Weasyprint is only used to generate PDF files from HTML for some modules. As suc
 
 If you need to use it, follow the installation steps at https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation.
 
-For Windows, the best way is through MSYS2, Mac users can simply install using Homebrew.
+For Windows, the best way is through MSYS2. Mac users can simply install using Homebrew.
 
 ### Install dependencies (for real)
 
@@ -106,7 +110,8 @@ Install the dependencies you'll need using `pip` (the common requirements are in
 pip install -r requirements-dev.txt
 ```
 
-If you changed the version of Jellyfish, don't forget to set it back:
+> [!WARNING]
+> If you changed the version of Jellyfish or excluded Weasyprint, don't forget to set it back before committing your changes.
 
 ```
 jellyfish==1.0.4                    # String Matching
