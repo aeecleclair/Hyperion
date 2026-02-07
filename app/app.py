@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 import alembic.command as alembic_command
 import alembic.config as alembic_config
 import alembic.migration as alembic_migration
-import redis
 from calypsso import get_calypsso_app
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.encoders import jsonable_encoder
@@ -18,7 +17,6 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
-from redis import Redis
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -45,7 +43,6 @@ from app.module import all_modules, module_list, permissions_list
 from app.types.exceptions import (
     ContentHTTPException,
     GoogleAPIInvalidCredentialsError,
-    MultipleWorkersWithoutRedisInitializationError,
 )
 from app.types.sqlalchemy import Base
 from app.utils import initialization
@@ -55,7 +52,7 @@ from app.utils.redis import limiter
 from app.utils.state import LifespanState
 
 if TYPE_CHECKING:
-    import redis
+    from redis import Redis
 
     from app.types.factory import Factory
 
@@ -530,17 +527,13 @@ async def init_lifespan(
         get_redis_client,
     )()
 
-    # Initialization steps should only be run once across all workers
-    # We use Redis locks to ensure that the initialization steps are only run once
     number_of_workers = initialization.get_number_of_workers()
-    if number_of_workers > 1 and not isinstance(
-        redis_client,
-        Redis,
-    ):
-        raise MultipleWorkersWithoutRedisInitializationError
+    if number_of_workers > 1:
+        hyperion_error_logger.warning(
+            "Multiple workers and no Redis client is configured: using fallback lock instead for app init",
+        )
 
     # We need to run the database initialization only once across all the workers
-    # Other workers have to wait for the db to be initialized
     await initialization.use_lock_for_workers(
         init_db,
         "init_db",
@@ -553,6 +546,7 @@ async def init_lifespan(
         drop_db=drop_db,
     )
 
+    # We need to test the configuration only once across all the workers
     await initialization.use_lock_for_workers(
         test_configuration,
         "test_configuration",
@@ -583,6 +577,7 @@ async def init_lifespan(
             hyperion_error_logger=hyperion_error_logger,
         )
     async for db in get_db_dependency():
+        # We only need to initiate the Google API once across all the workers
         await initialization.use_lock_for_workers(
             init_google_API,
             "init_google_API",
@@ -598,6 +593,7 @@ async def init_lifespan(
             get_notification_manager,
             get_notification_manager,
         )()
+        # We only need to initialize the topics once across all the workers
         await initialization.use_lock_for_workers(
             initialize_notification_topics,
             "initialize_notification_topics",
@@ -700,7 +696,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         port = request.client.port
         client_address = f"{ip_address}:{port}"
 
-        redis_client: redis.Redis | None = get_redis_client_dependency()
+        redis_client: Redis | None = get_redis_client_dependency()
 
         # We test the ip address with the redis limiter
         process = True

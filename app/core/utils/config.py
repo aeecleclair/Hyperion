@@ -243,7 +243,7 @@ class Settings(BaseSettings):
     ########################
     # Redis configuration #
     ########################
-    # Redis configuration is needed to use the rate limiter, or multiple uvicorn workers
+    # Redis configuration is needed to use the rate limiter
     # We use the default redis configuration, so the protected mode is enabled by default (see https://redis.io/docs/manual/security/#protected-mode)
     # If you want to use a custom configuration, a password and a specific binds should be used to avoid security issues
     REDIS_HOST: str | None = None
