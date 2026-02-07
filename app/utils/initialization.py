@@ -307,7 +307,7 @@ async def use_lock_for_workers(
     **kwargs: P.kwargs,
 ) -> None:
     """
-    Aquires a Redis lock to ensure that `func` is only run by once for all workers.
+    Aquires a Redis lock to ensure that `func` is only run once for all workers.
 
     - If the Redis client is not provided, the function will execute `job_function` only for the process that is chosen to initialize the app.
     - If `number_of_workers` is 1, the function will execute `job_function` directly, without acquiring a lock.
@@ -328,7 +328,7 @@ async def use_lock_for_workers(
         redis_client,
         redis.Redis,
     ):
-        # If a Redis is not provided, we only let one chosen process to execute the function
+        # If a Redis is not provided, we only let one chosen process execute the function
         if (
             os.getpid()
             == next(
