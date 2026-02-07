@@ -577,7 +577,7 @@ async def init_lifespan(
             hyperion_error_logger=hyperion_error_logger,
         )
     async for db in get_db_dependency():
-        # We need to initiate the Google API only once across all the workers
+        # We only need to initiate the Google API once across all the workers
         await initialization.use_lock_for_workers(
             init_google_API,
             "init_google_API",
@@ -593,7 +593,7 @@ async def init_lifespan(
             get_notification_manager,
             get_notification_manager,
         )()
-        # We need to inittialiaze the topics only once across all the workers
+        # We only need to initialize the topics once across all the workers
         await initialization.use_lock_for_workers(
             initialize_notification_topics,
             "initialize_notification_topics",
