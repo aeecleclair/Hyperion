@@ -113,7 +113,7 @@ class NotificationManager:
             return
 
         if len(tokens) == 0:
-            # We should not try to send a message to an emtpy list of tokens
+            # We should not try to send a message to an empty list of tokens
             # or we will get an error "max_workers must be greater than 0"
             # See https://github.com/firebase/firebase-admin-python/issues/792
             return
