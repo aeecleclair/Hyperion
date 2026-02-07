@@ -349,7 +349,9 @@ async def load_all_competition_users_by_school(
         .where(
             models_sport_competition.CompetitionUser.edition_id == edition_id,
             models_users.CoreUser.school_id == school_id,
-            models_sport_competition.CompetitionUser.validated,
+            models_sport_competition.CompetitionUser.validated
+            if exclude_non_validated
+            else and_(True),
         ),
     )
     return [

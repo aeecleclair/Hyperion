@@ -1419,7 +1419,7 @@ async def test_data_exporter(
     client: TestClient,
 ):
     response = client.get(
-        "/competition/users/data-export?included_fields=purchases&included_fields=payments&included_fields=participants",
+        "/competition/data-export/users?included_fields=purchases&included_fields=payments&included_fields=participants",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 200

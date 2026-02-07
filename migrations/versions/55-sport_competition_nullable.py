@@ -42,7 +42,7 @@ def upgrade() -> None:
     )
     conn.execute(
         sa.text("""
-        DELETE FROM competition_users
+        DELETE FROM competition_user
         WHERE is_athlete IS FALSE and is_pompom IS FALSE and is_cameraman IS FALSE and is_fanfare IS FALSE
         """),
     )
@@ -52,8 +52,12 @@ def upgrade() -> None:
         "quota",
         nullable=False,
     )
+    sa.Enum(
+        PaiementMethodType,
+        name="paiementmethodtype",
+    ).create(op.get_bind(), checkfirst=True)
     op.add_column(
-        "competition_payments",
+        "competition_payment",
         sa.Column(
             "method",
             sa.Enum(
@@ -73,7 +77,11 @@ def downgrade() -> None:
         nullable=True,
     )
     op.alter_column("competition_match", "date", nullable=True)
-    op.drop_column("competition_payments", "method")
+    op.drop_column("competition_payment", "method")
+    sa.Enum(
+        PaiementMethodType,
+        name="paiementmethodtype",
+    ).drop(op.get_bind(), checkfirst=True)
 
 
 def pre_test_upgrade(
