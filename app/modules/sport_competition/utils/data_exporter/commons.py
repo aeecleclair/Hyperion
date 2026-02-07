@@ -11,7 +11,6 @@ def generate_format(workbook: xlsxwriter.Workbook):
     def make_format(
         workbook: xlsxwriter.Workbook,
         *,
-        color: str | None = None,
         bold: bool = False,
         align: str = "center",
         font: str = "Raleway",
@@ -25,8 +24,6 @@ def generate_format(workbook: xlsxwriter.Workbook):
             "align": align,
             "font_name": font,
         }
-        if color:
-            fmt_dict["font_color"] = color
         if font_color:
             fmt_dict["font_color"] = font_color
         if bg_color:
