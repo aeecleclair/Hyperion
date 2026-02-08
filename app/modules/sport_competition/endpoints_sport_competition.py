@@ -33,10 +33,26 @@ from app.modules.sport_competition.permissions_sport_competition import (
 from app.modules.sport_competition.types_sport_competition import (
     CompetitionGroupType,
     ExcelExportParams,
+    PaiementMethodType,
     ProductSchoolType,
 )
-from app.modules.sport_competition.utils.data_exporter import (
+from app.modules.sport_competition.utils.data_exporter.captain_exporter import (
+    construct_captains_excel,
+)
+from app.modules.sport_competition.utils.data_exporter.global_exporter import (
     construct_users_excel_with_parameters,
+)
+from app.modules.sport_competition.utils.data_exporter.school_participants_exporter import (
+    construct_school_users_excel_with_parameters,
+)
+from app.modules.sport_competition.utils.data_exporter.school_quotas_exporter import (
+    construct_school_quotas_excel,
+)
+from app.modules.sport_competition.utils.data_exporter.sport_participants_exporter import (
+    construct_sport_users_excel,
+)
+from app.modules.sport_competition.utils.data_exporter.sport_quotas_exporter import (
+    construct_sport_quotas_excel,
 )
 from app.modules.sport_competition.utils.validation_checker import (
     check_validation_consistency,
@@ -46,6 +62,7 @@ from app.modules.sport_competition.utils_sport_competition import (
     get_public_type_from_user,
     validate_payment,
     validate_product_variant_purchase,
+    validate_purchases,
 )
 from app.types.content_type import ContentType
 from app.types.module import Module
@@ -102,7 +119,7 @@ async def create_sport(
             status_code=400,
             detail="A sport with this name already exists",
         )
-    sport = schemas_sport_competition.Sport(**sport.model_dump(), id=str(uuid4()))
+    sport = schemas_sport_competition.Sport(**sport.model_dump(), id=uuid4())
     await cruds_sport_competition.add_sport(sport, db)
     return sport
 
@@ -371,77 +388,6 @@ async def get_current_user_competition(
     if not competition_user:
         raise HTTPException(status_code=404, detail="User not found")
     return competition_user
-
-
-@module.router.get(
-    "/competition/users/data-export",
-    response_class=FileResponse,
-    status_code=200,
-)
-async def export_competition_users_data(
-    included_fields: list[ExcelExportParams] = Query(default=[]),
-    exclude_non_validated: bool = False,
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
-        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
-    ),
-    edition: schemas_sport_competition.CompetitionEdition = Depends(
-        get_current_edition,
-    ),
-):
-    """
-    Export competition users data for the current edition as a CSV file.
-    """
-    users = await cruds_sport_competition.load_all_competition_users(
-        edition.id,
-        db,
-        exclude_non_validated=exclude_non_validated,
-    )
-    products = await cruds_sport_competition.load_products(
-        edition.id,
-        db,
-    )
-    sports = await cruds_sport_competition.load_all_sports(db)
-    schools = await cruds_sport_competition.load_all_schools(edition.id, db)
-
-    participants = None
-    if ExcelExportParams.participants in included_fields:
-        all_participants = await cruds_sport_competition.load_all_participants(
-            edition.id,
-            db,
-        )
-        participants = {p.user_id: p for p in all_participants}
-    payments = None
-    if ExcelExportParams.payments in included_fields:
-        payments = await cruds_sport_competition.load_all_payments(edition.id, db)
-    purchases = await cruds_sport_competition.load_all_purchases(edition.id, db)
-
-    excel_io = BytesIO()
-
-    construct_users_excel_with_parameters(
-        parameters=included_fields,
-        sports=sports,
-        schools=schools,
-        users=users,
-        products=products,
-        users_participant=participants,
-        users_payments=payments,
-        users_purchases=purchases,
-        export_io=excel_io,
-    )
-
-    res = excel_io.getvalue()
-
-    excel_io.close()
-
-    headers = {
-        "Content-Disposition": f'attachment; filename="competition_users_{edition.name}.xlsx"',
-    }
-    return Response(
-        res,
-        headers=headers,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
 
 
 @module.router.get(
@@ -2274,7 +2220,6 @@ async def join_sport(
         substitute=participant_info.substitute,
         is_license_valid=False,
         team_id=participant_info.team_id or new_team.id,
-        created_at=datetime.now(UTC),
     )
     await cruds_sport_competition.add_participant(
         participant,
@@ -3549,6 +3494,9 @@ async def get_purchases_by_school_id(
         edition.id,
         db,
     )
+    hyperion_error_logger.error(users)
+    hyperion_error_logger.error(edition)
+    hyperion_error_logger.error(school_id)
     purchases_by_user: dict[str, list[schemas_sport_competition.PurchaseComplete]] = {}
     for db_user in users:
         purchases_by_user[
@@ -3925,6 +3873,7 @@ async def create_payment(
         user_id=user_id,
         total=payment.total,
         edition_id=edition.id,
+        method=PaiementMethodType.manual,
     )
 
     purchases = await cruds_sport_competition.load_purchases_by_user_id(
@@ -3938,36 +3887,7 @@ async def create_payment(
         db,
     )
 
-    purchases_total = sum(
-        purchase.product_variant.price * purchase.quantity for purchase in purchases
-    )
-    payments_total = sum(payment.total for payment in payments)
-    total_paid = payments_total + db_payment.total
-
-    if total_paid == purchases_total:
-        for purchase in purchases:
-            await cruds_sport_competition.mark_purchase_as_validated(
-                purchase.user_id,
-                purchase.product_variant_id,
-                True,
-                db,
-            )
-    else:
-        purchases.sort(key=lambda x: x.purchased_on)
-        for purchase in purchases:
-            if total_paid <= 0:
-                break
-            if purchase.validated:
-                total_paid -= purchase.product_variant.price * purchase.quantity
-                continue
-            if purchase.product_variant.price * purchase.quantity <= total_paid:
-                await cruds_sport_competition.mark_purchase_as_validated(
-                    purchase.user_id,
-                    purchase.product_variant_id,
-                    True,
-                    db,
-                )
-                total_paid -= purchase.product_variant.price * purchase.quantity
+    await validate_purchases(purchases, [*payments, db_payment], db)
     await cruds_sport_competition.add_payment(db_payment, db)
     return db_payment
 
@@ -4353,4 +4273,395 @@ async def register_to_volunteer_shift(
     await cruds_sport_competition.add_volunteer_registration(
         db_registration,
         db,
+    )
+
+
+# endregion: Volunteers
+# region: Data Exporters
+
+
+@module.router.get(
+    "/competition/data-export/users",
+    response_class=FileResponse,
+    status_code=200,
+)
+async def export_competition_users_data(
+    included_fields: list[ExcelExportParams] = Query(default=[]),
+    exclude_non_validated: bool = False,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Export competition users data for the current edition as a CSV file.
+    """
+    users = await cruds_sport_competition.load_all_competition_users(
+        edition.id,
+        db,
+        exclude_non_validated=exclude_non_validated,
+    )
+    products = await cruds_sport_competition.load_products(
+        edition.id,
+        db,
+    )
+    sports = await cruds_sport_competition.load_all_sports(db)
+    schools = await cruds_sport_competition.load_all_schools(edition.id, db)
+
+    participants = None
+    if ExcelExportParams.participants in included_fields:
+        all_participants = await cruds_sport_competition.load_all_participants(
+            edition.id,
+            db,
+        )
+        participants = {p.user_id: p for p in all_participants}
+    payments = None
+    if ExcelExportParams.payments in included_fields:
+        payments = await cruds_sport_competition.load_all_payments(edition.id, db)
+    purchases = await cruds_sport_competition.load_all_purchases(edition.id, db)
+
+    excel_io = BytesIO()
+
+    construct_users_excel_with_parameters(
+        parameters=included_fields,
+        sports=sports,
+        schools=schools,
+        users=users,
+        products=products,
+        users_participant=participants,
+        users_payments=payments,
+        users_purchases=purchases,
+        export_io=excel_io,
+    )
+
+    res = excel_io.getvalue()
+
+    excel_io.close()
+
+    headers = {
+        "Content-Disposition": f'attachment; filename="competition_users_{edition.name}.xlsx"',
+    }
+    return Response(
+        res,
+        headers=headers,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+@module.router.get(
+    "/competition/data-export/schools/{school_id}/users",
+    response_class=FileResponse,
+    status_code=200,
+)
+async def export_school_competition_users_data(
+    school_id: UUID,
+    included_fields: list[ExcelExportParams] = Query(default=[]),
+    exclude_non_validated: bool = False,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Export competition users data for the current edition as a CSV file.
+    """
+    users = await cruds_sport_competition.load_all_competition_users_by_school(
+        school_id,
+        edition.id,
+        db,
+        exclude_non_validated=exclude_non_validated,
+    )
+    products = await cruds_sport_competition.load_products(
+        edition.id,
+        db,
+    )
+    sports = await cruds_sport_competition.load_all_sports(db)
+
+    participants = None
+    if ExcelExportParams.participants in included_fields:
+        all_participants = await cruds_sport_competition.load_participants_by_school_id(
+            school_id,
+            edition.id,
+            db,
+        )
+        participants = {p.user_id: p for p in all_participants}
+    payments = None
+    if ExcelExportParams.payments in included_fields:
+        payments = await cruds_sport_competition.load_school_payments(
+            school_id,
+            edition.id,
+            db,
+        )
+    purchases = await cruds_sport_competition.load_school_purchases(
+        school_id,
+        edition.id,
+        db,
+    )
+
+    excel_io = BytesIO()
+
+    construct_school_users_excel_with_parameters(
+        parameters=included_fields,
+        sports=sports,
+        users=users,
+        products=products,
+        users_participant=participants,
+        users_payments=payments,
+        users_purchases=purchases,
+        export_io=excel_io,
+    )
+
+    res = excel_io.getvalue()
+
+    excel_io.close()
+
+    headers = {
+        "Content-Disposition": f'attachment; filename="competition_users_{edition.name}.xlsx"',
+    }
+    return Response(
+        res,
+        headers=headers,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+@module.router.get(
+    "/competition/data-export/participants/captains",
+    response_class=FileResponse,
+    status_code=200,
+)
+async def export_participants_captains_data(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Export participants captains data for the current edition as an Excel file.
+    """
+    teams = await cruds_sport_competition.load_all_teams(
+        edition.id,
+        db,
+    )
+    captains = [
+        next(
+            (
+                participant
+                for participant in team.participants
+                if participant.user_id == team.captain_id
+            ),
+            None,
+        )
+        for team in teams
+    ]
+    captains = [captain for captain in captains if captain is not None]
+    sports = await cruds_sport_competition.load_all_sports(db)
+
+    excel_io = BytesIO()
+
+    construct_captains_excel(
+        sports=sports,
+        captains=captains,
+        export_io=excel_io,
+    )
+
+    res = excel_io.getvalue()
+
+    excel_io.close()
+
+    headers = {
+        "Content-Disposition": f'attachment; filename="participants_captains_{edition.name}.xlsx"',
+    }
+    return Response(
+        res,
+        headers=headers,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+@module.router.get(
+    "/competition/data-export/schools/{school_id}/quotas",
+    response_class=FileResponse,
+    status_code=200,
+)
+async def export_school_quotas_data(
+    school_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Export school quotas data for the current edition as an Excel file.
+    """
+    sports = await cruds_sport_competition.load_all_sports(db)
+    products = await cruds_sport_competition.load_products(
+        edition.id,
+        db,
+    )
+    school_sports_quotas = (
+        await cruds_sport_competition.load_all_sport_quotas_by_school_id(
+            school_id,
+            edition.id,
+            db,
+        )
+    )
+    school_general_quotas = await cruds_sport_competition.load_school_general_quota(
+        school_id,
+        edition.id,
+        db,
+    )
+    school_product_quotas = (
+        await cruds_sport_competition.load_all_school_product_quotas(
+            school_id,
+            edition.id,
+            db,
+        )
+    )
+
+    excel_io = BytesIO()
+
+    construct_school_quotas_excel(
+        sports=sports,
+        products=products,
+        school_sports_quotas=school_sports_quotas,
+        school_general_quotas=school_general_quotas,
+        school_product_quotas=school_product_quotas,
+        export_io=excel_io,
+    )
+
+    res = excel_io.getvalue()
+
+    excel_io.close()
+
+    headers = {
+        "Content-Disposition": f'attachment; filename="school_quotas_{school_id}_{edition.name}.xlsx"',
+    }
+    return Response(
+        res,
+        headers=headers,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+@module.router.get(
+    "/competition/data-export/sports/{sport_id}/quotas",
+    response_class=FileResponse,
+    status_code=200,
+)
+async def export_sport_quotas_data(
+    sport_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Export sport quotas data for the current edition as an Excel file.
+    """
+    sport = await cruds_sport_competition.load_sport_by_id(sport_id, db)
+    if not sport:
+        raise HTTPException(
+            status_code=404,
+            detail="The sport does not exist.",
+        )
+
+    sport_schools_quotas = (
+        await cruds_sport_competition.load_all_sport_quotas_by_sport_id(
+            sport_id,
+            edition.id,
+            db,
+        )
+    )
+    schools = await cruds_sport_competition.load_all_schools(edition.id, db)
+
+    excel_io = BytesIO()
+
+    construct_sport_quotas_excel(
+        schools=schools,
+        school_sports_quotas=sport_schools_quotas,
+        export_io=excel_io,
+    )
+
+    res = excel_io.getvalue()
+
+    excel_io.close()
+
+    headers = {
+        "Content-Disposition": f'attachment; filename="sport_quotas_{sport.name}_{edition.name}.xlsx"',
+    }
+    return Response(
+        res,
+        headers=headers,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+@module.router.get(
+    "/competition/data-export/sports/{sport_id}/participants",
+    response_class=FileResponse,
+    status_code=200,
+)
+async def export_sport_participants_data(
+    sport_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Export sport quotas data for the current edition as an Excel file.
+    """
+    sport = await cruds_sport_competition.load_sport_by_id(sport_id, db)
+    if not sport:
+        raise HTTPException(
+            status_code=404,
+            detail="The sport does not exist.",
+        )
+    participants = await cruds_sport_competition.load_participants_by_sport_id(
+        sport_id,
+        edition.id,
+        db,
+    )
+    schools = await cruds_sport_competition.load_all_schools(edition.id, db)
+    users_purchases = await cruds_sport_competition.load_all_purchases(edition.id, db)
+
+    excel_io = BytesIO()
+
+    construct_sport_users_excel(
+        schools=schools,
+        participants=participants,
+        users_purchases=users_purchases,
+        export_io=excel_io,
+    )
+
+    res = excel_io.getvalue()
+
+    excel_io.close()
+
+    headers = {
+        "Content-Disposition": f'attachment; filename="sport_quotas_{sport.name}_{edition.name}.xlsx"',
+    }
+    return Response(
+        res,
+        headers=headers,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )

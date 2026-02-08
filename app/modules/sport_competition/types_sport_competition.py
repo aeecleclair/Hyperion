@@ -40,3 +40,8 @@ class ExcelExportParams(Enum):
     participants = "participants"
     purchases = "purchases"
     payments = "payments"
+
+
+class PaiementMethodType(Enum):
+    manual = "manual"
+    helloasso = "helloasso"

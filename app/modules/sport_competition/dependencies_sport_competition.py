@@ -19,7 +19,9 @@ from app.modules.sport_competition import (
 from app.modules.sport_competition.permissions_sport_competition import (
     SportCompetitionPermissions,
 )
-from app.modules.sport_competition.types_sport_competition import CompetitionGroupType
+from app.modules.sport_competition.types_sport_competition import (
+    CompetitionGroupType,
+)
 from app.types.scopes_type import ScopeType
 from app.utils.tools import has_user_permission
 

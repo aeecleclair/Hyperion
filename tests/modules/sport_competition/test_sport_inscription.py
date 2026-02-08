@@ -2742,8 +2742,6 @@ async def test_create_match_as_random(
         name="New Match",
         team1_id=team1.id,
         team2_id=team2.id,
-        description="A new match for testing",
-        sport_id=sport_with_team.id,
         location_id=location.id,
         date=datetime.now(UTC),
     )
@@ -2774,8 +2772,6 @@ async def test_create_match_as_admin(
         name="New Match",
         team1_id=team1.id,
         team2_id=team2.id,
-        description="A new match for testing",
-        sport_id=sport_with_team.id,
         location_id=location.id,
         date=datetime(2024, 6, 15, 15, 0, 0, tzinfo=UTC),
     )
@@ -3594,14 +3590,70 @@ async def test_register_to_volunteer_shift(
     assert registration_check is not None, registrations_json
 
 
-async def test_data_exporter(
+# endregion
+# region: Data Export
+async def test_data_exporter_users(
     client: TestClient,
 ):
     response = client.get(
-        "/competition/users/data-export?included_fields=purchases&included_fields=payments&included_fields=participants",
+        "/competition/data-export/users?included_fields=purchases&included_fields=payments&included_fields=participants",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 200
+
+
+async def test_data_exporter_captains(
+    client: TestClient,
+):
+    response = client.get(
+        "/competition/data-export/participants/captains",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+
+
+async def test_data_exporter_school_users(
+    client: TestClient,
+):
+    response = client.get(
+        f"/competition/data-export/schools/{school1.id}/users?included_fields=purchases&included_fields=payments&included_fields=participants",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+
+
+async def test_data_exporter_school_quotas(
+    client: TestClient,
+):
+    response = client.get(
+        f"/competition/data-export/schools/{school1.id}/quotas",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+
+
+async def test_data_exporter_sport_quotas(
+    client: TestClient,
+):
+    response = client.get(
+        f"/competition/data-export/sports/{sport_with_team.id}/quotas",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+
+
+async def test_data_exporter_sport_participants(
+    client: TestClient,
+):
+    response = client.get(
+        f"/competition/data-export/sports/{sport_with_team.id}/participants",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+
+
+# endregion
+# region: Competition Users Deletion
 
 
 async def test_delete_competition_user(

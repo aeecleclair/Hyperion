@@ -419,7 +419,7 @@ async def test_payment_tool_init_checkout(
             helloasso_client_id="clientid",
             helloasso_client_secret="secret",
             helloasso_slug="test",
-            redirect_url=redirect_url,
+            redirection_uri=redirect_url,
         ),
     }
     payment_tool = PaymentTool(
@@ -481,7 +481,7 @@ async def test_payment_tool_init_checkout_with_one_failure(
             helloasso_client_id="clientid",
             helloasso_client_secret="secret",
             helloasso_slug="test",
-            redirect_url=redirect_url,
+            redirection_uri=redirect_url,
         ),
     }
 
@@ -556,7 +556,7 @@ async def test_payment_tool_init_checkout_fail(
             helloasso_client_id="clientid",
             helloasso_client_secret="secret",
             helloasso_slug="test",
-            redirect_url=redirect_url,
+            redirection_uri=redirect_url,
         ),
     }
 
