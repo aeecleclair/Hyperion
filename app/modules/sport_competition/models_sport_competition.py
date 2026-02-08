@@ -258,7 +258,7 @@ class Match(Base):
     name: Mapped[str]
     team1_id: Mapped[UUID] = mapped_column(ForeignKey("competition_team.id"))
     team2_id: Mapped[UUID] = mapped_column(ForeignKey("competition_team.id"))
-    date: Mapped[datetime]
+    date: Mapped[datetime | None]
     location_id: Mapped[UUID] = mapped_column(ForeignKey("competition_location.id"))
     score_team1: Mapped[int | None]
     score_team2: Mapped[int | None]

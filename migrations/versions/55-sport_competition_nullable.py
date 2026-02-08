@@ -68,6 +68,11 @@ def upgrade() -> None:
             server_default="helloasso",
         ),
     )
+    op.alter_column(
+        "competition_match",
+        "date",
+        nullable=True,
+    )
 
 
 def downgrade() -> None:
@@ -82,6 +87,12 @@ def downgrade() -> None:
         PaiementMethodType,
         name="paiementmethodtype",
     ).drop(op.get_bind(), checkfirst=True)
+    op.alter_column(
+        "competition_match",
+        "date",
+        nullable=False,
+        server_default=sa.text("NOW()"),
+    )
 
 
 def pre_test_upgrade(
