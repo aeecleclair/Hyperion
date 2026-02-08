@@ -33,7 +33,7 @@ def generate_format(workbook: xlsxwriter.Workbook):
         if right is not None:
             fmt_dict["right"] = right
         if left is not None:
-            fmt_dict["right"] = left
+            fmt_dict["left"] = left
         if bottom is not None:
             fmt_dict["bottom"] = bottom
         return workbook.add_format(fmt_dict)
