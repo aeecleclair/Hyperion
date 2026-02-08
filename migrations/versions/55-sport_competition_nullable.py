@@ -29,13 +29,6 @@ def upgrade() -> None:
     conn = op.get_bind()
     conn.execute(
         sa.text("""
-        UPDATE competition_match
-        SET date = NOW()
-        WHERE date IS NULL
-        """),
-    )
-    conn.execute(
-        sa.text("""
         DELETE FROM competition_school_product_quota
         WHERE quota IS NULL
         """),
@@ -46,7 +39,6 @@ def upgrade() -> None:
         WHERE is_athlete IS FALSE and is_pompom IS FALSE and is_cameraman IS FALSE and is_fanfare IS FALSE
         """),
     )
-    op.alter_column("competition_match", "date", nullable=False)
     op.alter_column(
         "competition_school_product_quota",
         "quota",
@@ -68,11 +60,6 @@ def upgrade() -> None:
             server_default="helloasso",
         ),
     )
-    op.alter_column(
-        "competition_match",
-        "date",
-        nullable=True,
-    )
 
 
 def downgrade() -> None:
@@ -81,18 +68,11 @@ def downgrade() -> None:
         "quota",
         nullable=True,
     )
-    op.alter_column("competition_match", "date", nullable=True)
     op.drop_column("competition_payment", "method")
     sa.Enum(
         PaiementMethodType,
         name="paiementmethodtype",
     ).drop(op.get_bind(), checkfirst=True)
-    op.alter_column(
-        "competition_match",
-        "date",
-        nullable=False,
-        server_default=sa.text("NOW()"),
-    )
 
 
 def pre_test_upgrade(
