@@ -95,6 +95,7 @@ class TicketBase(BaseModel):
     user_id: str
     event_id: UUID
     category_id: UUID
+    session_id: UUID
     total: int
 
 
@@ -108,3 +109,4 @@ class TicketSimple(TicketBase):
 class TicketComplete(TicketSimple):
     event: EventComplete
     category: CategoryComplete
+    session: SessionComplete
