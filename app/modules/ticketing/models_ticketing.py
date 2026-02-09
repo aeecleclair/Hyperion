@@ -92,7 +92,12 @@ class Ticket(Base):
         init=False,
         lazy="selectin",
     )
+    session_id: Mapped[UUID | None] = mapped_column(ForeignKey("ticketing_session.id"))
+    session: Mapped[Session | None] = relationship(
+        init=False,
+        lazy="selectin",
+    )
     total: Mapped[int]
     created_at: Mapped[datetime]
-    status: Mapped[str]
+    status: Mapped[str] # TODO: Enum
     nb_scan: Mapped[int]
