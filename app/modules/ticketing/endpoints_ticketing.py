@@ -1,11 +1,12 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.users import models_users
-from app.dependencies import get_db, is_user
-from app.modules.ticketing import cruds_ticketing, schemas_ticketing
+from app.dependencies import get_db, get_redis_client, is_user
+from app.modules.ticketing import cache_ticketing, cruds_ticketing, schemas_ticketing
 from app.modules.ticketing.factory_ticketing import TicketingFactory
 from app.types.module import Module
 
@@ -22,12 +23,12 @@ module = Module(
 @module.router.get(
     "/ticketing/events/",
     summary="Get all events",
-    response_model=list[schemas_ticketing.EventComplete],
+    response_model=list[schemas_ticketing.EventSimple],
     status_code=200,
 )
 async def get_events(
     db: AsyncSession = Depends(get_db),
-) -> list[schemas_ticketing.EventComplete]:
+) -> list[schemas_ticketing.EventSimple]:
     """Get all events."""
     return await cruds_ticketing.get_events(db=db)
 
@@ -357,14 +358,72 @@ async def create_ticket(
     ticket: schemas_ticketing.TicketBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    redis_client: Redis | None = Depends(get_redis_client),
 ) -> schemas_ticketing.TicketComplete:
     """Create a new ticket."""
     ticket_simple = schemas_ticketing.TicketSimple(
         **ticket.model_dump(),
         id=UUID(),
         user_id=user.id,
+        status="pending",
+        nb_scan=0,
     )
+
+    # Verify that the event, category and session exist before creating the ticket to prevent creating tickets for non existing entities
+    event = await cruds_ticketing.get_event_by_id(event_id=ticket_simple.event_id, db=db)
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+    category = await cruds_ticketing.get_category_by_id(category_id=ticket_simple.category_id, db=db)
+    if category is None:
+        raise HTTPException(status_code=404, detail="Category not found")
+    session = await cruds_ticketing.get_session_by_id(session_id=ticket_simple.session_id, db=db)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # TODO: Verify that the quota is not already full before creating the ticket to prevent overbooking in case of concurrent ticket purchases across multiple workers
+    # First with redis cache and then with database queries as fallback if redis is not available
+    if isinstance(redis_client, Redis):
+        pass
+    else:
+        if event.quota is not None and event.used_quota >= event.quota:
+            raise HTTPException(status_code=400, detail="Event quota exceeded")
+        if category.quota is not None and category.used_quota >= category.quota:
+            raise HTTPException(status_code=400, detail="Category quota exceeded")
+        if session.quota is not None and session.used_quota >= session.quota:
+            raise HTTPException(status_code=400, detail="Session quota exceeded")
+
     await cruds_ticketing.create_ticket(ticket=ticket_simple, db=db)
+
+    # TODO: Add redis cache update for event quota
+    if isinstance(redis_client, Redis):
+        cache_ticketing.increment_quota_event(
+            redis=redis_client,
+            event_id=ticket_simple.event_id,
+            amount=1,
+        )
+        cache_ticketing.increment_quota_category(
+            redis=redis_client,
+            category_id=ticket_simple.category_id,
+            amount=1,
+        )
+        cache_ticketing.increment_quota_session(
+            redis=redis_client,
+            session_id=ticket_simple.session_id,
+            amount=1,
+        )
+
+    await cruds_ticketing.increment_used_quota_event(
+        event_id=ticket_simple.event_id,
+        db=db,
+    )
+    await cruds_ticketing.increment_used_quota_category(
+        category_id=ticket_simple.category_id,
+        db=db,
+    )
+    await cruds_ticketing.increment_used_quota_session(
+        session_id=ticket_simple.session_id,
+        db=db,
+    )
     ticket_complete = await cruds_ticketing.get_ticket_by_id(
         ticket_id=ticket_simple.id,
         db=db,
@@ -373,6 +432,9 @@ async def create_ticket(
     if ticket_complete is None:
         await db.rollback()
         raise HTTPException(status_code=500, detail="Ticket creation failed")
+
+    # TODO: Init MyECLPay Transfer
+
     return ticket_complete
 
 

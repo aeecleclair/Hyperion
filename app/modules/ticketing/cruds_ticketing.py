@@ -9,12 +9,12 @@ from app.modules.ticketing import models_ticketing, schemas_ticketing
 
 async def get_events(
     db: AsyncSession,
-) -> list[schemas_ticketing.EventComplete]:
+) -> list[schemas_ticketing.EventSimple]:
     """Get all events."""
 
     events = await db.execute(select(models_ticketing.Event))
     return [
-        schemas_ticketing.EventComplete(
+        schemas_ticketing.EventSimple(
             id=event.id,
             store_id=event.store_id,
             creator_id=event.creator_id,
@@ -32,8 +32,6 @@ async def get_events(
                 name=event.store.name,
                 creation=event.store.creation,
             ),
-            sessions=event.sessions,
-            categories=event.categories,
         )
         for event in events.scalars().all()
     ]
@@ -155,6 +153,22 @@ async def update_event(
     await db.flush()
 
 
+async def increment_used_quota_event(
+    db: AsyncSession,
+    event_id: UUID,
+) -> None:
+    """Increment the used quota of an event, its sessions and its category if applicable."""
+    await db.execute(
+        update(models_ticketing.Event)
+        # Only increment if the event has a quota and the quota is not already full
+        # This prevents overbooking in case of concurrent ticket purchases across multiple workers
+        .where(models_ticketing.Event.id == event_id and models_ticketing.Event.used_quota < models_ticketing.Event.quota)
+        .values(used_quota=models_ticketing.Event.used_quota + 1),
+    )
+
+    await db.flush()
+
+
 async def delete_event(
     db: AsyncSession,
     event_id: UUID,
@@ -242,6 +256,22 @@ async def delete_session(
     await db.flush()
 
 
+async def increment_used_quota_session(
+    db: AsyncSession,
+    session_id: UUID,
+) -> None:
+    """Increment the used quota of a session."""
+    await db.execute(
+        update(models_ticketing.Session)
+        # Only increment if the session has a quota and the quota is not already full
+        # This prevents overbooking in case of concurrent ticket purchases across multiple workers
+        .where(models_ticketing.Session.id == session_id and models_ticketing.Session.used_quota < models_ticketing.Session.quota)
+        .values(used_quota=models_ticketing.Session.used_quota + 1),
+    )
+
+    await db.flush()
+
+
 async def get_category_by_id(
     category_id: UUID,
     db: AsyncSession,
@@ -326,6 +356,22 @@ async def delete_category(
     await db.flush()
 
 
+async def increment_used_quota_category(
+    db: AsyncSession,
+    category_id: UUID,
+) -> None:
+    """Increment the used quota of a category."""
+    await db.execute(
+        update(models_ticketing.Category)
+        # Only increment if the category has a quota and the quota is not already full
+        # This prevents overbooking in case of concurrent ticket purchases across multiple workers
+        .where(models_ticketing.Category.id == category_id and models_ticketing.Category.used_quota < models_ticketing.Category.quota)
+        .values(used_quota=models_ticketing.Category.used_quota + 1),
+    )
+
+    await db.flush()
+
+
 async def get_tickets(
     db: AsyncSession,
 ) -> list[schemas_ticketing.TicketComplete]:
@@ -338,10 +384,12 @@ async def get_tickets(
             user_id=ticket.user_id,
             event_id=ticket.event_id,
             category_id=ticket.category_id,
+            session_id=ticket.session_id,
             total=ticket.total,
             created_at=ticket.created_at,
             event=ticket.event,
             category=ticket.category,
+            session=ticket.session,
             status=ticket.status,
             nb_scan=ticket.nb_scan,
         )
@@ -366,10 +414,12 @@ async def get_tickets_by_user_id(
             user_id=ticket.user_id,
             event_id=ticket.event_id,
             category_id=ticket.category_id,
+            session_id=ticket.session_id,
             total=ticket.total,
             created_at=ticket.created_at,
             event=ticket.event,
             category=ticket.category,
+            session=ticket.session,
             status=ticket.status,
             nb_scan=ticket.nb_scan,
         )
@@ -401,10 +451,12 @@ async def get_ticket_by_id(
             user_id=ticket.user_id,
             event_id=ticket.event_id,
             category_id=ticket.category_id,
+            session_id=ticket.session_id,
             total=ticket.total,
             created_at=ticket.created_at,
             event=ticket.event,
             category=ticket.category,
+            session=ticket.session,
             status=ticket.status,
             nb_scan=ticket.nb_scan,
         )
