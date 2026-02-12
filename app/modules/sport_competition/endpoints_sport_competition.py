@@ -3494,9 +3494,6 @@ async def get_purchases_by_school_id(
         edition.id,
         db,
     )
-    hyperion_error_logger.error(users)
-    hyperion_error_logger.error(edition)
-    hyperion_error_logger.error(school_id)
     purchases_by_user: dict[str, list[schemas_sport_competition.PurchaseComplete]] = {}
     for db_user in users:
         purchases_by_user[
@@ -3644,7 +3641,6 @@ async def create_purchase(
                 quantity=purchase.quantity,
             ),
         )
-        await db.flush()
         return db_purchase
 
     await cruds_sport_competition.add_purchase(
@@ -3652,6 +3648,137 @@ async def create_purchase(
         db,
     )
     return db_purchase
+
+
+@module.router.post(
+    "/competition/purchases/users/{user_id}",
+    response_model=schemas_sport_competition.Purchase,
+    status_code=201,
+)
+async def create_user_purchase(
+    user_id: str,
+    purchase: schemas_sport_competition.PurchaseBase,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Create a user's purchase.
+
+    **User must be competition admin to use this endpoint**
+    """
+    competition_user = await cruds_sport_competition.load_competition_user_by_id(
+        user_id,
+        edition.id,
+        db,
+    )
+    if not competition_user:
+        raise HTTPException(
+            status_code=403,
+            detail="You must be registered for the competition to make a purchase",
+        )
+    school_extension = await cruds_sport_competition.load_school_by_id(
+        competition_user.user.school_id,
+        db,
+    )
+    if not school_extension:
+        raise HTTPException(
+            status_code=403,
+            detail="Your school is not registered for the competition",
+        )
+    product_variant = await cruds_sport_competition.load_product_variant_by_id(
+        purchase.product_variant_id,
+        db,
+    )
+    if not product_variant:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid product_variant_id",
+        )
+    validate_product_variant_purchase(
+        purchase,
+        product_variant,
+        competition_user,
+        school_extension,
+        edition,
+    )
+    existing_db_purchase = await cruds_sport_competition.load_purchase_by_ids(
+        user_id,
+        purchase.product_variant_id,
+        db,
+    )
+    if existing_db_purchase:
+        raise HTTPException(
+            status_code=403,
+            detail="This user already has a purchase for this product variant",
+        )
+
+    db_purchase = schemas_sport_competition.Purchase(
+        user_id=user_id,
+        product_variant_id=purchase.product_variant_id,
+        edition_id=edition.id,
+        validated=False,
+        quantity=purchase.quantity,
+        purchased_on=datetime.now(UTC),
+    )
+    if competition_user.validated:
+        await cruds_sport_competition.invalidate_competition_user(
+            competition_user.user_id,
+            edition.id,
+            db,
+        )
+
+    await cruds_sport_competition.add_purchase(
+        db_purchase,
+        db,
+    )
+    return db_purchase
+
+
+@module.router.patch(
+    "/competition/purchases/users/{user_id}/variants/{variant_id}",
+    status_code=204,
+)
+async def update_user_purchase(
+    user_id: str,
+    variant_id: UUID,
+    purchase: schemas_sport_competition.PurchaseEdit,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Edit a user's purchase.
+
+    **User must be competition admin to use this endpoint**
+    """
+    db_purchase = await cruds_sport_competition.load_purchase_by_ids(
+        user_id,
+        variant_id,
+        db,
+    )
+    if not db_purchase or db_purchase.edition_id != edition.id:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid purchase_id",
+        )
+    if db_purchase.validated and purchase.validated is None:
+        purchase.validated = False
+
+    await cruds_sport_competition.update_purchase(
+        db=db,
+        user_id=user_id,
+        product_variant_id=variant_id,
+        purchase=purchase,
+    )
 
 
 @module.router.delete(
@@ -3708,6 +3835,44 @@ async def delete_purchase(
 
     await cruds_sport_competition.delete_purchase(
         user.id,
+        product_variant_id,
+        db,
+    )
+
+
+@module.router.delete(
+    "/competition/users/{user_id}/purchases/{product_variant_id}",
+    status_code=204,
+)
+async def delete_user_purchase(
+    user_id: str,
+    product_variant_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Delete a user's purchase.
+
+    **User must be competition admin to use this endpoint**
+    """
+    db_purchase = await cruds_sport_competition.load_purchase_by_ids(
+        user_id,
+        product_variant_id,
+        db,
+    )
+    if not db_purchase or db_purchase.edition_id != edition.id:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid purchase_id",
+        )
+
+    await cruds_sport_competition.delete_purchase(
+        user_id,
         product_variant_id,
         db,
     )
