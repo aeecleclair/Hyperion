@@ -251,6 +251,7 @@ async def setup():
         sport_category=SportCategory.masculine,
         edition_id=active_edition.id,
         is_athlete=True,
+        is_cameraman=True,
         validated=False,
         created_at=datetime.now(UTC),
     )
@@ -1147,6 +1148,79 @@ async def test_create_purchase(
         )
 
 
+async def test_create_purchase_as_admin(
+    client: TestClient,
+):
+    new_purchase = {
+        "product_variant_id": str(variant_for_cameraman.id),
+        "quantity": 1,
+    }
+    response = client.post(
+        f"/competition/purchases/users/{admin_user.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json=new_purchase,
+    )
+    assert response.status_code == 201, response.text
+    purchases = client.get(
+        f"/competition/purchases/users/{admin_user.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    purchases_data = purchases.json()
+    assert any(
+        purchase["product_variant_id"] == str(variant_for_cameraman.id)
+        for purchase in purchases_data
+    )
+    response = client.delete(
+        f"/competition/purchases/{variant_for_cameraman.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 204
+
+
+async def test_update_purchase_quantity(
+    client: TestClient,
+):
+    purchase_to_update = models_sport_competition.CompetitionPurchase(
+        product_variant_id=variant_for_cameraman.id,
+        user_id=admin_user.id,
+        edition_id=active_edition.id,
+        quantity=1,
+        validated=False,
+        purchased_on=datetime.now(UTC),
+    )
+    await add_object_to_db(purchase_to_update)
+    updated_purchase = {
+        "quantity": 3,
+    }
+    response = client.patch(
+        f"/competition/purchases/users/{admin_user.id}/variants/{purchase_to_update.product_variant_id}",
+        json=updated_purchase,
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 204
+    purchases = client.get(
+        "/competition/purchases/me",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    purchases_data = purchases.json()
+    purchase = next(
+        (
+            purchase
+            for purchase in purchases_data
+            if purchase["product_variant_id"]
+            == str(purchase_to_update.product_variant_id)
+        ),
+        None,
+    )
+    assert purchase is not None
+    assert purchase["quantity"] == updated_purchase["quantity"]
+    response = client.delete(
+        f"/competition/purchases/{purchase_to_update.product_variant_id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 204
+
+
 async def test_delete_purchase(
     client: TestClient,
 ):
@@ -1161,6 +1235,34 @@ async def test_delete_purchase(
     await add_object_to_db(purchase_to_delete)
     response = client.delete(
         f"/competition/purchases/{purchase_to_delete.product_variant_id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 204
+    purchases = client.get(
+        "/competition/purchases/me",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    purchases_data = purchases.json()
+    assert not any(
+        purchase["product_variant_id"] == str(purchase_to_delete.product_variant_id)
+        for purchase in purchases_data
+    )
+
+
+async def test_delete_purchase_as_admin(
+    client: TestClient,
+):
+    purchase_to_delete = models_sport_competition.CompetitionPurchase(
+        product_variant_id=variant_for_pompom.id,
+        user_id=admin_user.id,
+        edition_id=active_edition.id,
+        quantity=1,
+        validated=False,
+        purchased_on=datetime.now(UTC),
+    )
+    await add_object_to_db(purchase_to_delete)
+    response = client.delete(
+        f"/competition/users/{admin_user.id}/purchases/{purchase_to_delete.product_variant_id}",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 204

@@ -409,6 +409,7 @@ class PurchaseComplete(Purchase):
 
 class PurchaseEdit(BaseModel):
     quantity: int | None = None
+    validated: bool | None = None
 
 
 class PaymentBase(BaseModel):
