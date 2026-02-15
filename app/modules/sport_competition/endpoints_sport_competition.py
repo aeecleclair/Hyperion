@@ -3494,9 +3494,6 @@ async def get_purchases_by_school_id(
         edition.id,
         db,
     )
-    hyperion_error_logger.error(users)
-    hyperion_error_logger.error(edition)
-    hyperion_error_logger.error(school_id)
     purchases_by_user: dict[str, list[schemas_sport_competition.PurchaseComplete]] = {}
     for db_user in users:
         purchases_by_user[
