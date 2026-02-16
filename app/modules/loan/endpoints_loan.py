@@ -432,8 +432,12 @@ async def delete_loaner_item(
             status_code=400,
             detail=f"Item {item_id} does not belong to {loaner_id} loaner",
         )
+    loaner = await cruds_loan.get_loaner_by_id(
+        loaner_id=loaner_id,
+        db=db,
+    )
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_any_group(user, [item.loaner.group_manager_id]):
+    if not is_user_member_of_any_group(user, [loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loaner_id} loaner",
