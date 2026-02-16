@@ -16,12 +16,12 @@ class Loaner(Base):
 
     items: Mapped[list["Item"]] = relationship(
         "Item",
-        lazy="joined",
+        lazy="select",
         default_factory=list,
     )
     loans: Mapped[list["Loan"]] = relationship(
         "Loan",
-        lazy="joined",
+        lazy="select",
         back_populates="loaner",
         default_factory=list,
     )
