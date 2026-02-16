@@ -148,10 +148,7 @@ async def get_loans_by_borrower(
         query = query.filter(models_loan.Loan.returned.is_(returned))
 
     result = await db.execute(query)
-    # With the `unique()` call, the function raise an error inviting to add `unique()` to `result`.
-    # `unique()` make sure a row can not be present multiple times in the result
-    # This may be caused structure of the database with a relationship loop: loaner->loans->items->loaner
-    return result.unique().scalars().all()
+    return result.scalars().all()
 
 
 async def create_loan(

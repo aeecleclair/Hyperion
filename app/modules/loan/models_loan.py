@@ -74,7 +74,7 @@ class Loan(Base):
         "Item",
         viewonly=True,
         secondary="loan_content",
-        lazy="joined",
+        lazy="selectin",
         init=False,
     )
 
@@ -87,7 +87,7 @@ class Loan(Base):
     )
     loaner: Mapped[Loaner] = relationship(
         "Loaner",
-        lazy="joined",
+        lazy="selectin",
         back_populates="loans",
         init=False,
     )
