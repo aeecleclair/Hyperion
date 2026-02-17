@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.types.sqlalchemy import Base, PrimaryKey
 
 if TYPE_CHECKING:
-    from app.core.myeclpay.models_myeclpay import Store
+    from app.core.mypayment.models_mypayment import Store
     from app.modules import ticketing
 
 
@@ -16,7 +16,7 @@ class Event(Base):
     __tablename__ = "ticketing_event"
 
     id: Mapped[PrimaryKey]
-    store_id: Mapped[UUID] = mapped_column(ForeignKey("myeclpay_store.id"))
+    store_id: Mapped[UUID] = mapped_column(ForeignKey("mypayment_store.id"))
     store: Mapped["Store"] = relationship(
         init=False,
         lazy="selectin",
