@@ -4,11 +4,18 @@ from fastapi import APIRouter, Depends, HTTPException
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users
-from app.dependencies import get_db, get_redis_client, is_user
+from app.dependencies import get_db, get_redis_client, is_user, is_user_allowed_to
 from app.modules.ticketing import cache_ticketing, cruds_ticketing, schemas_ticketing
 from app.modules.ticketing.factory_ticketing import TicketingFactory
 from app.types.module import Module
+
+
+class TicketingPermissions(ModulePermissions):
+    acess_ticketing = "acess_ticketing"
+    manage_events = "manage_events"
+
 
 router = APIRouter(tags=["Ticketing"])
 
@@ -56,7 +63,9 @@ async def get_event_by_id(
 async def create_event(
     event: schemas_ticketing.EventBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([TicketingPermissions.manage_events]),
+    ),
 ) -> schemas_ticketing.EventComplete:
     """Create a new event."""
     stored = await cruds_ticketing.get_event_by_name(name=event.name, db=db)
@@ -85,6 +94,9 @@ async def update_event(
     event_id: UUID,
     event_update: schemas_ticketing.EventUpdate,
     db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([TicketingPermissions.manage_events]),
+    ),
 ) -> None:
     """Update an existing event."""
     stored = await cruds_ticketing.get_event_by_id(event_id=event_id, db=db)
@@ -106,6 +118,9 @@ async def update_event(
 async def delete_event(
     event_id: UUID,
     db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([TicketingPermissions.manage_events]),
+    ),
 ) -> None:
     """Delete an existing event."""
     stored = await cruds_ticketing.get_event_by_id(event_id=event_id, db=db)
@@ -145,6 +160,9 @@ async def get_session_by_id(
 async def create_session(
     session: schemas_ticketing.SessionBase,
     db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([TicketingPermissions.manage_events]),
+    ),
 ) -> schemas_ticketing.SessionComplete:
     """Create a new session."""
     session_simple = schemas_ticketing.SessionSimple(
@@ -174,6 +192,9 @@ async def update_session(
     session_id: UUID,
     session_update: schemas_ticketing.SessionUpdate,
     db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([TicketingPermissions.manage_events]),
+    ),
 ) -> None:
     """Update an existing session."""
     stored = await cruds_ticketing.get_session_by_id(session_id=session_id, db=db)
@@ -195,6 +216,9 @@ async def update_session(
 async def delete_session(
     session_id: UUID,
     db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([TicketingPermissions.manage_events]),
+    ),
 ) -> None:
     """Delete an existing session."""
     stored = await cruds_ticketing.get_session_by_id(session_id=session_id, db=db)
@@ -234,6 +258,9 @@ async def get_category_by_id(
 async def create_category(
     category: schemas_ticketing.CategoryBase,
     db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([TicketingPermissions.manage_events]),
+    ),
 ) -> schemas_ticketing.CategoryComplete:
     """Create a new category."""
     category_complete = schemas_ticketing.CategoryComplete(
@@ -256,6 +283,9 @@ async def update_category(
     category_id: UUID,
     category_update: schemas_ticketing.CategoryUpdate,
     db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([TicketingPermissions.manage_events]),
+    ),
 ) -> None:
     """Update an existing category."""
     stored = await cruds_ticketing.get_category_by_id(category_id=category_id, db=db)
@@ -277,6 +307,9 @@ async def update_category(
 async def delete_category(
     category_id: UUID,
     db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([TicketingPermissions.manage_events]),
+    ),
 ) -> None:
     """Delete an existing category."""
     stored = await cruds_ticketing.get_category_by_id(category_id=category_id, db=db)
@@ -370,13 +403,22 @@ async def create_ticket(
     )
 
     # Verify that the event, category and session exist before creating the ticket to prevent creating tickets for non existing entities
-    event = await cruds_ticketing.get_event_by_id(event_id=ticket_simple.event_id, db=db)
+    event = await cruds_ticketing.get_event_by_id(
+        event_id=ticket_simple.event_id,
+        db=db,
+    )
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found")
-    category = await cruds_ticketing.get_category_by_id(category_id=ticket_simple.category_id, db=db)
+    category = await cruds_ticketing.get_category_by_id(
+        category_id=ticket_simple.category_id,
+        db=db,
+    )
     if category is None:
         raise HTTPException(status_code=404, detail="Category not found")
-    session = await cruds_ticketing.get_session_by_id(session_id=ticket_simple.session_id, db=db)
+    session = await cruds_ticketing.get_session_by_id(
+        session_id=ticket_simple.session_id,
+        db=db,
+    )
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -459,7 +501,8 @@ async def update_ticket(
         db=db,
     )
 
-
+# Could be deleted if the user is the one who has created the ticket
+# or if the user has the right permissions to manage events
 @module.router.delete(
     "/ticketing/tickets/{ticket_id}",
     summary="Delete an existing ticket",
@@ -474,4 +517,7 @@ async def delete_ticket(
     stored = await cruds_ticketing.get_ticket_by_id(ticket_id=ticket_id, db=db)
     if stored is None:
         raise HTTPException(status_code=404, detail="Ticket not found")
+    # TODO: Add permission check to allow only the user who has created the ticket or users with manage_events permission to delete the ticket
+    # Should it be a pending ticket?
+    # Should we keep the ticket but mark it as cancelled to keep track of the quota and for historical data?
     await cruds_ticketing.delete_ticket(ticket_id=ticket_id, db=db)
