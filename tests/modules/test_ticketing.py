@@ -37,7 +37,6 @@ student_user: models_users.CoreUser
 
 event1: models_ticketing.Event
 event2: models_ticketing.Event
-event3: models_ticketing.Event
 event_fake_id = UUID("5e9ec7bf-0ab4-421a-bbe7-7ec064fcec8d")
 
 student_token: str
@@ -99,22 +98,22 @@ async def init_objects():
     await add_object_to_db(store)
 
     # Create events
-    global event1, event2, event3
+    global event1, event2
     event1 = models_ticketing.Event(
         id=uuid4(),
         name="Event 1",
         open_date=datetime(2024, 1, 1, tzinfo=UTC),
         # Tests will not pass in 2200, will MyECLPay be still around ? :D
         close_date=datetime(2200, 12, 31, tzinfo=UTC),
-        quota=100,
-        user_quota=5,
-        used_quota=0,
+        quota=4,
+        user_quota=2,
+        used_quota=1,
         disabled=False,
         creator_id=str(admin_user.id),
         store_id=store.id,
     )
     await add_object_to_db(event1)
-    # Event will be used to test quota, so we set a low quota
+    # Event will be used to test disabled state etc.
     event2 = models_ticketing.Event(
         id=uuid4(),
         name="Event 2",
@@ -128,24 +127,56 @@ async def init_objects():
         store_id=store.id,
     )
     await add_object_to_db(event2)
-    # Event 3 will be used to test disabled state
-    event3 = models_ticketing.Event(
+
+    # Create sessions and categories for event1
+    session1 = models_ticketing.Session(
         id=uuid4(),
-        name="Event 3",
-        open_date=datetime(2024, 1, 1, tzinfo=UTC),
-        close_date=datetime(2200, 12, 31, tzinfo=UTC),
-        quota=100,
-        user_quota=5,
+        event_id=event1.id,
+        name="Session 1",
+        quota=2,
+        user_quota=1,
+        used_quota=1,
+        disabled=False,
+    )
+    await add_object_to_db(session1)
+    session2 = models_ticketing.Session(
+        id=uuid4(),
+        event_id=event1.id,
+        name="Session 2",
+        quota=2,
+        user_quota=1,
+        used_quota=0,
+        disabled=False,
+    )
+    await add_object_to_db(session2)
+    session3 = models_ticketing.Session(
+        id=uuid4(),
+        event_id=event1.id,
+        name="Session 3",
+        quota=2,
+        user_quota=1,
         used_quota=0,
         disabled=True,
-        creator_id=str(admin_user.id),
-        store_id=store.id,
     )
-    await add_object_to_db(event3)
+    await add_object_to_db(session3)
+
+    category1 = models_ticketing.Category(
+        id=uuid4(),
+        event_id=event1.id,
+        name="Category 1",
+        quota=2,
+        user_quota=1,
+        used_quota=1,
+        disabled=False,
+        required_mebership=None,
+        linked_sessions=[session1, session2],
+        price=100,
+    )
+    await add_object_to_db(category1)
 
     global student_user, student_token
     student_user = await create_user_with_groups(
-        groups=[], account_type=AccountType.student
+        groups=[], account_type=AccountType.student,
     )
     student_token = create_api_access_token(student_user)
 
@@ -155,7 +186,6 @@ async def init_objects():
     [
         (event1.id, 200),
         (event2.id, 200),
-        (event3.id, 200),
         (event_fake_id, 404),
     ],
 )
