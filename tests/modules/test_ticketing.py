@@ -8,8 +8,8 @@ from fastapi.testclient import TestClient
 
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.memberships import models_memberships
-from app.core.myeclpay import models_myeclpay
-from app.core.myeclpay.types_myeclpay import WalletType
+from app.core.mypayment import models_mypayment
+from app.core.mypayment.types_mypayment import WalletType
 from app.core.users import models_users
 from app.modules.ticketing import models_ticketing
 
@@ -27,10 +27,10 @@ structure_manager_user_token: str
 
 association_membership: models_memberships.CoreAssociationMembership
 association_membership_user: models_memberships.CoreAssociationUserMembership
-structure: models_myeclpay.Structure
+structure: models_mypayment.Structure
 
-store_wallet: models_myeclpay.Wallet
-store: models_myeclpay.Store
+store_wallet: models_mypayment.Wallet
+store: models_mypayment.Store
 
 
 student_user: models_users.CoreUser
@@ -62,7 +62,7 @@ async def init_objects():
     structure_manager_user = await create_user_with_groups(groups=[])
     structure_manager_user_token = create_api_access_token(structure_manager_user)
 
-    structure = models_myeclpay.Structure(
+    structure = models_mypayment.Structure(
         id=uuid4(),
         name="Test Structure",
         creation=datetime.now(UTC),
@@ -81,14 +81,14 @@ async def init_objects():
 
     # Create store
     global store_wallet, store
-    store_wallet = models_myeclpay.Wallet(
+    store_wallet = models_mypayment.Wallet(
         id=uuid4(),
         type=WalletType.STORE,
         balance=0,
     )
     await add_object_to_db(store_wallet)
 
-    store = models_myeclpay.Store(
+    store = models_mypayment.Store(
         id=uuid4(),
         name="Test Store",
         structure_id=structure.id,
@@ -176,7 +176,8 @@ async def init_objects():
 
     global student_user, student_token
     student_user = await create_user_with_groups(
-        groups=[], account_type=AccountType.student,
+        groups=[],
+        account_type=AccountType.student,
     )
     student_token = create_api_access_token(student_user)
 

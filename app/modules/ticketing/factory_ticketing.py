@@ -5,7 +5,7 @@ from uuid import uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.memberships.factory_memberships import CoreMembershipsFactory
-from app.core.myeclpay.factory_myeclpay import MyECLPayFactory
+from app.core.mypayment.factory_mypayment import MyPaymentFactory
 from app.core.users.factory_users import CoreUsersFactory
 from app.core.utils.config import Settings
 from app.modules.ticketing import cruds_ticketing, schemas_ticketing
@@ -15,7 +15,7 @@ from app.types.factory import Factory
 class TicketingFactory(Factory):
     depends_on = [
         CoreUsersFactory,
-        MyECLPayFactory,
+        MyPaymentFactory,
         CoreMembershipsFactory,
     ]
 
@@ -40,7 +40,7 @@ class TicketingFactory(Factory):
             db,
             schemas_ticketing.EventSimple(
                 id=cls.event_id,
-                store_id=MyECLPayFactory.other_stores_id[0][0],
+                store_id=MyPaymentFactory.other_stores_id[0][0],
                 creator_id=CoreUsersFactory.other_users_id[0],
                 name="Commuz 2025",
                 open_date=datetime.now(UTC),
