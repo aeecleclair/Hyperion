@@ -12,6 +12,13 @@ if TYPE_CHECKING:
     from app.modules import ticketing
 
 
+class CategorySessionAssociation(Base):
+    __tablename__ = "ticketing_category_session"
+
+    category_id: Mapped[UUID] = mapped_column(ForeignKey("ticketing_category.id"), primary_key=True)
+    session_id: Mapped[UUID] = mapped_column(ForeignKey("ticketing_session.id"), primary_key=True)
+
+
 class Event(Base):
     __tablename__ = "ticketing_event"
 
@@ -55,6 +62,14 @@ class Session(Base):
     user_quota: Mapped[int | None]
     disabled: Mapped[bool]
 
+    categories: Mapped[list["Category"]] = relationship(
+        secondary=CategorySessionAssociation.__table__,
+        back_populates="sessions",
+        init=False,
+        lazy="selectin",
+        default_factory=list,
+    )
+
 
 class Category(Base):
     __tablename__ = "ticketing_category"
@@ -66,7 +81,13 @@ class Category(Base):
         lazy="selectin",
     )
     name: Mapped[str]
-    linked_sessions: Mapped[str | None]
+    sessions: Mapped[list["Session"]] = relationship(
+        secondary=CategorySessionAssociation.__table__,
+        back_populates="categories",
+        init=False,
+        lazy="selectin",
+        default_factory=list,
+    )
     required_mebership: Mapped[UUID | None] = mapped_column(
         ForeignKey("core_association_membership.id"),
     )
@@ -99,5 +120,5 @@ class Ticket(Base):
     )
     total: Mapped[int]
     created_at: Mapped[datetime]
-    status: Mapped[str] # TODO: Enum
+    status: Mapped[str]  # TODO: Enum
     nb_scan: Mapped[int]
