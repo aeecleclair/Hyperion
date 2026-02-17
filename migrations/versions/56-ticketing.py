@@ -16,7 +16,7 @@ from app.types.sqlalchemy import TZDateTime
 
 # revision identifiers, used by Alembic.
 revision: str = "b2e04c519621"
-down_revision: str | None = "91fadc90f892"
+down_revision: str | None = "562adbd796ae"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -53,7 +53,8 @@ def upgrade() -> None:
         sa.Column("disabled", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(["event_id"], ["ticketing_event.id"]),
         sa.ForeignKeyConstraint(
-            ["required_mebership"], ["core_association_membership.id"],
+            ["required_mebership"],
+            ["core_association_membership.id"],
         ),
         sa.PrimaryKeyConstraint("id"),
     )
