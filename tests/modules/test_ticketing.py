@@ -42,7 +42,7 @@ student_user: models_users.CoreUser
 
 event1: models_ticketing.Event
 event2: models_ticketing.Event
-event_fake_id = UUID("5e9ec7bf-0ab4-421a-bbe7-7ec064fcec8d")
+event_fake: models_ticketing.Event
 
 student_token: str
 admin_token: str
@@ -109,7 +109,7 @@ async def init_objects():
     await add_object_to_db(store)
 
     # Create events
-    global event1, event2
+    global event1, event2, event_fake
     event1 = models_ticketing.Event(
         id=uuid4(),
         name="Event 1",
@@ -138,6 +138,20 @@ async def init_objects():
         store_id=store.id,
     )
     await add_object_to_db(event2)
+
+    event_fake = models_ticketing.Event(
+        id=uuid4(),
+        name="Event Fake",
+        open_date=datetime(2024, 1, 1, tzinfo=UTC),
+        close_date=datetime(2200, 12, 31, tzinfo=UTC),
+        quota=3,
+        user_quota=2,
+        used_quota=1,
+        disabled=False,
+        creator_id=str(admin_user.id),
+        store_id=store.id,
+    )
+    # Do not add event_fake to the database
 
     # Create sessions and categories for event1
     session1 = models_ticketing.Session(
@@ -196,14 +210,14 @@ async def init_objects():
 @pytest.mark.parametrize(
     ("event_id", "expected_code"),
     [
-        (event1.id, 200),
-        (event2.id, 200),
-        (event_fake_id, 404),
+        (event1, 200),
+        (event2, 200),
+        (event_fake, 404),
     ],
 )
-def test_get_offer(event_id: uuid.UUID, expected_code: int, client: TestClient):
+def test_get_offer(event: models_ticketing.Event, expected_code: int, client: TestClient):
     response = client.get(
-        f"/pmf/offers/{event_id}",
+        f"/pmf/offers/{event.id}",
         headers={"Authorization": f"Bearer {student_token}"},
     )
     assert response.status_code == expected_code
