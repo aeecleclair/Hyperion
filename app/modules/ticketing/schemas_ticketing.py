@@ -64,7 +64,6 @@ class SessionUpdate(BaseModel):
 class CategoryBase(BaseModel):
     event_id: UUID
     name: str
-    linked_sessions: list[UUID] | None = None
     required_mebership: UUID | None = None
     quota: int | None = None
     user_quota: int | None = None
@@ -79,11 +78,12 @@ class CategorySimple(CategoryBase):
 
 class CategoryComplete(CategorySimple):
     event: EventSimple
+    sessions: list[UUID] | None = None
 
 
 class CategoryUpdate(BaseModel):
     name: str | None = None
-    linked_sessions: list[UUID] | None = None
+    sessions: list[UUID] | None = None
     required_mebership: UUID | None = None
     quota: int | None = None
     user_quota: int | None = None
