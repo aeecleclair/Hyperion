@@ -144,6 +144,7 @@ class TicketingFactory(Factory):
                     user_id=user_id,
                     event_id=cls.event_id,
                     category_id=category_id,
+                    session_id=cls.session1_id,
                     total=1500 if category_id == cls.category1_id else 2000,
                     created_at=datetime.now(UTC),
                     nb_scan=0,
