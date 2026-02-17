@@ -62,7 +62,7 @@ class Session(Base):
     user_quota: Mapped[int | None]
     disabled: Mapped[bool]
 
-    categories: Mapped[list["Category"]] = relationship(
+    categories: Mapped[list["ticketing.models_ticketing.Category"]] = relationship(
         secondary=CategorySessionAssociation.__table__,
         back_populates="sessions",
         init=False,
@@ -81,7 +81,7 @@ class Category(Base):
         lazy="selectin",
     )
     name: Mapped[str]
-    sessions: Mapped[list["Session"]] = relationship(
+    sessions: Mapped[list["ticketing.models_ticketing.Session"]] = relationship(
         secondary=CategorySessionAssociation.__table__,
         back_populates="categories",
         init=False,
