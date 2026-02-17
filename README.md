@@ -48,6 +48,29 @@ Activate it
 <details>
 <summary>
 
+### Linux
+
+</summary>
+
+Create the virtual environment
+
+> You need to be in Hyperion main folder
+
+```bash
+py -3.14 -m venv .venv
+```
+
+Activate it
+
+```bash
+source ./.venv/bin/activate
+```
+
+</details>
+
+<details>
+<summary>
+
 ### macOS (using Pyenv)
 
 </summary>
