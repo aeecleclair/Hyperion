@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.myeclpay import schemas_myeclpay
+from app.core.mypayment import schemas_mypayment
 from app.modules.ticketing import models_ticketing, schemas_ticketing
 
 
@@ -25,7 +25,7 @@ async def get_events(
             user_quota=event.user_quota,
             used_quota=event.used_quota,
             disabled=event.disabled,
-            store=schemas_myeclpay.StoreSimple(
+            store=schemas_mypayment.StoreSimple(
                 id=event.store.id,
                 structure_id=event.store.structure_id,
                 wallet_id=event.store.wallet_id,
@@ -67,7 +67,7 @@ async def get_event_by_id(
             user_quota=event.user_quota,
             used_quota=event.used_quota,
             disabled=event.disabled,
-            store=schemas_myeclpay.StoreSimple(
+            store=schemas_mypayment.StoreSimple(
                 id=event.store.id,
                 structure_id=event.store.structure_id,
                 wallet_id=event.store.wallet_id,
@@ -111,7 +111,7 @@ async def get_event_by_name(
             user_quota=event.user_quota,
             used_quota=event.used_quota,
             disabled=event.disabled,
-            store=schemas_myeclpay.StoreSimple(
+            store=schemas_mypayment.StoreSimple(
                 id=event.store.id,
                 structure_id=event.store.structure_id,
                 wallet_id=event.store.wallet_id,
