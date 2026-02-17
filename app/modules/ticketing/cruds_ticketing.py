@@ -162,7 +162,10 @@ async def increment_used_quota_event(
         update(models_ticketing.Event)
         # Only increment if the event has a quota and the quota is not already full
         # This prevents overbooking in case of concurrent ticket purchases across multiple workers
-        .where(models_ticketing.Event.id == event_id and models_ticketing.Event.used_quota < models_ticketing.Event.quota)
+        .where(
+            models_ticketing.Event.id == event_id
+            and models_ticketing.Event.used_quota < models_ticketing.Event.quota,
+        )
         .values(used_quota=models_ticketing.Event.used_quota + 1),
     )
 
@@ -265,7 +268,10 @@ async def increment_used_quota_session(
         update(models_ticketing.Session)
         # Only increment if the session has a quota and the quota is not already full
         # This prevents overbooking in case of concurrent ticket purchases across multiple workers
-        .where(models_ticketing.Session.id == session_id and models_ticketing.Session.used_quota < models_ticketing.Session.quota)
+        .where(
+            models_ticketing.Session.id == session_id
+            and models_ticketing.Session.used_quota < models_ticketing.Session.quota,
+        )
         .values(used_quota=models_ticketing.Session.used_quota + 1),
     )
 
@@ -296,7 +302,7 @@ async def get_category_by_id(
             event_id=category.event_id,
             event=category.event,
             name=category.name,
-            linked_sessions=category.linked_sessions,
+            sessions=category.sessions,
             required_mebership=category.required_mebership,
             quota=category.quota,
             user_quota=category.user_quota,
@@ -314,15 +320,8 @@ async def create_category(
     category: schemas_ticketing.CategorySimple,
 ) -> None:
     """Create a new category."""
-    joined_sessions = (
-        ",".join(str(session_id) for session_id in category.linked_sessions)
-        if category.linked_sessions
-        else None
-    )
-    category_model = category.model_dump()
-    category_model["linked_sessions"] = joined_sessions
     db.add(
-        models_ticketing.Category(**category_model),
+        models_ticketing.Category(**category.model_dump()),
     )
     await db.flush()
 
@@ -365,7 +364,10 @@ async def increment_used_quota_category(
         update(models_ticketing.Category)
         # Only increment if the category has a quota and the quota is not already full
         # This prevents overbooking in case of concurrent ticket purchases across multiple workers
-        .where(models_ticketing.Category.id == category_id and models_ticketing.Category.used_quota < models_ticketing.Category.quota)
+        .where(
+            models_ticketing.Category.id == category_id
+            and models_ticketing.Category.used_quota < models_ticketing.Category.quota,
+        )
         .values(used_quota=models_ticketing.Category.used_quota + 1),
     )
 
