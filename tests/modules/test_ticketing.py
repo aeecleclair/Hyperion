@@ -6,6 +6,7 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
+from app.core.groups import models_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.memberships import models_memberships
 from app.core.mypayment import models_mypayment
@@ -14,9 +15,11 @@ from app.core.users import models_users
 from app.modules.ticketing import models_ticketing
 
 # We need to import event_loop for pytest-asyncio routine defined bellow
+from app.modules.ticketing.endpoints_ticketing import TicketingPermissions
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
+    create_groups_with_permissions,
     create_user_with_groups,
 )
 
@@ -24,6 +27,8 @@ admin_user: models_users.CoreUser
 admin_user_token: str
 structure_manager_user: models_users.CoreUser
 structure_manager_user_token: str
+
+bde_group: models_groups.Groups
 
 association_membership: models_memberships.CoreAssociationMembership
 association_membership_user: models_memberships.CoreAssociationUserMembership
@@ -49,11 +54,17 @@ async def init_objects():
     admin_user = await create_user_with_groups(groups=[GroupType.admin])
     admin_user_token = create_api_access_token(admin_user)
 
+    global bde_group
+    bde_group = await create_groups_with_permissions(
+        [TicketingPermissions.manage_events],
+        "BDE Group",
+    )
+
     global association_membership
     association_membership = models_memberships.CoreAssociationMembership(
         id=uuid4(),
         name="Test Association Membership",
-        manager_group_id=GroupType.BDE,
+        manager_group_id=bde_group.id,
     )
     await add_object_to_db(association_membership)
 
@@ -169,9 +180,9 @@ async def init_objects():
         used_quota=1,
         disabled=False,
         required_mebership=None,
-        linked_sessions=[session1, session2],
         price=100,
     )
+    category1.sessions = [session1, session2]
     await add_object_to_db(category1)
 
     global student_user, student_token
