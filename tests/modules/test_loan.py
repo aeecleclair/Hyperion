@@ -28,6 +28,7 @@ loaner: models_loan.Loaner
 loaner_to_delete: models_loan.Loaner
 loan: models_loan.Loan
 item: models_loan.Item
+loan_content: models_loan.LoanContent
 item_to_delete: models_loan.Item
 token_loaner: str
 token_simple: str
@@ -82,7 +83,7 @@ async def init_objects() -> None:
     loaner_to_delete = models_loan.Loaner(
         id=str(uuid.uuid4()),
         name="cinema",
-        group_manager_id=loan_user_simple.id,
+        group_manager_id=loaner_group_to_delete.id,
     )
     await add_object_to_db(loaner_to_delete)
 
@@ -109,6 +110,7 @@ async def init_objects() -> None:
         total_quantity=5,
     )
     await add_object_to_db(item_to_delete)
+
     loan = models_loan.Loan(
         id=str(uuid.uuid4()),
         borrower_id=loan_user_simple.id,
@@ -117,10 +119,16 @@ async def init_objects() -> None:
         end=datetime.date(year=2023, month=4, day=26),
         caution="Carte etudiante",
         returned=False,
-        items=[item],
         notes=None,
     )
     await add_object_to_db(loan)
+
+    loan_content = models_loan.LoanContent(
+        loan_id=loan.id,
+        item_id=item.id,
+        quantity=1,
+    )
+    await add_object_to_db(loan_content)
 
     global token_admin
     token_admin = create_api_access_token(admin_user)
@@ -138,6 +146,12 @@ def test_get_loaners(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
+    loaners_json = response.json()
+    assert len(loaners_json) == 2
+    assert set(loaner["group_manager_id"] for loaner in loaners_json) == {
+        loaner.group_manager_id,
+        loaner_to_delete.group_manager_id,
+    }
 
 
 def test_create_loaners(client: TestClient) -> None:
@@ -150,6 +164,8 @@ def test_create_loaners(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 201
+    loaner_json = response.json()
+    assert loaner_json["name"] == "ECLAIR"
 
 
 def test_update_loaners(client: TestClient) -> None:
@@ -161,7 +177,14 @@ def test_update_loaners(client: TestClient) -> None:
         },
         headers={"Authorization": f"Bearer {token_admin}"},
     )
-    assert response.status_code == 204
+    assert response.status_code == 204, response.json()
+    loaners_response = client.get(
+        "/loans/loaners/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert loaners_response.status_code == 200
+    loaners_json = loaners_response.json()
+    assert "AE" in [loaner["name"] for loaner in loaners_json]
 
 
 def test_delete_loaners(client: TestClient) -> None:
@@ -171,6 +194,14 @@ def test_delete_loaners(client: TestClient) -> None:
     )
     assert response.status_code == 204
 
+    response_loaners = client.get(
+        "/loans/loaners/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response_loaners.status_code == 200
+    loaners_json = response_loaners.json()
+    assert loaner_to_delete.id not in [loaner["id"] for loaner in loaners_json]
+
 
 def test_get_loans_by_loaner(client: TestClient) -> None:
     response = client.get(
@@ -178,6 +209,11 @@ def test_get_loans_by_loaner(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token_loaner}"},
     )
     assert response.status_code == 200
+    loans_json = response.json()
+    assert len(loans_json) == 1
+    loaned_items = loans_json[0]["items_qty"]
+    assert len(loaned_items) == 1
+    assert loaned_items[0]["itemSimple"]["id"] == item.id
 
 
 def test_get_items_for_loaner(client: TestClient) -> None:
@@ -186,6 +222,9 @@ def test_get_items_for_loaner(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token_loaner}"},
     )
     assert response.status_code == 200
+    items_json = response.json()
+    assert len(items_json) == 2
+    assert set(item["id"] for item in items_json) == {item.id, item_to_delete.id}
 
 
 def test_create_items_for_loaner(client: TestClient) -> None:
@@ -200,13 +239,23 @@ def test_create_items_for_loaner(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token_loaner}"},
     )
     assert response.status_code == 201
+    item_json = response.json()
+    assert item_json["name"] == "TestItem"
+
+    response_items = client.get(
+        f"/loans/loaners/{loaner.id}/items",
+        headers={"Authorization": f"Bearer {token_loaner}"},
+    )
+    assert response_items.status_code == 200
+    items_json = response_items.json()
+    assert len(items_json) == 3
 
 
 def test_update_items_for_loaner(client: TestClient) -> None:
     response = client.patch(
         f"/loans/loaners/{loaner.id}/items/{item.id}",
         json={
-            "name": "TestItem",
+            "name": "Test Item Changed",
             "suggested_caution": 100,
             "total_quantity": 7,
             "suggested_lending_duration": timedelta(days=10).seconds,
@@ -214,6 +263,14 @@ def test_update_items_for_loaner(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token_loaner}"},
     )
     assert response.status_code == 204
+
+    response = client.get(
+        f"/loans/loaners/{loaner.id}/items",
+        headers={"Authorization": f"Bearer {token_loaner}"},
+    )
+    assert response.status_code == 200
+    items_json = response.json()
+    assert "Test Item Changed" in [i["name"] for i in items_json if i["id"] == item.id]
 
 
 def test_delete_loaner_item(client: TestClient) -> None:
@@ -223,6 +280,15 @@ def test_delete_loaner_item(client: TestClient) -> None:
     )
     assert response.status_code == 204
 
+    response = client.get(
+        f"/loans/loaners/{loaner.id}/items",
+        headers={"Authorization": f"Bearer {token_loaner}"},
+    )
+    assert response.status_code == 200
+    items_json = response.json()
+    assert len(items_json) == 2
+    assert item_to_delete.id not in [item["id"] for item in items_json]
+
 
 def test_get_current_user_loans(client: TestClient) -> None:
     response = client.get(
@@ -230,14 +296,27 @@ def test_get_current_user_loans(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token_simple}"},
     )
     assert response.status_code == 200
+    loans_json = response.json()
+    assert len(loans_json) == 1
+    assert loans_json[0]["borrower_id"] == loan_user_simple.id
 
 
 def test_get_current_user_loaners(client: TestClient) -> None:
-    response = client.get(
+    response_user_simple = client.get(
         "/loans/users/me/loaners",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
-    assert response.status_code == 200
+    assert response_user_simple.status_code == 200
+    user_loaner_json = response_user_simple.json()
+    assert len(user_loaner_json) == 0
+
+    response_user_loaner = client.get(
+        "/loans/users/me/loaners",
+        headers={"Authorization": f"Bearer {token_loaner}"},
+    )
+    assert response_user_loaner.status_code == 200
+    loaner_json = response_user_loaner.json()
+    assert len(loaner_json) == 1
 
 
 def test_create_loan(client: TestClient) -> None:
@@ -260,6 +339,8 @@ def test_create_loan(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token_loaner}"},
     )
     assert response.status_code == 201
+    loan_json = response.json()
+    assert loan_json["loaner_id"] == loaner.id
 
 
 def test_update_loan(client: TestClient) -> None:
@@ -283,6 +364,16 @@ def test_update_loan(client: TestClient) -> None:
     )
     assert response.status_code == 204
 
+    response = client.get(
+        f"/loans/loaners/{loaner.id}/loans",
+        headers={"Authorization": f"Bearer {token_loaner}"},
+    )
+
+    loans_json = response.json()
+    assert [
+        loan_json["caution"] for loan_json in loans_json if loan_json["id"] == loan.id
+    ] == ["20€"]
+
 
 def test_return_loan(client: TestClient) -> None:
     response = client.post(
@@ -290,6 +381,15 @@ def test_return_loan(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token_loaner}"},
     )
     assert response.status_code == 204
+    loans_response = response = client.get(
+        f"/loans/loaners/{loaner.id}/loans",
+        headers={"Authorization": f"Bearer {token_loaner}"},
+    )
+
+    loans_json = loans_response.json()
+    assert [
+        loan_json["returned"] for loan_json in loans_json if loan_json["id"] == loan.id
+    ] == [True]
 
 
 def test_extend_loan(client: TestClient) -> None:
@@ -301,6 +401,15 @@ def test_extend_loan(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token_loaner}"},
     )
     assert response.status_code == 204
+    loans_response = response = client.get(
+        f"/loans/loaners/{loaner.id}/loans",
+        headers={"Authorization": f"Bearer {token_loaner}"},
+    )
+
+    loans_json = loans_response.json()
+    assert [
+        loan_json["end"] for loan_json in loans_json if loan_json["id"] == loan.id
+    ] == ["2024-05-25"]
 
 
 def test_delete_loan(client: TestClient) -> None:
@@ -309,3 +418,10 @@ def test_delete_loan(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token_loaner}"},
     )
     assert response.status_code == 204
+    loans_response = response = client.get(
+        f"/loans/loaners/{loaner.id}/loans",
+        headers={"Authorization": f"Bearer {token_loaner}"},
+    )
+
+    loans_json = loans_response.json()
+    assert loan.id not in [loan_json["id"] for loan_json in loans_json]

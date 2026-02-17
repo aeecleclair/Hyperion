@@ -230,7 +230,13 @@ async def get_loans_by_loaner(
                 for itemret in itemsret
             ]
 
-            loans.append(schemas_loan.Loan(items_qty=items_qty_ret, **loan.__dict__))
+            loans.append(
+                schemas_loan.Loan(
+                    items_qty=items_qty_ret,
+                    loaner=loaner,
+                    **loan.__dict__,
+                ),
+            )
 
     return loans
 
@@ -432,8 +438,12 @@ async def delete_loaner_item(
             status_code=400,
             detail=f"Item {item_id} does not belong to {loaner_id} loaner",
         )
+    loaner = await cruds_loan.get_loaner_by_id(
+        loaner_id=loaner_id,
+        db=db,
+    )
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_any_group(user, [item.loaner.group_manager_id]):
+    if not is_user_member_of_any_group(user, [loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loaner_id} loaner",
@@ -615,7 +625,6 @@ async def create_loan(
         notes=loan_creation.notes,
         caution=loan_creation.caution,
         returned=False,  # A newly created loan is still not returned
-        items=[],
     )
 
     try:
@@ -783,11 +792,9 @@ async def update_loan(
             items.append((item, quantity))
 
     try:
-        # We need to remove the item_ids list from the schema before calling the update_loan crud function
-        loan_in_db_update = schemas_loan.LoanInDBUpdate(**loan_update.model_dump())
         await cruds_loan.update_loan(
             loan_id=loan_id,
-            loan_update=loan_in_db_update,
+            loan_update=loan_update,
             db=db,
         )
     except ValueError as error:

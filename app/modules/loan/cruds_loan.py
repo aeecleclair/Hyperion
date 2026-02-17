@@ -14,10 +14,7 @@ async def get_loaners(
     """Return the loaner with id"""
 
     result = await db.execute(select(models_loan.Loaner))
-    # With the `unique()` call, the function raise an error inviting to add `unique()` to `result`.
-    # `unique()` make sure a row can not be present multiple times in the result
-    # This may be caused structure of the database with a relationship loop: loaner->loans->items->loaner
-    return result.unique().scalars().all()
+    return result.scalars().all()
 
 
 async def create_loaner(
@@ -53,7 +50,10 @@ async def get_loaner_by_id(
     result = await db.execute(
         select(models_loan.Loaner)
         .where(models_loan.Loaner.id == loaner_id)
-        .options(selectinload(models_loan.Loaner.loans)),
+        .options(
+            selectinload(models_loan.Loaner.items),
+            selectinload(models_loan.Loaner.loans),
+        ),
     )
     return result.scalars().first()
 
@@ -148,10 +148,7 @@ async def get_loans_by_borrower(
         query = query.filter(models_loan.Loan.returned.is_(returned))
 
     result = await db.execute(query)
-    # With the `unique()` call, the function raise an error inviting to add `unique()` to `result`.
-    # `unique()` make sure a row can not be present multiple times in the result
-    # This may be caused structure of the database with a relationship loop: loaner->loans->items->loaner
-    return result.unique().scalars().all()
+    return result.scalars().all()
 
 
 async def create_loan(
@@ -165,13 +162,15 @@ async def create_loan(
 
 async def update_loan(
     loan_id: str,
-    loan_update: schemas_loan.LoanInDBUpdate,
+    loan_update: schemas_loan.LoanUpdate,
     db: AsyncSession,
 ):
     await db.execute(
         update(models_loan.Loan)
         .where(models_loan.Loan.id == loan_id)
-        .values(**loan_update.model_dump(exclude_none=True)),
+        .values(
+            **loan_update.model_dump(exclude_none=True, exclude={"items_borrowed"}),
+        ),
     )
     await db.flush()
 
