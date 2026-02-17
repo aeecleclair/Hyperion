@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from app.core.myeclpay.schemas_myeclpay import StoreSimple
+from app.core.mypayment.schemas_mypayment import StoreSimple
 
 
 class EventBase(BaseModel):
