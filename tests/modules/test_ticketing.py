@@ -1,8 +1,6 @@
-import uuid
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import uuid4
 
-import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
@@ -28,7 +26,7 @@ admin_user_token: str
 structure_manager_user: models_users.CoreUser
 structure_manager_user_token: str
 
-bde_group: models_groups.Groups
+bde_group: models_groups.CoreGroup
 
 association_membership: models_memberships.CoreAssociationMembership
 association_membership_user: models_memberships.CoreAssociationUserMembership
@@ -207,17 +205,24 @@ async def init_objects():
     student_token = create_api_access_token(student_user)
 
 
-@pytest.mark.parametrize(
-    ("event_id", "expected_code"),
-    [
-        (event1, 200),
-        (event2, 200),
-        (event_fake, 404),
-    ],
-)
-def test_get_offer(event: models_ticketing.Event, expected_code: int, client: TestClient):
+def test_get_event(client: TestClient):
+    # Test with event1 (should succeed)
     response = client.get(
-        f"/pmf/offers/{event.id}",
+        f"/ticketing/events/{event1.id}",
         headers={"Authorization": f"Bearer {student_token}"},
     )
-    assert response.status_code == expected_code
+    assert response.status_code == 200
+
+    # Test with event2 (should succeed)
+    response = client.get(
+        f"/ticketing/events/{event2.id}",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 200
+
+    # Test with event_fake (not in DB, should return 404)
+    response = client.get(
+        f"/ticketing/events/{event_fake.id}",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 404
