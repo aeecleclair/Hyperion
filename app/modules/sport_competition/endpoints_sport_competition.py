@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import get_account_types_except_externals
 from app.core.payment.payment_tool import PaymentTool
+from app.core.payment.schemas_payment import PayerUser
 from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.schools import cruds_schools
 from app.core.schools.schools_type import SchoolType
@@ -4166,24 +4167,24 @@ async def get_payment_url(
             status_code=403,
             detail="Please give an amount in cents, greater than 1€.",
         )
-    user_schema = schemas_users.CoreUser(
-        account_type=user.account_type,
-        school_id=user.school_id,
-        id=user.id,
-        email=user.email,
-        name=user.name,
-        firstname=user.firstname,
-        created_on=user.created_on,
-        groups=[],
-    )
-    checkout = await payment_tool.init_checkout(
-        module=module.root,
-        checkout_amount=amount,
-        checkout_name=f"Challenge {edition.name}",
-        payer_user=user_schema,
-        db=db,
-    )
+
+    try:
+        checkout = await payment_tool.init_checkout(
+            module=module.root,
+            checkout_amount=amount,
+            checkout_name=f"Challenge {edition.name}",
+            payer_user=PayerUser(
+                firstname=user.firstname,
+                name=user.name,
+                email=user.email,
+                birthday=user.birthday,
+            ),
+            db=db,
+        )
+    except Exception:
+        raise HTTPException(status_code=502, detail="Cannot init the checkout")
     hyperion_error_logger.info(f"Competition: Logging Checkout id {checkout.id}")
+
     cruds_sport_competition.add_checkout(
         db=db,
         checkout=schemas_sport_competition.Checkout(
@@ -4193,7 +4194,6 @@ async def get_payment_url(
             checkout_id=checkout.id,
         ),
     )
-
     return schemas_sport_competition.PaymentUrl(
         url=checkout.payment_url,
     )

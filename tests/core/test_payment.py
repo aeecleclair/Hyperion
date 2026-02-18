@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from helloasso_python.exceptions import UnauthorizedException
+from helloasso_python.exceptions import BadRequestException
 from helloasso_python.models.hello_asso_api_v5_models_carts_init_checkout_body import (
     HelloAssoApiV5ModelsCartsInitCheckoutBody,
 )
@@ -17,8 +17,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.payment import cruds_payment, models_payment, schemas_payment
 from app.core.payment.payment_tool import PaymentTool
 from app.core.payment.types_payment import HelloAssoConfig, HelloAssoConfigName
-from app.core.schools import schemas_schools
-from app.core.users import schemas_users
 from app.types.module import Module
 from tests.commons import (
     MockedPaymentTool,
@@ -34,7 +32,7 @@ checkout_with_existing_checkout_payment: models_payment.Checkout
 existing_checkout_payment: models_payment.CheckoutPayment
 checkout: models_payment.Checkout
 
-user_schema: schemas_users.CoreUser
+payer_user: schemas_payment.PayerUser
 
 TEST_MODULE_ROOT = "tests"
 
@@ -74,19 +72,14 @@ async def init_objects() -> None:
     )
     await add_object_to_db(checkout)
 
-    global user_schema
-    user = await create_user_with_groups(
-        groups=[],
+    user = await create_user_with_groups(groups=[])
+    global payer_user
+    payer_user = schemas_payment.PayerUser(
+        firstname=user.firstname,
+        name=user.name,
+        email=user.email,
+        birthday=user.birthday,
     )
-    school = schemas_schools.CoreSchool(
-        id=user.school.id,
-        name=user.school.name,
-        email_regex=user.school.email_regex,
-    )
-    user_dict = user.__dict__
-    user_dict.pop("school")
-
-    user_schema = schemas_users.CoreUser(**user_dict, school=school)
 
 
 # Test endpoints #
@@ -453,7 +446,7 @@ async def test_payment_tool_init_checkout(
             checkout_name="test",
             redirection_uri="redirect",
             db=db,
-            payer_user=user_schema,
+            payer_user=payer_user,
         )
 
         assert returned_checkout.payment_url == redirect_url
@@ -497,7 +490,7 @@ async def test_payment_tool_init_checkout_with_one_failure(
         init_checkout_body: HelloAssoApiV5ModelsCartsInitCheckoutBody,
     ):
         if init_checkout_body.payer is not None:
-            raise UnauthorizedException
+            raise BadRequestException
         return HelloAssoApiV5ModelsCartsInitCheckoutResponse(
             id=7,
             redirect_url=redirect_url,
@@ -526,7 +519,7 @@ async def test_payment_tool_init_checkout_with_one_failure(
             checkout_name="test",
             redirection_uri="redirect",
             db=db,
-            payer_user=user_schema,
+            payer_user=payer_user,
         )
 
         assert returned_checkout.payment_url == redirect_url
@@ -592,7 +585,7 @@ async def test_payment_tool_init_checkout_fail(
                 checkout_name="test",
                 redirection_uri="redirect",
                 db=db,
-                payer_user=user_schema,
+                payer_user=payer_user,
             )
 
     mocked_hyperion_security_logger.assert_called()

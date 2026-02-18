@@ -1260,6 +1260,7 @@ async def register_user(
         accepted_tos_version=0,
         db=db,
     )
+    await db.flush()
 
     hyperion_mypayment_logger.info(
         wallet_id,
@@ -1851,7 +1852,7 @@ async def init_ha_transfer(
         )
         raise HTTPException(
             status_code=400,
-            detail="Redirect URL is not trusted by hyperion",
+            detail="Redirect URL is not trusted by Hyperion",
         )
 
     if transfer_info.amount < 100:
@@ -1867,7 +1868,7 @@ async def init_ha_transfer(
     if user_payment is None:
         raise HTTPException(
             status_code=404,
-            detail="User is not registered for MyECL Pay",
+            detail="User is not registered for MyECLPay",
         )
 
     if not is_user_latest_tos_signed(user_payment):
@@ -1894,29 +1895,23 @@ async def init_ha_transfer(
             detail="Wallet balance would exceed the maximum allowed balance",
         )
 
-    user_schema = schemas_users.CoreUser(
-        account_type=user.account_type,
-        school_id=user.school_id,
-        email=user.email,
-        birthday=user.birthday,
-        promo=user.promo,
-        floor=user.floor,
-        phone=user.phone,
-        created_on=user.created_on,
-        groups=[],
-        id=user.id,
-        name=user.name,
-        firstname=user.firstname,
-        nickname=user.nickname,
-    )
-    checkout = await payment_tool.init_checkout(
-        module="mypayment",
-        checkout_amount=transfer_info.amount,
-        checkout_name=f"Recharge {settings.school.payment_name}",
-        redirection_uri=f"{settings.CLIENT_URL}mypayment/transfer/redirect?url={transfer_info.redirect_url}",
-        payer_user=user_schema,
-        db=db,
-    )
+    try:
+        checkout = await payment_tool.init_checkout(
+            module="mypayment",
+            checkout_amount=transfer_info.amount,
+            checkout_name="Recharge {settings.school.payment_name}",
+            redirection_uri=f"{settings.CLIENT_URL}mypayment/transfer/redirect?url={transfer_info.redirect_url}",
+            payer_user=schemas_payment.PayerUser(
+                firstname=user.firstname,
+                name=user.name,
+                email=user.email,
+                birthday=user.birthday,
+            ),
+            db=db,
+        )
+    except Exception:
+        raise HTTPException(status_code=502, detail="Cannot init the checkout")
+    hyperion_error_logger.info(f"Mypayment: Logging Checkout id {checkout.id}")
 
     await cruds_mypayment.create_transfer(
         db=db,
@@ -1931,7 +1926,6 @@ async def init_ha_transfer(
             confirmed=False,
         ),
     )
-
     return schemas_payment.PaymentUrl(
         url=checkout.payment_url,
     )
