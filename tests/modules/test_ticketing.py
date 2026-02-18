@@ -38,9 +38,9 @@ store: models_mypayment.Store
 
 student_user: models_users.CoreUser
 
-event1: models_ticketing.Event
-event2: models_ticketing.Event
-event_fake: models_ticketing.Event
+event1: models_ticketing.TicketingEvent
+event2: models_ticketing.TicketingEvent
+event_fake: models_ticketing.TicketingEvent
 
 student_token: str
 admin_token: str
@@ -123,7 +123,7 @@ async def init_objects():
     )
     await add_object_to_db(event1)
     # Event will be used to test disabled state etc.
-    event2 = models_ticketing.Event(
+    event2 = models_ticketing.TicketingEvent(
         id=uuid4(),
         name="Event 2",
         open_date=datetime(2024, 1, 1, tzinfo=UTC),
@@ -137,7 +137,7 @@ async def init_objects():
     )
     await add_object_to_db(event2)
 
-    event_fake = models_ticketing.Event(
+    event_fake = models_ticketing.TicketingEvent(
         id=uuid4(),
         name="Event Fake",
         open_date=datetime(2024, 1, 1, tzinfo=UTC),
@@ -152,7 +152,7 @@ async def init_objects():
     # Do not add event_fake to the database
 
     # Create sessions and categories for event1
-    session1 = models_ticketing.Session(
+    session1 = models_ticketing.TicketingSession(
         id=uuid4(),
         event_id=event1.id,
         name="Session 1",
@@ -172,7 +172,7 @@ async def init_objects():
         disabled=False,
     )
     await add_object_to_db(session2)
-    session3 = models_ticketing.Session(
+    session3 = models_ticketing.TicketingSession(
         id=uuid4(),
         event_id=event1.id,
         name="Session 3",
@@ -183,7 +183,7 @@ async def init_objects():
     )
     await add_object_to_db(session3)
 
-    category1 = models_ticketing.Category(
+    category1 = models_ticketing.TicketingCategory(
         id=uuid4(),
         event_id=event1.id,
         name="Category 1",
