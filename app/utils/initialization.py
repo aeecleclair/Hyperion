@@ -307,7 +307,10 @@ async def use_lock_for_workers(
     **kwargs: P.kwargs,
 ) -> None:
     """
-    Aquires a Redis lock to ensure that `func` is only executed by one worker.
+    Aquires a Redis lock to ensure that `func` is only run once for all workers.
+
+    - If the Redis client is not provided, the function will execute `job_function` only for the process that is chosen to initialize the app.
+    - If `number_of_workers` is 1, the function will execute `job_function` directly, without acquiring a lock.
 
     Using `unlock_key` allows to wait for a worker to have finished executing `func` before continuing execution.
     If provided, the function will wait until this unlock key is set before continuing
@@ -315,20 +318,26 @@ async def use_lock_for_workers(
     The job may be a sync or async function. This util will pass `kwargs` as arguments to the `job_function`.
     We assume that the function execution won't take more than 20 seconds.
 
-    If the Redis client is not provided, the function will execute `job_function` directly without acquiring a lock.
-
-    If `number_of_workers` is less than or equal to 1, the function will execute `job_function` directly without acquiring a lock.
     """
 
-    if (
-        not isinstance(
-            redis_client,
-            redis.Redis,
-        )
-        or number_of_workers <= 1
-    ):
-        # If a Redis is not provided, we execute the function directly
+    if number_of_workers == 1:
+        # There is only one child process, no lock is needed
         await execute_async_or_sync_method(job_function, *args, **kwargs)
+
+    elif not isinstance(
+        redis_client,
+        redis.Redis,
+    ):
+        # If a Redis is not provided, we only let one chosen process execute the function
+        if (
+            os.getpid()
+            == [
+                process
+                for process in psutil.Process(os.getppid()).children()
+                if process.status() != psutil.STATUS_ZOMBIE
+            ][-1].pid
+        ):
+            await execute_async_or_sync_method(job_function, *args, **kwargs)
 
     elif redis_client.set(key, "1", nx=True, ex=120):
         # We acquired the lock, we execute the function
@@ -360,7 +369,7 @@ def get_number_of_workers() -> int:
     Get the number of active Hyperion workers
     """
     # We use the parent process to get the workers
-    parent_pid = os.getppid()  # PID du parent (FastAPI master process)
+    parent_pid = os.getppid()  # FastAPI master process
     parent_process = psutil.Process(parent_pid)
     workers = [
         p for p in parent_process.children() if p.status() != psutil.STATUS_ZOMBIE
