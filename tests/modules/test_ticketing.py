@@ -108,7 +108,7 @@ async def init_objects():
 
     # Create events
     global event1, event2, event_fake
-    event1 = models_ticketing.Event(
+    event1 = models_ticketing.TicketingEvent(
         id=uuid4(),
         name="Event 1",
         open_date=datetime(2024, 1, 1, tzinfo=UTC),
@@ -162,7 +162,7 @@ async def init_objects():
         disabled=False,
     )
     await add_object_to_db(session1)
-    session2 = models_ticketing.Session(
+    session2 = models_ticketing.TicketingSession(
         id=uuid4(),
         event_id=event1.id,
         name="Session 2",
