@@ -13,7 +13,7 @@ async def get_events(
 ) -> list[schemas_ticketing.EventSimple]:
     """Get all events."""
 
-    events = await db.execute(select(models_ticketing.Event))
+    events = await db.execute(select(models_ticketing.TicketingEvent))
     return [
         schemas_ticketing.EventSimple(
             id=event.id,
@@ -47,11 +47,13 @@ async def get_event_by_id(
     event = (
         (
             await db.execute(
-                select(models_ticketing.Event).where(
-                    models_ticketing.Event.id == event_id,
-                ).options(
-                    selectinload(models_ticketing.Event.sessions),
-                    selectinload(models_ticketing.Event.categories),
+                select(models_ticketing.TicketingEvent)
+                .where(
+                    models_ticketing.TicketingEvent.id == event_id,
+                )
+                .options(
+                    selectinload(models_ticketing.TicketingEvent.sessions),
+                    selectinload(models_ticketing.TicketingEvent.categories),
                 ),
             )
         )
@@ -78,8 +80,14 @@ async def get_event_by_id(
                 name=event.store.name,
                 creation=event.store.creation,
             ),
-            sessions=[schemas_ticketing.SessionSimple.model_validate(session) for session in event.sessions],
-            categories=[schemas_ticketing.CategorySimple.model_validate(category) for category in event.categories],
+            sessions=[
+                schemas_ticketing.SessionSimple.model_validate(session)
+                for session in event.sessions
+            ],
+            categories=[
+                schemas_ticketing.CategorySimple.model_validate(category)
+                for category in event.categories
+            ],
         )
         if event
         else None
@@ -94,11 +102,13 @@ async def get_event_by_name(
     event = (
         (
             await db.execute(
-                select(models_ticketing.Event).where(
-                    models_ticketing.Event.name == name,
-                ).options(
-                    selectinload(models_ticketing.Event.sessions),
-                    selectinload(models_ticketing.Event.categories),
+                select(models_ticketing.TicketingEvent)
+                .where(
+                    models_ticketing.TicketingEvent.name == name,
+                )
+                .options(
+                    selectinload(models_ticketing.TicketingEvent.sessions),
+                    selectinload(models_ticketing.TicketingEvent.categories),
                 ),
             )
         )
@@ -125,8 +135,14 @@ async def get_event_by_name(
                 name=event.store.name,
                 creation=event.store.creation,
             ),
-            sessions=[schemas_ticketing.SessionSimple.model_validate(session) for session in event.sessions],
-            categories=[schemas_ticketing.CategorySimple.model_validate(category) for category in event.categories],
+            sessions=[
+                schemas_ticketing.SessionSimple.model_validate(session)
+                for session in event.sessions
+            ],
+            categories=[
+                schemas_ticketing.CategorySimple.model_validate(category)
+                for category in event.categories
+            ],
         )
         if event
         else None
@@ -140,7 +156,7 @@ async def create_event(
     """Create a new event."""
 
     db.add(
-        models_ticketing.Event(**event.model_dump()),
+        models_ticketing.TicketingEvent(**event.model_dump()),
     )
     await db.flush()
 
@@ -153,8 +169,8 @@ async def update_event(
     """Update an existing event."""
 
     await db.execute(
-        update(models_ticketing.Event)
-        .where(models_ticketing.Event.id == event_id)
+        update(models_ticketing.TicketingEvent)
+        .where(models_ticketing.TicketingEvent.id == event_id)
         .values(**event_update.model_dump(exclude_unset=True)),
     )
     await db.flush()
@@ -166,14 +182,15 @@ async def increment_used_quota_event(
 ) -> None:
     """Increment the used quota of an event, its sessions and its category if applicable."""
     await db.execute(
-        update(models_ticketing.Event)
+        update(models_ticketing.TicketingEvent)
         # Only increment if the event has a quota and the quota is not already full
         # This prevents overbooking in case of concurrent ticket purchases across multiple workers
         .where(
-            models_ticketing.Event.id == event_id
-            and models_ticketing.Event.used_quota < models_ticketing.Event.quota,
+            models_ticketing.TicketingEvent.id == event_id
+            and models_ticketing.TicketingEvent.used_quota
+            < models_ticketing.TicketingEvent.quota,
         )
-        .values(used_quota=models_ticketing.Event.used_quota + 1),
+        .values(used_quota=models_ticketing.TicketingEvent.used_quota + 1),
     )
 
     await db.flush()
@@ -186,7 +203,9 @@ async def delete_event(
     """Delete an existing event."""
 
     await db.execute(
-        delete(models_ticketing.Event).where(models_ticketing.Event.id == event_id),
+        delete(models_ticketing.TicketingEvent).where(
+            models_ticketing.TicketingEvent.id == event_id,
+        ),
     )
     await db.flush()
 
@@ -200,8 +219,8 @@ async def get_session_by_id(
     session = (
         (
             await db.execute(
-                select(models_ticketing.Session).where(
-                    models_ticketing.Session.id == session_id,
+                select(models_ticketing.TicketingSession).where(
+                    models_ticketing.TicketingSession.id == session_id,
                 ),
             )
         )
@@ -232,7 +251,7 @@ async def create_session(
     """Create a new session."""
 
     db.add(
-        models_ticketing.Session(**session.model_dump()),
+        models_ticketing.TicketingSession(**session.model_dump()),
     )
     await db.flush()
 
@@ -245,8 +264,8 @@ async def update_session(
     """Update an existing session."""
 
     await db.execute(
-        update(models_ticketing.Session)
-        .where(models_ticketing.Session.id == session_id)
+        update(models_ticketing.TicketingSession)
+        .where(models_ticketing.TicketingSession.id == session_id)
         .values(**session_update.model_dump(exclude_unset=True)),
     )
     await db.flush()
@@ -259,8 +278,8 @@ async def delete_session(
     """Delete an existing session."""
 
     await db.execute(
-        delete(models_ticketing.Session).where(
-            models_ticketing.Session.id == session_id,
+        delete(models_ticketing.TicketingSession).where(
+            models_ticketing.TicketingSession.id == session_id,
         ),
     )
     await db.flush()
@@ -272,14 +291,15 @@ async def increment_used_quota_session(
 ) -> None:
     """Increment the used quota of a session."""
     await db.execute(
-        update(models_ticketing.Session)
+        update(models_ticketing.TicketingSession)
         # Only increment if the session has a quota and the quota is not already full
         # This prevents overbooking in case of concurrent ticket purchases across multiple workers
         .where(
-            models_ticketing.Session.id == session_id
-            and models_ticketing.Session.used_quota < models_ticketing.Session.quota,
+            models_ticketing.TicketingSession.id == session_id
+            and models_ticketing.TicketingSession.used_quota
+            < models_ticketing.TicketingSession.quota,
         )
-        .values(used_quota=models_ticketing.Session.used_quota + 1),
+        .values(used_quota=models_ticketing.TicketingSession.used_quota + 1),
     )
 
     await db.flush()
@@ -294,8 +314,8 @@ async def get_category_by_id(
     category = (
         (
             await db.execute(
-                select(models_ticketing.Category).where(
-                    models_ticketing.Category.id == category_id,
+                select(models_ticketing.TicketingCategory).where(
+                    models_ticketing.TicketingCategory.id == category_id,
                 ),
             )
         )
@@ -328,7 +348,7 @@ async def create_category(
 ) -> None:
     """Create a new category."""
     db.add(
-        models_ticketing.Category(**category.model_dump()),
+        models_ticketing.TicketingCategory(**category.model_dump()),
     )
     await db.flush()
 
@@ -341,8 +361,8 @@ async def update_category(
     """Update an existing category."""
 
     await db.execute(
-        update(models_ticketing.Category)
-        .where(models_ticketing.Category.id == category_id)
+        update(models_ticketing.TicketingCategory)
+        .where(models_ticketing.TicketingCategory.id == category_id)
         .values(**category_update.model_dump(exclude_unset=True)),
     )
     await db.flush()
@@ -355,8 +375,8 @@ async def delete_category(
     """Delete an existing category."""
 
     await db.execute(
-        delete(models_ticketing.Category).where(
-            models_ticketing.Category.id == category_id,
+        delete(models_ticketing.TicketingCategory).where(
+            models_ticketing.TicketingCategory.id == category_id,
         ),
     )
     await db.flush()
@@ -368,14 +388,15 @@ async def increment_used_quota_category(
 ) -> None:
     """Increment the used quota of a category."""
     await db.execute(
-        update(models_ticketing.Category)
+        update(models_ticketing.TicketingCategory)
         # Only increment if the category has a quota and the quota is not already full
         # This prevents overbooking in case of concurrent ticket purchases across multiple workers
         .where(
-            models_ticketing.Category.id == category_id
-            and models_ticketing.Category.used_quota < models_ticketing.Category.quota,
+            models_ticketing.TicketingCategory.id == category_id
+            and models_ticketing.TicketingCategory.used_quota
+            < models_ticketing.TicketingCategory.quota,
         )
-        .values(used_quota=models_ticketing.Category.used_quota + 1),
+        .values(used_quota=models_ticketing.TicketingCategory.used_quota + 1),
     )
 
     await db.flush()
@@ -386,7 +407,7 @@ async def get_tickets(
 ) -> list[schemas_ticketing.TicketComplete]:
     """Get all tickets."""
 
-    tickets = await db.execute(select(models_ticketing.Ticket))
+    tickets = await db.execute(select(models_ticketing.TicketingTicket))
     return [
         schemas_ticketing.TicketComplete(
             id=ticket.id,
@@ -413,8 +434,8 @@ async def get_tickets_by_user_id(
     """Get all tickets for a specific user."""
 
     tickets = await db.execute(
-        select(models_ticketing.Ticket).where(
-            models_ticketing.Ticket.user_id == user_id,
+        select(models_ticketing.TicketingTicket).where(
+            models_ticketing.TicketingTicket.user_id == user_id,
         ),
     )
     return [
@@ -445,8 +466,8 @@ async def get_ticket_by_id(
     ticket = (
         (
             await db.execute(
-                select(models_ticketing.Ticket).where(
-                    models_ticketing.Ticket.id == ticket_id,
+                select(models_ticketing.TicketingTicket).where(
+                    models_ticketing.TicketingTicket.id == ticket_id,
                 ),
             )
         )
@@ -481,7 +502,7 @@ async def create_ticket(
     """Create a new ticket."""
 
     db.add(
-        models_ticketing.Ticket(**ticket.model_dump()),
+        models_ticketing.TicketingTicket(**ticket.model_dump()),
     )
     await db.flush()
 
@@ -494,8 +515,8 @@ async def update_ticket(
     """Update an existing ticket."""
 
     await db.execute(
-        update(models_ticketing.Ticket)
-        .where(models_ticketing.Ticket.id == ticket_id)
+        update(models_ticketing.TicketingTicket)
+        .where(models_ticketing.TicketingTicket.id == ticket_id)
         .values(**ticket_update.model_dump(exclude_unset=True)),
     )
     await db.flush()
@@ -508,8 +529,8 @@ async def delete_ticket(
     """Delete an existing ticket."""
 
     await db.execute(
-        delete(models_ticketing.Ticket).where(
-            models_ticketing.Ticket.id == ticket_id,
+        delete(models_ticketing.TicketingTicket).where(
+            models_ticketing.TicketingTicket.id == ticket_id,
         ),
     )
     await db.flush()

@@ -60,7 +60,7 @@ class TicketingFactory(Factory):
             schemas_ticketing.SessionSimple(
                 id=cls.session1_id,
                 event_id=cls.event_id,
-                name="Session du Samedi Soir",
+                name="TicketingSession du Samedi Soir",
                 quota=300,
                 user_quota=2,
                 used_quota=0,
@@ -72,7 +72,7 @@ class TicketingFactory(Factory):
             schemas_ticketing.SessionSimple(
                 id=cls.session2_id,
                 event_id=cls.event_id,
-                name="Session du Dimanche Après-midi",
+                name="TicketingSession du Dimanche Après-midi",
                 quota=200,
                 user_quota=2,
                 used_quota=0,
