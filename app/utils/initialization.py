@@ -331,11 +331,11 @@ async def use_lock_for_workers(
         # If a Redis is not provided, we only let one chosen process execute the function
         if (
             os.getpid()
-            == next(
+            == [
                 process
                 for process in psutil.Process(os.getppid()).children()
                 if process.status() != psutil.STATUS_ZOMBIE
-            ).pid
+            ][-1].pid
         ):
             await execute_async_or_sync_method(job_function, *args, **kwargs)
 
