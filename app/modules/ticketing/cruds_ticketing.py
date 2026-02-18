@@ -2,6 +2,7 @@ from uuid import UUID
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.mypayment import schemas_mypayment
 from app.modules.ticketing import models_ticketing, schemas_ticketing
@@ -48,6 +49,9 @@ async def get_event_by_id(
             await db.execute(
                 select(models_ticketing.Event).where(
                     models_ticketing.Event.id == event_id,
+                ).options(
+                    selectinload(models_ticketing.Event.sessions),
+                    selectinload(models_ticketing.Event.categories),
                 ),
             )
         )
@@ -74,8 +78,8 @@ async def get_event_by_id(
                 name=event.store.name,
                 creation=event.store.creation,
             ),
-            sessions=event.sessions,
-            categories=event.categories,
+            sessions=[schemas_ticketing.SessionSimple.model_validate(session) for session in event.sessions],
+            categories=[schemas_ticketing.CategorySimple.model_validate(category) for category in event.categories],
         )
         if event
         else None
@@ -92,6 +96,9 @@ async def get_event_by_name(
             await db.execute(
                 select(models_ticketing.Event).where(
                     models_ticketing.Event.name == name,
+                ).options(
+                    selectinload(models_ticketing.Event.sessions),
+                    selectinload(models_ticketing.Event.categories),
                 ),
             )
         )
@@ -118,8 +125,8 @@ async def get_event_by_name(
                 name=event.store.name,
                 creation=event.store.creation,
             ),
-            sessions=event.sessions,
-            categories=event.categories,
+            sessions=[schemas_ticketing.SessionSimple.model_validate(session) for session in event.sessions],
+            categories=[schemas_ticketing.CategorySimple.model_validate(category) for category in event.categories],
         )
         if event
         else None
