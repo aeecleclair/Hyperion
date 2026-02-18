@@ -40,7 +40,6 @@ student_user: models_users.CoreUser
 
 event1: models_ticketing.TicketingEvent
 event2: models_ticketing.TicketingEvent
-event_fake: models_ticketing.TicketingEvent
 
 student_token: str
 admin_token: str
@@ -107,7 +106,7 @@ async def init_objects():
     await add_object_to_db(store)
 
     # Create events
-    global event1, event2, event_fake
+    global event1, event2
     event1 = models_ticketing.TicketingEvent(
         id=uuid4(),
         name="Event 1",
@@ -136,20 +135,6 @@ async def init_objects():
         store_id=store.id,
     )
     await add_object_to_db(event2)
-
-    event_fake = models_ticketing.TicketingEvent(
-        id=uuid4(),
-        name="Event Fake",
-        open_date=datetime(2024, 1, 1, tzinfo=UTC),
-        close_date=datetime(2200, 12, 31, tzinfo=UTC),
-        quota=3,
-        user_quota=2,
-        used_quota=1,
-        disabled=False,
-        creator_id=str(admin_user.id),
-        store_id=store.id,
-    )
-    # Do not add event_fake to the database
 
     # Create sessions and categories for event1
     session1 = models_ticketing.TicketingSession(
@@ -222,7 +207,7 @@ def test_get_event(client: TestClient):
 
     # Test with event_fake (not in DB, should return 404)
     response = client.get(
-        f"/ticketing/events/{event_fake.id}",
+        f"/ticketing/events/{uuid4()}",
         headers={"Authorization": f"Bearer {student_token}"},
     )
     assert response.status_code == 404
