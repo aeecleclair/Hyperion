@@ -4628,14 +4628,14 @@ async def export_participants_captains_data(
         )
         for team in teams
     ]
-    captains = [captain for captain in captains if captain is not None]
+    true_captains = [captain for captain in captains if captain is not None]
     sports = await cruds_sport_competition.load_all_sports(db)
 
     excel_io = BytesIO()
 
     construct_captains_excel(
         sports=sports,
-        captains=captains,
+        captains=true_captains,
         export_io=excel_io,
     )
 

@@ -442,6 +442,11 @@ async def delete_loaner_item(
         loaner_id=loaner_id,
         db=db,
     )
+    if loaner is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid loaner_id",
+        )
     # The user should be a member of the loaner's manager group
     if not is_user_member_of_any_group(user, [loaner.group_manager_id]):
         raise HTTPException(

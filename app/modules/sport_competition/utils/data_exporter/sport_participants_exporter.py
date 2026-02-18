@@ -47,7 +47,7 @@ def build_data_rows(
                 "while exporting sport participants.",
             )
             raise MissingDataError("Required school data is missing.")  # noqa: TRY003
-        row = [
+        row: list[str | int] = [
             participant.user.user.name,
             participant.user.user.firstname,
             participant.user.user.email,
