@@ -285,7 +285,7 @@ def write_product_headers(
 def write_to_excel(
     parameters: list[ExcelExportParams],
     workbook: xlsxwriter.Workbook,
-    product_structure: tuple[list, int],
+    product_structure: tuple[list, int] | None,
     data_rows: list,
     thick_columns: list[int],
     col_idx: int,
@@ -300,6 +300,10 @@ def write_to_excel(
     if ExcelExportParams.participants in parameters:
         write_participant_headers(worksheet, formats, columns_max_length)
     if ExcelExportParams.purchases in parameters:
+        if product_structure is None:
+            raise TypeError(  # noqa: TRY003
+                "product_structure is None but ExcelExportParams.purchases is set",
+            )
         write_product_headers(
             worksheet,
             product_structure,
@@ -313,6 +317,10 @@ def write_to_excel(
         if ExcelExportParams.participants in parameters:
             start_index += len(PARTICIPANTS_COLUMNS)
         if ExcelExportParams.purchases in parameters:
+            if product_structure is None:
+                raise TypeError(  # noqa: TRY003
+                    "product_structure is None but ExcelExportParams.purchases is set",
+                )
             start_index += product_structure[1]
         write_payment_headers(
             worksheet,
@@ -360,7 +368,7 @@ def construct_users_excel_with_parameters(
         ),
     )
 
-    product_structure: tuple[list, int] = ()  # ty: ignore
+    product_structure: tuple[list, int] | None = None
     col_idx = len(FIXED_COLUMNS)
     if ExcelExportParams.purchases in parameters and products is not None:
         products.sort(

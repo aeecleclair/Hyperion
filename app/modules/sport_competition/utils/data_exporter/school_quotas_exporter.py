@@ -32,8 +32,8 @@ def build_data_rows(
     sports: list[schemas_sport_competition.Sport],
     products: list[schemas_sport_competition.ProductComplete],
 ) -> tuple[list[list], list[list[int]]]:
-    data_rows = [[], [], []]
-    thick_columns = [[], [], []]  # First column index
+    data_rows: list[list] = [[], [], []]
+    thick_columns: list[list[int]] = [[], [], []]  # First column index
 
     sport_dict = {sport.id: sport for sport in sports}
     product_dict = {product.id: product for product in products}
@@ -51,47 +51,49 @@ def build_data_rows(
             "non_athlete_pompom_quota": "Quota Non-Athlètes + Pom-pom",
             "non_athlete_fanfare_quota": "Quota Non-Athlètes + Fanfare",
         }
-        for quota in school_general_quotas.model_dump(
+        for general_quota in school_general_quotas.model_dump(
             exclude={"school_id", "edition_id"},
         ).items():
             row = [
-                attribute_mapping[quota[0]],
-                quota[1] if quota[1] is not None else "Aucun",
+                attribute_mapping[general_quota[0]],
+                general_quota[1] if general_quota[1] is not None else "Aucun",
             ]
             data_rows[0].append(row)
         thick_columns[0].append(len(GENERAL_COLUMNS) - 1)
 
-    for quota in school_sports_quotas:
+    for sports_quota in school_sports_quotas:
         try:
-            sport = sport_dict[quota.sport_id]
+            sport = sport_dict[sports_quota.sport_id]
         except KeyError as e:
             hyperion_error_logger.exception(
-                f"Missing data for school quota {quota.sport_id}",
+                f"Missing data for school quota {sports_quota.sport_id}",
             )
             raise MissingDataError(  # noqa: TRY003
-                f"Missing related data for school quota {quota.sport_id}",
+                f"Missing related data for school quota {sports_quota.sport_id}",
             ) from e
 
         row = [
             sport.name,
-            quota.participant_quota if quota.participant_quota is not None else "Aucun",
-            quota.team_quota if quota.team_quota is not None else "Aucun",
+            sports_quota.participant_quota
+            if sports_quota.participant_quota is not None
+            else "Aucun",
+            sports_quota.team_quota if sports_quota.team_quota is not None else "Aucun",
         ]
         data_rows[1].append(row)
     thick_columns[1].append(len(SPORT_COLUMNS) - 1)
 
-    for quota in school_product_quotas:
+    for product_quota in school_product_quotas:
         try:
-            product = product_dict[quota.product_id]
+            product = product_dict[product_quota.product_id]
         except KeyError as e:
             hyperion_error_logger.exception(
-                f"Missing data for school product quota {quota.product_id}",
+                f"Missing data for school product quota {product_quota.product_id}",
             )
             raise MissingDataError(  # noqa: TRY003
-                f"Missing related data for school product quota {quota.product_id}",
+                f"Missing related data for school product quota {product_quota.product_id}",
             ) from e
 
-        row = [product.name, quota.quota]
+        row = [product.name, product_quota.quota]
         data_rows[2].append(row)
     thick_columns[2].append(len(PRODUCT_COLUMNS) - 1)
 
