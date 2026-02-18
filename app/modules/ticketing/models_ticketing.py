@@ -24,7 +24,7 @@ class CategorySessionAssociation(Base):
     )
 
 
-class Event(Base):
+class TicketingEvent(Base):
     __tablename__ = "ticketing_event"
 
     id: Mapped[PrimaryKey]
@@ -42,24 +42,28 @@ class Event(Base):
     user_quota: Mapped[int | None]
     disabled: Mapped[bool]
 
-    sessions: Mapped[list["Session"]] = relationship(
+    sessions: Mapped[
+        list["TicketingSession"]
+    ] = relationship(
         back_populates="event",
         init=False,
         lazy="selectin",
     )
-    categories: Mapped[list["Category"]] = relationship(
+    categories: Mapped[
+        list["TicketingCategory"]
+    ] = relationship(
         back_populates="event",
         init=False,
         lazy="selectin",
     )
 
 
-class Session(Base):
+class TicketingSession(Base):
     __tablename__ = "ticketing_session"
 
     id: Mapped[PrimaryKey]
     event_id: Mapped[UUID] = mapped_column(ForeignKey("ticketing_event.id"))
-    event: Mapped[Event] = relationship(
+    event: Mapped[TicketingEvent] = relationship(
         back_populates="sessions",
         init=False,
         lazy="selectin",
@@ -70,7 +74,9 @@ class Session(Base):
     user_quota: Mapped[int | None]
     disabled: Mapped[bool]
 
-    categories: Mapped[list["Category"]] = relationship(
+    categories: Mapped[
+        list["TicketingCategory"]
+    ] = relationship(
         secondary=CategorySessionAssociation.__table__,
         back_populates="sessions",
         init=False,
@@ -79,18 +85,20 @@ class Session(Base):
     )
 
 
-class Category(Base):
+class TicketingCategory(Base):
     __tablename__ = "ticketing_category"
 
     id: Mapped[PrimaryKey]
     event_id: Mapped[UUID] = mapped_column(ForeignKey("ticketing_event.id"))
-    event: Mapped[Event] = relationship(
+    event: Mapped[TicketingEvent] = relationship(
         back_populates="categories",
         init=False,
         lazy="selectin",
     )
     name: Mapped[str]
-    sessions: Mapped[list["Session"]] = relationship(
+    sessions: Mapped[
+        list["TicketingSession"]
+    ] = relationship(
         secondary=CategorySessionAssociation.__table__,
         back_populates="categories",
         init=False,
@@ -107,23 +115,23 @@ class Category(Base):
     disabled: Mapped[bool]
 
 
-class Ticket(Base):
+class TicketingTicket(Base):
     __tablename__ = "ticketing_ticket"
 
     id: Mapped[PrimaryKey]
     user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
     event_id: Mapped[UUID] = mapped_column(ForeignKey("ticketing_event.id"))
-    event: Mapped[Event] = relationship(
+    event: Mapped[TicketingEvent] = relationship(
         init=False,
         lazy="selectin",
     )
     category_id: Mapped[UUID] = mapped_column(ForeignKey("ticketing_category.id"))
-    category: Mapped[Category] = relationship(
+    category: Mapped[TicketingCategory] = relationship(
         init=False,
         lazy="selectin",
     )
     session_id: Mapped[UUID | None] = mapped_column(ForeignKey("ticketing_session.id"))
-    session: Mapped[Session | None] = relationship(
+    session: Mapped[TicketingSession | None] = relationship(
         init=False,
         lazy="selectin",
     )
