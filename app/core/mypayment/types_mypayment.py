@@ -15,14 +15,19 @@ class WalletDeviceStatus(str, Enum):
 
 class TransactionType(str, Enum):
     DIRECT = "direct"
+    INDIRECT = "indirect"
     REQUEST = "request"
     REFUND = "refund"
 
 
 class HistoryType(str, Enum):
     TRANSFER = "transfer"
+
     RECEIVED = "received"
     GIVEN = "given"
+    INDIRECT_GIVEN = "indirect_given"
+    INDIRECT_RECEIVED = "indirect_received"
+
     REFUND_CREDITED = "refund_credited"
     REFUND_DEBITED = "refund_debited"
 
