@@ -81,11 +81,29 @@ async def get_event_by_id(
                 creation=event.store.creation,
             ),
             sessions=[
-                schemas_ticketing.SessionSimple.model_validate(session)
+                schemas_ticketing.SessionSimple(
+                    id=session.id,
+                    event_id=session.event_id,
+                    name=session.name,
+                    quota=session.quota,
+                    user_quota=session.user_quota,
+                    used_quota=session.used_quota,
+                    disabled=session.disabled,
+                )
                 for session in event.sessions
             ],
             categories=[
-                schemas_ticketing.CategorySimple.model_validate(category)
+                schemas_ticketing.CategorySimple(
+                    id=category.id,
+                    event_id=category.event_id,
+                    name=category.name,
+                    required_mebership=category.required_mebership,
+                    quota=category.quota,
+                    user_quota=category.user_quota,
+                    used_quota=category.used_quota,
+                    price=category.price,
+                    disabled=category.disabled,
+                )
                 for category in event.categories
             ],
         )
