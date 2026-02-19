@@ -131,8 +131,6 @@ FACTORIES_DEMO_USERS:
     password: #azerty
     groups:
       - 0a25cb76-4b63-4fd3-b939-da6d9feabf28 # admin
-      - 45649735-866a-49df-b04b-a13c74fd5886 # AE
-      - 1f841bd9-00be-41a7-96e1-860a18a46105 # eclair
   # - firstname: ...
 
 #####################################
