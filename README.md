@@ -514,9 +514,9 @@ insert into core_membership (user_id, group_id) values ('<Your user_id>', '0a25c
 
 Install docker and the compose plugin (https://docs.docker.com/compose/install/)
 
-[`docker-compose.yaml`](docker-compose.yaml) includes the minimal settings required to run Hyperion using docker compose.
+[`compose.yaml`](compose.yaml) includes the minimal settings required to run Hyperion using docker compose.
 
-> During dev, [`docker-compose-dev.yaml`](docker-compose-dev.yaml) can be used to run the database, the redis server etc... If you really want to run the project without docker, you can do it but you will have to install the database, redis, etc ... yourself or disable corresponding features in the .env file (which is not recommended).
+> During dev, [`compose.dev.yaml`](compose.dev.yaml) can be used to run the database, the redis server etc... If you really want to run the project without docker, you can do it but you will have to install the database, redis, etc ... yourself or disable corresponding features in the .env file (which is not recommended).
 
 ## Linting and formating
 
@@ -562,7 +562,7 @@ See [app/core/google_api/README.md](app/core/google_api/README.md) for more info
 
 ## Hyperion deployment
 
-For production we encourage to use multiple Uvicorn workers. You can use our [docker image](Dockerfile) and [docker-compose file](docker-compose.yaml) files to run Hyperion with Unicorn.
+For production we encourage to use multiple Uvicorn workers. You can use our [docker image](Dockerfile) and [docker-compose file](compose.yaml) files to run Hyperion with Unicorn.
 
 You should use our [init file](app/app.py) to ensure that database initialization and migrations are only run once.
 
