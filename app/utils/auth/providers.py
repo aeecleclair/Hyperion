@@ -260,19 +260,15 @@ class SynapseAuthClient(BaseAuthClient):
 
 
 class MinecraftAuthClient(BaseAuthClient):
-    # Set of scopes the auth client is authorized to grant when issuing an access token.
-    # See app.types.scopes_type.ScopeType for possible values
-    allowed_scopes: set[ScopeType | str] = {ScopeType.profile}
+    allowed_scopes: set[ScopeType | str] = {ScopeType.profile, ScopeType.openid}
 
     permission = AuthPermissions.minecraft
 
     @classmethod
     def get_userinfo(cls, user: models_users.CoreUser):
         return {
-            "id": user.id,
-            "nickname": user.nickname,
-            "promo": user.promo,
-            "floor": user.floor or "Autre",
+            "sub": user.id,
+            "preferred_username": user.nickname or user.firstname,
         }
 
 
@@ -308,7 +304,7 @@ class RalllyAuthClient(BaseAuthClient):
     allowed_scopes: set[ScopeType | str] = {
         ScopeType.openid,
         ScopeType.profile,
-        "email",
+        ScopeType.email,
     }
 
     return_userinfo_in_id_token: bool = True
