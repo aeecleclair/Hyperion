@@ -29,7 +29,7 @@ class BaseAuthClient:
     # If the client always send a specific scope (ex: `name`), you may add it to the allowed scopes as a string (ex: `"name"`)
     # These "string" scopes won't have any effect for Hyperion but won't raise a warning when asked by the client
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
-    allowed_scopes: set[ScopeType | str] = {ScopeType.openid}
+    allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
     # Restrict the authentication to this client to specific Hyperion groups through permissions.
     # When set to `None`, users from any group can use the auth client
     permission: ModulePermissions | None = None
@@ -195,7 +195,7 @@ class PiwigoAuthClient(BaseAuthClient):
 class HedgeDocAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.types.scopes_type.ScopeType for possible values
-    allowed_scopes: set[ScopeType | str] = {ScopeType.profile}
+    allowed_scopes: set[ScopeType | str] = {ScopeType.profile, ScopeType.openid}
 
     permission = AuthPermissions.hedgedoc
 
@@ -321,7 +321,7 @@ class RalllyAuthClient(BaseAuthClient):
 
 
 class DocumensoAuthClient(BaseAuthClient):
-    allowed_scopes: set[ScopeType | str] = {ScopeType.openid}
+    allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
 
     allow_pkce_with_client_secret: bool = True
 
