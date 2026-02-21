@@ -1131,16 +1131,13 @@ def get_oidc_provider_metadata(settings: Settings):
         settings.OVERRIDDEN_CLIENT_URL_FOR_OIDC or settings.CLIENT_URL
     )
     return {
-        "issuer": settings.OIDC_ISSUER,  # We want to remove the trailing slash
+        "issuer": settings.OIDC_ISSUER,  # Without the trailing slash
         "authorization_endpoint": settings.CLIENT_URL + "auth/authorize",
         "token_endpoint": overridden_client_url + "auth/token",
         "userinfo_endpoint": overridden_client_url + "auth/userinfo",
         "introspection_endpoint": overridden_client_url + "auth/introspect",
         "jwks_uri": overridden_client_url + "oidc/authorization-flow/jwks_uri",
-        # RECOMMENDED The OAuth 2.0 / OpenID Connect URL of the OP's Dynamic Client Registration Endpoint OpenID.Registration.
-        # TODO: is this relevant?
-        # TODO: add for Calypsso
-        # "registration_endpoint": "https://a/register",
+        "registration_endpoint": overridden_client_url + "calypsso/register",
         "request_parameter_supported": True,
         "scopes_supported": [scope.value for scope in ScopeType],
         # REQUIRED Must be code as wa only support authorization code grant
@@ -1174,19 +1171,21 @@ def get_oidc_provider_metadata(settings: Settings):
             "sub",
             "name",
             "firstname",
+            "family_name",
             "nickname",
+            "preferred_username",
             "profile",
             "picture",
             "email",
+            "email_verified",
         ],
         # TODO: do we want to expose a documentation?
-        # "service_documentation": "https://d/about",
+        # "service_documentation": "https://docs.myecl.fr/hyperion/common/...",
         "claims_parameter_supported": False,
         "request_uri_parameter_supported": False,
         "require_request_uri_registration": False,
-        # TODO: add
-        # The privacy policy document URL, omitted if none.
-        # op_policy_uri = ""
-        # The terms of service document URL, omitted if none.
-        # op_tos_uri = ""
+        # TODO: The registration process SHOULD display this URL to the person registering the Client if it is given.
+        "op_policy_uri": overridden_client_url + "calypsso/asset?path=privacy",
+        "op_tos_uri": overridden_client_url
+        + "calypsso/asset?path=terms_and_conditions",
     }
