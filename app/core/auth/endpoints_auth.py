@@ -1132,12 +1132,13 @@ def get_oidc_provider_metadata(settings: Settings):
     )
     return {
         "issuer": settings.OIDC_ISSUER,  # Without the trailing slash
-        "authorization_endpoint": settings.CLIENT_URL + "auth/authorize",
+        "authorization_endpoint": overridden_client_url + "auth/authorize",
         "token_endpoint": overridden_client_url + "auth/token",
         "userinfo_endpoint": overridden_client_url + "auth/userinfo",
         "introspection_endpoint": overridden_client_url + "auth/introspect",
         "jwks_uri": overridden_client_url + "oidc/authorization-flow/jwks_uri",
-        "registration_endpoint": overridden_client_url + "calypsso/register",
+        "registration_endpoint": overridden_client_url
+        + calypsso.get_register_relative_url(False),
         "request_parameter_supported": True,
         "scopes_supported": [scope.value for scope in ScopeType],
         # REQUIRED Must be code as wa only support authorization code grant
@@ -1185,7 +1186,8 @@ def get_oidc_provider_metadata(settings: Settings):
         "request_uri_parameter_supported": False,
         "require_request_uri_registration": False,
         # TODO: The registration process SHOULD display this URL to the person registering the Client if it is given.
-        "op_policy_uri": overridden_client_url + "calypsso/asset?path=privacy",
+        "op_policy_uri": overridden_client_url
+        + calypsso.get_asset_relative_url(calypsso.Asset.privacy),
         "op_tos_uri": overridden_client_url
-        + "calypsso/asset?path=terms_and_conditions",
+        + calypsso.get_asset_relative_url(calypsso.Asset.terms_and_conditions),
     }
