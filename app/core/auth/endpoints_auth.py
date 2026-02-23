@@ -1132,7 +1132,7 @@ def get_oidc_provider_metadata(settings: Settings):
     )
     return {
         "issuer": settings.OIDC_ISSUER,  # Without the trailing slash
-        "authorization_endpoint": overridden_client_url + "auth/authorize",
+        "authorization_endpoint": settings.CLIENT_URL + "auth/authorize",
         "token_endpoint": overridden_client_url + "auth/token",
         "userinfo_endpoint": overridden_client_url + "auth/userinfo",
         "introspection_endpoint": overridden_client_url + "auth/introspect",
