@@ -195,7 +195,7 @@ class PiwigoAuthClient(BaseAuthClient):
 class HedgeDocAuthClient(BaseAuthClient):
     # Set of scopes the auth client is authorized to grant when issuing an access token.
     # See app.types.scopes_type.ScopeType for possible values
-    allowed_scopes: set[ScopeType | str] = {ScopeType.profile, ScopeType.openid}
+    allowed_scopes: set[ScopeType | str] = {ScopeType.profile}
 
     permission = AuthPermissions.hedgedoc
 
