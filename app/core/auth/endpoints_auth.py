@@ -1137,7 +1137,7 @@ def get_oidc_provider_metadata(settings: Settings):
         "userinfo_endpoint": overridden_client_url + "auth/userinfo",
         "introspection_endpoint": overridden_client_url + "auth/introspect",
         "jwks_uri": overridden_client_url + "oidc/authorization-flow/jwks_uri",
-        "registration_endpoint": overridden_client_url
+        "registration_endpoint": settings.CLIENT_URL
         + calypsso.get_register_relative_url(False),
         "request_parameter_supported": True,
         "scopes_supported": [scope.value for scope in ScopeType],
@@ -1186,8 +1186,8 @@ def get_oidc_provider_metadata(settings: Settings):
         "request_uri_parameter_supported": False,
         "require_request_uri_registration": False,
         # TODO: The registration process SHOULD display this URL to the person registering the Client if it is given.
-        "op_policy_uri": overridden_client_url
+        "op_policy_uri": settings.CLIENT_URL
         + calypsso.get_asset_relative_url(calypsso.Asset.privacy),
-        "op_tos_uri": overridden_client_url
+        "op_tos_uri": settings.CLIENT_URL
         + calypsso.get_asset_relative_url(calypsso.Asset.terms_and_conditions),
     }
