@@ -321,7 +321,11 @@ class RalllyAuthClient(BaseAuthClient):
 
 
 class DocumensoAuthClient(BaseAuthClient):
-    allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
+    allowed_scopes: set[ScopeType | str] = {
+        ScopeType.openid,
+        ScopeType.email,
+        ScopeType.profile,
+    }
 
     allow_pkce_with_client_secret: bool = True
 
