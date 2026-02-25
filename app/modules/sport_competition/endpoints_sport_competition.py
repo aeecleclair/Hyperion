@@ -35,6 +35,7 @@ from app.modules.sport_competition.types_sport_competition import (
     ExcelExportParams,
     PaiementMethodType,
     ProductSchoolType,
+    SportCategory,
 )
 from app.modules.sport_competition.utils.data_exporter.captain_exporter import (
     construct_captains_excel,
@@ -4425,6 +4426,30 @@ async def register_to_volunteer_shift(
         raise HTTPException(
             status_code=400,
             detail="This volunteer shift is full.",
+        )
+
+    # Create or update the CompetitionUser with is_volunteer=True
+    competition_user = await cruds_sport_competition.load_competition_user_by_id(
+        user.id,
+        edition.id,
+        db,
+    )
+    if competition_user is None:
+        new_user = schemas_sport_competition.CompetitionUserSimple(
+            user_id=user.id,
+            edition_id=edition.id,
+            sport_category=SportCategory.masculine,
+            is_volunteer=True,
+            validated=False,
+            created_at=datetime.now(UTC),
+        )
+        await cruds_sport_competition.add_competition_user(new_user, db)
+    elif not competition_user.is_volunteer:
+        await cruds_sport_competition.update_competition_user(
+            user.id,
+            edition.id,
+            schemas_sport_competition.CompetitionUserEdit(is_volunteer=True),
+            db,
         )
 
     db_registration = schemas_sport_competition.VolunteerRegistration(
