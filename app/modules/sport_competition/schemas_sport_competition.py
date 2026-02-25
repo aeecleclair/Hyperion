@@ -86,6 +86,7 @@ class CompetitionUserBase(BaseModel):
     is_fanfare: bool = False
     is_cameraman: bool = False
     is_athlete: bool = False
+    is_volunteer: bool = False
     allow_pictures: bool = True
 
     @model_validator(mode="after")
@@ -108,6 +109,7 @@ class CompetitionUserBase(BaseModel):
                 self.is_fanfare,
                 self.is_cameraman,
                 self.is_athlete,
+                self.is_volunteer,
             ],
         ):
             raise InvalidUserType("none")
@@ -137,6 +139,7 @@ class CompetitionUserEdit(BaseModel):
     is_fanfare: bool | None = None
     is_cameraman: bool | None = None
     is_athlete: bool | None = None
+    is_volunteer: bool | None = None
     allow_pictures: bool | None = None
 
 
