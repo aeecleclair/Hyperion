@@ -95,6 +95,7 @@ class CoreUsersFactory(Factory):
             user = CoreUser(
                 id=cls.other_users_id[i],
                 password_hash=password[i],
+                should_change_password=False,
                 firstname=firstname[i],
                 nickname=nickname[i],
                 name=name[i],
@@ -115,6 +116,7 @@ class CoreUsersFactory(Factory):
                 password_hash=security.get_password_hash(
                     user_info.password or faker.password(16, True, True, True, True),
                 ),
+                should_change_password=False,
                 firstname=user_info.firstname,
                 nickname=user_info.nickname,
                 name=user_info.name,
