@@ -440,6 +440,7 @@ async def add_competition_user(
             is_cameraman=user.is_cameraman,
             is_pompom=user.is_pompom,
             is_fanfare=user.is_fanfare,
+            is_volunteer=user.is_volunteer,
             allow_pictures=user.allow_pictures,
             validated=user.validated,
             created_at=user.created_at,
