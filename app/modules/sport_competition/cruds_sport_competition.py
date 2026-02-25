@@ -2,7 +2,7 @@ import logging
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import and_, delete, func, or_, select, update
+from sqlalchemy import and_, delete, func, not_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -318,12 +318,16 @@ async def load_all_competition_users(
     edition_id: UUID,
     db: AsyncSession,
     exclude_non_validated: bool = False,
+    exclude_cancelled: bool = True,
 ) -> list[schemas_sport_competition.CompetitionUser]:
     competition_users = await db.execute(
         select(models_sport_competition.CompetitionUser).where(
             models_sport_competition.CompetitionUser.edition_id == edition_id,
             models_sport_competition.CompetitionUser.validated
             if exclude_non_validated
+            else and_(True),
+            not_(models_sport_competition.CompetitionUser.cancelled)
+            if exclude_cancelled
             else and_(True),
         ),
     )
@@ -352,6 +356,7 @@ async def load_all_competition_users_by_school(
             models_sport_competition.CompetitionUser.validated
             if exclude_non_validated
             else and_(True),
+            not_(models_sport_competition.CompetitionUser.cancelled),
         ),
     )
     return [
@@ -422,9 +427,69 @@ async def count_validated_competition_users_by_school_id(
             models_sport_competition.CompetitionUser.is_fanfare == is_fanfare
             if is_fanfare is not None
             else and_(True),
+            not_(models_sport_competition.CompetitionUser.cancelled),
         ),
     )
     return result.scalar() or 0
+
+
+async def load_competition_users_stats_by_edition_id(
+    edition_id: UUID,
+    db: AsyncSession,
+) -> schemas_sport_competition.CompetitionUsersStats:
+    result = await db.execute(
+        select(
+            func.count().label("total_users"),
+            func.count()
+            .filter(
+                models_sport_competition.CompetitionUser.is_athlete,
+            )
+            .label("total_athletes"),
+            func.count()
+            .filter(
+                models_sport_competition.CompetitionUser.is_cameraman,
+            )
+            .label("total_cameramen"),
+            func.count()
+            .filter(
+                models_sport_competition.CompetitionUser.is_pompom,
+            )
+            .label("total_pompoms"),
+            func.count()
+            .filter(
+                models_sport_competition.CompetitionUser.is_fanfare,
+            )
+            .label("total_fanfares"),
+            func.count()
+            .filter(
+                models_sport_competition.CompetitionUser.is_volunteer,
+            )
+            .label("total_volunteers"),
+        )
+        .select_from(models_sport_competition.CompetitionUser)
+        .where(
+            models_sport_competition.CompetitionUser.edition_id == edition_id,
+            not_(models_sport_competition.CompetitionUser.cancelled),
+        ),
+    )
+    stats = result.first()
+    if not stats:
+        return schemas_sport_competition.CompetitionUsersStats(
+            total_users=0,
+            total_athletes=0,
+            total_cameramen=0,
+            total_pompoms=0,
+            total_fanfares=0,
+            total_volunteers=0,
+        )
+    return schemas_sport_competition.CompetitionUsersStats(
+        total_users=stats.total_users or 0,
+        total_athletes=stats.total_athletes or 0,
+        total_cameramen=stats.total_cameramen or 0,
+        total_pompoms=stats.total_pompoms or 0,
+        total_fanfares=stats.total_fanfares or 0,
+        total_volunteers=stats.total_volunteers or 0,
+    )
 
 
 async def add_competition_user(
@@ -462,6 +527,60 @@ async def update_competition_user(
             models_sport_competition.CompetitionUser.edition_id == edition_id,
         )
         .values(**user.model_dump(exclude_unset=True)),
+    )
+    await db.flush()
+
+
+async def validate_competition_user(
+    user_id: str,
+    edition_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_sport_competition.CompetitionUser)
+        .where(
+            and_(
+                models_sport_competition.CompetitionUser.user_id == user_id,
+                models_sport_competition.CompetitionUser.edition_id == edition_id,
+            ),
+        )
+        .values(validated=True),
+    )
+    await db.flush()
+
+
+async def cancel_competition_user(
+    user_id: str,
+    edition_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_sport_competition.CompetitionUser)
+        .where(
+            and_(
+                models_sport_competition.CompetitionUser.user_id == user_id,
+                models_sport_competition.CompetitionUser.edition_id == edition_id,
+            ),
+        )
+        .values(cancelled=True),
+    )
+    await db.flush()
+
+
+async def invalidate_competition_user(
+    user_id: str,
+    edition_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_sport_competition.CompetitionUser)
+        .where(
+            and_(
+                models_sport_competition.CompetitionUser.user_id == user_id,
+                models_sport_competition.CompetitionUser.edition_id == edition_id,
+            ),
+        )
+        .values(validated=False),
     )
     await db.flush()
 
@@ -637,7 +756,7 @@ async def update_participant(
     user_id: str,
     sport_id: UUID,
     edition_id: UUID,
-    participant: schemas_sport_competition.ParticipantEdit,
+    participant_edit: schemas_sport_competition.ParticipantEdit,
     db: AsyncSession,
 ):
     await db.execute(
@@ -650,43 +769,7 @@ async def update_participant(
                 == edition_id,
             ),
         )
-        .values(**participant.model_dump(exclude_unset=True)),
-    )
-    await db.flush()
-
-
-async def validate_competition_user(
-    user_id: str,
-    edition_id: UUID,
-    db: AsyncSession,
-):
-    await db.execute(
-        update(models_sport_competition.CompetitionUser)
-        .where(
-            and_(
-                models_sport_competition.CompetitionUser.user_id == user_id,
-                models_sport_competition.CompetitionUser.edition_id == edition_id,
-            ),
-        )
-        .values(validated=True),
-    )
-    await db.flush()
-
-
-async def invalidate_competition_user(
-    user_id: str,
-    edition_id: UUID,
-    db: AsyncSession,
-):
-    await db.execute(
-        update(models_sport_competition.CompetitionUser)
-        .where(
-            and_(
-                models_sport_competition.CompetitionUser.user_id == user_id,
-                models_sport_competition.CompetitionUser.edition_id == edition_id,
-            ),
-        )
-        .values(validated=False),
+        .values(**participant_edit.model_dump(exclude_unset=True)),
     )
     await db.flush()
 
@@ -939,6 +1022,38 @@ async def count_validated_participants_by_school_and_sport_ids(
         ),
     )
     return result.scalar() or 0
+
+
+async def load_sports_stats_by_edition_id(
+    edition_id: UUID,
+    db: AsyncSession,
+) -> schemas_sport_competition.CompetitionSportsStats:
+    total_participants = await db.execute(
+        select(func.count())
+        .select_from(models_sport_competition.CompetitionParticipant)
+        .where(
+            models_sport_competition.CompetitionParticipant.edition_id == edition_id,
+        ),
+    )
+    total_teams = await db.execute(
+        select(func.count())
+        .select_from(models_sport_competition.CompetitionTeam)
+        .where(
+            models_sport_competition.CompetitionTeam.edition_id == edition_id,
+        ),
+    )
+    total_matches = await db.execute(
+        select(func.count())
+        .select_from(models_sport_competition.Match)
+        .where(
+            models_sport_competition.Match.edition_id == edition_id,
+        ),
+    )
+    return schemas_sport_competition.CompetitionSportsStats(
+        total_participants=total_participants.scalar() or 0,
+        total_teams=total_teams.scalar() or 0,
+        total_matches=total_matches.scalar() or 0,
+    )
 
 
 async def update_participant_certificate_file_id(
@@ -2712,6 +2827,31 @@ async def load_payment_by_id(
         if payment
         else None
     )
+
+
+async def load_revenues_stats_by_edition_id(
+    edition_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_sport_competition.CompetitionRevenueStats]:
+    stats = await db.execute(
+        select(
+            models_sport_competition.CompetitionPayment.method,
+            func.count(models_sport_competition.CompetitionPayment.id),
+            func.sum(models_sport_competition.CompetitionPayment.total),
+        )
+        .where(
+            models_sport_competition.CompetitionPayment.edition_id == edition_id,
+        )
+        .group_by(models_sport_competition.CompetitionPayment.method),
+    )
+    return [
+        schemas_sport_competition.CompetitionRevenueStats(
+            method=stat[0],
+            count=stat[1],
+            total=stat[2],
+        )
+        for stat in stats.all()
+    ]
 
 
 async def add_payment(

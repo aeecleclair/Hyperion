@@ -66,6 +66,7 @@ class CompetitionUser(Base):
     is_athlete: Mapped[bool] = mapped_column(default=False)
     is_volunteer: Mapped[bool] = mapped_column(default=False)
     allow_pictures: Mapped[bool] = mapped_column(default=True)
+    cancelled: Mapped[bool] = mapped_column(default=False)
 
     user: Mapped[CoreUser] = relationship(
         "CoreUser",

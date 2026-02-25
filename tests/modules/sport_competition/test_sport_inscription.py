@@ -3589,9 +3589,29 @@ async def test_register_to_volunteer_shift(
     )
     assert registration_check is not None, registrations_json
 
+    response = client.get(
+        "/competition/users/me",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200, response.json()
+    user_info = response.json()
+    assert user_info["is_volunteer"] is True
+
 
 # endregion
 # region: Data Export
+
+
+async def test_get_edition_stats(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        f"/competition/editions/{active_edition.id}/stats",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200, response.json()
+
+
 async def test_data_exporter_users(
     client: TestClient,
 ):
