@@ -224,7 +224,7 @@ async def get_edition_stats(
     edition_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
 ) -> schemas_sport_competition.CompetitionEditionStats:
     """
