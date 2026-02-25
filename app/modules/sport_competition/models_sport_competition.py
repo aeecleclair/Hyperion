@@ -64,6 +64,7 @@ class CompetitionUser(Base):
     is_fanfare: Mapped[bool] = mapped_column(default=False)
     is_cameraman: Mapped[bool] = mapped_column(default=False)
     is_athlete: Mapped[bool] = mapped_column(default=False)
+    is_volunteer: Mapped[bool] = mapped_column(default=False)
     allow_pictures: Mapped[bool] = mapped_column(default=True)
 
     user: Mapped[CoreUser] = relationship(
