@@ -2456,11 +2456,11 @@ async def edit_participant(
                     status_code=400,
                     detail="Sport needs to be played in a team, participant is currently not in a team",
                 )
-            new_team = await cruds_sport_competition.load_team_by_id(
+            new_team_db = await cruds_sport_competition.load_team_by_id(
                 participant.team_id,
                 db,
             )
-            if new_team is None or new_team.sport_id != participant_edit.sport_id:
+            if new_team_db is None or new_team_db.sport_id != participant_edit.sport_id:
                 raise HTTPException(
                     status_code=400,
                     detail="Participant team is not compatible with the new sport",
