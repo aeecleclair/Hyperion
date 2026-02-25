@@ -2519,7 +2519,7 @@ async def edit_participant(
         participant_edit.team_id is not None
         and participant_edit.team_id != participant.team_id
     ):
-        new_team = await cruds_sport_competition.load_team_by_id(
+        new_team_db = await cruds_sport_competition.load_team_by_id(
             participant_edit.team_id,
             db,
         )
@@ -4741,7 +4741,7 @@ async def register_to_volunteer_shift(
 async def validate_volunteer_registration(
     shift_id: UUID,
     user_id: str,
-    validate: bool = Body(..., embed=True),
+    validated: bool = Body(..., embed=True),
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
@@ -4766,7 +4766,7 @@ async def validate_volunteer_registration(
     await cruds_sport_competition.update_volunteer_registration_validation(
         user_id,
         shift_id,
-        validate,
+        validated,
         db,
     )
 
