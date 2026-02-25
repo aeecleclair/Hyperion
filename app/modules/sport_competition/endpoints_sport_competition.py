@@ -536,6 +536,8 @@ async def edit_current_user_competition(
     Edit the current user's competition user for the current edition.
     The user must exist in the core users database.
     """
+    if user_edit.validated:
+        user_edit.validated = False
     stored = await cruds_sport_competition.load_competition_user_by_id(
         db=db,
         user_id=user.id,
