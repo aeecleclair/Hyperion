@@ -676,6 +676,36 @@ async def edit_competition_user(
 
 
 @module.router.patch(
+    "/competition/users/{user_id}/schools",
+    status_code=204,
+)
+async def edit_user_school(
+    user_id: str,
+    school_id: UUID = Body(),
+    db: AsyncSession = Depends(get_db),
+    current_user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+) -> None:
+    user = await cruds_users.get_user_by_id(db, user_id)
+    if user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found in the database",
+        )
+    if user.school_id != SchoolType.no_school.value:
+        raise HTTPException(
+            status_code=400,
+            detail="User already has a school, cannot change it",
+        )
+    await cruds_users.update_user(
+        db,
+        user_id,
+        schemas_users.CoreUserUpdateAdmin(school_id=school_id),
+    )
+
+
+@module.router.patch(
     "/competition/users/{user_id}/validate",
     status_code=204,
 )

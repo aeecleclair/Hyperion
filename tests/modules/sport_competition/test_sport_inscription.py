@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import delete, update
 
 from app.core.groups import models_groups
-from app.core.groups.groups_type import AccountType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.core.schools import models_schools
 from app.core.schools.schools_type import SchoolType
 from app.core.users import models_users
@@ -46,11 +46,14 @@ active_edition: models_sport_competition.CompetitionEdition
 old_edition: models_sport_competition.CompetitionEdition
 
 admin_user: models_users.CoreUser
+competition_admin_user: models_users.CoreUser
 school_bds_user: models_users.CoreUser
 sport_manager_user: models_users.CoreUser
 user3: models_users.CoreUser
 user4: models_users.CoreUser
+user5: models_users.CoreUser
 admin_token: str
+competition_admin_token: str
 school_bds_token: str
 sport_manager_token: str
 user3_token: str
@@ -161,10 +164,21 @@ async def init_objects() -> None:
     )
     await add_object_to_db(active_edition)
 
-    global admin_user, school_bds_user, sport_manager_user, user3, user4
+    global \
+        admin_user, \
+        competition_admin_user, \
+        school_bds_user, \
+        sport_manager_user, \
+        user3, \
+        user4, \
+        user5
     admin_user = await create_user_with_groups(
-        [admin_group.id],
+        [GroupType.admin.value],
         email="Admin User",
+    )
+    competition_admin_user = await create_user_with_groups(
+        [admin_group.id],
+        email="Compétition Admin User",
     )
     school_bds_user = await create_user_with_groups(
         [],
@@ -183,9 +197,21 @@ async def init_objects() -> None:
         [],
         email="Another Random User",
     )
+    user5 = await create_user_with_groups(
+        [],
+        school_id=SchoolType.no_school,
+        email="Third Random User",
+    )
 
-    global admin_token, school_bds_token, sport_manager_token, user3_token, user4_token
+    global \
+        admin_token, \
+        competition_admin_token, \
+        school_bds_token, \
+        sport_manager_token, \
+        user3_token, \
+        user4_token
     admin_token = create_api_access_token(admin_user)
+    competition_admin_token = create_api_access_token(competition_admin_user)
     school_bds_token = create_api_access_token(school_bds_user)
     sport_manager_token = create_api_access_token(sport_manager_user)
     user3_token = create_api_access_token(user3)
@@ -196,7 +222,7 @@ async def init_objects() -> None:
         competition_user_school_bds, \
         competition_user_sport_manager
     competition_user_admin = models_sport_competition.CompetitionUser(
-        user_id=admin_user.id,
+        user_id=competition_admin_user.id,
         sport_category=SportCategory.masculine,
         edition_id=active_edition.id,
         is_athlete=True,
@@ -392,14 +418,14 @@ async def init_objects() -> None:
         school_id=SchoolType.centrale_lyon.value,
         edition_id=active_edition.id,
         name="Admin Team",
-        captain_id=admin_user.id,
+        captain_id=competition_admin_user.id,
         created_at=datetime.now(UTC),
     )
     await add_object_to_db(team_admin_user)
 
     global participant1, participant2, participant3
     participant1 = models_sport_competition.CompetitionParticipant(
-        user_id=admin_user.id,
+        user_id=competition_admin_user.id,
         school_id=SchoolType.centrale_lyon.value,
         edition_id=active_edition.id,
         sport_id=sport_free_quota.id,
@@ -551,7 +577,7 @@ async def init_objects() -> None:
         id=uuid4(),
         edition_id=active_edition.id,
         name="Morning Shift",
-        manager_id=admin_user.id,
+        manager_id=competition_admin_user.id,
         description="Help with setup and registration",
         value=2,
         start_time=datetime(2024, 6, 15, 8, 0, tzinfo=UTC),
@@ -561,7 +587,7 @@ async def init_objects() -> None:
     )
     await add_object_to_db(volunteer_shift)
     volunteer_registration = models_sport_competition.VolunteerRegistration(
-        user_id=admin_user.id,
+        user_id=competition_admin_user.id,
         shift_id=volunteer_shift.id,
         edition_id=active_edition.id,
         registered_at=datetime.now(UTC),
@@ -603,7 +629,7 @@ async def test_create_sport_as_random(
 
     sports = client.get(
         "/competition/sports",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert sports.status_code == 200, sports.json()
     sports_json = sports.json()
@@ -619,7 +645,7 @@ async def test_create_sport_as_admin(
 ) -> None:
     response = client.post(
         "/competition/sports",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json={
             "name": "New Sport",
             "team_size": 5,
@@ -633,7 +659,7 @@ async def test_create_sport_as_admin(
 
     sports = client.get(
         "/competition/sports",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert sports.status_code == 200, sports.json()
     sports_json = sports.json()
@@ -649,7 +675,7 @@ async def test_create_sport_with_invalid_data(
 ) -> None:
     response = client.post(
         "/competition/sports",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json={
             "name": "Invalid Sport",
             "team_size": -1,  # Invalid team size
@@ -666,7 +692,7 @@ async def test_create_sport_with_duplicate_name(
 ) -> None:
     response = client.post(
         "/competition/sports",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json={
             "name": sport_free_quota.name,  # Duplicate name
             "team_size": 5,
@@ -696,7 +722,7 @@ async def test_patch_sport_as_random(
 
     sports = client.get(
         "/competition/sports",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert sports.status_code == 200, sports.json()
     sports_json = sports.json()
@@ -722,7 +748,7 @@ async def test_patch_sport_as_admin(
     await add_object_to_db(sport_to_modify)
     response = client.patch(
         f"/competition/sports/{sport_to_modify.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json={
             "name": "Updated Sport",
             "team_size": 6,
@@ -735,7 +761,7 @@ async def test_patch_sport_as_admin(
 
     sports = client.get(
         "/competition/sports",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert sports.status_code == 200, sports.json()
     sports_json = sports.json()
@@ -752,7 +778,7 @@ async def test_patch_sport_with_duplicate_name(
 ) -> None:
     response = client.patch(
         f"/competition/sports/{sport_free_quota.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json={
             "name": sport_used_quota.name,  # Duplicate name
             "team_size": 6,
@@ -775,7 +801,7 @@ async def test_delete_sport_as_random(
 
     sports = client.get(
         "/competition/sports",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert sports.status_code == 200, sports.json()
     sports_json = sports.json()
@@ -791,7 +817,7 @@ async def test_delete_sport_active(
 ) -> None:
     response = client.delete(
         f"/competition/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 400, response.json()
 
@@ -811,13 +837,13 @@ async def test_delete_sport_as_admin(
 
     response = client.delete(
         f"/competition/sports/{sport_to_delete.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 204, response.json()
 
     sports = client.get(
         "/competition/sports",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert sports.status_code == 200, sports.json()
     sports_json = sports.json()
@@ -861,7 +887,7 @@ async def test_create_edition_as_admin(
 ) -> None:
     response = client.post(
         "/competition/editions",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json={
             "name": "New Competition Edition",
             "year": 2025,
@@ -872,7 +898,7 @@ async def test_create_edition_as_admin(
     assert response.status_code == 201, response.json()
     editions = client.get(
         "/competition/editions",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert editions.status_code == 200
     editions_json = editions.json()
@@ -904,7 +930,7 @@ async def test_create_edition_as_random(
 
     editions = client.get(
         "/competition/editions",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert editions.status_code == 200
     editions_json = editions.json()
@@ -924,7 +950,7 @@ async def test_patch_edition_as_admin(
 ) -> None:
     response = client.patch(
         f"/competition/editions/{old_edition.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json={
             "name": "Updated Edition",
         },
@@ -933,7 +959,7 @@ async def test_patch_edition_as_admin(
 
     editions = client.get(
         "/competition/editions",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert editions.status_code == 200
     editions_json = editions.json()
@@ -950,12 +976,12 @@ async def test_activate_edition(
 ) -> None:
     response = client.post(
         f"/competition/editions/{old_edition.id}/activate",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 204, response.json()
     editions = client.get(
         "/competition/editions",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert editions.status_code == 200
     editions_json = editions.json()
@@ -967,7 +993,7 @@ async def test_activate_edition(
     assert activated_edition["active"] is True
     client.post(
         f"/competition/editions/{active_edition.id}/activate",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
 
 
@@ -976,13 +1002,13 @@ async def test_enable_inscription_not_active(
 ) -> None:
     response = client.post(
         f"/competition/editions/{old_edition.id}/inscription",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json=True,
     )
     assert response.status_code == 400, response.json()
     editions = client.get(
         "/competition/editions",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert editions.status_code == 200
     editions_json = editions.json()
@@ -999,13 +1025,13 @@ async def test_enable_inscription(
 ) -> None:
     response = client.post(
         f"/competition/editions/{active_edition.id}/inscription",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json=True,
     )
     assert response.status_code == 204, response.json()
     editions = client.get(
         "/competition/editions",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert editions.status_code == 200
     editions_json = editions.json()
@@ -1035,7 +1061,7 @@ async def test_patch_edition_as_random(
 
     editions = client.get(
         "/competition/editions",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert editions.status_code == 200
     editions_json = editions.json()
@@ -1085,7 +1111,7 @@ async def test_post_school_extension_as_random(
 
     schools = client.get(
         "/competition/schools",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert schools.status_code == 200, schools.json()
     schools_json = schools.json()
@@ -1101,7 +1127,7 @@ async def test_post_school_extension_as_admin(
 ) -> None:
     response = client.post(
         "/competition/schools",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json={
             "school_id": str(school2.id),
             "from_lyon": False,
@@ -1113,7 +1139,7 @@ async def test_post_school_extension_as_admin(
 
     schools = client.get(
         "/competition/schools",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert schools.status_code == 200, schools.json()
     schools_json = schools.json()
@@ -1140,7 +1166,7 @@ async def test_patch_school_extension_as_random(
 
     schools = client.get(
         "/competition/schools",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert schools.status_code == 200, schools.json()
     schools_json = schools.json()
@@ -1159,7 +1185,7 @@ async def test_patch_school_extension_as_admin(
 ) -> None:
     response = client.patch(
         f"/competition/schools/{school1.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json={
             "from_lyon": True,
             "active": True,
@@ -1170,7 +1196,7 @@ async def test_patch_school_extension_as_admin(
 
     schools = client.get(
         "/competition/schools",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert schools.status_code == 200, schools.json()
     schools_json = schools.json()
@@ -1220,7 +1246,7 @@ async def test_get_competition_user_by_id(
 ) -> None:
     response = client.get(
         f"/competition/users/{competition_user_admin.user_id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 200, response.json()
     user = response.json()
@@ -1274,7 +1300,7 @@ async def test_patch_competition_user_as_admin(
 ) -> None:
     response = client.patch(
         f"/competition/users/{competition_user_admin.user_id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json={
             "sport_category": SportCategory.masculine.value,
         },
@@ -1283,11 +1309,30 @@ async def test_patch_competition_user_as_admin(
 
     user_response = client.get(
         f"/competition/users/{competition_user_admin.user_id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert user_response.status_code == 200, user_response.json()
     user = user_response.json()
     assert user["sport_category"] == SportCategory.masculine.value
+
+
+async def test_patch_user_school_as_admin(
+    client: TestClient,
+) -> None:
+    response = client.patch(
+        f"/competition/users/{user5.id}/schools",
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
+        json=str(school2.id),
+    )
+    assert response.status_code == 204, response.json()
+
+    user_response = client.get(
+        f"/users/{user5.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert user_response.status_code == 200, user_response.json()
+    user = user_response.json()
+    assert user["school_id"] == str(school2.id)
 
 
 # endregion
@@ -1305,7 +1350,7 @@ async def test_add_user_to_group_as_random(
 
     user = client.get(
         f"/competition/users/{competition_user_admin.user_id}/groups",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert user.status_code == 200, user.json()
     user_json = user.json()
@@ -1319,13 +1364,13 @@ async def test_add_user_to_group_as_admin(
 ) -> None:
     response = client.post(
         f"/competition/groups/{CompetitionGroupType.schools_bds.value}/users/{competition_user_admin.user_id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 201, response.json()
 
     user = client.get(
         "/competition/users/me/groups",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert user.status_code == 200, user.json()
     user_json = user.json()
@@ -1345,7 +1390,7 @@ async def test_remove_user_from_group_as_random(
 
     user = client.get(
         f"/competition/users/{competition_user_school_bds.user_id}/groups",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert user.status_code == 200, user.json()
     user_json = user.json()
@@ -1373,7 +1418,7 @@ async def test_get_school_general_quota(
 ) -> None:
     response = client.get(
         f"/competition/schools/{school1.id}/general-quota",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 200, response.json()
     school_quota_json = response.json()
@@ -1415,7 +1460,7 @@ async def test_post_school_general_quota_as_random(
 
     school_quota = client.get(
         f"/competition/schools/{school2.id}/general-quota",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert school_quota.status_code == 404, school_quota.json()
 
@@ -1425,7 +1470,7 @@ async def test_post_school_general_quota_as_admin(
 ) -> None:
     response = client.post(
         f"/competition/schools/{school2.id}/general-quota",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json={
             "athlete_quota": 10,
             "cameraman_quota": 5,
@@ -1437,7 +1482,7 @@ async def test_post_school_general_quota_as_admin(
 
     school_quota = client.get(
         f"/competition/schools/{school2.id}/general-quota",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert school_quota.status_code == 200, school_quota.json()
     school_quota_json = school_quota.json()
@@ -1465,7 +1510,7 @@ async def test_patch_school_general_quota_as_random(
 
     school_quota = client.get(
         f"/competition/schools/{school1.id}/general-quota",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert school_quota.status_code == 200, school_quota.json()
     school_quota_json = school_quota.json()
@@ -1480,7 +1525,7 @@ async def test_patch_school_general_quota_as_admin(
 ) -> None:
     response = client.patch(
         f"/competition/schools/{school1.id}/general-quota",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json={
             "athlete_quota": 5,
             "cameraman_quota": 3,
@@ -1492,7 +1537,7 @@ async def test_patch_school_general_quota_as_admin(
 
     school_quota = client.get(
         f"/competition/schools/{school1.id}/general-quota",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert school_quota.status_code == 200, school_quota.json()
     school_quota_json = school_quota.json()
@@ -1511,7 +1556,7 @@ async def test_get_school_sport_quota(
 ) -> None:
     response = client.get(
         f"/competition/schools/{school1.id}/sports-quotas",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 200, response.json()
     quotas = response.json()
@@ -1523,7 +1568,7 @@ async def test_get_sport_quota(
 ) -> None:
     response = client.get(
         f"/competition/sports/{sport_free_quota.id}/quotas",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 200, response.json()
     quota = response.json()
@@ -1545,7 +1590,7 @@ async def test_post_school_sport_quota_as_random(
 
     quota = client.get(
         f"/competition/schools/{school2.id}/sports-quotas",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert quota.status_code == 200, quota.json()
     quota_json = quota.json()
@@ -1561,7 +1606,7 @@ async def test_post_school_sport_quota_as_admin(
 ) -> None:
     response = client.post(
         f"/competition/schools/{school2.id}/sports/{sport_free_quota.id}/quotas",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json={
             "participant_quota": 5,
             "team_quota": 2,
@@ -1571,7 +1616,7 @@ async def test_post_school_sport_quota_as_admin(
 
     quota = client.get(
         f"/competition/schools/{school2.id}/sports-quotas",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert quota.status_code == 200, quota.json()
     quota_json = quota.json()
@@ -1599,7 +1644,7 @@ async def test_patch_school_sport_quota_as_random(
 
     quota = client.get(
         f"/competition/schools/{school1.id}/sports-quotas",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert quota.status_code == 200, quota.json()
     quota_json = quota.json()
@@ -1617,7 +1662,7 @@ async def test_patch_school_sport_quota_as_admin(
 ) -> None:
     response = client.patch(
         f"/competition/schools/{school2.id}/sports/{sport_free_quota.id}/quotas",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json={
             "participant_quota": 3,
             "team_quota": 1,
@@ -1627,7 +1672,7 @@ async def test_patch_school_sport_quota_as_admin(
 
     quota = client.get(
         f"/competition/schools/{school2.id}/sports-quotas",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert quota.status_code == 200, quota.json()
     quota_json = quota.json()
@@ -1651,7 +1696,7 @@ async def test_delete_school_sport_quota_as_random(
 
     quota = client.get(
         f"/competition/schools/{school1.id}/sports-quotas",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert quota.status_code == 200, quota.json()
     quota_json = quota.json()
@@ -1667,13 +1712,13 @@ async def test_delete_school_sport_quota_as_admin(
 ) -> None:
     response = client.delete(
         f"/competition/schools/{school2.id}/sports/{sport_free_quota.id}/quotas",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 204, response.json()
 
     quota = client.get(
         f"/competition/schools/{school2.id}/sports-quotas",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert quota.status_code == 200, quota.json()
     quota_json = quota.json()
@@ -1693,7 +1738,7 @@ async def test_get_user_team_as_captain(
 ) -> None:
     response = client.get(
         "/competition/teams/me",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 200, response.json()
     team = response.json()
@@ -1754,7 +1799,7 @@ async def test_create_team_different_captain(
 
     teams = client.get(
         f"/competition/teams/sports/{sport_free_quota.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert teams.status_code == 200, teams.json()
     teams_json = teams.json()
@@ -1783,7 +1828,7 @@ async def test_create_team_different_school(
 
     teams = client.get(
         f"/competition/teams/sports/{sport_free_quota.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert teams.status_code == 200, teams.json()
     teams_json = teams.json()
@@ -1812,7 +1857,7 @@ async def test_create_team_for_sport_without_team(
 
     teams = client.get(
         f"/competition/teams/sports/{sport_free_quota.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert teams.status_code == 200, teams.json()
     teams_json = teams.json()
@@ -1847,7 +1892,7 @@ async def test_create_team_no_quota(
 
     teams = client.get(
         f"/competition/teams/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert teams.status_code == 200, teams.json()
     teams_json = teams.json()
@@ -1873,7 +1918,7 @@ async def test_create_team_used_name(
 
     teams = client.get(
         f"/competition/teams/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert teams.status_code == 200, teams.json()
     teams_json = teams.json()
@@ -1888,11 +1933,11 @@ async def test_create_team(
         name="New Team",
         school_id=SchoolType.centrale_lyon.value,
         sport_id=sport_with_team.id,
-        captain_id=admin_user.id,
+        captain_id=competition_admin_user.id,
     )
     response = client.post(
         "/competition/teams",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json=team_info.model_dump(exclude_none=True, mode="json"),
     )
     assert response.status_code == 201, response.json()
@@ -1900,7 +1945,7 @@ async def test_create_team(
 
     teams = client.get(
         f"/competition/teams/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert teams.status_code == 200, teams.json()
     teams_json = teams.json()
@@ -1922,7 +1967,7 @@ async def test_patch_team_as_random(
 
     teams = client.get(
         f"/competition/teams/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert teams.status_code == 200, teams.json()
     teams_json = teams.json()
@@ -1936,7 +1981,7 @@ async def test_patch_team_as_admin(
 ) -> None:
     response = client.patch(
         f"/competition/teams/{team1.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json={
             "name": "Updated Team Name",
         },
@@ -1945,7 +1990,7 @@ async def test_patch_team_as_admin(
 
     teams = client.get(
         f"/competition/teams/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert teams.status_code == 200, teams.json()
     teams_json = teams.json()
@@ -1968,7 +2013,7 @@ async def test_patch_team_as_captain(
 
     teams = client.get(
         f"/competition/teams/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert teams.status_code == 200, teams.json()
     teams_json = teams.json()
@@ -1988,7 +2033,7 @@ async def test_delete_team_as_random(
 
     teams = client.get(
         f"/competition/teams/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert teams.status_code == 200, teams.json()
     teams_json = teams.json()
@@ -2011,13 +2056,13 @@ async def test_delete_team_as_admin(
     await add_object_to_db(new_team)
     response = client.delete(
         f"/competition/teams/{new_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 204, response.json()
 
     teams = client.get(
         f"/competition/teams/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert teams.status_code == 200, teams.json()
     teams_json = teams.json()
@@ -2049,7 +2094,7 @@ async def test_delete_team_as_captain(
 
     teams = client.get(
         f"/competition/teams/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert teams.status_code == 200, teams.json()
     teams_json = teams.json()
@@ -2069,11 +2114,11 @@ async def test_get_participant_me(
 ) -> None:
     response = client.get(
         "/competition/participants/me",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 200, response.json()
     user = response.json()
-    assert user["user_id"] == str(admin_user.id)
+    assert user["user_id"] == str(competition_admin_user.id)
     assert user["sport_id"] == str(sport_free_quota.id)
     assert user["edition_id"] == str(active_edition.id)
 
@@ -2083,7 +2128,7 @@ async def test_get_participant_for_sport(
 ) -> None:
     response = client.get(
         f"/competition/participants/sports/{sport_free_quota.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 200, response.json()
     users = response.json()
@@ -2097,7 +2142,7 @@ async def test_get_participant_for_school_as_admin(
 ) -> None:
     response = client.get(
         f"/competition/participants/schools/{SchoolType.centrale_lyon.value}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 200, response.json()
     users = response.json()
@@ -2154,7 +2199,7 @@ async def test_user_participate_with_invalid_category(
 
     participants = client.get(
         f"/competition/participants/sports/{sport_feminine.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert participants.status_code == 200, participants.json()
     participants_json = participants.json()
@@ -2180,7 +2225,7 @@ async def test_user_participate_without_team(
 
     participants = client.get(
         f"/competition/participants/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert participants.status_code == 200, participants.json()
     participants_json = participants.json()
@@ -2210,7 +2255,7 @@ async def test_user_participate_with_invalid_team_school(
 
     participants = client.get(
         f"/competition/participants/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert participants.status_code == 200, participants.json()
     participants_json = participants.json()
@@ -2237,7 +2282,7 @@ async def test_user_participate_with_unknown_team(
 
     participants = client.get(
         f"/competition/participants/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert participants.status_code == 200, participants.json()
     participants_json = participants.json()
@@ -2293,7 +2338,7 @@ async def test_user_participate_with_maximum_team_size(
 
     participants = client.get(
         f"/competition/participants/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert participants.status_code == 200, participants.json()
     participants_json = participants.json()
@@ -2322,7 +2367,7 @@ async def test_user_participate_with_maximum_substitute_size(
 
     participants = client.get(
         f"/competition/participants/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert participants.status_code == 200, participants.json()
     participants_json = participants.json()
@@ -2347,7 +2392,7 @@ async def test_user_participate_with_valid_data(
 
     participants = client.get(
         f"/competition/participants/sports/{sport_free_quota.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert participants.status_code == 200, participants.json()
     participants_json = participants.json()
@@ -2383,7 +2428,7 @@ async def test_user_participate_with_team(
 
     participants = client.get(
         f"/competition/participants/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert participants.status_code == 200, participants.json()
     participants_json = participants.json()
@@ -2404,27 +2449,31 @@ async def test_add_user_certificate(
     }
     response = client.post(
         f"/competition/participants/sports/{sport_free_quota.id}/certificate",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         files=file_content,
     )
     assert response.status_code == 204, response.json()
 
     participants = client.get(
         f"/competition/participants/sports/{sport_free_quota.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert participants.status_code == 200, participants.json()
     participants_json = participants.json()
     user_participation = next(
-        (u for u in participants_json if u["user_id"] == str(admin_user.id)),
+        (
+            u
+            for u in participants_json
+            if u["user_id"] == str(competition_admin_user.id)
+        ),
         None,
     )
     assert user_participation is not None, participants_json
     assert user_participation["certificate_file_id"] is not None, participants_json
 
     file_response = client.get(
-        f"/competition/participants/users/{admin_user.id}/certificate",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        f"/competition/participants/users/{competition_admin_user.id}/certificate",
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert file_response.status_code == 200, file_response.json()
     assert file_response.content == file, file_response.json()
@@ -2435,18 +2484,22 @@ async def test_delete_user_certificate(
 ) -> None:
     response = client.delete(
         f"/competition/participants/sports/{sport_free_quota.id}/certificate",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 204, response.json()
 
     participants = client.get(
         f"/competition/participants/sports/{sport_free_quota.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert participants.status_code == 200, participants.json()
     participants_json = participants.json()
     user_participation = next(
-        (u for u in participants_json if u["user_id"] == str(admin_user.id)),
+        (
+            u
+            for u in participants_json
+            if u["user_id"] == str(competition_admin_user.id)
+        ),
         None,
     )
     assert user_participation is not None, participants_json
@@ -2464,7 +2517,7 @@ async def test_user_withdraw_participation(
 
     participants = client.get(
         f"/competition/participants/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert participants.status_code == 200, participants.json()
     participants_json = participants.json()
@@ -2497,7 +2550,7 @@ async def test_user_withdraw_participation_delete_team(
 
     teams = client.get(
         f"/competition/teams/sports/{sport_free_quota.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert teams.status_code == 200, teams.json()
     teams_json = teams.json()
@@ -2557,7 +2610,7 @@ async def test_post_location_as_random(
 
     locations = client.get(
         "/competition/locations",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert locations.status_code == 200, locations.json()
     locations_json = locations.json()
@@ -2580,7 +2633,7 @@ async def test_post_location_as_admin(
     )
     response = client.post(
         "/competition/locations",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json=location_info.model_dump(exclude_none=True, mode="json"),
     )
     assert response.status_code == 201, response.json()
@@ -2588,7 +2641,7 @@ async def test_post_location_as_admin(
 
     locations = client.get(
         "/competition/locations",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert locations.status_code == 200, locations.json()
     locations_json = locations.json()
@@ -2613,7 +2666,7 @@ async def test_patch_location_as_random(
 
     locations = client.get(
         "/competition/locations",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert locations.status_code == 200, locations.json()
     locations_json = locations.json()
@@ -2630,7 +2683,7 @@ async def test_patch_location_as_admin(
 ) -> None:
     response = client.patch(
         f"/competition/locations/{location.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json={
             "name": "Updated Location Name",
         },
@@ -2639,7 +2692,7 @@ async def test_patch_location_as_admin(
 
     locations = client.get(
         "/competition/locations",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert locations.status_code == 200, locations.json()
     locations_json = locations.json()
@@ -2662,7 +2715,7 @@ async def delete_location_as_random(
 
     locations = client.get(
         "/competition/locations",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert locations.status_code == 200, locations.json()
     locations_json = locations.json()
@@ -2688,13 +2741,13 @@ async def test_delete_location_as_admin(
     await add_object_to_db(new_location)
     response = client.delete(
         f"/competition/locations/{new_location.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 204, response.json()
 
     locations = client.get(
         "/competition/locations",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert locations.status_code == 200, locations.json()
     locations_json = locations.json()
@@ -2754,7 +2807,7 @@ async def test_create_match_as_random(
 
     matches = client.get(
         f"/competition/matches/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert matches.status_code == 200, matches.json()
     matches_json = matches.json()
@@ -2777,7 +2830,7 @@ async def test_create_match_as_admin(
     )
     response = client.post(
         f"/competition/matches/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json=match_info.model_dump(exclude_none=True, mode="json"),
     )
     assert response.status_code == 201, response.json()
@@ -2785,7 +2838,7 @@ async def test_create_match_as_admin(
 
     matches = client.get(
         f"/competition/matches/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert matches.status_code == 200, matches.json()
     matches_json = matches.json()
@@ -2810,7 +2863,7 @@ async def test_patch_match_as_random(
 
     matches = client.get(
         f"/competition/matches/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert matches.status_code == 200, matches.json()
     matches_json = matches.json()
@@ -2827,7 +2880,7 @@ async def test_patch_match_as_admin(
 ) -> None:
     response = client.patch(
         f"/competition/matches/{match1.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json={
             "name": "Updated Match Name",
             "score_team1": 3,
@@ -2839,7 +2892,7 @@ async def test_patch_match_as_admin(
 
     matches = client.get(
         f"/competition/matches/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert matches.status_code == 200, matches.json()
     matches_json = matches.json()
@@ -2871,7 +2924,7 @@ async def test_edit_match_as_sport_manager(
 
     matches = client.get(
         f"/competition/matches/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert matches.status_code == 200, matches.json()
     matches_json = matches.json()
@@ -2897,7 +2950,7 @@ async def test_delete_match_as_random(
 
     matches = client.get(
         f"/competition/matches/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert matches.status_code == 200, matches.json()
     matches_json = matches.json()
@@ -2927,13 +2980,13 @@ async def test_delete_match_as_admin(
     await add_object_to_db(new_match)
     response = client.delete(
         f"/competition/matches/{new_match.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 204, response.text
 
     matches = client.get(
         f"/competition/matches/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert matches.status_code == 200, matches.json()
     matches_json = matches.json()
@@ -2969,7 +3022,7 @@ async def test_delete_match_as_sport_manager(
 
     matches = client.get(
         f"/competition/matches/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert matches.status_code == 200, matches.json()
     matches_json = matches.json()
@@ -3041,7 +3094,7 @@ async def test_post_podium_as_random(
 
     podiums = client.get(
         f"/competition/podiums/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert podiums.status_code == 200, podiums.json()
     podiums_json = podiums.json()
@@ -3087,7 +3140,7 @@ async def test_post_podium_as_sport_manager(
 
     podiums = client.get(
         f"/competition/podiums/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert podiums.status_code == 200, podiums.json()
     podiums_json = podiums.json()
@@ -3119,7 +3172,7 @@ async def test_delete_podium_as_random(
 
     podiums = client.get(
         f"/competition/podiums/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert podiums.status_code == 200, podiums.json()
     podiums_json = podiums.json()
@@ -3137,7 +3190,7 @@ async def test_delete_podium_as_sport_manager(
 
     podiums = client.get(
         f"/competition/podiums/sports/{sport_with_team.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert podiums.status_code == 200, podiums.json()
     podiums_json = podiums.json()
@@ -3185,7 +3238,7 @@ async def test_post_pompom_podium_as_random(
 
     podiums = client.get(
         "/competition/podiums/pompoms",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert podiums.status_code == 200, podiums.json()
     podiums_json = podiums.json()
@@ -3212,7 +3265,7 @@ async def test_post_pompom_podium_as_admin(
 
     response = client.post(
         "/competition/podiums/pompoms",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json=[
             podium.model_dump(exclude_none=True, mode="json") for podium in podium_infos
         ],
@@ -3221,7 +3274,7 @@ async def test_post_pompom_podium_as_admin(
 
     podiums = client.get(
         "/competition/podiums/pompoms",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert podiums.status_code == 200, podiums.json()
     podiums_json = podiums.json()
@@ -3233,7 +3286,7 @@ async def test_post_pompom_podium_as_admin(
 
     global_podiums = client.get(
         "/competition/podiums/global",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert global_podiums.status_code == 200, global_podiums.json()
     global_podiums_json = global_podiums.json()
@@ -3260,7 +3313,7 @@ async def test_delete_pompom_podium_as_random(
 
     podiums = client.get(
         "/competition/podiums/pompoms",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert podiums.status_code == 200, podiums.json()
     podiums_json = podiums.json()
@@ -3272,13 +3325,13 @@ async def test_delete_pompom_podium_as_admin(
 ) -> None:
     response = client.delete(
         "/competition/podiums/pompoms",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 204, response.json()
 
     podiums = client.get(
         "/competition/podiums/pompoms",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert podiums.status_code == 200, podiums.json()
     podiums_json = podiums.json()
@@ -3308,7 +3361,7 @@ async def test_create_volunteer_shift_as_random(
 ) -> None:
     shift_info = VolunteerShiftBase(
         name="New Shift",
-        manager_id=admin_user.id,
+        manager_id=competition_admin_user.id,
         description="A new shift for testing",
         value=1,
         start_time=datetime.now(UTC),
@@ -3325,7 +3378,7 @@ async def test_create_volunteer_shift_as_random(
 
     shifts = client.get(
         "/competition/volunteers/shifts",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert shifts.status_code == 200, shifts.json()
     shifts_json = shifts.json()
@@ -3341,7 +3394,7 @@ async def test_create_volunteer_shift_as_admin(
 ) -> None:
     shift_info = VolunteerShiftBase(
         name="New Shift",
-        manager_id=admin_user.id,
+        manager_id=competition_admin_user.id,
         description="A new shift for testing",
         value=1,
         start_time=datetime.now(UTC),
@@ -3351,7 +3404,7 @@ async def test_create_volunteer_shift_as_admin(
     )
     response = client.post(
         "/competition/volunteers/shifts",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json=shift_info.model_dump(exclude_none=True, mode="json"),
     )
     assert response.status_code == 201, response.json()
@@ -3359,7 +3412,7 @@ async def test_create_volunteer_shift_as_admin(
 
     shifts = client.get(
         "/competition/volunteers/shifts",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert shifts.status_code == 200, shifts.json()
     shifts_json = shifts.json()
@@ -3384,7 +3437,7 @@ async def test_patch_volunteer_shift_as_random(
 
     shifts = client.get(
         "/competition/volunteers/shifts",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert shifts.status_code == 200, shifts.json()
     shifts_json = shifts.json()
@@ -3401,7 +3454,7 @@ async def test_patch_volunteer_shift_as_admin(
 ) -> None:
     response = client.patch(
         f"/competition/volunteers/shifts/{volunteer_shift.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
         json={
             "name": "Updated Shift Name",
         },
@@ -3410,7 +3463,7 @@ async def test_patch_volunteer_shift_as_admin(
 
     shifts = client.get(
         "/competition/volunteers/shifts",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert shifts.status_code == 200, shifts.json()
     shifts_json = shifts.json()
@@ -3433,7 +3486,7 @@ async def test_delete_volunteer_shift_as_random(
 
     shifts = client.get(
         "/competition/volunteers/shifts",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert shifts.status_code == 200, shifts.json()
     shifts_json = shifts.json()
@@ -3450,7 +3503,7 @@ async def test_delete_volunteer_shift_as_admin(
     new_shift = models_sport_competition.VolunteerShift(
         id=uuid4(),
         name="Shift to Delete",
-        manager_id=admin_user.id,
+        manager_id=competition_admin_user.id,
         description="A shift to delete",
         value=1,
         start_time=datetime.now(UTC),
@@ -3470,13 +3523,13 @@ async def test_delete_volunteer_shift_as_admin(
     await add_object_to_db(new_registration)
     response = client.delete(
         f"/competition/volunteers/shifts/{new_shift.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 204, response.json()
 
     shifts = client.get(
         "/competition/volunteers/shifts",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert shifts.status_code == 200, shifts.json()
     shifts_json = shifts.json()
@@ -3508,7 +3561,7 @@ async def test_get_own_volunteer_registrations(
 ) -> None:
     response = client.get(
         "/competition/volunteers/me",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
 
     assert response.status_code == 200, response.json()
@@ -3522,7 +3575,7 @@ async def test_register_already_registered_to_shift(
 ) -> None:
     response = client.post(
         f"/competition/volunteers/shifts/{volunteer_shift.id}/register",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 400, response.json()
     assert (
@@ -3560,7 +3613,7 @@ async def test_register_to_volunteer_shift(
     new_shift = models_sport_competition.VolunteerShift(
         id=uuid4(),
         name="Another Shift",
-        manager_id=admin_user.id,
+        manager_id=competition_admin_user.id,
         description="Another shift for testing",
         value=1,
         start_time=datetime.now(UTC) + timedelta(days=1),
@@ -3573,13 +3626,13 @@ async def test_register_to_volunteer_shift(
 
     response = client.post(
         f"/competition/volunteers/shifts/{new_shift.id}/register",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 204, response.json()
 
     registrations = client.get(
         "/competition/volunteers/me",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert registrations.status_code == 200, registrations.json()
     registrations_json = registrations.json()
@@ -3591,7 +3644,7 @@ async def test_register_to_volunteer_shift(
 
     response = client.get(
         "/competition/users/me",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 200, response.json()
     user_info = response.json()
@@ -3607,7 +3660,7 @@ async def test_get_edition_stats(
 ) -> None:
     response = client.get(
         f"/competition/editions/{active_edition.id}/stats",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 200, response.json()
 
@@ -3617,7 +3670,7 @@ async def test_data_exporter_users(
 ):
     response = client.get(
         "/competition/data-export/users?included_fields=purchases&included_fields=payments&included_fields=participants",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 200
 
@@ -3627,7 +3680,7 @@ async def test_data_exporter_captains(
 ):
     response = client.get(
         "/competition/data-export/participants/captains",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 200
 
@@ -3637,7 +3690,7 @@ async def test_data_exporter_school_users(
 ):
     response = client.get(
         f"/competition/data-export/schools/{school1.id}/users?included_fields=purchases&included_fields=payments&included_fields=participants",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 200
 
@@ -3647,7 +3700,7 @@ async def test_data_exporter_school_quotas(
 ):
     response = client.get(
         f"/competition/data-export/schools/{school1.id}/quotas",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 200
 
@@ -3657,7 +3710,7 @@ async def test_data_exporter_sport_quotas(
 ):
     response = client.get(
         f"/competition/data-export/sports/{sport_with_team.id}/quotas",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 200
 
@@ -3667,7 +3720,7 @@ async def test_data_exporter_sport_participants(
 ):
     response = client.get(
         f"/competition/data-export/sports/{sport_with_team.id}/participants",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 200
 
@@ -3681,6 +3734,6 @@ async def test_delete_competition_user(
 ) -> None:
     response = client.delete(
         f"/competition/users/{user3.id}",
-        headers={"Authorization": f"Bearer {admin_token}"},
+        headers={"Authorization": f"Bearer {competition_admin_token}"},
     )
     assert response.status_code == 204
