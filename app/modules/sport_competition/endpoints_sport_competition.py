@@ -814,17 +814,11 @@ async def cancel_competition_user(
             status_code=400,
             detail="User has no payment, consider deleting the user instead of cancelling",
         )
-    purchases = await cruds_sport_competition.load_purchases_by_user_id(
+    await cruds_sport_competition.delete_purchases_by_user_id(
         user_id,
         edition.id,
         db,
     )
-    for purchase in purchases:
-        await cruds_sport_competition.delete_purchase(
-            purchase.user_id,
-            purchase.product_variant_id,
-            db,
-        )
     participant = await cruds_sport_competition.load_participant_by_user_id(
         user_id,
         edition.id,
