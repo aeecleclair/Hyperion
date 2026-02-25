@@ -2513,6 +2513,31 @@ async def edit_participant(
             await cruds_sport_competition.add_team(new_team, db)
             participant_edit.team_id = new_team.id
             delete_old_team = True
+    if (
+        participant_edit.team_id is not None
+        and participant_edit.team_id != participant.team_id
+    ):
+        new_team = await cruds_sport_competition.load_team_by_id(
+            participant_edit.team_id,
+            db,
+        )
+        if new_team is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Team not found in the database",
+            )
+        old_team = await cruds_sport_competition.load_team_by_id(
+            participant.team_id,
+            db,
+        )
+        if old_team is None:
+            raise HTTPException(
+                status_code=500,
+                detail="Old team not found in the database",
+            )
+        if len(old_team.participants) == 1:
+            delete_old_team = True
+
     await cruds_sport_competition.update_participant(
         user_id=user_id,
         sport_id=sport_id,
@@ -4703,6 +4728,85 @@ async def register_to_volunteer_shift(
 
     await cruds_sport_competition.add_volunteer_registration(
         db_registration,
+        db,
+    )
+
+
+@module.router.patch(
+    "/competition/volunteers/shifts/{shift_id}/users/{user_id}/validation",
+    status_code=204,
+)
+async def validate_volunteer_registration(
+    shift_id: UUID,
+    user_id: str,
+    validate: bool = Body(..., embed=True),
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+):
+    """
+    Validate a volunteer registration.
+
+    **User must be a competition admin to use this endpoint**
+    """
+    db_registration = await cruds_sport_competition.load_volunteer_registration_by_ids(
+        user_id,
+        shift_id,
+        db,
+    )
+    if db_registration is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Volunteer registration not found.",
+        )
+
+    await cruds_sport_competition.update_volunteer_registration_validation(
+        user_id,
+        shift_id,
+        validate,
+        db,
+    )
+
+
+@module.router.delete(
+    "/competition/volunteers/shifts/{shift_id}/unregister",
+    status_code=204,
+)
+async def unregister_from_volunteer_shift(
+    shift_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to(
+            [
+                SportCompetitionPermissions.volunteer_sport_competition,
+                SportCompetitionPermissions.manage_sport_competition,
+            ],
+        ),
+    ),
+):
+    """
+    Unregister from a volunteer shift.
+    """
+    db_registration = await cruds_sport_competition.load_volunteer_registration_by_ids(
+        user.id,
+        shift_id,
+        db,
+    )
+    if db_registration is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Volunteer registration not found.",
+        )
+    if db_registration.validated:
+        raise HTTPException(
+            status_code=403,
+            detail="You can't unregister from a validated volunteer shift.",
+        )
+
+    await cruds_sport_competition.delete_volunteer_registration(
+        user.id,
+        shift_id,
         db,
     )
 

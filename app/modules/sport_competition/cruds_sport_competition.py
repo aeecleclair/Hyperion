@@ -3079,6 +3079,61 @@ async def load_volunteer_registrations_by_user_id(
     ]
 
 
+async def load_volunteer_registration_by_ids(
+    user_id: str,
+    shift_id: UUID,
+    db: AsyncSession,
+) -> schemas_sport_competition.VolunteerRegistrationComplete | None:
+    registration = (
+        (
+            await db.execute(
+                select(models_sport_competition.VolunteerRegistration)
+                .where(
+                    models_sport_competition.VolunteerRegistration.user_id == user_id,
+                    models_sport_competition.VolunteerRegistration.shift_id == shift_id,
+                )
+                .options(
+                    selectinload(models_sport_competition.VolunteerRegistration.shift),
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return (
+        schemas_sport_competition.VolunteerRegistrationComplete(
+            user_id=registration.user_id,
+            shift_id=registration.shift_id,
+            edition_id=registration.edition_id,
+            validated=registration.validated,
+            registered_at=registration.registered_at,
+            shift=schemas_sport_competition.VolunteerShiftComplete(
+                id=registration.shift.id,
+                edition_id=registration.shift.edition_id,
+                name=registration.shift.name,
+                manager_id=registration.shift.manager_id,
+                description=registration.shift.description,
+                value=registration.shift.value,
+                start_time=registration.shift.start_time,
+                end_time=registration.shift.end_time,
+                max_volunteers=registration.shift.max_volunteers,
+                location=registration.shift.location,
+                manager=schemas_users.CoreUser(
+                    id=registration.shift.manager.id,
+                    email=registration.shift.manager.email,
+                    name=registration.shift.manager.name,
+                    school_id=registration.shift.manager.school_id,
+                    firstname=registration.shift.manager.firstname,
+                    nickname=registration.shift.manager.nickname,
+                    account_type=registration.shift.manager.account_type,
+                ),
+            ),
+        )
+        if registration
+        else None
+    )
+
+
 async def add_volunteer_registration(
     registration: schemas_sport_competition.VolunteerRegistration,
     db: AsyncSession,
@@ -3091,6 +3146,22 @@ async def add_volunteer_registration(
             validated=registration.validated,
             registered_at=registration.registered_at,
         ),
+    )
+
+
+async def update_volunteer_registration_validation(
+    user_id: str,
+    shift_id: UUID,
+    validated: bool,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_sport_competition.VolunteerRegistration)
+        .where(
+            models_sport_competition.VolunteerRegistration.user_id == user_id,
+            models_sport_competition.VolunteerRegistration.shift_id == shift_id,
+        )
+        .values(validated=validated),
     )
 
 
