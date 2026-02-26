@@ -17,7 +17,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 FIXED_COLUMNS = ["Nom", "Prénom", "Email", "École", "Type", "Statut"]
-PARTICIPANTS_COLUMNS = ["Sport", "Licence", "Licence valide", "Équipe"]
+PARTICIPANTS_COLUMNS = ["Catégorie", "Sport", "Licence", "Licence valide", "Équipe"]
 PAYMENTS_COLUMNS = ["Total à payer", "Total payé", "Tout payé"]
 
 
@@ -91,10 +91,11 @@ def build_data_rows(
             participant = users_participant.get(user.user.id, None)
             if participant:
                 sport = next(s for s in sports if s.id == participant.sport_id)
-                row[6] = sport.name
-                row[7] = participant.license or "N/A"
-                row[8] = participant.is_license_valid
-                row[9] = (
+                row[6] = participant.user.sport_category.value
+                row[7] = sport.name
+                row[8] = participant.license or "N/A"
+                row[9] = participant.is_license_valid
+                row[10] = (
                     f"{participant.team.name}{' (capitaine)' if participant.team.captain_id == user.user.id else ''}"
                 )
             else:
@@ -102,7 +103,8 @@ def build_data_rows(
                 row[7] = ""
                 row[8] = ""
                 row[9] = ""
-            thick_columns.append(9)
+                row[10] = ""
+            thick_columns.append(10)
 
         if ExcelExportParams.purchases in parameters and product_structure is not None:
             offset = 10 if ExcelExportParams.participants in parameters else 7
