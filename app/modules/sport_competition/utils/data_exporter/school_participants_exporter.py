@@ -1,4 +1,3 @@
-import logging
 from io import BytesIO
 
 import xlsxwriter
@@ -12,9 +11,6 @@ from app.modules.sport_competition.utils.data_exporter.commons import (
     write_data_rows,
 )
 from app.types.exceptions import MissingDataError
-
-hyperion_error_logger = logging.getLogger("hyperion.error")
-
 
 FIXED_COLUMNS = ["Nom", "Prénom", "Email", "Type", "Statut"]
 PARTICIPANTS_COLUMNS = ["Catégorie", "Sport", "Licence", "Licence valide", "Équipe"]
@@ -151,7 +147,7 @@ def build_data_rows(
             row[offset + 2] = (
                 ("OUI" if total == paid else "NON") if user.validated else ""
             )
-            thick_columns.append(offset + 2)
+            thick_columns.append(offset + len(PAYMENTS_COLUMNS) - 1)
 
         data_rows.append(row)
 
@@ -183,7 +179,7 @@ def write_participant_headers(
         0,
         len(FIXED_COLUMNS),
         0,
-        len(FIXED_COLUMNS) + 3,
+        len(FIXED_COLUMNS) + len(PARTICIPANTS_COLUMNS) - 1,
         "Participants",
         formats["header"]["base"],
     )
@@ -202,7 +198,7 @@ def write_payment_headers(
         0,
         start_index,
         0,
-        start_index + 2,
+        start_index + len(PAYMENTS_COLUMNS) - 1,
         "Paiements",
         formats["header"]["base"],
     )
@@ -324,13 +320,17 @@ def write_to_excel(
             product_structure,
             formats,
             len(FIXED_COLUMNS)
-            + (4 if ExcelExportParams.participants in parameters else 0),
+            + (
+                len(PARTICIPANTS_COLUMNS)
+                if ExcelExportParams.participants in parameters
+                else 0
+            ),
             columns_max_length,
         )
     if ExcelExportParams.payments in parameters:
         start_index = len(FIXED_COLUMNS)
         if ExcelExportParams.participants in parameters:
-            start_index += 4
+            start_index += len(PARTICIPANTS_COLUMNS)
         if ExcelExportParams.purchases in parameters:
             if product_structure is None:
                 raise TypeError(  # noqa: TRY003
@@ -352,7 +352,7 @@ def write_to_excel(
         columns_max_length,
     )
     autosize_columns(worksheet, columns_max_length)
-    worksheet.freeze_panes(5, 4)
+    worksheet.freeze_panes(len(FIXED_COLUMNS), 4)
 
 
 def construct_school_users_excel_with_parameters(
@@ -392,7 +392,6 @@ def construct_school_users_excel_with_parameters(
             len(prod_struct["variants_info"]) * 2
             for prod_struct in product_structure[0]
         )
-        hyperion_error_logger.debug(f"Product structure: {product_structure}")
 
     if ExcelExportParams.participants in parameters:
         col_idx += len(PARTICIPANTS_COLUMNS)
