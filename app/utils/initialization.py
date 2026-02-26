@@ -11,9 +11,12 @@ from sqlalchemy import Connection, MetaData, delete, select
 from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from sqlalchemy.pool import NullPool
 
 from app.core.core_endpoints import models_core
 from app.core.groups import models_groups
+from app.core.groups.groups_type import AccountType
+from app.core.permissions import models_permissions
 from app.core.schools import models_schools
 from app.core.utils.config import Settings
 from app.types import core_data
@@ -30,66 +33,61 @@ def get_sync_db_engine(settings: Settings) -> Engine:
     """
     Create a synchronous database engine
     """
+    poolClass = None
     if settings.SQLITE_DB:
         SQLALCHEMY_DATABASE_URL = f"sqlite:///./{settings.SQLITE_DB}"
     else:
         SQLALCHEMY_DATABASE_URL = f"postgresql+psycopg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
+        if settings.USE_NULL_POOL:
+            poolClass = NullPool
 
-    return create_engine(SQLALCHEMY_DATABASE_URL, echo=settings.DATABASE_DEBUG)
+    return create_engine(
+        SQLALCHEMY_DATABASE_URL,
+        poolclass=poolClass,
+        echo=settings.DATABASE_DEBUG,
+    )
 
 
-def get_all_module_group_visibility_membership_sync(
+def create_group_permission_sync(
+    group_id: str,
+    permission_name: str,
     db: Session,
-):
+) -> None:
     """
-    Return the every module with their visibility
+    Create a new group permission in database
     """
-    result = db.execute(select(models_core.ModuleGroupVisibility))
-    return result.unique().scalars().all()
-
-
-def get_all_module_account_type_visibility_membership_sync(
-    db: Session,
-):
-    """
-    Return the every module with their visibility
-    """
-    result = db.execute(select(models_core.ModuleAccountTypeVisibility))
-    return result.unique().scalars().all()
-
-
-def create_module_group_visibility_sync(
-    module_visibility: models_core.ModuleGroupVisibility,
-    db: Session,
-) -> models_core.ModuleGroupVisibility:
-    """
-    Create a new module visibility in database and return it
-    """
-    db.add(module_visibility)
+    db.add(
+        models_permissions.CorePermissionGroup(
+            group_id=group_id,
+            permission_name=permission_name,
+        ),
+    )
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
         raise
-    else:
-        return module_visibility
 
 
-def create_module_account_type_visibility_sync(
-    module_visibility: models_core.ModuleAccountTypeVisibility,
+def create_account_type_permission_sync(
+    account_type: AccountType,
+    permission_name: str,
     db: Session,
-) -> models_core.ModuleAccountTypeVisibility:
+) -> None:
     """
-    Create a new module visibility in database and return it
+    Create a new account type permission in database
     """
-    db.add(module_visibility)
+    db.add(
+        models_permissions.CorePermissionAccountType(
+            account_type=account_type,
+            permission_name=permission_name,
+        ),
+    )
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
         raise
-    else:
-        return module_visibility
 
 
 def get_group_by_id_sync(group_id: str, db: Session) -> models_groups.CoreGroup | None:
@@ -178,6 +176,20 @@ def create_school_sync(
         raise
     else:
         return school
+
+
+def clean_permissions_sync(db: Session, permssion_list: list[str]) -> None:
+    """
+    Delete all unused permissions in the database
+    """
+    db.execute(
+        delete(models_permissions.CorePermissionGroup).where(
+            models_permissions.CorePermissionGroup.permission_name.notin_(
+                permssion_list,
+            ),
+        ),
+    )
+    db.commit()
 
 
 def delete_core_data_crud_sync(schema: str, db: Session) -> None:
@@ -295,7 +307,10 @@ async def use_lock_for_workers(
     **kwargs: P.kwargs,
 ) -> None:
     """
-    Aquires a Redis lock to ensure that `func` is only executed by one worker.
+    Aquires a Redis lock to ensure that `func` is only run once for all workers.
+
+    - If the Redis client is not provided, the function will execute `job_function` only for the process that is chosen to initialize the app.
+    - If `number_of_workers` is 1, the function will execute `job_function` directly, without acquiring a lock.
 
     Using `unlock_key` allows to wait for a worker to have finished executing `func` before continuing execution.
     If provided, the function will wait until this unlock key is set before continuing
@@ -303,20 +318,26 @@ async def use_lock_for_workers(
     The job may be a sync or async function. This util will pass `kwargs` as arguments to the `job_function`.
     We assume that the function execution won't take more than 20 seconds.
 
-    If the Redis client is not provided, the function will execute `job_function` directly without acquiring a lock.
-
-    If `number_of_workers` is less than or equal to 1, the function will execute `job_function` directly without acquiring a lock.
     """
 
-    if (
-        not isinstance(
-            redis_client,
-            redis.Redis,
-        )
-        or number_of_workers <= 1
-    ):
-        # If a Redis is not provided, we execute the function directly
+    if number_of_workers == 1:
+        # There is only one child process, no lock is needed
         await execute_async_or_sync_method(job_function, *args, **kwargs)
+
+    elif not isinstance(
+        redis_client,
+        redis.Redis,
+    ):
+        # If a Redis is not provided, we only let one chosen process execute the function
+        if (
+            os.getpid()
+            == [
+                process
+                for process in psutil.Process(os.getppid()).children()
+                if process.status() != psutil.STATUS_ZOMBIE
+            ][-1].pid
+        ):
+            await execute_async_or_sync_method(job_function, *args, **kwargs)
 
     elif redis_client.set(key, "1", nx=True, ex=120):
         # We acquired the lock, we execute the function
@@ -348,7 +369,7 @@ def get_number_of_workers() -> int:
     Get the number of active Hyperion workers
     """
     # We use the parent process to get the workers
-    parent_pid = os.getppid()  # PID du parent (FastAPI master process)
+    parent_pid = os.getppid()  # FastAPI master process
     parent_process = psutil.Process(parent_pid)
     workers = [
         p for p in parent_process.children() if p.status() != psutil.STATUS_ZOMBIE

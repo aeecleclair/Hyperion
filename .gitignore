@@ -1,29 +1,27 @@
 # Cache folders
-__pycache__
-.mypy_cache
-.pytest_cache
-.ruff_cache
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
 
-# Databases and data
-sql_app.db
-test.db
+# Databases (PostgreSQL and SQLite) and Redis volumes
+hyperion-redis/
+hyperion-db/
+*.db
+
+# Persistent data as files
 data/
 
-# Dotenv file
+# Configuration and secrets files
 .env
-.env.yaml
 config.yaml
-
-
-# Firebase secrets
 firebase.json
 
 # macOS
 .DS_Store
 
 # Virtual environment
-.venv
-.python-version
+.venv/
 
 # Logs
 logs/
@@ -31,10 +29,9 @@ logs/
 # Pytest-cov
 .coverage
 
-# Jinja templates test output
+# Jinja output templates and test output
 tests/jinja_test_outputs/
+node_modules/
 
 # Local testing
 scripts/
-
-node_modules

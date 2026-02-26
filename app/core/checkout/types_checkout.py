@@ -39,6 +39,7 @@ class HelloAssoConfigName(Enum):
     CDR = "CDR"
     RAID = "RAID"
     MYPAYMENT = "MYPAYMENT"
+    CHALLENGER = "CHALLENGER"
 
 
 class HelloAssoConfig(BaseModel):

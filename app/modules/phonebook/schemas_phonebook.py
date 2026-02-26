@@ -83,6 +83,7 @@ class MemberComplete(MemberBase):
 
 class AssociationGroupementBase(BaseModel):
     name: str
+    manager_group_id: str
 
     model_config = ConfigDict(from_attributes=True)
 

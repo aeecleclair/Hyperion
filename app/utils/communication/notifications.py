@@ -45,6 +45,7 @@ class NotificationManager:
 
     async def _manage_firebase_batch_response(
         self,
+        message_content: Message,
         response: messaging.BatchResponse,
         tokens: list[str],
         db: AsyncSession,
@@ -53,22 +54,44 @@ class NotificationManager:
         Manage the response of a firebase notification. We need to assume that tokens that failed to be send are not valid anymore and delete them from the database.
         """
         if response.failure_count > 0:
-            responses = response.responses
-            failed_tokens = []
+            responses: list[messaging.SendResponse] = response.responses
+            failed_tokens: list[str] = []
+            mismatching_tokens: list[str] = []
             for idx, resp in enumerate(responses):
                 if not resp.success:
                     # Firebase may return different errors: https://firebase.google.com/docs/reference/admin/python/firebase_admin.messaging#exceptions
                     # UnregisteredError happens when the token is not valid anymore, and should thus be removed from the database
-                    # Other errors may happen, we want to log them as they may indicate a problem with the firebase configuration
+                    # Other errors may happen, we want to log them as they may indicate a problem with the firebase configuration.
+                    # We cannot do more from the back-end to have the user eventually receive the notification.
                     if not isinstance(
                         resp.exception,
-                        firebase_admin.messaging.UnregisteredError,
+                        messaging.UnregisteredError,
                     ):
-                        hyperion_error_logger.error(
-                            f"Firebase: Failed to send firebase notification to token {tokens[idx]}: {resp.exception}",
-                        )
+                        if isinstance(
+                            resp.exception,
+                            messaging.SenderIdMismatchError,
+                        ):
+                            mismatching_tokens.append(tokens[idx])
+                        else:
+                            hyperion_error_logger.error(
+                                f"Firebase: Failed to send firebase notification to token {tokens[idx]}: {resp.exception}",
+                            )
                     # The order of responses corresponds to the order of the registration tokens.
                     failed_tokens.append(tokens[idx])
+            if len(mismatching_tokens) > 0:
+                usernames = await cruds_notification.get_usernames_by_firebase_tokens(
+                    tokens=mismatching_tokens,
+                    db=db,
+                )
+                hyperion_error_logger.error(
+                    "Firebase: SenderId mismatch for notification '%s' (%s module) for %s/%s tokens (%s users) : %s",
+                    message_content.title,
+                    message_content.action_module,
+                    len(mismatching_tokens),
+                    response.success_count + response.failure_count,
+                    len(usernames),
+                    ", ".join(usernames),
+                )
             hyperion_error_logger.info(
                 f"{response.failure_count} messages failed to be send, removing their tokens from the database.",
             )
@@ -93,7 +116,7 @@ class NotificationManager:
             return
 
         if len(tokens) == 0:
-            # We should not try to send a message to an emtpy list of tokens
+            # We should not try to send a message to an empty list of tokens
             # or we will get an error "max_workers must be greater than 0"
             # See https://github.com/firebase/firebase-admin-python/issues/792
             return
@@ -117,13 +140,14 @@ class NotificationManager:
                 ),
             )
 
-            result = messaging.send_each_for_multicast(message)
+            result: messaging.BatchResponse = messaging.send_each_for_multicast(message)
         except Exception:
             hyperion_error_logger.exception(
                 "Notification: Unable to send firebase notification to tokens",
             )
             raise
         await self._manage_firebase_batch_response(
+            message_content,
             response=result,
             tokens=tokens,
             db=db,
@@ -142,21 +166,33 @@ class NotificationManager:
         if not self.use_firebase:
             return
 
-        topic = str(topic_id)
-        message = messaging.Message(
-            topic=topic,
-            notification=messaging.Notification(
-                title=message_content.title,
-                body=message_content.content,
-            ),
-        )
         try:
-            messaging.send(message)
-        except messaging.FirebaseError:
+            topic = str(topic_id)
+            message = messaging.Message(
+                topic=topic,
+                data={"action_module": message_content.action_module},
+                notification=messaging.Notification(
+                    title=message_content.title,
+                    body=message_content.content,
+                ),
+            )
+
+            result: messaging.BatchResponse = messaging.send_each([message])
+        except Exception:
             hyperion_error_logger.exception(
                 f"Notification: Unable to send firebase notification for topic {topic}",
             )
             raise
+
+        if result.failure_count > 0:
+            hyperion_error_logger.error(
+                "Firebase: Failed to send notification '%s' for topic %s (%s module) for %s/%s tokens",
+                message_content.title,
+                topic,
+                message_content.action_module,
+                result.failure_count,
+                result.success_count + result.failure_count,
+            )
 
     async def subscribe_tokens_to_topic(
         self,
@@ -173,7 +209,10 @@ class NotificationManager:
             return
 
         topic = str(topic_id)
-        response = messaging.subscribe_to_topic(tokens, topic)
+        response: messaging.TopicManagementResponse = messaging.subscribe_to_topic(
+            tokens,
+            topic,
+        )
         if response.failure_count > 0:
             hyperion_error_logger.info(
                 f"Notification: Failed to subscribe to topic {topic} due to {[error.reason for error in response.errors]}",

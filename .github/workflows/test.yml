@@ -3,7 +3,7 @@ name: Test
 
 on:
   pull_request:
-    types: [opened, edited, ready_for_review, synchronize]
+    types: [opened, ready_for_review, synchronize]
   push:
     branches:
       - main
@@ -20,7 +20,7 @@ jobs:
       # Label used to access the service container
       redis:
         # Docker Hub image
-        image: redis
+        image: redis:7.0-alpine3.17
         # Set health checks to wait until redis has started
         options: >-
           --health-cmd "redis-cli ping"
@@ -32,7 +32,7 @@ jobs:
           - 6379:6379
       postgres:
         # Docker Hub image
-        image: postgres
+        image: postgres:15.1-alpine3.17
         # Provide the password for postgres
         env:
           POSTGRES_PASSWORD: "somerealpassword"
@@ -50,40 +50,48 @@ jobs:
 
     steps:
       - name: Check out the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+
+      - name: Fetch full main branch history # We don't known the the base commit of the PR
+        run: git fetch origin main --unshallow
 
       # Setup Python (faster than using Python container)
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         id: setup-python
         with:
-          python-version: "3.11"
+          python-version-file: .python-version
 
       - name: Cache uv folder
         id: cache-uv
-        uses: actions/cache@v4
+        uses: actions/cache@v4.3.0
         with:
           path: ~/.cache/uv
-          key: ${{ runner.os }}-python-${{ steps.setup-python.outputs.python-version }}-uv-${{ hashFiles('requirements-common.txt', 'requirements-dev.txt') }}
+          key: ${{ runner.os }}-python-${{ steps.setup-python.outputs.python-version }}-uv-${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}
 
       - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+        run: curl -LsSf https://astral.sh/uv/0.9.27/install.sh | sh
 
       - name: Install dependencies
         run: uv pip install --system -r requirements-dev.txt
 
       - name: Cache .pytest_cache folder
         id: pytest_cache
-        uses: actions/cache@v4
+        uses: actions/cache@v4.3.0
         with:
           path: .pytest_cache
           key: pytest_cache-${{ github.head_ref }}
-      
 
-      - name: Run unit tests with Postgresql
-        run: python -m pytest --cov
+      # Run unit tests, run them all when push to main branch
+      - name: Run all unit tests
+        run: python tests_script.py --cov --all
+        if: github.event_name == 'push'
+
+      - name: Run unit tests for changed files
+        run: python tests_script.py --cov
+        if: github.event_name == 'pull_request'
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v5.5.1
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

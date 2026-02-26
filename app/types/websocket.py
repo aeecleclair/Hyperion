@@ -9,6 +9,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.users import cruds_users
 from app.core.utils.config import Settings
 from app.types.scopes_type import ScopeType
 from app.utils.auth import auth_utils
@@ -256,11 +257,19 @@ class WebsocketConnectionManager:
                 request_id="websocket",
             )
 
-            user = await auth_utils.get_user_from_token_with_scopes(
+            user_id = auth_utils.get_user_id_from_token_with_scopes(
                 scopes=[[ScopeType.API]],
-                db=db,
                 token_data=token_data,
             )
+            user = await cruds_users.get_user_by_id(
+                db=db,
+                user_id=user_id,
+            )
+            if not user:
+                raise ValueError  # noqa: TRY301
+        except WebSocketDisconnect:
+            # we cannot send data over a websocket if it has already been closed
+            return
         except Exception:
             await websocket.send_text(
                 ConnectionWSMessageModel(
@@ -270,7 +279,7 @@ class WebsocketConnectionManager:
                 ).model_dump_json(),
             )
             await websocket.close()
-            return
+            raise
         finally:
             await db.close()
 

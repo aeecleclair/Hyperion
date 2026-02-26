@@ -35,6 +35,7 @@ class AssociationGroupement(Base):
     __tablename__ = "phonebook_association_groupement"
 
     id: Mapped[PrimaryKey]
+    manager_group_id: Mapped[str] = mapped_column(ForeignKey("core_group.id"))
     name: Mapped[str] = mapped_column(index=True, unique=True)
 
 

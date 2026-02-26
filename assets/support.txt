@@ -1,5 +1,5 @@
 Welcome on {application_name} support page.
 
-You can create an user by choosing "Créer un compte" on the main page of the application. You will receive a message on the adresse you entered asking you to confirm your account.
+By downloading or using the app, these terms will automatically apply to you – you should make sure therefore that you read them carefully before using the app. The app itself, and all the trade marks, copyright, database rights and other intellectual property rights related to it, belong to their respective owners.
 
 If you have any problems using {application_name}, please contact us at {entity_email}. We undertake to process your request as soon as possible.

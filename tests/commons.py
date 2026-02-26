@@ -19,11 +19,11 @@ from app.core.checkout.payment_tool import PaymentTool
 from app.core.checkout.types_checkout import HelloAssoConfig, HelloAssoConfigName
 from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import AccountType, GroupType
+from app.core.permissions import cruds_permissions, schemas_permissions
 from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users, models_users, schemas_users
 from app.core.utils import security
 from app.core.utils.config import Settings
-from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.types import core_data
 from app.types.scheduler import OfflineScheduler
 from app.types.sqlalchemy import Base, SessionLocalType
@@ -73,8 +73,6 @@ async def override_init_state(
 
     notification_manager = NotificationManager(settings=settings)
 
-    drive_file_manager = DriveFileManager()
-
     payment_tools = init_test_payment_tools()
 
     mail_templates = init_mail_templates(settings=settings)
@@ -86,7 +84,6 @@ async def override_init_state(
         scheduler=scheduler,
         ws_manager=ws_manager,
         notification_manager=notification_manager,
-        drive_file_manager=drive_file_manager,
         payment_tools=payment_tools,
         mail_templates=mail_templates,
     )
@@ -98,6 +95,7 @@ def create_test_settings(**kwargs) -> Settings:
     return Settings(
         _env_file="./tests/.env.test",
         _yaml_file="./tests/config.test.yaml",
+        USE_NULL_POOL=True,
         **kwargs,
     )
 
@@ -166,8 +164,73 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 TEST_PASSWORD_HASH = security.get_password_hash(get_random_string())
 
 
+async def add_account_type_permission(
+    permission: str,
+    account_type: AccountType,
+):
+    async with TestingSessionLocal() as db:
+        try:
+            await cruds_permissions.create_account_type_permission(
+                db=db,
+                permission=schemas_permissions.CoreAccountTypePermission(
+                    permission_name=permission,
+                    account_type=account_type,
+                ),
+            )
+            await db.commit()
+        except Exception as error:
+            await db.rollback()
+            raise FailedToAddObjectToDB from error
+        finally:
+            await db.close()
+
+
+async def create_groups_with_permissions(
+    permissions: list[str],
+    group_name: str,
+) -> models_groups.CoreGroup:
+    """
+    Add a dummy group to the database
+    Group property will be randomly generated if not provided
+
+    The group will be added to provided `permissions`
+    """
+
+    group_id = str(uuid.uuid4())
+
+    group = models_groups.CoreGroup(
+        id=group_id,
+        name=group_name,
+        description=None,
+    )
+
+    async with TestingSessionLocal() as db:
+        try:
+            await cruds_groups.create_group(db=db, group=group)
+
+            for permission in permissions:
+                await cruds_permissions.create_group_permission(
+                    db=db,
+                    permission=schemas_permissions.CoreGroupPermission(
+                        permission_name=permission,
+                        group_id=group_id,
+                    ),
+                )
+            await db.commit()
+        except Exception as error:
+            await db.rollback()
+            raise FailedToAddObjectToDB from error
+        finally:
+            await db.close()
+    async with TestingSessionLocal() as db:
+        group_db = await cruds_groups.get_group_by_id(db, group_id)
+        await db.close()
+
+    return group_db  # type: ignore # (group_db can't be None)  # noqa: PGH003
+
+
 async def create_user_with_groups(
-    groups: list[GroupType],
+    groups: list[GroupType | str],
     account_type: AccountType = AccountType.student,
     school_id: SchoolType | uuid.UUID = SchoolType.base_school,
     user_id: str | None = None,
@@ -217,7 +280,7 @@ async def create_user_with_groups(
                 await cruds_groups.create_membership(
                     db=db,
                     membership=models_groups.CoreMembership(
-                        group_id=group.value,
+                        group_id=group.value if isinstance(group, GroupType) else group,
                         user_id=user_id,
                         description=None,
                     ),
@@ -283,13 +346,15 @@ async def add_coredata_to_db(
             await db.close()
 
 
+mocked_checkout_id: uuid.UUID = uuid.UUID("81c9ad91-f415-494a-96ad-87bf647df82c")
+
+
 class MockedPaymentTool(PaymentTool):
     def __init__(
         self,
     ):
         self.payment_tool = PaymentTool(
             config=HelloAssoConfig(
-                name=HelloAssoConfigName.CDR,
                 helloasso_client_id="client",
                 helloasso_client_secret="secret",
                 helloasso_slug="test",
@@ -310,22 +375,20 @@ class MockedPaymentTool(PaymentTool):
         payer_user: schemas_users.CoreUser | None = None,
         redirection_uri: str | None = None,
     ) -> schemas_checkout.Checkout:
-        checkout_id = uuid.UUID("81c9ad91-f415-494a-96ad-87bf647df82c")
-
-        exist = await cruds_checkout.get_checkout_by_id(checkout_id, db)
+        exist = await cruds_checkout.get_checkout_by_id(mocked_checkout_id, db)
         if exist is None:
             checkout_model = models_checkout.Checkout(
-                id=checkout_id,
-                module="cdr",
+                id=mocked_checkout_id,
+                module=module,
                 name=checkout_name,
-                amount=500,
+                amount=checkout_amount,
                 hello_asso_checkout_id=123,
                 secret="checkoutsecret",
             )
             await cruds_checkout.create_checkout(db, checkout_model)
 
         return schemas_checkout.Checkout(
-            id=checkout_id,
+            id=mocked_checkout_id,
             payment_url="https://some.url.fr/checkout",
         )
 

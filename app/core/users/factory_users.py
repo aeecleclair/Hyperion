@@ -66,7 +66,7 @@ class CoreUsersFactory(Factory):
             for _ in range(NB_USERS)
         ]
         floors = [
-            random.choice(["T1", "T2", "T3", "Adoma", "Exté"])  # noqa: S311
+            random.choice(["V3", "V45", "T21", "X3", "Adoma", "X2"])  # noqa: S311
             for _ in range(NB_USERS)
         ]
         for i in range(NB_USERS):

@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 from uuid import UUID
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +13,7 @@ from app.modules.calendar.utils_calendar import create_icalendar_file
 
 
 async def get_all_events(db: AsyncSession) -> Sequence[models_calendar.Event]:
-    """Retriveve all the events in the database."""
+    """Retrieve all the events in the database."""
     result = await db.execute(
         select(models_calendar.Event).options(
             selectinload(models_calendar.Event.association),
@@ -155,3 +156,42 @@ async def add_ical_secret(
         secret=secret,
     )
     db.add(ical_secret)
+    
+    
+def date_all_day(dt: datetime, all_day: bool) -> date | datetime:
+    """
+    RFC 5545 3.6.1 :
+    * The DTEND name is exclusive, so we add one day on the iCalendar file.
+    * The DTSTART is inclusive, but midnight in "Europe/Paris" is one day after 11PM in UTC, so we add one day as well.
+    """
+    return (dt + timedelta(1)).date() if all_day else dt
+
+
+async def create_icalendar_file(db: AsyncSession) -> None:
+    """Create the ics file corresponding to the database. The calendar is entirely recreated each time an event is added or deleted in the db."""
+    events = await get_all_events(db)
+
+    calendar = Calendar()
+    calendar.add("version", "2.0")  # Required field
+    calendar.add("prodid", "-//AEECL//myecl.fr//fr-FR")  # Required field
+
+    for event in events:
+        if event.decision == Decision.approved:
+            ical_event = Event()
+            ical_event.add("uid", f"{event.id}@myecl.fr")
+            ical_event.add("summary", event.name)
+            ical_event.add("description", event.description)
+            ical_event.add(
+                "dtstart",
+                date_all_day(event.start, event.all_day),
+            )
+            ical_event.add(
+                "dtend",
+                date_all_day(event.end, event.all_day),
+            )
+            ical_event.add("dtstamp", datetime.now(UTC))
+            ical_event.add("class", "public")
+            ical_event.add("organizer", event.organizer)
+            ical_event.add("location", event.location)
+            if event.recurrence_rule:
+                ical_event.add("rrule", vRecur.from_ical(event.recurrence_rule))

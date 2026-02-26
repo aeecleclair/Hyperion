@@ -124,11 +124,14 @@ async def get_user_memberships_by_user_id(
     maximal_start_date: date | None = None,
     minimal_end_date: date | None = None,
     maximal_end_date: date | None = None,
+    manager_restriction: list[str] | None = None,
 ) -> Sequence[schemas_memberships.UserMembershipComplete]:
     result = (
         (
             await db.execute(
-                select(models_memberships.CoreAssociationUserMembership).where(
+                select(models_memberships.CoreAssociationUserMembership)
+                .join(models_memberships.CoreAssociationMembership)
+                .where(
                     models_memberships.CoreAssociationUserMembership.user_id == user_id,
                     models_memberships.CoreAssociationUserMembership.end_date
                     >= minimal_end_date
@@ -145,6 +148,11 @@ async def get_user_memberships_by_user_id(
                     models_memberships.CoreAssociationUserMembership.start_date
                     <= maximal_start_date
                     if maximal_start_date
+                    else and_(True),
+                    models_memberships.CoreAssociationMembership.manager_group_id.in_(
+                        manager_restriction,
+                    )
+                    if manager_restriction
                     else and_(True),
                 ),
             )

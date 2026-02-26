@@ -11,12 +11,14 @@ from app.core.feed.utils_feed import create_feed_news
 from app.core.groups.groups_type import AccountType
 from app.core.notification.schemas_notification import Message
 from app.core.notification.utils_notification import get_topic_by_root_and_identifier
+from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users
 from app.dependencies import (
     get_db,
     get_notification_manager,
     get_notification_tool,
     is_user_a_school_member,
+    is_user_allowed_to,
 )
 from app.modules.advert import (
     cruds_advert,
@@ -32,14 +34,26 @@ from app.utils.tools import (
     get_file_from_data,
     is_user_member_of_an_association,
     is_user_member_of_an_association_id,
+    has_user_permission,
+    is_group_id_valid,
+    is_user_member_of_any_group,
+    save_file_as_data,
 )
 
 root = "advert"
+
+
+class AdvertPermissions(ModulePermissions):
+    access_adverts = "access_adverts"
+    manage_advertisers = "manage_advertisers"
+
+
 module = Module(
     root=root,
     tag="Advert",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
     factory=AdvertFactory(),
+    permissions=AdvertPermissions,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -53,7 +67,9 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 async def read_adverts(
     advertisers: list[uuid.UUID] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_school_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AdvertPermissions.access_adverts]),
+    ),
 ):
     """
     Get existing adverts. If advertisers optional parameter is used, search adverts by advertisers
@@ -77,7 +93,9 @@ async def read_adverts(
 async def read_advert(
     advert_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_school_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AdvertPermissions.access_adverts]),
+    ),
 ):
     """
     Get an advert
@@ -96,7 +114,9 @@ async def read_advert(
 async def create_advert(
     advert: schemas_advert.AdvertBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_school_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AdvertPermissions.access_adverts]),
+    ),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
@@ -197,7 +217,9 @@ async def update_advert(
     advert_id: uuid.UUID,
     advert_update: schemas_advert.AdvertUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_school_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AdvertPermissions.access_adverts]),
+    ),
 ):
     """
     Edit an advert
@@ -235,7 +257,9 @@ async def update_advert(
 async def delete_advert(
     advert_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_school_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AdvertPermissions.access_adverts]),
+    ),
 ):
     """
     Delete an advert
@@ -270,7 +294,9 @@ async def delete_advert(
 async def read_advert_image(
     advert_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_school_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AdvertPermissions.access_adverts]),
+    ),
 ):
     """
     Get the image of an advert
@@ -298,7 +324,9 @@ async def read_advert_image(
 async def create_advert_image(
     advert_id: uuid.UUID,
     image: UploadFile = File(...),
-    user: models_users.CoreUser = Depends(is_user_a_school_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AdvertPermissions.access_adverts]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """

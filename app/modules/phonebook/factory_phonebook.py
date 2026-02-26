@@ -4,6 +4,7 @@ import uuid
 from faker import Faker
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.groups.factory_groups import CoreGroupsFactory
 from app.core.users import cruds_users
 from app.core.users.factory_users import CoreUsersFactory
 from app.core.utils.config import Settings
@@ -15,7 +16,7 @@ faker = Faker("fr_FR")
 
 
 class PhonebookFactory(Factory):
-    depends_on = [CoreUsersFactory]
+    depends_on = [CoreUsersFactory, CoreGroupsFactory]
 
     @classmethod
     async def create_association_groupement(cls, db: AsyncSession) -> list[uuid.UUID]:
@@ -24,6 +25,7 @@ class PhonebookFactory(Factory):
             schemas_phonebook.AssociationGroupement(
                 id=groupement_ids[0],
                 name="Section AE",
+                manager_group_id=CoreGroupsFactory.groups_ids[0],
             ),
             db=db,
         )
@@ -31,6 +33,7 @@ class PhonebookFactory(Factory):
             schemas_phonebook.AssociationGroupement(
                 id=groupement_ids[1],
                 name="Club AE",
+                manager_group_id=CoreGroupsFactory.groups_ids[0],
             ),
             db=db,
         )
@@ -38,6 +41,7 @@ class PhonebookFactory(Factory):
             schemas_phonebook.AssociationGroupement(
                 id=groupement_ids[2],
                 name="Section USE",
+                manager_group_id=CoreGroupsFactory.groups_ids[1],
             ),
             db=db,
         )

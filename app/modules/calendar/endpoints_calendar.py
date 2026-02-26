@@ -5,6 +5,13 @@ from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.groups.groups_type import AccountType
+from app.core.permissions.type_permissions import ModulePermissions
+from app.core.users import models_users
+from app.dependencies import (
+    get_db,
+    is_user_allowed_to,
+    )
 from app.core.associations import cruds_associations
 from app.core.feed import cruds_feed
 from app.core.feed.types_feed import NewsStatus
@@ -43,12 +50,21 @@ from app.utils.tools import (
     is_user_member_of_an_association,
     is_user_member_of_any_group,
 )
+from app.utils.tools import has_user_permission
+
+
+class CalendarPermissions(ModulePermissions):
+    access_calendar = "access_calendar"
+    manage_events = "manage_events"
+    create_ical = "create_ical"
+
 
 module = Module(
     root=utils_calendar.root,
     tag="Calendar",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
     factory=CalendarFactory(),
+    permissions=CalendarPermissions,
 )
 
 
@@ -59,7 +75,9 @@ module = Module(
 )
 async def get_events(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_calendar)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.manage_events]),
+    ),
 ):
     """Get all events from the database."""
     return await cruds_calendar.get_all_events(db=db)
@@ -72,7 +90,9 @@ async def get_events(
 )
 async def get_confirmed_events(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_school_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.access_calendar]),
+    ),
 ):
     """
     Get all confirmed events.
@@ -112,7 +132,9 @@ async def get_association_events(
 async def get_event_by_id(
     event_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_school_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.access_calendar]),
+    ),
 ):
     """
     Get an event's information by its id.
@@ -146,7 +168,9 @@ async def get_event_by_id(
 async def get_event_ticket_url(
     event_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_school_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.manage_events]),
+    ),
 ):
     event = await cruds_calendar.get_event(db=db, event_id=event_id)
 
@@ -254,7 +278,9 @@ async def create_event_image(
 async def add_event(
     event: schemas_calendar.EventBaseCreation,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_school_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.access_calendar]),
+    ),
     settings: Settings = Depends(get_settings),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     notification_manager: NotificationManager = Depends(get_notification_manager),
@@ -361,7 +387,9 @@ async def edit_envent(
     event_id: uuid.UUID,
     event_edit: schemas_calendar.EventEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_school_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.access_calendar]),
+    ),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -387,17 +415,18 @@ async def edit_envent(
                 detail="Ticket URL and opening time must be provided together",
             )
 
-    is_user_member_of_BDE = is_user_member_of_any_group(
-        user,
-        [GroupType.admin_calendar],
-    )
+    has_user_calendar_admin_access = await has_user_permission(
+            user,
+            CalendarPermissions.manage_events,
+            db,
+        )
 
     if (
         not is_user_member_of_an_association(
             user=user,
             association=event.association,
         )
-        and not is_user_member_of_BDE
+        and not has_user_calendar_admin_access
     ):
         raise HTTPException(
             status_code=403,
@@ -433,9 +462,11 @@ async def confirm_event(
     event_id: uuid.UUID,
     decision: Decision,
     db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.manage_events]),
+    ),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     notification_manager: NotificationManager = Depends(get_notification_manager),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_calendar)),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -511,8 +542,10 @@ async def confirm_event(
 async def delete_event(
     event_id,
     db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.access_calendar]),
+    ),
     settings: Settings = Depends(get_settings),
-    user: models_users.CoreUser = Depends(is_user_a_school_member),
 ):
     """
     Remove an event.
@@ -524,16 +557,17 @@ async def delete_event(
     if event is None:
         raise HTTPException(status_code=404)
 
-    is_user_member_of_BDE = is_user_member_of_any_group(
-        user,
-        [GroupType.admin_calendar],
-    )
+    has_user_calendar_admin_access = await has_user_permission(
+            user,
+            CalendarPermissions.manage_events,
+            db,
+        )
     is_user_member_of_the_event_association = is_user_member_of_an_association(
         user=user,
         association=event.association,
     )
 
-    if is_user_member_of_BDE or (
+    if has_user_calendar_admin_access or (
         is_user_member_of_the_event_association and event.decision == Decision.pending
     ):
         await cruds_calendar.delete_event(
@@ -591,7 +625,9 @@ async def get_ical_url(
 )
 async def recreate_ical_file(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.create_ical]),
+    ),
     settings: Settings = Depends(get_settings),
 ):
     """

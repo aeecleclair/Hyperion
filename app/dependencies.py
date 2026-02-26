@@ -10,6 +10,7 @@ async def get_users(db: AsyncSession = Depends(get_db)):
 import logging
 from collections.abc import AsyncGenerator, Callable, Coroutine
 from functools import lru_cache
+from types import CoroutineType
 from typing import TYPE_CHECKING, Annotated, Any, cast
 from uuid import UUID
 
@@ -26,11 +27,16 @@ from app.core.associations import cruds_associations
 from app.core.auth import schemas_auth
 from app.core.checkout.payment_tool import PaymentTool
 from app.core.checkout.types_checkout import HelloAssoConfigName
-from app.core.groups.groups_type import AccountType, GroupType, get_school_account_types
-from app.core.users import models_users
+from app.core.groups.groups_type import (
+    AccountType,
+    GroupType,
+    get_school_account_types,
+)
+from app.core.permissions import cruds_permissions
+from app.core.permissions.type_permissions import ModulePermissions
+from app.core.users import cruds_users, models_users
 from app.core.utils import security
 from app.core.utils.config import Settings, construct_prod_settings
-from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.types.exceptions import (
     InvalidAppStateTypeError,
     PaymentToolCredentialsNotSetException,
@@ -111,8 +117,6 @@ async def init_state(
 
     notification_manager = NotificationManager(settings=settings)
 
-    drive_file_manager = DriveFileManager()
-
     payment_tools = init_payment_tools(
         settings=settings,
         hyperion_error_logger=hyperion_error_logger,
@@ -127,7 +131,6 @@ async def init_state(
         scheduler=scheduler,
         ws_manager=ws_manager,
         notification_manager=notification_manager,
-        drive_file_manager=drive_file_manager,
         payment_tools=payment_tools,
         mail_templates=mail_templates,
     )
@@ -187,7 +190,7 @@ def get_settings() -> Settings:
     return construct_prod_settings()
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_db() -> AsyncGenerator[AsyncSession]:
     """
     Return a database session that will be automatically committed and closed after usage.
 
@@ -225,7 +228,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await db.close()
 
 
-async def get_unsafe_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_unsafe_db() -> AsyncGenerator[AsyncSession]:
     """
     Return a database session but don't close it automatically
 
@@ -249,11 +252,11 @@ def get_scheduler() -> "Scheduler":
     return GLOBAL_STATE["scheduler"]
 
 
-def get_websocket_connection_manager() -> WebsocketConnectionManager:
+def get_websocket_connection_manager() -> "WebsocketConnectionManager":
     return GLOBAL_STATE["ws_manager"]
 
 
-def get_notification_manager() -> NotificationManager:
+def get_notification_manager() -> "NotificationManager":
     """
     Dependency that returns the notification manager.
     This dependency provide a low level tool allowing to use notification manager internal methods.
@@ -277,14 +280,6 @@ def get_notification_tool(
         notification_manager=notification_manager,
         db=db,
     )
-
-
-def get_drive_file_manager() -> DriveFileManager:
-    """
-    Dependency that returns the drive file manager.
-    """
-
-    return GLOBAL_STATE["drive_file_manager"]
 
 
 @lru_cache
@@ -327,12 +322,41 @@ def get_token_data(
     )
 
 
-def get_user_from_token_with_scopes(
+def get_user_id_from_token_with_scopes(
     scopes: list[list[ScopeType]],
 ) -> Callable[
-    [AsyncSession, schemas_auth.TokenData],
-    Coroutine[Any, Any, models_users.CoreUser],
+    [schemas_auth.TokenData],
+    Coroutine[Any, Any, str],
 ]:
+    """
+    Generate a dependency which will:
+     * check the request header contain a valid JWT token
+     * make sure the token contain the given scopes
+     * return the corresponding user_id of the token
+
+    This endpoint allows to require scopes other than the API scope. This should only be used by the auth endpoints.
+    To restrict an endpoint from the API, use `is_user_in`.
+    """
+
+    async def get_current_user_id(
+        token_data: schemas_auth.TokenData = Depends(get_token_data),
+    ) -> str:
+        """
+        Dependency that makes sure the token is valid, contains the expected scopes and returns the corresponding user_id.
+        The expected scopes are passed as list of list of scopes, each list of scopes is an "AND" condition, and the list of list of scopes is an "OR" condition.
+        """
+
+        return auth_utils.get_user_id_from_token_with_scopes(
+            scopes=scopes,
+            token_data=token_data,
+        )
+
+    return get_current_user_id
+
+
+def get_user_from_token_with_scopes(
+    scopes: list[list[ScopeType]],
+) -> Callable[[AsyncSession, str], Coroutine[Any, Any, models_users.CoreUser]]:
     """
     Generate a dependency which will:
      * check the request header contain a valid JWT token
@@ -343,27 +367,25 @@ def get_user_from_token_with_scopes(
     To restrict an endpoint from the API, use `is_user_in`.
     """
 
-    async def get_current_user(
+    async def get_user_from_user_id(
         db: AsyncSession = Depends(get_db),
-        token_data: schemas_auth.TokenData = Depends(get_token_data),
+        user_id: str = Depends(get_user_id_from_token_with_scopes(scopes)),
     ) -> models_users.CoreUser:
         """
         Dependency that makes sure the token is valid, contains the expected scopes and returns the corresponding user.
         The expected scopes are passed as list of list of scopes, each list of scopes is an "AND" condition, and the list of list of scopes is an "OR" condition.
         """
+        user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        return user
 
-        return await auth_utils.get_user_from_token_with_scopes(
-            scopes=scopes,
-            db=db,
-            token_data=token_data,
-        )
-
-    return get_current_user
+    return get_user_from_user_id
 
 
 def is_user(
-    excluded_groups: list[GroupType] | None = None,
-    included_groups: list[GroupType] | None = None,
+    excluded_groups: list[GroupType | str] | None = None,
+    included_groups: list[GroupType | str] | None = None,
     excluded_account_types: list[AccountType] | None = None,
     included_account_types: list[AccountType] | None = None,
     exclude_external: bool = False,
@@ -530,3 +552,60 @@ def is_user_super_admin(
         * return the corresponding user `models_users.CoreUser` object
     """
     return user
+
+
+def is_user_allowed_to(
+    permissions_name: list[ModulePermissions],
+    db: AsyncSession = Depends(get_db),
+) -> Callable[[models_users.CoreUser], Coroutine[Any, Any, models_users.CoreUser]]:
+    """
+    Generate a dependency which will:
+        * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
+        * make sure the user making the request exists
+        * make sure the user has the permission with the given name
+        * return the corresponding user `models_users.CoreUser` object
+    """
+
+    async def is_user_allowed_to(
+        user: models_users.CoreUser = Depends(
+            is_user(),
+        ),
+        db: AsyncSession = Depends(get_db),
+    ) -> models_users.CoreUser:
+        """
+        A dependency that checks that user has the permission with the given name then returns the corresponding user.
+        """
+        if GroupType.admin in [group.id for group in user.groups]:
+            return user
+
+        allowed_group_ids: list[str] = []
+        allowed_account_types: list[AccountType] = []
+        for permission_name in permissions_name:
+            allowed_group_ids += (
+                await cruds_permissions.get_permissions_by_permission_name(
+                    db,
+                    permission_name,
+                )
+            ).groups
+            allowed_account_types += (
+                await cruds_permissions.get_permissions_by_permission_name(
+                    db,
+                    permission_name,
+                )
+            ).account_types
+
+        if (
+            not any(
+                group_id in [group.id for group in user.groups]
+                for group_id in allowed_group_ids
+            )
+            and user.account_type not in allowed_account_types
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Unauthorized, user does not have the required permission",
+            )
+
+        return user
+
+    return is_user_allowed_to

@@ -44,7 +44,7 @@ class Product(Base):
         index=True,
         unique=True,
     )
-    price: Mapped[float]
+    price: Mapped[int]
     category: Mapped[str] = mapped_column(index=True)
 
 
@@ -52,12 +52,17 @@ class Delivery(Base):
     __tablename__ = "amap_delivery"
 
     id: Mapped[str] = mapped_column(primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(unique=False)
     delivery_date: Mapped[date] = mapped_column(
         unique=False,
         index=True,
     )
     status: Mapped[DeliveryStatusType] = mapped_column(String)
-    orders: Mapped[list["Order"]] = relationship("Order", init=False)
+    orders: Mapped[list["Order"]] = relationship(
+        "Order",
+        init=False,
+        back_populates="delivery",
+    )
     products: Mapped[list[Product]] = relationship(
         "Product",
         secondary="amap_delivery_content",
@@ -76,10 +81,15 @@ class Order(Base):
         index=True,
     )
     order_id: Mapped[str] = mapped_column(primary_key=True, index=True)
-    amount: Mapped[float]
+    amount: Mapped[int]
     collection_slot: Mapped[AmapSlotType]
     ordering_date: Mapped[datetime]
-    delivery_date: Mapped[date]
+    delivery: Mapped["Delivery"] = relationship(
+        "Delivery",
+        lazy="joined",
+        init=False,
+        back_populates="orders",
+    )
     user: Mapped[CoreUser] = relationship(
         "CoreUser",
         init=False,
@@ -88,7 +98,7 @@ class Order(Base):
         "Product",
         secondary="amap_order_content",
         viewonly=True,
-        default_factory=list,
+        init=False,
     )
 
 
@@ -99,7 +109,8 @@ class Cash(Base):
         ForeignKey("core_user.id"),
         primary_key=True,
     )
-    balance: Mapped[float]
+    balance: Mapped[int]
+    last_order_date: Mapped[datetime]
     user: Mapped[CoreUser] = relationship("CoreUser", init=False)
 
 

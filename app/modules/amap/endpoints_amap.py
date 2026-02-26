@@ -6,8 +6,9 @@ from fastapi import Depends, HTTPException, Response
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import AccountType, GroupType
+from app.core.groups.groups_type import AccountType
 from app.core.notification.schemas_notification import Message, Topic
+from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users, models_users, schemas_users
 from app.core.users.endpoints_users import read_user
 from app.dependencies import (
@@ -15,8 +16,7 @@ from app.dependencies import (
     get_notification_tool,
     get_redis_client,
     get_request_id,
-    is_user_a_member,
-    is_user_in,
+    is_user_allowed_to,
 )
 from app.modules.amap import cruds_amap, models_amap, schemas_amap
 from app.modules.amap.factory_amap import AmapFactory
@@ -24,7 +24,13 @@ from app.modules.amap.types_amap import DeliveryStatusType
 from app.types.module import Module
 from app.utils.communication.notifications import NotificationTool
 from app.utils.redis import locker_get, locker_set
-from app.utils.tools import is_user_member_of_any_group
+from app.utils.tools import has_user_permission
+
+
+class AmapPermissions(ModulePermissions):
+    access_amap = "access_amap"
+    manage_amap = "manage_amap"
+
 
 root = "amap"
 amap_topic = Topic(
@@ -41,6 +47,7 @@ module = Module(
     default_allowed_account_types=[AccountType.student, AccountType.staff],
     registred_topics=[amap_topic],
     factory=AmapFactory(),
+    permissions=AmapPermissions,
 )
 
 hyperion_amap_logger = logging.getLogger("hyperion.amap")
@@ -54,12 +61,14 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def get_products(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_amap)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.manage_amap]),
+    ),
 ):
     """
     Return all products
 
-    **The user must be a member of the group AMAP to use this endpoint**
+    **The user must be a member of a group authorized to use manage AMAP to use this endpoint**
     """
     return await cruds_amap.get_products(db)
 
@@ -72,12 +81,14 @@ async def get_products(
 async def create_product(
     product: schemas_amap.ProductSimple,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_amap)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.manage_amap]),
+    ),
 ):
     """
     Create a new product
 
-    **The user must be a member of the group AMAP to use this endpoint**
+    **The user must be a member of a group authorized to use manage AMAP to use this endpoint**
     """
     db_product = models_amap.Product(id=str(uuid.uuid4()), **product.__dict__)
 
@@ -92,7 +103,9 @@ async def create_product(
 async def get_product_by_id(
     product_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.access_amap]),
+    ),
 ):
     """
     Get a specific product
@@ -113,12 +126,14 @@ async def edit_product(
     product_id: str,
     product_update: schemas_amap.ProductEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_amap)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.manage_amap]),
+    ),
 ):
     """
     Edit a product
 
-    **The user must be a member of the group AMAP to use this endpoint**
+    **The user must be a member of a group authorized to use manage AMAP to use this endpoint**
     """
 
     product = await cruds_amap.get_product_by_id(db=db, product_id=product_id)
@@ -139,12 +154,14 @@ async def edit_product(
 async def delete_product(
     product_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_amap)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.manage_amap]),
+    ),
 ):
     """
     Delete a product. A product can not be deleted if it is already used in a delivery.
 
-    **The user must be a member of the group AMAP to use this endpoint**
+    **The user must be a member of a group authorized to use manage AMAP to use this endpoint**
     """
 
     product = await cruds_amap.get_product_by_id(db=db, product_id=product_id)
@@ -167,7 +184,9 @@ async def delete_product(
 )
 async def get_deliveries(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.access_amap]),
+    ),
 ):
     """
     Get all deliveries.
@@ -183,12 +202,14 @@ async def get_deliveries(
 async def create_delivery(
     delivery: schemas_amap.DeliveryBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_amap)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.manage_amap]),
+    ),
 ):
     """
     Create a new delivery.
 
-    **The user must be a member of the group AMAP to use this endpoint**
+    **The user must be a member of a group authorized to use manage AMAP to use this endpoint**
     """
 
     db_delivery = schemas_amap.DeliveryComplete(
@@ -196,14 +217,6 @@ async def create_delivery(
         status=DeliveryStatusType.creation,
         **delivery.model_dump(),
     )
-    if await cruds_amap.is_there_a_delivery_on(
-        db=db,
-        delivery_date=db_delivery.delivery_date,
-    ):
-        raise HTTPException(
-            status_code=400,
-            detail="There is already a delivery planned that day.",
-        )
 
     return await cruds_amap.create_delivery(delivery=db_delivery, db=db)
 
@@ -215,12 +228,14 @@ async def create_delivery(
 async def delete_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_amap)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.manage_amap]),
+    ),
 ):
     """
     Delete a delivery.
 
-    **The user must be a member of the group AMAP to use this endpoint**
+    **The user must be a member of a group authorized to use manage AMAP to use this endpoint**
     """
 
     delivery_db = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
@@ -244,12 +259,14 @@ async def edit_delivery(
     delivery_id: str,
     delivery: schemas_amap.DeliveryUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_amap)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.manage_amap]),
+    ),
 ):
     """
     Edit a delivery.
 
-    **The user must be a member of the group AMAP to use this endpoint**
+    **The user must be a member of a group authorized to use manage AMAP to use this endpoint**
     """
 
     delivery_db = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
@@ -273,12 +290,14 @@ async def add_product_to_delivery(
     products_ids: schemas_amap.DeliveryProductsUpdate,
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_amap)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.manage_amap]),
+    ),
 ):
     """
     Add `product_id` product to `delivery_id` delivery. This endpoint will only add a membership between the two objects.
 
-    **The user must be a member of the group AMAP to use this endpoint**
+    **The user must be a member of a group authorized to use manage AMAP to use this endpoint**
     """
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is None:
@@ -305,12 +324,14 @@ async def remove_product_from_delivery(
     delivery_id: str,
     products_ids: schemas_amap.DeliveryProductsUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_amap)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.manage_amap]),
+    ),
 ):
     """
     Remove a given product from a delivery. This won't delete the product nor the delivery.
 
-    **The user must be a member of the group AMAP to use this endpoint**
+    **The user must be a member of a group authorized to use manage AMAP to use this endpoint**
     """
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is None:
@@ -337,12 +358,14 @@ async def remove_product_from_delivery(
 async def get_orders_from_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user_req: models_users.CoreUser = Depends(is_user_in(GroupType.admin_amap)),
+    user_req: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.manage_amap]),
+    ),
 ):
     """
     Get orders from a delivery.
 
-    **The user must be a member of the group AMAP to use this endpoint**
+    **The user must be a member of a group authorized to use manage AMAP to use this endpoint**
     """
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is None:
@@ -359,7 +382,14 @@ async def get_orders_from_delivery(
             schemas_amap.ProductQuantity(**product.__dict__)
             for product in order_content
         ]
-        res.append(schemas_amap.OrderReturn(productsdetail=products, **order.__dict__))
+        res.append(
+            schemas_amap.OrderReturn(
+                productsdetail=products,
+                delivery_date=delivery.delivery_date,
+                delivery_name=delivery.name,
+                **order.__dict__,
+            ),
+        )
     return res
 
 
@@ -371,12 +401,14 @@ async def get_orders_from_delivery(
 async def get_order_by_id(
     order_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_amap)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.manage_amap]),
+    ),
 ):
     """
     Get content of an order.
 
-    **The user must be a member of the group AMAP to use this endpoint**
+    **The user must be a member of a group authorized to use manage AMAP to use this endpoint**
     """
 
     order = await cruds_amap.get_order_by_id(order_id=order_id, db=db)
@@ -384,7 +416,12 @@ async def get_order_by_id(
         raise HTTPException(status_code=404, detail="Delivery not found")
 
     products = await cruds_amap.get_products_of_order(db=db, order_id=order_id)
-    return schemas_amap.OrderReturn(productsdetail=products, **order.__dict__)
+    return schemas_amap.OrderReturn(
+        productsdetail=products,
+        delivery_name=order.delivery.name,
+        delivery_date=order.delivery.delivery_date,
+        **order.__dict__,
+    )
 
 
 @module.router.post(
@@ -396,7 +433,9 @@ async def add_order_to_delievery(
     order: schemas_amap.OrderBase,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis | None = Depends(get_redis_client),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.access_amap]),
+    ),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -420,14 +459,14 @@ async def add_order_to_delievery(
 
     if not (
         user.id == order.user_id
-        or is_user_member_of_any_group(user, [GroupType.admin_amap])
+        or await has_user_permission(user, AmapPermissions.manage_amap, db)
     ):
         raise HTTPException(
             status_code=403,
             detail="You are not allowed to add this order",
         )
 
-    amount = 0.0
+    amount = 0
     for product_id, product_quantity in zip(
         order.products_ids,
         order.products_quantity,
@@ -444,7 +483,6 @@ async def add_order_to_delievery(
         order_id=order_id,
         amount=amount,
         ordering_date=ordering_date,
-        delivery_date=delivery.delivery_date,
         **order.model_dump(),
     )
     balance: models_amap.Cash | None = await cruds_amap.get_cash_by_id(
@@ -454,12 +492,10 @@ async def add_order_to_delievery(
 
     # If the balance does not exist, we create a new one with a balance of 0
     if not balance:
-        new_cash_db = schemas_amap.CashDB(
+        balance = models_amap.Cash(
             balance=0,
             user_id=order.user_id,
-        )
-        balance = models_amap.Cash(
-            **new_cash_db.model_dump(),
+            last_order_date=ordering_date,
         )
         await cruds_amap.create_cash_of_user(
             cash=balance,
@@ -470,7 +506,6 @@ async def add_order_to_delievery(
         raise HTTPException(status_code=400, detail="You can't order nothing")
 
     redis_key = "amap_" + order.user_id
-
     if not isinstance(redis_client, Redis) or locker_get(
         redis_client=redis_client,
         key=redis_key,
@@ -482,6 +517,7 @@ async def add_order_to_delievery(
         await cruds_amap.add_order_to_delivery(
             order=db_order,
             db=db,
+            delivery=delivery,
         )
         await cruds_amap.remove_cash(
             db=db,
@@ -489,14 +525,28 @@ async def add_order_to_delievery(
             amount=amount,
         )
 
+        await cruds_amap.update_last_ordering_date(
+            db=db,
+            user_id=order.user_id,
+            date=ordering_date,
+        )
+
         orderret = await cruds_amap.get_order_by_id(order_id=db_order.order_id, db=db)
         productsret = await cruds_amap.get_products_of_order(db=db, order_id=order_id)
 
         hyperion_amap_logger.info(
-            f"Add_order_to_delivery: An order has been created for user {order.user_id} for an amount of {amount}€. ({request_id})",
+            f"Add_order_to_delivery: An order has been created for user {order.user_id} for an amount of {(amount / 100):.2f}€. ({request_id})",
         )
-        return schemas_amap.OrderReturn(productsdetail=productsret, **orderret.__dict__)
 
+        if orderret is None:
+            raise HTTPException(status_code=404, detail="added order not found")
+
+        return schemas_amap.OrderReturn(
+            productsdetail=productsret,
+            delivery_name=orderret.delivery.name,
+            delivery_date=orderret.delivery.delivery_date,
+            **orderret.__dict__,
+        )
     finally:
         locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
@@ -510,7 +560,9 @@ async def edit_order_from_delivery(
     order: schemas_amap.OrderEdit,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis | None = Depends(get_redis_client),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.access_amap]),
+    ),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -538,7 +590,7 @@ async def edit_order_from_delivery(
 
     if not (
         user.id == previous_order.user_id
-        or is_user_member_of_any_group(user, [GroupType.admin_amap])
+        or await has_user_permission(user, AmapPermissions.manage_amap, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -585,7 +637,6 @@ async def edit_order_from_delivery(
             raise HTTPException(status_code=404, detail="No cash found")
 
         redis_key = "amap_" + previous_order.user_id
-
         if not isinstance(redis_client, Redis) or locker_get(
             redis_client=redis_client,
             key=redis_key,
@@ -608,6 +659,12 @@ async def edit_order_from_delivery(
                 user_id=previous_order.user_id,
                 amount=previous_amount,
             )
+            date = datetime.now(UTC)
+            await cruds_amap.update_last_ordering_date(
+                db=db,
+                user_id=previous_order.user_id,
+                date=date,
+            )
             hyperion_amap_logger.info(
                 f"Edit_order: Order {order_id} has been edited for user {db_order.user_id}. Amount was {previous_amount}€, is now {amount}€. ({request_id})",
             )
@@ -624,7 +681,9 @@ async def remove_order(
     order_id: str,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis | None = Depends(get_redis_client),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.access_amap]),
+    ),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -632,7 +691,7 @@ async def remove_order(
 
     **A member of the group AMAP can delete orders of other users**
     """
-    is_user_admin = is_user_member_of_any_group(user, [GroupType.admin_amap])
+    is_user_admin = await has_user_permission(user, AmapPermissions.manage_amap, db)
     order = await cruds_amap.get_order_by_id(db=db, order_id=order_id)
     if not order:
         raise HTTPException(status_code=404, detail="No order found")
@@ -695,7 +754,9 @@ async def remove_order(
 async def open_ordering_of_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_amap)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.manage_amap]),
+    ),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
@@ -728,7 +789,9 @@ async def open_ordering_of_delivery(
 async def lock_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_amap)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.manage_amap]),
+    ),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is None:
@@ -749,7 +812,9 @@ async def lock_delivery(
 async def mark_delivery_as_delivered(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_amap)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.manage_amap]),
+    ),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is None:
@@ -770,7 +835,9 @@ async def mark_delivery_as_delivered(
 async def archive_of_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_amap)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.manage_amap]),
+    ),
 ):
     delivery = await cruds_amap.get_delivery_by_id(db=db, delivery_id=delivery_id)
     if delivery is None:
@@ -792,12 +859,14 @@ async def archive_of_delivery(
 )
 async def get_users_cash(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_amap)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.manage_amap]),
+    ),
 ):
     """
     Get cash from all users.
 
-    **The user must be a member of the group AMAP to use this endpoint**
+    **The user must be a member of a group authorized to use manage AMAP to use this endpoint**
     """
     return await cruds_amap.get_users_cash(db)
 
@@ -810,7 +879,9 @@ async def get_users_cash(
 async def get_cash_by_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.access_amap]),
+    ),
 ):
     """
     Get cash from a specific user.
@@ -822,7 +893,8 @@ async def get_cash_by_id(
         raise HTTPException(status_code=404, detail="User not found")
 
     if not (
-        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_amap])
+        user_id == user.id
+        or await has_user_permission(user, AmapPermissions.manage_amap, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -838,6 +910,7 @@ async def get_cash_by_id(
             balance=0,
             user_id=user_id,
             user=schemas_users.CoreUserSimple(**user_db.__dict__),
+            last_order_date=datetime.now(UTC),
         )
 
     return cash
@@ -852,14 +925,16 @@ async def create_cash_of_user(
     user_id: str,
     cash: schemas_amap.CashEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_amap)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.manage_amap]),
+    ),
     request_id: str = Depends(get_request_id),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
     Create cash for an user.
 
-    **The user must be a member of the group AMAP to use this endpoint**
+    **The user must be a member of a group authorized to use manage AMAP to use this endpoint**
     """
 
     user_db = await read_user(user_id=user_id, db=db)
@@ -873,7 +948,11 @@ async def create_cash_of_user(
             detail="This user already has a cash.",
         )
 
-    cash_db = models_amap.Cash(user_id=user_id, balance=cash.balance)
+    cash_db = models_amap.Cash(
+        user_id=user_id,
+        balance=cash.balance,
+        last_order_date=datetime.now(UTC),
+    )
 
     await cruds_amap.create_cash_of_user(
         cash=cash_db,
@@ -893,7 +972,7 @@ async def create_cash_of_user(
 
     message = Message(
         title="AMAP - Solde mis à jour",
-        content=f"Votre nouveau solde est de {cash} €.",
+        content=f"Votre nouveau solde est de {cash.balance // 100}€{cash.balance % 100}.",
         action_module="amap",
     )
     await notification_tool.send_notification_to_user(
@@ -912,14 +991,16 @@ async def edit_cash_by_id(
     user_id: str,
     balance: schemas_amap.CashEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_amap)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.manage_amap]),
+    ),
     request_id: str = Depends(get_request_id),
 ):
     """
     Edit cash for an user. This will add the balance to the current balance.
     A negative value can be provided to remove money from the user.
 
-    **The user must be a member of the group AMAP to use this endpoint**
+    **The user must be a member of a group authorized to use manage AMAP to use this endpoint**
     """
     user_db = await read_user(user_id=user_id, db=db)
     if not user_db:
@@ -947,7 +1028,9 @@ async def edit_cash_by_id(
 async def get_orders_of_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.access_amap]),
+    ),
 ):
     """
     Get orders from an user.
@@ -959,7 +1042,7 @@ async def get_orders_of_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     if not (
-        user_id == user.id or is_user_member_of_any_group(user, [GroupType.admin_amap])
+        user_id == user.id or has_user_permission(user, AmapPermissions.manage_amap, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -972,7 +1055,16 @@ async def get_orders_of_user(
             db=db,
             order_id=order.order_id,
         )
-        res.append(schemas_amap.OrderReturn(productsdetail=products, **order.__dict__))
+        if order is None:
+            raise HTTPException(status_code=404, detail="at least one order not found")
+        res.append(
+            schemas_amap.OrderReturn(
+                productsdetail=products,
+                delivery_date=order.delivery.delivery_date,
+                delivery_name=order.delivery.name,
+                **order.__dict__,
+            ),
+        )
     return res
 
 
@@ -983,7 +1075,9 @@ async def get_orders_of_user(
 )
 async def get_information(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.access_amap]),
+    ),
 ):
     """
     Return all information
@@ -1007,12 +1101,14 @@ async def get_information(
 async def edit_information(
     edit_information: schemas_amap.InformationEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin_amap)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([AmapPermissions.manage_amap]),
+    ),
 ):
     """
     Update information
 
-    **The user must be a member of the group AMAP to use this endpoint**
+    **The user must be a member of a group authorized to use manage AMAP to use this endpoint**
     """
 
     # We need to check if informations are already in the database
