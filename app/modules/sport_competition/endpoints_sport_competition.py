@@ -7,7 +7,7 @@ from fastapi import Body, Depends, File, HTTPException, Query, Response, UploadF
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import get_account_types_except_externals
+from app.core.groups.groups_type import AccountType, get_account_types_except_externals
 from app.core.payment.payment_tool import PaymentTool
 from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.schools import cruds_schools
@@ -700,10 +700,20 @@ async def edit_user_school(
             status_code=400,
             detail="User already has a school, cannot change it",
         )
+    if school_id == SchoolType.no_school.value:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot set the school to no_school",
+        )
     await cruds_users.update_user(
         db,
         user_id,
-        schemas_users.CoreUserUpdateAdmin(school_id=school_id),
+        schemas_users.CoreUserUpdateAdmin(
+            school_id=school_id,
+            account_type=AccountType.student
+            if school_id == SchoolType.centrale_lyon.value
+            else AccountType.other_school_student,
+        ),
     )
 
 
@@ -2477,13 +2487,13 @@ async def edit_participant(
                 detail="Sport not found in the database",
             )
         if new_sport.team_size > 1:
-            if participant.team_id is None:
+            if participant_edit.team_id is None:
                 raise HTTPException(
                     status_code=400,
                     detail="Sport needs to be played in a team, participant is currently not in a team",
                 )
             new_team_db = await cruds_sport_competition.load_team_by_id(
-                participant.team_id,
+                participant_edit.team_id,
                 db,
             )
             if new_team_db is None or new_team_db.sport_id != participant_edit.sport_id:
@@ -2517,7 +2527,7 @@ async def edit_participant(
             participant_edit.team_id,
             db,
         )
-        if new_team is None:
+        if new_team_db is None:
             raise HTTPException(
                 status_code=404,
                 detail="Team not found in the database",
@@ -2533,6 +2543,25 @@ async def edit_participant(
             )
         if len(old_team.participants) == 1:
             delete_old_team = True
+        else:
+            new_captain = next(
+                (
+                    user
+                    for user in old_team.participants
+                    if user.user_id != participant.user_id
+                ),
+                None,
+            )
+            if new_captain is None:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Cannot change team for the participant because there is no other participant in the current team to assign as captain",
+                )
+            await cruds_sport_competition.update_team(
+                old_team.id,
+                schemas_sport_competition.TeamEdit(captain_id=new_captain.user_id),
+                db,
+            )
 
     await cruds_sport_competition.update_participant(
         user_id=user_id,
@@ -4468,7 +4497,7 @@ async def get_payment_url(
 
 @module.router.get(
     "/competition/volunteers/shifts",
-    response_model=list[schemas_sport_competition.VolunteerShiftComplete],
+    response_model=list[schemas_sport_competition.VolunteerShiftCompleteWithVolunteers],
     status_code=200,
 )
 async def get_all_volunteer_shifts(
