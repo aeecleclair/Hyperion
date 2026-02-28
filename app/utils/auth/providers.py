@@ -359,7 +359,7 @@ class SiarnaqAuthClient(BaseAuthClient):
     permission = AuthPermissions.siarnaq
 
 
-class PMFAuthClient(BaseAuthClient):
+class EnceladusAuthClient(BaseAuthClient):
     allowed_scopes: set[ScopeType | str] = {ScopeType.API}
 
     allowed_account_types: list[AccountType] | None = None
