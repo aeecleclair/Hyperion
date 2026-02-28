@@ -107,7 +107,12 @@ pyenv activate hyperion
 
 Before installing the dependencies, you need to check a few things to make things easier :
 
+<details>
+<summary>
+
 ### About Jellyfish and Rust (Windows only)
+
+</summary>
 
 If you don't have Rust installed on your Windows PC and don't want to install it, decrease the version of `jellyfish` to `0.10.0` in the [`requirements.txt`](requirements.txt) file:
 
@@ -116,6 +121,8 @@ jellyfish==0.10.0                    # String Matching
 ```
 
 > if you don't know, go ahead with the next steps and see if an error mentioning Rust is raised.
+
+</details>
 
 ### About Weasyprint and Pango
 
@@ -146,7 +153,12 @@ jellyfish==1.0.4                    # String Matching
 
 Choose either SQLite or PostgreSQL.
 
+<details>
+<summary>
+
 ### SQLite
+
+</summary>
 
 #### Advantages
 
@@ -166,7 +178,14 @@ Being so light, it does not support some features nowadays common for relational
 
 There is nothing to do, it works out of the box.
 
+</details>
+
+<details>
+<summary>
+
 ### PostgreSQL
+
+</summary>
 
 #### Advantages
 
@@ -255,6 +274,7 @@ services:
 ```
 
 </details>
+</details>
 
 ## 4. Complete the dotenv (`.env`) and the `config.yaml`
 
@@ -331,22 +351,43 @@ The `config.yaml` contains environment variables that are internal to the Python
 > [!WARNING]
 > Beforehand, check that your venv is activated.
 
+<details>
+<summary>
+
 ### Using VS Code
+
+</summary>
 
 1. In the activity bar (the leftmost part), click the _Run and Debug_ icon (the play button).
 2. Click the green play button.
 
-Check that your Hyperion instance is up and running by navigating to http://localhost:8000/information.
+</details>
+
+<details>
+<summary>
 
 ### Using the command-line interface
+
+</summary>
 
 ```bash
 fastapi dev
 ```
 
+</details>
+
+### Finally...
+
 Check that your Hyperion instance is up and running by navigating to http://localhost:8000/information.
 
+In your config.yaml, set `USE_FACTORIES: False`.
+
+<details>
+<summary>
+
 ## 6. Create your own user (if not yet the case using factories)
+
+</summary>
 
 There are at least 5 distinct ways to do so outside the use of factories, ranked here from easiest (~GUI) to hardest (~CLI).
 
@@ -473,13 +514,24 @@ insert into core_user (id, firstname, name, nickname, email, password_hash, scho
 ```
 
 </details>
+</details>
+
+<details>
+<summary>
 
 ## 7. Make your user admin (if not yet the case using factories)
+
+</summary>
 
 > [!IMPORTANT]
 > Again, using factories is the recommended way.
 
+<details>
+<summary>
+
 ### If there is exactly one user in the database
+
+</summary>
 
 Then you can make it admin using the following command:
 
@@ -487,7 +539,14 @@ Then you can make it admin using the following command:
 curl -X POST http://localhost:8000/users/make-admin
 ```
 
+</details>
+
+<details>
+<summary>
+
 ### Using a database client in command line
+
+</summary>
 
 > [!WARNING]
 > Work in progress
@@ -500,6 +559,9 @@ curl -X POST http://localhost:8000/users/make-admin
 ```sql
 insert into core_membership (user_id, group_id) values ('<Your user_id>', '0a25cb76-4b63-4fd3-b939-da6d9feabf28');
 ```
+
+</details>
+</details>
 
 ---
 
