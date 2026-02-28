@@ -34,6 +34,13 @@ Create the virtual environment.
 py -3.14 -m venv .venv
 ```
 
+Activate it
+
+```bash
+.\.venv\Scripts\activate
+```
+
+
 If you get an error saying roughly:
 
 ```
@@ -46,11 +53,8 @@ Then in a Powershell, run this to allow scripts executions for your user:
 Set-ExecutionPolicy Unrestricted -Scope CurrentUser
 ```
 
-Activate it
+and try again.
 
-```bash
-.\.venv\Scripts\activate
-```
 
 </details>
 
