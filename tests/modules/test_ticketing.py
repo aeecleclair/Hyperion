@@ -10,7 +10,7 @@ from app.core.memberships import models_memberships
 from app.core.mypayment import models_mypayment
 from app.core.mypayment.types_mypayment import WalletType
 from app.core.users import models_users
-from app.modules.ticketing import models_ticketing
+from app.modules.ticketing import models_ticketing, schemas_ticketing
 
 # We need to import event_loop for pytest-asyncio routine defined bellow
 from app.modules.ticketing.endpoints_ticketing import TicketingPermissions
@@ -189,14 +189,34 @@ async def init_objects():
     )
     student_token = create_api_access_token(student_user)
 
+# Units tests for basic CRUD operations on events, sessions and categories.
 
-def test_get_event(client: TestClient):
+# -------------------------- Test event basic cruds -------------------------- #
+
+# Get all events
+async def test_get_events_list(client: TestClient):
+    response = client.get(
+        "/ticketing/events",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 200
+    events = response.json()
+    assert isinstance(events, list)
+    assert len(events) >= 2  # We created 2 events in the fixture
+    # Verify that an event is an instance of EventSimple
+    for event in events:
+        assert isinstance(event, schemas_ticketing.EventSimple)
+
+
+# get event by id
+async def test_get_event(client: TestClient):
     # Test with event1 (should succeed)
     response = client.get(
         f"/ticketing/events/{event1.id}",
         headers={"Authorization": f"Bearer {student_token}"},
     )
     assert response.status_code == 200
+    assert isinstance(response.json(), schemas_ticketing.EventComplete)
 
     # Test with event2 (should succeed)
     response = client.get(
@@ -211,3 +231,171 @@ def test_get_event(client: TestClient):
         headers={"Authorization": f"Bearer {student_token}"},
     )
     assert response.status_code == 404
+
+
+# create event
+async def test_create_event(client: TestClient):
+    new_event_data = {
+        "name": "New Event",
+        "open_date": "2024-01-01T00:00:00Z",
+        "close_date": "2200-12-31T23:59:59Z",
+        "quota": 10,
+        "user_quota": 2,
+        "store_id": str(store.id),
+    }
+    response = client.post(
+        "/ticketing/events",
+        json=new_event_data,
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 201
+    created_event = response.json()
+    assert created_event == new_event_data
+
+
+# create event without perms
+async def test_create_event_without_perms(client: TestClient):
+    new_event_data = {
+        "name": "New Event",
+        "open_date": "2024-01-01T00:00:00Z",
+        "close_date": "2200-12-31T23:59:59Z",
+        "quota": 10,
+        "user_quota": 2,
+        "store_id": str(store.id),
+    }
+    response = client.post(
+        "/ticketing/events",
+        json=new_event_data,
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 403
+
+
+async def test_create_event_with_invalid_store(client: TestClient):
+    new_event_data = {
+        "name": "New Event",
+        "open_date": "2024-01-01T00:00:00Z",
+        "close_date": "2200-12-31T23:59:59Z",
+        "quota": 10,
+        "user_quota": 2,
+        "store_id": str(uuid4()),  # Invalid store ID
+    }
+    response = client.post(
+        "/ticketing/events",
+        json=new_event_data,
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 400
+
+
+# update event
+async def test_update_event_as_admin(client: TestClient):
+    update_data = {
+        "name": "Updated Event Name",
+        "quota": 20,
+    }
+    response = client.patch(
+        f"/ticketing/events/{event1.id}",
+        json=update_data,
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 200
+    updated_event = response.json()
+    assert updated_event["name"] == update_data["name"]
+    assert updated_event["quota"] == update_data["quota"]
+
+
+async def test_update_event_as_lambda(client: TestClient):
+    update_data = {
+        "name": "Updated Event Name",
+        "quota": 20,
+    }
+    response = client.patch(
+        f"/ticketing/events/{event1.id}",
+        json=update_data,
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 403
+
+
+async def test_update_event_with_invalid_id(client: TestClient):
+    update_data = {
+        "name": "Updated Event Name",
+        "quota": 20,
+    }
+    response = client.patch(
+        f"/ticketing/events/{uuid4()}",
+        json=update_data,
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 404
+
+
+# fail to update event with quota less than used_quota
+async def test_update_event_with_quota_less_than_used_quota(client: TestClient):
+    update_data = {
+        "quota": 0,  # event1 has used_quota=1, so this should fail
+    }
+    response = client.patch(
+        f"/ticketing/events/{event1.id}",
+        json=update_data,
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 400
+
+
+# test delete event as lambda, should fail
+async def test_delete_event_as_lambda(client: TestClient):
+    response = client.delete(
+        f"/ticketing/events/{event1.id}",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 403
+
+# test delete event as admin, should succeed
+async def test_delete_event_as_admin(client: TestClient):
+    # First create a new event to delete
+    to_delete_event = models_ticketing.TicketingEvent(
+        id=uuid4(),
+        name="To Delete Event",
+        open_date=datetime(2024, 1, 1, tzinfo=UTC),
+        close_date=datetime(2200, 12, 31, tzinfo=UTC),
+        quota=5,
+        user_quota=2,
+        used_quota=0,
+        disabled=False,
+        creator_id=str(admin_user.id),
+        store_id=store.id,
+    )
+    await add_object_to_db(to_delete_event)
+    response = client.delete(
+        f"/ticketing/events/{to_delete_event.id}",
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 204
+    # Verify that the event is actually deleted
+    response = client.get(
+        f"/ticketing/events/{to_delete_event.id}",
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 404
+
+# test delete event as admin with tickets, should fail
+async def test_deleted_as_admin_with_tickets(client: TestClient):
+    # Create a ticket for the event
+    ticket = models_ticketing.Ticket(
+        id=uuid4(),
+        event_id=event1.id,
+        user_id=student_user.id,
+        status="active",
+    )
+    await add_object_to_db(ticket)
+    # Try to delete the event with existing tickets
+    response = client.delete(
+        f"/ticketing/events/{event1.id}",
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 400
+
+
+# -------------------------- Test session basic cruds -------------------------- #
