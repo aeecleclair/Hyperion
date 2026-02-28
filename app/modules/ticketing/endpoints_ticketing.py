@@ -105,6 +105,11 @@ async def update_event(
     stored = await cruds_ticketing.get_event_by_id(event_id=event_id, db=db)
     if stored is None:
         raise HTTPException(status_code=404, detail="Event not found")
+    if event_update.quota is not None and stored.used_quota > event_update.quota:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot set quota less than used quota",
+        )
     await cruds_ticketing.update_event(
         event_id=event_id,
         event_update=event_update,
