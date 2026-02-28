@@ -8,7 +8,16 @@ Hyperion is the API of an open-source project launched by ÉCLAIR, the computer 
 
 The structure of this project is modular. Hyperion has a core that performs vital functions (authentication, database migration, authorization, etc). The other functions of Hyperion are realized in what we call modules. You can contribute to the project by adding modules if you wish.
 
+## 0. Prerequisites
+
+- Git
+- Python, at least 3.12
+- Remove Anaconda from your computer
+
 ## 1. Creating a virtual environment for Python 3.14
+
+> [!NOTE]
+> You can also create a 3.12 or 3.13 venv if 3.14 does not work for you!
 
 <details>
 <summary>
@@ -17,7 +26,7 @@ The structure of this project is modular. Hyperion has a core that performs vita
 
 </summary>
 
-Create the virtual environment
+Create the virtual environment.
 
 > You need to be in Hyperion main folder
 
