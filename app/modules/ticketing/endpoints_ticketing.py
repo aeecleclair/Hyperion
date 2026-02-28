@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
 from redis import Redis
@@ -76,8 +76,10 @@ async def create_event(
         raise HTTPException(status_code=400, detail="Event already exists")
     event = schemas_ticketing.EventSimple(
         **event.model_dump(),
-        id=UUID(),
+        id=uuid4(),
         creator_id=user.id,
+        used_quota=0,
+        disabled=False,
     )
     await cruds_ticketing.create_event(event=event, db=db)
     event_complete = await cruds_ticketing.get_event_by_id(event_id=event.id, db=db)
@@ -175,7 +177,7 @@ async def create_session(
     """Create a new session."""
     session_simple = schemas_ticketing.SessionSimple(
         **session.model_dump(),
-        id=UUID(),
+        id=uuid4(),
         used_quota=0,
         disabled=False,
     )
@@ -273,7 +275,7 @@ async def create_category(
     """Create a new category."""
     category_complete = schemas_ticketing.CategoryComplete(
         **category.model_dump(),
-        id=UUID(),
+        id=uuid4(),
         used_quota=0,
         disabled=False,
     )
@@ -404,7 +406,7 @@ async def create_ticket(
     """Create a new ticket."""
     ticket_simple = schemas_ticketing.TicketSimple(
         **ticket.model_dump(),
-        id=UUID(),
+        id=uuid4(),
         user_id=user.id,
         status="pending",
         nb_scan=0,
