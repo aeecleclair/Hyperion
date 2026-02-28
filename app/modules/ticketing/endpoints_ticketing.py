@@ -511,6 +511,7 @@ async def update_ticket(
         db=db,
     )
 
+
 # Could be deleted if the user is the one who has created the ticket
 # or if the user has the right permissions to manage events
 @module.router.delete(

@@ -212,6 +212,7 @@ async def create_seller(
     can_bank: bool,
     can_see_history: bool,
     can_cancel: bool,
+    can_manage_ticketing: bool,
     can_manage_sellers: bool,
     db: AsyncSession,
 ) -> None:
@@ -221,6 +222,7 @@ async def create_seller(
         can_bank=can_bank,
         can_see_history=can_see_history,
         can_cancel=can_cancel,
+        can_manage_ticketing=can_manage_ticketing,
         can_manage_sellers=can_manage_sellers,
     )
     db.add(wallet)
@@ -250,6 +252,7 @@ async def get_seller(
             can_bank=result.can_bank,
             can_see_history=result.can_see_history,
             can_cancel=result.can_cancel,
+            can_manage_ticketing=result.can_manage_ticketing,
             can_manage_sellers=result.can_manage_sellers,
             user=schemas_users.CoreUserSimple(
                 id=result.user.id,
@@ -281,6 +284,7 @@ async def get_sellers_by_store_id(
             can_bank=seller.can_bank,
             can_see_history=seller.can_see_history,
             can_cancel=seller.can_cancel,
+            can_manage_ticketing=seller.can_manage_ticketing,
             can_manage_sellers=seller.can_manage_sellers,
             user=schemas_users.CoreUserSimple(
                 id=seller.user.id,

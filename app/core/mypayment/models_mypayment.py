@@ -221,6 +221,7 @@ class Seller(Base):
     can_bank: Mapped[bool]
     can_see_history: Mapped[bool]
     can_cancel: Mapped[bool]
+    can_manage_ticketing: Mapped[bool]
     can_manage_sellers: Mapped[bool]
 
     user: Mapped[models_users.CoreUser] = relationship(init=False, lazy="joined")
