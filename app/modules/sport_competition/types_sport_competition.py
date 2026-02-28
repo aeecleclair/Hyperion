@@ -28,6 +28,7 @@ class ProductPublicType(Enum):
     fanfare = "fanfare"
     cameraman = "cameraman"
     athlete = "athlete"
+    volunteer = "volunteer"
 
 
 class ProductSchoolType(Enum):
@@ -40,3 +41,8 @@ class ExcelExportParams(Enum):
     participants = "participants"
     purchases = "purchases"
     payments = "payments"
+
+
+class PaiementMethodType(Enum):
+    manual = "manual"
+    helloasso = "helloasso"

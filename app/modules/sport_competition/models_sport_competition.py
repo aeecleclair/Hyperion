@@ -8,6 +8,7 @@ from app.core.schools.models_schools import CoreSchool
 from app.core.users.models_users import CoreUser
 from app.modules.sport_competition.types_sport_competition import (
     CompetitionGroupType,
+    PaiementMethodType,
     ProductPublicType,
     ProductSchoolType,
     SportCategory,
@@ -63,7 +64,9 @@ class CompetitionUser(Base):
     is_fanfare: Mapped[bool] = mapped_column(default=False)
     is_cameraman: Mapped[bool] = mapped_column(default=False)
     is_athlete: Mapped[bool] = mapped_column(default=False)
+    is_volunteer: Mapped[bool] = mapped_column(default=False)
     allow_pictures: Mapped[bool] = mapped_column(default=True)
+    cancelled: Mapped[bool] = mapped_column(default=False)
 
     user: Mapped[CoreUser] = relationship(
         "CoreUser",
@@ -157,7 +160,7 @@ class SchoolProductQuota(Base):
         ForeignKey("competition_edition.id"),
         primary_key=True,
     )
-    quota: Mapped[int | None]
+    quota: Mapped[int]
 
 
 class CompetitionTeam(Base):
@@ -417,6 +420,7 @@ class CompetitionPayment(Base):
         ForeignKey("competition_edition.id"),
     )
     total: Mapped[int]
+    method: Mapped[PaiementMethodType]
     created_at: Mapped[datetime]
 
     __table_args__ = (

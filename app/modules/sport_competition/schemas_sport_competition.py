@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, NonNegativeInt, PositiveInt, model_validator
@@ -8,6 +9,7 @@ from app.core.users import schemas_users
 from app.modules.sport_competition.types_sport_competition import (
     CompetitionGroupType,
     InvalidUserType,
+    PaiementMethodType,
     ProductPublicType,
     ProductSchoolType,
     SportCategory,
@@ -32,6 +34,33 @@ class CompetitionEditionEdit(BaseModel):
     year: PositiveInt | None = None
     start_date: datetime | None = None
     end_date: datetime | None = None
+
+
+class CompetitionRevenueStats(BaseModel):
+    method: PaiementMethodType
+    count: NonNegativeInt
+    total: NonNegativeInt
+
+
+class CompetitionUsersStats(BaseModel):
+    total_users: int
+    total_athletes: int
+    total_cameramen: int
+    total_pompoms: int
+    total_fanfares: int
+    total_volunteers: int
+
+
+class CompetitionSportsStats(BaseModel):
+    total_participants: int
+    total_teams: int
+    total_matches: int
+
+
+class CompetitionEditionStats(BaseModel):
+    users_stats: CompetitionUsersStats
+    sports_stats: CompetitionSportsStats
+    revenues_stats: list[CompetitionRevenueStats]
 
 
 class SchoolExtensionBase(BaseModel):
@@ -85,7 +114,9 @@ class CompetitionUserBase(BaseModel):
     is_fanfare: bool = False
     is_cameraman: bool = False
     is_athlete: bool = False
+    is_volunteer: bool = False
     allow_pictures: bool = True
+    cancelled: bool = False
 
     @model_validator(mode="after")
     def validate_sport_category(self) -> "CompetitionUserBase":
@@ -107,6 +138,7 @@ class CompetitionUserBase(BaseModel):
                 self.is_fanfare,
                 self.is_cameraman,
                 self.is_athlete,
+                self.is_volunteer,
             ],
         ):
             raise InvalidUserType("none")
@@ -136,7 +168,9 @@ class CompetitionUserEdit(BaseModel):
     is_fanfare: bool | None = None
     is_cameraman: bool | None = None
     is_athlete: bool | None = None
+    is_volunteer: bool | None = None
     allow_pictures: bool | None = None
+    cancelled: Literal[False] | None = None
 
 
 class SportBase(BaseModel):
@@ -265,7 +299,7 @@ class MatchBase(BaseModel):
     team1_id: UUID
     team2_id: UUID
     location_id: UUID
-    date: datetime
+    date: datetime | None = None
     score_team1: int | None = None
     score_team2: int | None = None
     winner_id: UUID | None = None
@@ -408,6 +442,7 @@ class PurchaseComplete(Purchase):
 
 class PurchaseEdit(BaseModel):
     quantity: int | None = None
+    validated: bool | None = None
 
 
 class PaymentBase(BaseModel):
@@ -418,6 +453,7 @@ class PaymentComplete(PaymentBase):
     id: UUID
     user_id: str
     edition_id: UUID
+    method: PaiementMethodType
 
 
 class PaymentUrl(BaseModel):

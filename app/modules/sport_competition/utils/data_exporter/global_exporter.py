@@ -1,155 +1,20 @@
-import logging
 from io import BytesIO
 
 import xlsxwriter
 
 from app.modules.sport_competition import schemas_sport_competition
 from app.modules.sport_competition.types_sport_competition import ExcelExportParams
+from app.modules.sport_competition.utils.data_exporter.commons import (
+    autosize_columns,
+    generate_format,
+    get_user_types,
+    write_data_rows,
+)
 from app.types.exceptions import MissingDataError
 
 FIXED_COLUMNS = ["Nom", "Prénom", "Email", "École", "Type", "Statut"]
-PARTICIPANTS_COLUMNS = ["Sport", "Licence", "Licence valide", "Équipe"]
+PARTICIPANTS_COLUMNS = ["Catégorie", "Sport", "Licence", "Licence valide", "Équipe"]
 PAYMENTS_COLUMNS = ["Total à payer", "Total payé", "Tout payé"]
-
-hyperion_error_logger = logging.getLogger("hyperion.error")
-
-
-def generate_format(workbook: xlsxwriter.Workbook):
-    def make_format(
-        workbook: xlsxwriter.Workbook,
-        *,
-        color: str | None = None,
-        bold: bool = False,
-        align: str = "center",
-        font: str = "Raleway",
-        right: int | None = None,
-        left: int | None = None,
-        bottom: int | None = None,
-        bg_color: str | None = None,
-        font_color: str | None = None,
-    ):
-        fmt_dict: dict[str, str | int | bool] = {
-            "align": align,
-            "font_name": font,
-        }
-        if color:
-            fmt_dict["font_color"] = color
-        if font_color:
-            fmt_dict["font_color"] = font_color
-        if bg_color:
-            fmt_dict["bg_color"] = bg_color
-        if bold:
-            fmt_dict["bold"] = True
-        if right is not None:
-            fmt_dict["right"] = right
-        if left is not None:
-            fmt_dict["right"] = left
-        if bottom is not None:
-            fmt_dict["bottom"] = bottom
-        return workbook.add_format(fmt_dict)
-
-    return {
-        "header": {
-            "base": make_format(
-                workbook,
-                bold=True,
-                font_color="white",
-                bg_color="#0D47A1",
-            ),
-            "right": make_format(
-                workbook,
-                bold=True,
-                font_color="white",
-                bg_color="#0D47A1",
-                right=1,
-            ),
-            "left": make_format(
-                workbook,
-                bold=True,
-                font_color="white",
-                bg_color="#0D47A1",
-                left=1,
-            ),
-            "left_right": make_format(
-                workbook,
-                bold=True,
-                font_color="white",
-                bg_color="#0D47A1",
-                right=1,
-                left=1,
-            ),
-            "right_thick": make_format(
-                workbook,
-                bold=True,
-                font_color="white",
-                bg_color="#0D47A1",
-                right=2,
-            ),
-            "left_thick": make_format(
-                workbook,
-                bold=True,
-                font_color="white",
-                bg_color="#0D47A1",
-                left=2,
-            ),
-            "left_right_thick": make_format(
-                workbook,
-                bold=True,
-                font_color="white",
-                bg_color="#0D47A1",
-                right=2,
-                left=2,
-            ),
-        },
-        "validated": {
-            "base": make_format(workbook, bold=True, font_color="green"),
-            "right": make_format(workbook, bold=True, font_color="green", right=1),
-            "thick": make_format(workbook, bold=True, font_color="green", right=2),
-            "bottom": make_format(workbook, bold=True, font_color="green", bottom=2),
-            "bottom_right": make_format(
-                workbook,
-                bold=True,
-                font_color="green",
-                bottom=2,
-                right=1,
-            ),
-            "bottom_thick": make_format(
-                workbook,
-                bold=True,
-                font_color="green",
-                bottom=2,
-                right=2,
-            ),
-        },
-        "not_validated": {
-            "base": make_format(workbook, bold=True, font_color="red"),
-            "right": make_format(workbook, bold=True, font_color="red", right=1),
-            "thick": make_format(workbook, bold=True, font_color="red", right=2),
-            "bottom": make_format(workbook, bold=True, font_color="red", bottom=2),
-            "bottom_right": make_format(
-                workbook,
-                bold=True,
-                font_color="red",
-                bottom=2,
-                right=1,
-            ),
-            "bottom_thick": make_format(
-                workbook,
-                bold=True,
-                font_color="red",
-                bottom=2,
-                right=2,
-            ),
-        },
-        "other": {
-            "base": make_format(workbook),
-            "right": make_format(workbook, right=1),
-            "thick": make_format(workbook, right=2),
-            "bottom": make_format(workbook, bottom=2),
-            "bottom_right": make_format(workbook, bottom=2, right=1),
-            "bottom_thick": make_format(workbook, bottom=2, right=2),
-        },
-    }
 
 
 def build_product_structure(
@@ -161,6 +26,7 @@ def build_product_structure(
     for product in products:
         if not product.variants:
             continue
+        product.variants.sort(key=lambda v: v.name.lower())
         variants_info = []
         for variant in product.variants:
             qty_col = col_idx
@@ -182,19 +48,6 @@ def build_product_structure(
         )
 
     return product_structure, col_idx
-
-
-def get_user_types(user: schemas_sport_competition.CompetitionUser) -> list[str]:
-    types = []
-    if user.is_athlete:
-        types.append("Athlète")
-    if user.is_pompom:
-        types.append("Pom-pom")
-    if user.is_cameraman:
-        types.append("Cameraman")
-    if user.is_fanfare:
-        types.append("Fanfare")
-    return types
 
 
 def build_data_rows(
@@ -226,32 +79,35 @@ def build_data_rows(
             row[5] = "Validé mais non payé"
         else:
             row[5] = "Non validé"
-        thick_columns = [5]
+        thick_columns = [len(FIXED_COLUMNS) - 1]
         purchases_map = {
             p.product_variant_id: p for p in users_purchases.get(user.user.id, [])
         }
         if ExcelExportParams.participants in parameters and users_participant:
+            offset = len(FIXED_COLUMNS)
             participant = users_participant.get(user.user.id, None)
             if participant:
                 sport = next(s for s in sports if s.id == participant.sport_id)
-                row[6] = sport.name
-                row[7] = participant.license if participant.license else "N/A"
-                row[8] = participant.is_license_valid
-                row[9] = (
+                row[offset] = participant.user.sport_category.value
+                row[offset + 1] = sport.name
+                row[offset + 2] = participant.license or "N/A"
+                row[offset + 3] = participant.is_license_valid
+                row[offset + 4] = (
                     f"{participant.team.name}{' (capitaine)' if participant.team.captain_id == user.user.id else ''}"
                 )
             else:
-                row[6] = ""
-                row[7] = ""
-                row[8] = ""
-                row[9] = ""
-            thick_columns.append(9)
+                row[offset] = ""
+                row[offset + 1] = ""
+                row[offset + 2] = ""
+                row[offset + 3] = ""
+                row[offset + 4] = ""
+            thick_columns.append(len(FIXED_COLUMNS) + len(PARTICIPANTS_COLUMNS) - 1)
 
         if ExcelExportParams.purchases in parameters and product_structure is not None:
             offset = 10 if ExcelExportParams.participants in parameters else 7
             for prod_struct in product_structure[0]:
                 for vinfo in prod_struct["variants_info"]:
-                    p = purchases_map.get(vinfo["variant"].id, None)
+                    p = purchases_map.get(vinfo["variant"].id)
                     if p and p.quantity > 0:
                         row[vinfo["qty_col"] + offset] = p.quantity
                         row[vinfo["valid_col"] + offset] = (
@@ -263,9 +119,9 @@ def build_data_rows(
 
         if ExcelExportParams.payments in parameters and users_payments is not None:
             user_payments = users_payments.get(user.user.id, [])
-            offset = 6
+            offset = len(FIXED_COLUMNS)
             if ExcelExportParams.participants in parameters:
-                offset += 4
+                offset += len(PARTICIPANTS_COLUMNS)
             if (
                 ExcelExportParams.purchases in parameters
                 and product_structure is not None
@@ -279,7 +135,7 @@ def build_data_rows(
             row[offset] = str(total / 100)
             row[offset + 1] = str(paid / 100)
             row[offset + 2] = "OUI" if total == paid else "NON"
-            thick_columns.append(offset + 2)
+            thick_columns.append(offset + len(PAYMENTS_COLUMNS) - 1)
 
         data_rows.append(row)
 
@@ -311,7 +167,7 @@ def write_participant_headers(
         0,
         len(FIXED_COLUMNS),
         0,
-        len(FIXED_COLUMNS) + 3,
+        len(FIXED_COLUMNS) + len(PARTICIPANTS_COLUMNS) - 1,
         "Participants",
         formats["header"]["base"],
     )
@@ -425,73 +281,16 @@ def write_product_headers(
     return product_end_cols, list(variant_end_cols)
 
 
-def write_data_rows(
-    worksheet: xlsxwriter.Workbook.worksheet_class,
-    data_rows: list,
-    thick_columns: list[int],
-    formats: dict,
-    columns_max_length: list[int],
-    start_row: int = 5,
-):
-    for row_idx, row in enumerate(data_rows, start=start_row):
-        is_last_row = row_idx == start_row + len(data_rows) - 1
-        for col_idx, val in enumerate(row):
-            # Choix du format selon la colonne
-            if col_idx in thick_columns:
-                base = (
-                    formats["validated"]
-                    if val == "OUI"
-                    else formats["not_validated"]
-                    if val == "NON"
-                    else formats["other"]
-                )
-                fmt = base["bottom_thick"] if is_last_row else base["thick"]
-
-            # elif col_idx in variant_end_cols:
-            #     base = (
-            #         formats["validated"]
-            #         if val == "OUI"
-            #         else formats["not_validated"]
-            #         if val == "NON"
-            #         else formats["other"]
-            #     )
-            #     fmt = base["bottom_right"] if is_last_row else base["right"]
-            else:
-                base = (
-                    formats["validated"]
-                    if val == "OUI"
-                    else formats["not_validated"]
-                    if val == "NON"
-                    else formats["other"]
-                )
-                fmt = base["bottom"] if is_last_row else base["base"]
-
-            worksheet.write(row_idx, col_idx, val, fmt)
-            columns_max_length[col_idx] = max(
-                columns_max_length[col_idx],
-                len(str(val)),
-            )
-
-
-def autosize_columns(
-    worksheet: xlsxwriter.Workbook.worksheet_class,
-    columns_max_length: list[int],
-):
-    for i, length in enumerate(columns_max_length):
-        worksheet.set_column(i, i, length + 3)
-
-
 def write_to_excel(
     parameters: list[ExcelExportParams],
     workbook: xlsxwriter.Workbook,
-    worksheet_name: str,
-    product_structure: tuple[list, int],
+    product_structure: tuple[list, int] | None,
     data_rows: list,
     thick_columns: list[int],
     col_idx: int,
     formats: dict,
 ):
-    worksheet = workbook.add_worksheet(worksheet_name)
+    worksheet = workbook.add_worksheet("Données")
     columns_max_length = [len(c) for c in FIXED_COLUMNS] + [0] * (
         col_idx - len(FIXED_COLUMNS)
     )
@@ -500,19 +299,31 @@ def write_to_excel(
     if ExcelExportParams.participants in parameters:
         write_participant_headers(worksheet, formats, columns_max_length)
     if ExcelExportParams.purchases in parameters:
+        if product_structure is None:
+            raise TypeError(  # noqa: TRY003
+                "product_structure is None but ExcelExportParams.purchases is set",
+            )
         write_product_headers(
             worksheet,
             product_structure,
             formats,
             len(FIXED_COLUMNS)
-            + (4 if ExcelExportParams.participants in parameters else 0),
+            + (
+                len(PARTICIPANTS_COLUMNS)
+                if ExcelExportParams.participants in parameters
+                else 0
+            ),
             columns_max_length,
         )
     if ExcelExportParams.payments in parameters:
         start_index = len(FIXED_COLUMNS)
         if ExcelExportParams.participants in parameters:
-            start_index += 4
+            start_index += len(PARTICIPANTS_COLUMNS)
         if ExcelExportParams.purchases in parameters:
+            if product_structure is None:
+                raise TypeError(  # noqa: TRY003
+                    "product_structure is None but ExcelExportParams.purchases is set",
+                )
             start_index += product_structure[1]
         write_payment_headers(
             worksheet,
@@ -529,7 +340,7 @@ def write_to_excel(
         columns_max_length,
     )
     autosize_columns(worksheet, columns_max_length)
-    worksheet.freeze_panes(5, 4)
+    worksheet.freeze_panes(len(FIXED_COLUMNS), 4)
 
 
 def construct_users_excel_with_parameters(
@@ -550,9 +361,22 @@ def construct_users_excel_with_parameters(
     if users_participant is None and ExcelExportParams.participants in parameters:
         raise MissingDataError("users_participant")
 
-    product_structure: tuple = ()
+    school_dict = {school.school_id: school for school in schools}
+
+    users.sort(
+        key=lambda u: (
+            school_dict[u.user.school_id].school.name.lower(),
+            u.user.name.lower(),
+            u.user.firstname.lower(),
+        ),
+    )
+
+    product_structure: tuple[list, int] | None = None
     col_idx = len(FIXED_COLUMNS)
     if ExcelExportParams.purchases in parameters and products is not None:
+        products.sort(
+            key=lambda product: product.name.lower(),
+        )
         product_structure = build_product_structure(
             products,
         )
@@ -560,12 +384,11 @@ def construct_users_excel_with_parameters(
             len(prod_struct["variants_info"]) * 2
             for prod_struct in product_structure[0]
         )
-        hyperion_error_logger.debug(f"Product structure: {product_structure}")
 
     if ExcelExportParams.participants in parameters:
-        col_idx += 4
+        col_idx += len(PARTICIPANTS_COLUMNS)
     if ExcelExportParams.payments in parameters:
-        col_idx += 3
+        col_idx += len(PAYMENTS_COLUMNS)
     data_rows, thick_columns = build_data_rows(
         parameters,
         users,
@@ -584,7 +407,6 @@ def construct_users_excel_with_parameters(
     write_to_excel(
         parameters,
         workbook,
-        "Données",
         product_structure,
         data_rows,
         thick_columns,

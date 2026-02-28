@@ -1,6 +1,7 @@
 import base64
 import logging
-import urllib
+import re
+import urllib.parse
 import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -223,7 +224,6 @@ async def create_structure(
         short_id=structure.short_id,
         name=structure.name,
         association_membership_id=structure.association_membership_id,
-        association_membership=None,
         manager_user_id=structure.manager_user_id,
         siege_address_street=structure.siege_address_street,
         siege_address_zipcode=structure.siege_address_zipcode,
@@ -1299,7 +1299,7 @@ async def get_user_tos(
     return schemas_mypayment.TOSSignatureResponse(
         accepted_tos_version=existing_user_payment.accepted_tos_version,
         latest_tos_version=LATEST_TOS,
-        tos_content=Path("assets/mypayment-terms-of-service.txt").read_text(),
+        tos_content=Path("assets/mypayment-terms-of-service.txt").read_text("utf-8"),
         max_wallet_balance=settings.MYPAYMENT_MAXIMUM_WALLET_BALANCE,
     )
 
@@ -2856,8 +2856,6 @@ async def create_structure_invoice(
                 schemas_mypayment.InvoiceDetailBase(
                     invoice_id=invoice_id,
                     store_id=store.id,
-                    store_name=store.name,
-                    wallet_id=store_wallet.id,
                     total=store_wallet.balance,
                 ),
             )
@@ -2870,12 +2868,17 @@ async def create_structure_invoice(
         structure_id=structure_id,
         db=db,
     )
-    last_invoice_number = (
-        int(last_structure_invoice.reference[-4:])
-        if last_structure_invoice
-        and int(last_structure_invoice.reference[5:9]) == security_now.year
-        else 0
-    )
+    if last_structure_invoice:
+        year, last_invoice_number = re.findall(
+            r"[a-zA-Z]*(\d{4})[a-zA-Z]*(\d{4})",
+            last_structure_invoice.reference,
+        )[0]
+        last_invoice_number = int(last_invoice_number)
+        year = int(year)
+        if int(year) != security_now.year:
+            last_invoice_number = 0
+    else:
+        last_invoice_number = 0
     invoice = schemas_mypayment.InvoiceInfo(
         id=invoice_id,
         reference=f"PAY{security_now.year}{structure.short_id}{last_invoice_number + 1:04d}",

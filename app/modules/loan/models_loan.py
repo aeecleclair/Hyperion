@@ -16,13 +16,12 @@ class Loaner(Base):
 
     items: Mapped[list["Item"]] = relationship(
         "Item",
-        lazy="joined",
-        back_populates="loaner",
+        lazy="select",
         default_factory=list,
     )
     loans: Mapped[list["Loan"]] = relationship(
         "Loan",
-        lazy="joined",
+        lazy="select",
         back_populates="loaner",
         default_factory=list,
     )
@@ -48,12 +47,6 @@ class Item(Base):
     suggested_caution: Mapped[int]
     total_quantity: Mapped[int]
     suggested_lending_duration: Mapped[int]  # duration in seconds
-    loaner: Mapped[Loaner] = relationship(
-        Loaner,
-        lazy="joined",
-        back_populates="items",
-        init=False,
-    )
 
 
 class Loan(Base):
@@ -81,7 +74,8 @@ class Loan(Base):
         "Item",
         viewonly=True,
         secondary="loan_content",
-        lazy="joined",
+        lazy="selectin",
+        init=False,
     )
 
     returned_date: Mapped[date | None] = mapped_column(default=None)
@@ -93,7 +87,7 @@ class Loan(Base):
     )
     loaner: Mapped[Loaner] = relationship(
         "Loaner",
-        lazy="joined",
+        lazy="selectin",
         back_populates="loans",
         init=False,
     )

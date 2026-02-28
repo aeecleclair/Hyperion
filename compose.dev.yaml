@@ -1,6 +1,6 @@
 services:
   hyperion-db:
-    image: postgres
+    image: postgres:15.1-alpine3.17
     container_name: hyperion-db-dev
     restart: unless-stopped
     environment:
@@ -12,14 +12,13 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - hyperion_db_data:/var/lib/postgresql/data
+      - ./hyperion-db:/var/lib/postgresql/data
 
   hyperion-redis:
-    image: redis
+    image: redis:7.0-alpine3.17
     container_name: hyperion-redis-dev
     restart: unless-stopped
     ports:
       - 6379:6379
-
-volumes:
-  hyperion_db_data:
+    volumes:
+      - ./hyperion-redis:/data
