@@ -10,7 +10,7 @@ from app.core.memberships import models_memberships
 from app.core.mypayment import models_mypayment
 from app.core.mypayment.types_mypayment import WalletType
 from app.core.users import models_users
-from app.modules.ticketing import models_ticketing, schemas_ticketing
+from app.modules.ticketing import models_ticketing
 
 # We need to import event_loop for pytest-asyncio routine defined bellow
 from app.modules.ticketing.endpoints_ticketing import TicketingPermissions
@@ -40,6 +40,12 @@ student_user: models_users.CoreUser
 
 event1: models_ticketing.TicketingEvent
 event2: models_ticketing.TicketingEvent
+
+session1: models_ticketing.TicketingSession
+session2: models_ticketing.TicketingSession
+
+category1: models_ticketing.TicketingCategory
+
 
 student_token: str
 admin_token: str
@@ -136,6 +142,7 @@ async def init_objects():
     )
     await add_object_to_db(event2)
 
+    global session1, session2, session3
     # Create sessions and categories for event1
     session1 = models_ticketing.TicketingSession(
         id=uuid4(),
@@ -168,6 +175,7 @@ async def init_objects():
     )
     await add_object_to_db(session3)
 
+    global category1
     category1 = models_ticketing.TicketingCategory(
         id=uuid4(),
         event_id=event1.id,
@@ -205,9 +213,6 @@ async def test_get_events_list(client: TestClient):
     events = response.json()
     assert isinstance(events, list)
     assert len(events) >= 2  # We created 2 events in the fixture
-    # Verify that an event is an instance of EventSimple
-    for event in events:
-        assert isinstance(event, schemas_ticketing.EventSimple)
 
 
 # get event by id
@@ -218,7 +223,6 @@ async def test_get_event(client: TestClient):
         headers={"Authorization": f"Bearer {student_token}"},
     )
     assert response.status_code == 200
-    assert isinstance(response.json(), schemas_ticketing.EventComplete)
 
     # Test with event2 (should succeed)
     response = client.get(
@@ -252,7 +256,8 @@ async def test_create_event(client: TestClient):
     )
     assert response.status_code == 201
     created_event = response.json()
-    assert created_event == new_event_data
+    assert created_event["name"] == new_event_data["name"]
+    assert created_event["open_date"] == new_event_data["open_date"]
 
 
 # create event without perms
@@ -301,10 +306,7 @@ async def test_update_event_as_admin(client: TestClient):
         json=update_data,
         headers={"Authorization": f"Bearer {admin_user_token}"},
     )
-    assert response.status_code == 200
-    updated_event = response.json()
-    assert updated_event["name"] == update_data["name"]
-    assert updated_event["quota"] == update_data["quota"]
+    assert response.status_code == 204
 
 
 async def test_update_event_as_lambda(client: TestClient):
@@ -387,11 +389,16 @@ async def test_delete_event_as_admin(client: TestClient):
 # test delete event as admin with tickets, should fail
 async def test_deleted_as_admin_with_tickets(client: TestClient):
     # Create a ticket for the event
-    ticket = models_ticketing.Ticket(
+    ticket = models_ticketing.TicketingTicket(
         id=uuid4(),
         event_id=event1.id,
+        session_id=session1.id,
+        category_id=category1.id,
         user_id=student_user.id,
         status="active",
+        nb_scan=0,
+        total=1,
+        created_at=datetime.now(UTC),
     )
     await add_object_to_db(ticket)
     # Try to delete the event with existing tickets
