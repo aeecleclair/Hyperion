@@ -189,9 +189,11 @@ async def init_objects():
     )
     student_token = create_api_access_token(student_user)
 
+
 # Units tests for basic CRUD operations on events, sessions and categories.
 
 # -------------------------- Test event basic cruds -------------------------- #
+
 
 # Get all events
 async def test_get_events_list(client: TestClient):
@@ -352,6 +354,7 @@ async def test_delete_event_as_lambda(client: TestClient):
     )
     assert response.status_code == 403
 
+
 # test delete event as admin, should succeed
 async def test_delete_event_as_admin(client: TestClient):
     # First create a new event to delete
@@ -379,6 +382,7 @@ async def test_delete_event_as_admin(client: TestClient):
         headers={"Authorization": f"Bearer {admin_user_token}"},
     )
     assert response.status_code == 404
+
 
 # test delete event as admin with tickets, should fail
 async def test_deleted_as_admin_with_tickets(client: TestClient):
