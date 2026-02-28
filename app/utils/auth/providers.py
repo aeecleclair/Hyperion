@@ -359,6 +359,12 @@ class SiarnaqAuthClient(BaseAuthClient):
     permission = AuthPermissions.siarnaq
 
 
+class EnceladusAuthClient(BaseAuthClient):
+    allowed_scopes: set[ScopeType | str] = {ScopeType.API}
+
+    allowed_account_types: list[AccountType] | None = None
+
+
 class OverleafAuthClient(BaseAuthClient):
     permission = AuthPermissions.overleaf
 
