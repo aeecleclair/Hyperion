@@ -346,7 +346,7 @@ POSTGRES_DB="hyperion"
 The `config.yaml` contains environment variables that are internal to the Python runtime _because_ they are only used in the Python code.
 
 1. `ACCESS_TOKEN_SECRET_KEY` and `RSA_PRIVATE_PEM_STRING`: An example of each is provided.
-   You can generate your own if you want, or just change a couple characters in the examples, or deliberately leave it as it is (just remove the #).
+   You can generate your own if you want, or just change a couple characters in the examples, or deliberately leave it as it is.
 2. `SQLITE_DB`: **tells Hyperion whether to use SQLite or PostgreSQL**.
    - If you use **SQLite**: this field should be a (relative) filename, by default we named it `app.db`, you can change this name.
      Hyperion will create this file for you and use it as the database.
@@ -355,7 +355,7 @@ The `config.yaml` contains environment variables that are internal to the Python
      Hyperion will fallback to PostgreSQL settings.
 3. `USE_FACTORIES`: `True` by default, factories seed your database, if empty, with mocked data.
    This is useful on SQLite to repopulate your new database after dropping the previous one, of to create automatically your own user with admin privileges (see `FACTORIES_DEMO_USERS` below).
-4. `FACTORIES_DEMO_USERS`: **Replace the first user's data with yours** (not commented).
+4. `FACTORIES_DEMO_USERS`: **Replace the first user's data with yours** (not commented) or add your own.
    These future users will be created automatically when launching Hyperion with an empty database.
    Plus, your user will be there with your password and be admin out of the box.
 

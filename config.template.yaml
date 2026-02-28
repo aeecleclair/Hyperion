@@ -124,13 +124,20 @@ USE_FACTORIES: True # if True and the database is empty, it will be seeded with 
 # ```
 # Group UUIDs should be values of the GroupType enum from `app.core.groups.groupe_type.GroupType`
 FACTORIES_DEMO_USERS:
-  - firstname: #Foucauld
-    name: #Bellanger
-    nickname: #Ñool
-    email: #foucauld.bellanger@etu.ec-lyon.fr
-    password: #azerty
+  - firstname: Foucauld
+    name: Bellanger
+    nickname: Ñool
+    email: foucauld.bellanger@etu.ec-lyon.fr
+    password: azerty
     groups:
       - 0a25cb76-4b63-4fd3-b939-da6d9feabf28 # admin
+  # - firstname: 
+  #   name: 
+  #   nickname: 
+  #   email: 
+  #   password: 
+  #   groups:
+  #     - 0a25cb76-4b63-4fd3-b939-da6d9feabf28 # admin
   # - firstname: ...
 
 #####################################
