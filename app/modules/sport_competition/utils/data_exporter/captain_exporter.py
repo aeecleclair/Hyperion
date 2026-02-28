@@ -20,6 +20,7 @@ FIXED_COLUMNS: list[str] = [
     "Téléphone",
     "École",
     "Statut",
+    "Catégorie",
     "Sport",
     "Équipe",
 ]
@@ -52,6 +53,7 @@ def build_data_rows(
             captain.user.user.phone or "",
             captain.user.user.school.name if captain.user.user.school else "",
             (captain.user.validated and "OUI") or "NON",
+            captain.user.sport_category.value,
             sport.name,
             captain.team.name,
         ]

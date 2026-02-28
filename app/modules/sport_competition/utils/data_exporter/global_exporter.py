@@ -1,4 +1,3 @@
-import logging
 from io import BytesIO
 
 import xlsxwriter
@@ -13,11 +12,8 @@ from app.modules.sport_competition.utils.data_exporter.commons import (
 )
 from app.types.exceptions import MissingDataError
 
-hyperion_error_logger = logging.getLogger("hyperion.error")
-
-
 FIXED_COLUMNS = ["Nom", "Prénom", "Email", "École", "Type", "Statut"]
-PARTICIPANTS_COLUMNS = ["Sport", "Licence", "Licence valide", "Équipe"]
+PARTICIPANTS_COLUMNS = ["Catégorie", "Sport", "Licence", "Licence valide", "Équipe"]
 PAYMENTS_COLUMNS = ["Total à payer", "Total payé", "Tout payé"]
 
 
@@ -83,26 +79,29 @@ def build_data_rows(
             row[5] = "Validé mais non payé"
         else:
             row[5] = "Non validé"
-        thick_columns = [5]
+        thick_columns = [len(FIXED_COLUMNS) - 1]
         purchases_map = {
             p.product_variant_id: p for p in users_purchases.get(user.user.id, [])
         }
         if ExcelExportParams.participants in parameters and users_participant:
+            offset = len(FIXED_COLUMNS)
             participant = users_participant.get(user.user.id, None)
             if participant:
                 sport = next(s for s in sports if s.id == participant.sport_id)
-                row[6] = sport.name
-                row[7] = participant.license or "N/A"
-                row[8] = participant.is_license_valid
-                row[9] = (
+                row[offset] = participant.user.sport_category.value
+                row[offset + 1] = sport.name
+                row[offset + 2] = participant.license or "N/A"
+                row[offset + 3] = participant.is_license_valid
+                row[offset + 4] = (
                     f"{participant.team.name}{' (capitaine)' if participant.team.captain_id == user.user.id else ''}"
                 )
             else:
-                row[6] = ""
-                row[7] = ""
-                row[8] = ""
-                row[9] = ""
-            thick_columns.append(9)
+                row[offset] = ""
+                row[offset + 1] = ""
+                row[offset + 2] = ""
+                row[offset + 3] = ""
+                row[offset + 4] = ""
+            thick_columns.append(len(FIXED_COLUMNS) + len(PARTICIPANTS_COLUMNS) - 1)
 
         if ExcelExportParams.purchases in parameters and product_structure is not None:
             offset = 10 if ExcelExportParams.participants in parameters else 7
@@ -136,7 +135,7 @@ def build_data_rows(
             row[offset] = str(total / 100)
             row[offset + 1] = str(paid / 100)
             row[offset + 2] = "OUI" if total == paid else "NON"
-            thick_columns.append(offset + 2)
+            thick_columns.append(offset + len(PAYMENTS_COLUMNS) - 1)
 
         data_rows.append(row)
 
@@ -168,7 +167,7 @@ def write_participant_headers(
         0,
         len(FIXED_COLUMNS),
         0,
-        len(FIXED_COLUMNS) + 3,
+        len(FIXED_COLUMNS) + len(PARTICIPANTS_COLUMNS) - 1,
         "Participants",
         formats["header"]["base"],
     )
@@ -309,7 +308,11 @@ def write_to_excel(
             product_structure,
             formats,
             len(FIXED_COLUMNS)
-            + (4 if ExcelExportParams.participants in parameters else 0),
+            + (
+                len(PARTICIPANTS_COLUMNS)
+                if ExcelExportParams.participants in parameters
+                else 0
+            ),
             columns_max_length,
         )
     if ExcelExportParams.payments in parameters:
@@ -337,7 +340,7 @@ def write_to_excel(
         columns_max_length,
     )
     autosize_columns(worksheet, columns_max_length)
-    worksheet.freeze_panes(5, 4)
+    worksheet.freeze_panes(len(FIXED_COLUMNS), 4)
 
 
 def construct_users_excel_with_parameters(
@@ -381,7 +384,6 @@ def construct_users_excel_with_parameters(
             len(prod_struct["variants_info"]) * 2
             for prod_struct in product_structure[0]
         )
-        hyperion_error_logger.debug(f"Product structure: {product_structure}")
 
     if ExcelExportParams.participants in parameters:
         col_idx += len(PARTICIPANTS_COLUMNS)

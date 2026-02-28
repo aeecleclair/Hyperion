@@ -112,7 +112,7 @@ class LoanFactory(Factory):
             db=db,
             loan=models_loan.Loan(
                 id=loan_id_2,
-                borrower_id=CoreUsersFactory.demo_users_id[0],
+                borrower_id=CoreUsersFactory.other_users_id[0],
                 loaner_id=loaner_id_2,
                 start=date(2025, 2, 22),
                 end=date(2025, 2, 25),

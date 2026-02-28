@@ -1,4 +1,3 @@
-import logging
 from io import BytesIO
 
 import xlsxwriter
@@ -13,11 +12,8 @@ from app.modules.sport_competition.utils.data_exporter.commons import (
 )
 from app.types.exceptions import MissingDataError
 
-hyperion_error_logger = logging.getLogger("hyperion.error")
-
-
 FIXED_COLUMNS = ["Nom", "Prénom", "Email", "Type", "Statut"]
-PARTICIPANTS_COLUMNS = ["Sport", "Licence", "Licence valide", "Équipe"]
+PARTICIPANTS_COLUMNS = ["Catégorie", "Sport", "Licence", "Licence valide", "Équipe"]
 PAYMENTS_COLUMNS = ["Total à payer", "Total payé", "Tout payé"]
 
 
@@ -98,10 +94,11 @@ def build_data_rows(
             participant = users_participant.get(user.user.id, None)
             if participant:
                 sport = next(s for s in sports if s.id == participant.sport_id)
-                row[offset] = sport.name
-                row[offset + 1] = participant.license or "N/A"
-                row[offset + 2] = participant.is_license_valid
-                row[offset + 3] = (
+                row[offset] = participant.user.sport_category.value
+                row[offset + 1] = sport.name
+                row[offset + 2] = participant.license or "N/A"
+                row[offset + 3] = participant.is_license_valid
+                row[offset + 4] = (
                     f"{participant.team.name}{' (capitaine)' if participant.team.captain_id == user.user.id else ''}"
                 )
             else:
@@ -109,7 +106,8 @@ def build_data_rows(
                 row[offset + 1] = ""
                 row[offset + 2] = ""
                 row[offset + 3] = ""
-            thick_columns.append(offset + 3)
+                row[offset + 4] = ""
+            thick_columns.append(offset + 4)
 
         if ExcelExportParams.purchases in parameters and product_structure is not None:
             offset = (
@@ -149,7 +147,7 @@ def build_data_rows(
             row[offset + 2] = (
                 ("OUI" if total == paid else "NON") if user.validated else ""
             )
-            thick_columns.append(offset + 2)
+            thick_columns.append(offset + len(PAYMENTS_COLUMNS) - 1)
 
         data_rows.append(row)
 
@@ -181,7 +179,7 @@ def write_participant_headers(
         0,
         len(FIXED_COLUMNS),
         0,
-        len(FIXED_COLUMNS) + 3,
+        len(FIXED_COLUMNS) + len(PARTICIPANTS_COLUMNS) - 1,
         "Participants",
         formats["header"]["base"],
     )
@@ -200,7 +198,7 @@ def write_payment_headers(
         0,
         start_index,
         0,
-        start_index + 2,
+        start_index + len(PAYMENTS_COLUMNS) - 1,
         "Paiements",
         formats["header"]["base"],
     )
@@ -322,13 +320,17 @@ def write_to_excel(
             product_structure,
             formats,
             len(FIXED_COLUMNS)
-            + (4 if ExcelExportParams.participants in parameters else 0),
+            + (
+                len(PARTICIPANTS_COLUMNS)
+                if ExcelExportParams.participants in parameters
+                else 0
+            ),
             columns_max_length,
         )
     if ExcelExportParams.payments in parameters:
         start_index = len(FIXED_COLUMNS)
         if ExcelExportParams.participants in parameters:
-            start_index += 4
+            start_index += len(PARTICIPANTS_COLUMNS)
         if ExcelExportParams.purchases in parameters:
             if product_structure is None:
                 raise TypeError(  # noqa: TRY003
@@ -350,7 +352,7 @@ def write_to_excel(
         columns_max_length,
     )
     autosize_columns(worksheet, columns_max_length)
-    worksheet.freeze_panes(5, 4)
+    worksheet.freeze_panes(len(FIXED_COLUMNS), 4)
 
 
 def construct_school_users_excel_with_parameters(
@@ -390,7 +392,6 @@ def construct_school_users_excel_with_parameters(
             len(prod_struct["variants_info"]) * 2
             for prod_struct in product_structure[0]
         )
-        hyperion_error_logger.debug(f"Product structure: {product_structure}")
 
     if ExcelExportParams.participants in parameters:
         col_idx += len(PARTICIPANTS_COLUMNS)
