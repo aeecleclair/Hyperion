@@ -1050,15 +1050,20 @@ async def introspect_refresh_token(
 )
 async def auth_get_userinfo(
     user: models_users.CoreUser = Depends(
-        get_user_from_token_with_scopes([[ScopeType.openid], [ScopeType.profile]]),
+        get_user_from_token_with_scopes(
+            [
+                [ScopeType.openid],  # For OpenID Connect
+                [ScopeType.profile],  # For OAuth2
+            ],
+        ),
     ),
     token_data: schemas_auth.TokenData = Depends(get_token_data),
     settings: Settings = Depends(get_settings),
     request_id: str = Depends(get_request_id),
 ):
     """
-    Openid connect specify an endpoint the client can use to get information about the user.
-    The oidc client will provide the access_token it got previously in the request.
+    OpenID Connect specifies an endpoint the client can use to get information about the user.
+    The OIDC client will provide the `access_token` it got previously in the request.
 
     The information expected depends on the client and may include the user identifier, name, email, phone...
     See the reference for possible claims. See the client documentation and implementation to know what it needs and can receive.
@@ -1069,6 +1074,11 @@ async def auth_get_userinfo(
 
     Reference:
     https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
+
+    NB:
+    - For OpenID Connect, sending the `openid` scope is mandatory.
+    - For OAuth2, most clients implement an extension and may also want to access these endpoints,
+      but only send the `profile` scope, thus `profile` also enables this endpoint.
     """
 
     # For openid connect, the client_id is added in the public cid field

@@ -20,15 +20,16 @@ class ScopeType(str, Enum):
     # > [...] If no openid scope value is present, the request may still be a valid OAuth 2.0 request but is not an OpenID Connect request.
     # That is why both scopes lead to the same behavior in this implementation.
 
-    # It is mandatory for a client supporting OIDC to present the `openid` scope:
+    # It is mandatory for a client supporting OIDC to present the `openid` scope, the specification read:
     # > Verify that a scope parameter is present and contains the openid scope value [...].
+    # In our implementation, its presence gives a token that is the only way to access to the userinfo endpoint.
     openid = "openid"
 
-    # > This scope value requests access to the End-User's default profile Claims, which are:
-    # > name, family_name, given_name, middle_name, nickname, preferred_username, profile, picture, website, gender, birthdate, zoneinfo, locale, and updated_at.
+    # > [For] access to the End-User's default profile Claims, which are:
+    # > name, [...], nickname, [...], picture, [...].
     profile = "profile"
 
     # Some services may ask to access the user's email.
     # This scope is not required as the email can be included with any other scope.
-    # > This scope value requests access to the email and email_verified Claims.
+    # > [For] access to the email and email_verified Claims.
     email = "email"
