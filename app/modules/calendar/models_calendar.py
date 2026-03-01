@@ -5,7 +5,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.users.models_users import CoreUser
-from app.modules.calendar.types_calendar import Decision, Question_type
+from app.modules.calendar.types_calendar import Decision, QuestionType
 from app.types.sqlalchemy import Base, PrimaryKey
 
 
@@ -33,16 +33,12 @@ class Question(Base):
 
     id: Mapped[PrimaryKey]
     text: Mapped[str]
-    next_question_yes: Mapped[UUID] = mapped_column(
-        ForeignKey("calendar_questions_forms.id"),
-    )
-    next_question_no: Mapped[UUID | None] = mapped_column(
-        ForeignKey("calendar_questions_forms.id"),
-    )
+    yes_question_list: Mapped[list[UUID]]
+    no_question_list: Mapped[list[UUID]]
     form_id: Mapped[UUID] = mapped_column(
         ForeignKey("calendar_forms.id"),
     )
-    question_type: Mapped[Question_type]
+    question_type: Mapped[QuestionType]
 
 
 class Response(Base):
@@ -65,10 +61,8 @@ class Form(Base):
 
     __tablename__ = "calendar_forms"
 
+    name: Mapped[str]
     id: Mapped[PrimaryKey]
-    event_id: Mapped[UUID] = mapped_column(
-        ForeignKey("calendar_events.id"),
-    )
 
 
 class Contact(Base):
@@ -108,6 +102,11 @@ class ConfirmationEvents(Base):
         ForeignKey("calendar_events.id"),
     )
     confirming_body_id: Mapped[UUID] = mapped_column(
-        ForeignKey("core_groups.id"),
+        ForeignKey("calendar_confirmation_chains.conforming_body_id"),
+        primary_key=True,
+    )
+    number: Mapped[int] = mapped_column(
+        ForeignKey("calendar_confirmation_chains.number"),
+        primary_key=True,
     )
     state: Mapped[Decision]

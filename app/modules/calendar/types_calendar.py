@@ -24,7 +24,7 @@ class Decision(str, Enum):
         return f"{self.name}<{self.value}>"
 
 
-class Question_type(str, Enum):
+class QuestionType(str, Enum):
     boolean = "bool"
     open = "open"
     dates = "date"

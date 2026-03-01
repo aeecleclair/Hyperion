@@ -1,43 +1,26 @@
-from datetime import datetime
+from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 from app.core.users.schemas_users import CoreUserSimple
-from app.modules.calendar.types_calendar import CalendarEventType, Decision
+from app.modules.calendar.types_calendar import Decision, QuestionType
 
 
 # Schema de base. Contiens toutes les données communes à tous les schemas
 class EventBase(BaseModel):
     name: str
-    organizer: str
-    start: datetime
-    end: datetime
-    all_day: bool
-    location: str
-    type: CalendarEventType
-    description: str
-    recurrence_rule: str | None = None
+    applicant: CoreUserSimple
+    applicant_id: str
+    form_id: UUID
 
 
 class EventComplete(EventBase):
     id: str
     decision: Decision
-    applicant_id: str
-    model_config = ConfigDict(from_attributes=True)
 
 
 class EventEdit(BaseModel):
     name: str | None = None
-    organizer: str | None = None
-    start: datetime | None = None
-    end: datetime | None = None
-    all_day: bool | None = None
-    location: str | None = None
-    type: CalendarEventType | None = None
-    description: str | None = None
-    recurrence_rule: str | None = None
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class EventApplicant(CoreUserSimple):
@@ -48,4 +31,48 @@ class EventApplicant(CoreUserSimple):
 
 class EventReturn(EventComplete):
     applicant: EventApplicant
-    model_config = ConfigDict(from_attributes=True)
+
+
+class QuestionBase(BaseModel):
+    text: str
+    question_type: QuestionType
+    yes_question_list: list[UUID]
+    no_question_list: list[UUID]
+    form_id: UUID
+
+
+class QuestionComplete(QuestionBase):
+    id: UUID
+
+
+class QuestionEdit(BaseModel):
+    text: str | None = None
+    question_type: QuestionType | None = None
+
+
+class ContactBase(BaseModel):
+    mail: str
+    question_id: UUID
+
+
+class ContactComplete(ContactBase):
+    id: UUID
+
+
+class ContactEdit(BaseModel):
+    mail: str | None = None
+
+
+class ConfirmationChainsBase(BaseModel):
+    number: int
+    confirming_body_id: UUID
+    form_id: UUID
+
+
+class ConfirmationChainsComplete(ConfirmationChainsBase):
+    id: UUID
+
+
+class ConfirmationChainsEdit(BaseModel):
+    confirming_body_id: UUID | None = None
+    number: int | None = None
