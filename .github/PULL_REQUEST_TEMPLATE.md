@@ -2,7 +2,7 @@
 
 ## Summary
 
-<!--BRIEF description: DONT'T EXPLAIN the code: JUSTIFY what this PR is for!-->
+<!--BRIEF description: DON'T EXPLAIN the code: JUSTIFY what this PR is for!-->
 
 ...
 

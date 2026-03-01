@@ -1050,15 +1050,20 @@ async def introspect_refresh_token(
 )
 async def auth_get_userinfo(
     user: models_users.CoreUser = Depends(
-        get_user_from_token_with_scopes([[ScopeType.openid], [ScopeType.profile]]),
+        get_user_from_token_with_scopes(
+            [
+                [ScopeType.openid],  # For OpenID Connect
+                [ScopeType.profile],  # For OAuth2
+            ],
+        ),
     ),
     token_data: schemas_auth.TokenData = Depends(get_token_data),
     settings: Settings = Depends(get_settings),
     request_id: str = Depends(get_request_id),
 ):
     """
-    Openid connect specify an endpoint the client can use to get information about the user.
-    The oidc client will provide the access_token it got previously in the request.
+    OpenID Connect specifies an endpoint the client can use to get information about the user.
+    The OIDC client will provide the `access_token` it got previously in the request.
 
     The information expected depends on the client and may include the user identifier, name, email, phone...
     See the reference for possible claims. See the client documentation and implementation to know what it needs and can receive.
@@ -1069,6 +1074,11 @@ async def auth_get_userinfo(
 
     Reference:
     https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
+
+    NB:
+    - For OpenID Connect, sending the `openid` scope is mandatory.
+    - For OAuth2, most clients implement an extension and may also want to access these endpoints,
+      but only send the `profile` scope, thus `profile` also enables this endpoint.
     """
 
     # For openid connect, the client_id is added in the public cid field
@@ -1131,16 +1141,14 @@ def get_oidc_provider_metadata(settings: Settings):
         settings.OVERRIDDEN_CLIENT_URL_FOR_OIDC or settings.CLIENT_URL
     )
     return {
-        "issuer": settings.OIDC_ISSUER,  # We want to remove the trailing slash
+        "issuer": settings.OIDC_ISSUER,  # Without the trailing slash
         "authorization_endpoint": settings.CLIENT_URL + "auth/authorize",
         "token_endpoint": overridden_client_url + "auth/token",
         "userinfo_endpoint": overridden_client_url + "auth/userinfo",
         "introspection_endpoint": overridden_client_url + "auth/introspect",
         "jwks_uri": overridden_client_url + "oidc/authorization-flow/jwks_uri",
-        # RECOMMENDED The OAuth 2.0 / OpenID Connect URL of the OP's Dynamic Client Registration Endpoint OpenID.Registration.
-        # TODO: is this relevant?
-        # TODO: add for Calypsso
-        # "registration_endpoint": "https://a/register",
+        "registration_endpoint": settings.CLIENT_URL
+        + calypsso.get_register_relative_url(False),
         "request_parameter_supported": True,
         "scopes_supported": [scope.value for scope in ScopeType],
         # REQUIRED Must be code as wa only support authorization code grant
@@ -1174,19 +1182,22 @@ def get_oidc_provider_metadata(settings: Settings):
             "sub",
             "name",
             "firstname",
+            "family_name",
             "nickname",
+            "preferred_username",
             "profile",
             "picture",
             "email",
+            "email_verified",
         ],
         # TODO: do we want to expose a documentation?
-        # "service_documentation": "https://d/about",
+        # "service_documentation": "https://docs.myecl.fr/hyperion/common/...",
         "claims_parameter_supported": False,
         "request_uri_parameter_supported": False,
         "require_request_uri_registration": False,
-        # TODO: add
-        # The privacy policy document URL, omitted if none.
-        # op_policy_uri = ""
-        # The terms of service document URL, omitted if none.
-        # op_tos_uri = ""
+        # TODO: The registration process SHOULD display this URL to the person registering the Client if it is given.
+        "op_policy_uri": settings.CLIENT_URL
+        + calypsso.get_asset_relative_url(calypsso.Asset.privacy),
+        "op_tos_uri": settings.CLIENT_URL
+        + calypsso.get_asset_relative_url(calypsso.Asset.terms_and_conditions),
     }

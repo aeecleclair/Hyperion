@@ -29,7 +29,7 @@ class BaseAuthClient:
     # If the client always send a specific scope (ex: `name`), you may add it to the allowed scopes as a string (ex: `"name"`)
     # These "string" scopes won't have any effect for Hyperion but won't raise a warning when asked by the client
     # WARNING: to be able to use openid connect, `ScopeType.openid` should always be allowed
-    allowed_scopes: set[ScopeType | str] = {ScopeType.openid}
+    allowed_scopes: set[ScopeType | str] = {ScopeType.openid, ScopeType.profile}
     # Restrict the authentication to this client to specific Hyperion groups through permissions.
     # When set to `None`, users from any group can use the auth client
     permission: ModulePermissions | None = None
@@ -260,19 +260,15 @@ class SynapseAuthClient(BaseAuthClient):
 
 
 class MinecraftAuthClient(BaseAuthClient):
-    # Set of scopes the auth client is authorized to grant when issuing an access token.
-    # See app.types.scopes_type.ScopeType for possible values
-    allowed_scopes: set[ScopeType | str] = {ScopeType.profile}
+    allowed_scopes: set[ScopeType | str] = {ScopeType.profile, ScopeType.openid}
 
     permission = AuthPermissions.minecraft
 
     @classmethod
     def get_userinfo(cls, user: models_users.CoreUser):
         return {
-            "id": user.id,
-            "nickname": user.nickname,
-            "promo": user.promo,
-            "floor": user.floor or "Autre",
+            "sub": user.id,
+            "preferred_username": user.nickname or user.firstname,
         }
 
 
@@ -308,7 +304,7 @@ class RalllyAuthClient(BaseAuthClient):
     allowed_scopes: set[ScopeType | str] = {
         ScopeType.openid,
         ScopeType.profile,
-        "email",
+        ScopeType.email,
     }
 
     return_userinfo_in_id_token: bool = True
@@ -325,7 +321,11 @@ class RalllyAuthClient(BaseAuthClient):
 
 
 class DocumensoAuthClient(BaseAuthClient):
-    allowed_scopes: set[ScopeType | str] = {ScopeType.openid}
+    allowed_scopes: set[ScopeType | str] = {
+        ScopeType.openid,
+        ScopeType.email,
+        ScopeType.profile,
+    }
 
     allow_pkce_with_client_secret: bool = True
 
