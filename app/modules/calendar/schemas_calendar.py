@@ -76,3 +76,43 @@ class ConfirmationChainsComplete(ConfirmationChainsBase):
 class ConfirmationChainsEdit(BaseModel):
     confirming_body_id: UUID | None = None
     number: int | None = None
+
+
+class ReponseBase(BaseModel):
+    text: str
+    question_id: UUID
+    event_id: UUID
+
+
+class ReponseComplete(ReponseBase):
+    id: UUID
+
+
+class ReponseEdit(BaseModel):
+    text: str | None = None
+
+
+class FormBase(BaseModel):
+    name: str
+
+class FormComplete(FormBase):
+    id: UUID
+
+
+class FormEdit(BaseModel):
+    name: str | None = None 
+
+
+class ConfirmationEventsBase(BaseModel):
+    state: Decision
+    event_id: UUID
+    confirming_body_id: UUID
+
+
+class ConfirmationEventsComplete(ConfirmationEventsBase):
+    id: UUID
+    number: int
+
+
+
+

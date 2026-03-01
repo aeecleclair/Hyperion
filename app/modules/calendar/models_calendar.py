@@ -33,8 +33,13 @@ class Question(Base):
 
     id: Mapped[PrimaryKey]
     text: Mapped[str]
-    yes_question_list: Mapped[list[UUID]]
-    no_question_list: Mapped[list[UUID]]
+    
+    no_question_list: Mapped[UUID] = mapped_column(list,
+        ForeignKey("calendar_questions_forms.id"),
+    )
+    yes_question_list: Mapped[UUID] = mapped_column(list,
+        ForeignKey("calendar_questions_forms.id"),
+    )
     form_id: Mapped[UUID] = mapped_column(
         ForeignKey("calendar_forms.id"),
     )
