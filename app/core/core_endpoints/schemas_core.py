@@ -1,6 +1,7 @@
 """Common schemas file for endpoint /users et /groups because it would cause circular import"""
 
 from enum import Enum
+from typing import Sequence
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -17,8 +18,8 @@ class CoreInformation(BaseModel):
 
 class ModuleVisibility(BaseModel):
     root: str
-    allowed_group_ids: list[str]
-    allowed_account_types: list[AccountType]
+    allowed_group_ids: Sequence[str]
+    allowed_account_types: Sequence[AccountType | str]
     model_config = ConfigDict(from_attributes=True)
 
 

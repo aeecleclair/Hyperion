@@ -11,6 +11,7 @@ from app.core.notification.schemas_notification import Message, Topic
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users, models_users, schemas_users
 from app.core.users.endpoints_users import read_user
+from app.core.users.schemas_users import CoreUserSimple
 from app.dependencies import (
     get_db,
     get_notification_tool,
@@ -20,7 +21,9 @@ from app.dependencies import (
 )
 from app.modules.amap import cruds_amap, models_amap, schemas_amap
 from app.modules.amap.factory_amap import AmapFactory
+from app.modules.amap.schemas_amap import ProductComplete
 from app.modules.amap.types_amap import DeliveryStatusType
+from app.types.exceptions import NewlyAddedObjectInDbNotFoundError
 from app.types.module import Module
 from app.utils.communication.notifications import NotificationTool
 from app.utils.redis import locker_get, locker_set
@@ -417,10 +420,32 @@ async def get_order_by_id(
 
     products = await cruds_amap.get_products_of_order(db=db, order_id=order_id)
     return schemas_amap.OrderReturn(
-        productsdetail=products,
-        delivery_name=order.delivery.name,
-        delivery_date=order.delivery.delivery_date,
-        **order.__dict__,
+        productsdetail=[
+            schemas_amap.ProductQuantity(
+                quantity=product.quantity,
+                product=ProductComplete(
+                    name=product.product.name,
+                    price=product.product.price,
+                    category=product.product.category,
+                    id=product.product.id,
+                ),
+            )
+            for product in products
+        ],
+        user=schemas_users.CoreUserSimple(
+            id=order.user.id,
+            name=order.user.name,
+            firstname=order.user.firstname,
+            nickname=order.user.nickname,
+            school_id=order.user.school_id,
+            account_type=order.user.account_type,
+        ),
+        delivery_id=order.delivery_id,
+        collection_slot=order.collection_slot,
+        order_id=order.order_id,
+        amount=order.amount,
+        ordering_date=order.ordering_date,
+        delivery_date=order.delivery_date,
     )
 
 
@@ -532,10 +557,40 @@ async def add_order_to_delievery(
         )
 
         orderret = await cruds_amap.get_order_by_id(order_id=db_order.order_id, db=db)
+        if orderret is None:
+            raise NewlyAddedObjectInDbNotFoundError(db_order.order_id)
         productsret = await cruds_amap.get_products_of_order(db=db, order_id=order_id)
 
         hyperion_amap_logger.info(
             f"Add_order_to_delivery: An order has been created for user {order.user_id} for an amount of {(amount / 100):.2f}€. ({request_id})",
+        )
+        return schemas_amap.OrderReturn(
+            user=CoreUserSimple(
+                id=orderret.user.id,
+                account_type=orderret.user.account_type,
+                school_id=orderret.user.school_id,
+                name=orderret.user.name,
+                firstname=orderret.user.firstname,
+                nickname=orderret.user.nickname,
+            ),
+            productsdetail=[
+                schemas_amap.ProductQuantity(
+                    quantity=product.quantity,
+                    product=ProductComplete(
+                        name=product.product.name,
+                        price=product.product.price,
+                        category=product.product.category,
+                        id=product.product.id,
+                    ),
+                )
+                for product in productsret
+            ],
+            delivery_id=orderret.delivery_id,
+            collection_slot=orderret.collection_slot,
+            order_id=orderret.order_id,
+            amount=orderret.amount,
+            ordering_date=orderret.ordering_date,
+            delivery_date=orderret.delivery_date,
         )
 
         if orderret is None:
@@ -1055,16 +1110,37 @@ async def get_orders_of_user(
             db=db,
             order_id=order.order_id,
         )
-        if order is None:
-            raise HTTPException(status_code=404, detail="at least one order not found")
         res.append(
             schemas_amap.OrderReturn(
-                productsdetail=products,
-                delivery_date=order.delivery.delivery_date,
-                delivery_name=order.delivery.name,
-                **order.__dict__,
+                user=CoreUserSimple(
+                    id=order.user.id,
+                    account_type=order.user.account_type,
+                    school_id=order.user.school_id,
+                    name=order.user.name,
+                    firstname=order.user.firstname,
+                    nickname=order.user.nickname,
+                ),
+                productsdetail=[
+                    schemas_amap.ProductQuantity(
+                        quantity=product.quantity,
+                        product=ProductComplete(
+                            name=product.product.name,
+                            price=product.product.price,
+                            category=product.product.category,
+                            id=product.product.id,
+                        ),
+                    )
+                    for product in products
+                ],
+                delivery_id=order.delivery_id,
+                collection_slot=order.collection_slot,
+                order_id=order.order_id,
+                amount=order.amount,
+                ordering_date=order.ordering_date,
+                delivery_date=order.delivery_date,
             ),
         )
+
     return res
 
 

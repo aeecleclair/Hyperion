@@ -11,6 +11,7 @@ from app.core.groups.groups_type import AccountType
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users, models_users
 from app.core.users.endpoints_users import read_user
+from app.core.users.schemas_users import CoreUserSimple
 from app.dependencies import (
     get_db,
     get_redis_client,
@@ -901,7 +902,11 @@ async def get_cash_by_id(
         # We want to return a balance of 0 but we don't want to add it to the database
         # An admin AMAP has indeed to add a cash to the user the first time
         # TODO: this is a strange behaviour
-        return schemas_raffle.CashComplete(balance=0, user_id=user_id, user=user_db)
+        return schemas_raffle.CashComplete(
+            balance=0,
+            user_id=user_id,
+            user=CoreUserSimple.from_model(user_db),
+        )
     raise HTTPException(
         status_code=403,
         detail="Users that are not member of the group admin can only access the endpoint for their own user_id.",

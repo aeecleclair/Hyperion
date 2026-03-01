@@ -23,6 +23,7 @@ from app.core.users import schemas_users
 from app.core.utils import security
 from app.types.exceptions import (
     MissingHelloAssoCheckoutIdError,
+    MissingHelloAssoRedirectUrlError,
     PaymentToolCredentialsNotSetException,
     UnsetRedirectionUriError,
 )
@@ -167,20 +168,27 @@ class PaymentTool:
                     firstName=payer_user.firstname,
                     lastName=payer_user.name,
                     email=payer_user.email,
-                    dateOfBirth=payer_user.birthday,
+                    dateOfBirth=datetime(
+                        payer_user.birthday.year,
+                        payer_user.birthday.month,
+                        payer_user.birthday.day,
+                        tzinfo=UTC,
+                    )
+                    if payer_user.birthday
+                    else None,
                 )
 
             checkout_model_id = uuid.uuid4()
             secret = security.generate_token(nbytes=12)
 
             init_checkout_body = HelloAssoApiV5ModelsCartsInitCheckoutBody(
-                total_amount=checkout_amount,
-                initial_amount=checkout_amount,
-                item_name=checkout_name,
-                back_url=redirection_uri,
-                error_url=redirection_uri,
-                return_url=redirection_uri,
-                contains_donation=False,
+                totalAmount=checkout_amount,
+                initialAmount=checkout_amount,
+                itemName=checkout_name,
+                backUrl=redirection_uri,
+                errorUrl=redirection_uri,
+                returnUrl=redirection_uri,
+                containsDonation=False,
                 payer=payer,
                 metadata=schemas_payment.HelloAssoCheckoutMetadata(
                     secret=secret,
@@ -232,14 +240,19 @@ class PaymentTool:
                     secret=secret,
                 )
 
-                await cruds_payment.create_checkout(db=db, checkout=checkout_model)
-
-                return schemas_payment.Checkout(
-                    id=checkout_model_id,
-                    payment_url=response.redirect_url,
+            if response.redirect_url is None:
+                hyperion_error_logger.error(
+                    f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}. No checkout redirect_url returned",
                 )
-            hyperion_error_logger.error(
-                f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}. No checkout id returned",
+                raise MissingHelloAssoRedirectUrlError()  # noqa: TRY301
+
+            checkout_model = models_payment.Checkout(
+                id=checkout_model_id,
+                module=module,
+                name=checkout_name,
+                amount=checkout_amount,
+                hello_asso_checkout_id=response.id,
+                secret=secret,
             )
             raise MissingHelloAssoCheckoutIdError()  # noqa: TRY301
 

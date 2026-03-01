@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.groups.groups_type import AccountType
 from app.core.schools.schemas_schools import CoreSchool
+from app.core.users.models_users import CoreUser
 from app.utils import validators
 from app.utils.examples import examples_core
 
@@ -33,6 +34,18 @@ class CoreUserSimple(CoreUserBase):
     school_id: UUID
 
     model_config = ConfigDict(from_attributes=True)
+
+    @classmethod
+    def from_model(cls, user_model: CoreUser) -> "CoreUserSimple":
+        """Create a CoreUserSimple from a CoreUser model"""
+        return CoreUserSimple(
+            id=user_model.id,
+            account_type=user_model.account_type,
+            school_id=user_model.school_id,
+            name=user_model.name,
+            firstname=user_model.firstname,
+            nickname=user_model.nickname,
+        )
 
 
 class CoreUser(CoreUserSimple):

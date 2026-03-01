@@ -1,3 +1,4 @@
+from typing import Sequence
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -6,7 +7,7 @@ from app.core.users.schemas_users import CoreUserSimple
 
 
 class RoleTagsReturn(BaseModel):
-    tags: list[str]
+    tags: Sequence[str]
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -76,7 +77,7 @@ class MemberBase(CoreUserSimple):
 
 
 class MemberComplete(MemberBase):
-    memberships: list[MembershipComplete]
+    memberships: Sequence[MembershipComplete]
 
     model_config = ConfigDict(from_attributes=True)
 
