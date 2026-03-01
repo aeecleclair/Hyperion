@@ -1,8 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import AccountType
@@ -17,11 +16,7 @@ from app.modules.feedback import (
     models_feedback,
     schemas_feedback,
 )
-
-from app.types import standard_responses
-from app.types.content_type import ContentType
 from app.types.module import Module
-from app.utils.tools import get_file_from_data, save_file_as_data
 
 router = APIRouter()
 
@@ -35,7 +30,7 @@ module = Module(
     root="feedback",
     tag="Feedback",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
-    factory=FeedbackFactory(),
+    factory=None,
     permissions=FeedbackPermissions,
 )
 
@@ -45,7 +40,7 @@ module = Module(
     response_model=list[schemas_feedback.Feedback],
     status_code=200,
 )
-async def get_feedback(
+async def get_feedbacks(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([FeedbackPermissions.manage_feedback]),
@@ -88,8 +83,6 @@ async def create_feedback(
         feedback=feedback_db,
         db=db,
     )
-
-
 
 
 @module.router.delete(
