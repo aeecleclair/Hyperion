@@ -45,6 +45,7 @@ class StructureSimple(StructureBase):
 class Structure(StructureSimple):
     manager_user: schemas_users.CoreUserSimple
     association_membership: schemas_memberships.MembershipSimple | None
+    administrators: list[schemas_users.CoreUserSimple]
 
 
 class StructureUpdate(BaseModel):
@@ -58,6 +59,11 @@ class StructureUpdate(BaseModel):
     siege_address_country: str | None = None
     iban: str | None = None
     bic: str | None = None
+
+
+class StructureAdministrator(BaseModel):
+    user_id: str
+    structure_id: UUID
 
 
 class StructureTranfert(BaseModel):
