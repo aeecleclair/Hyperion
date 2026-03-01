@@ -1,4 +1,4 @@
-"""Blabla
+"""Mypayment Structure Admin
 
 Create Date: 2026-03-01 03:34:32.691123
 """
