@@ -7,7 +7,7 @@ from fastapi import Body, Depends, File, HTTPException, Query, Response, UploadF
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import AccountType, get_account_types_except_externals
+from app.core.groups.groups_type import get_account_types_except_externals
 from app.core.payment.payment_tool import PaymentTool
 from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.schools import cruds_schools
@@ -35,7 +35,6 @@ from app.modules.sport_competition.types_sport_competition import (
     ExcelExportParams,
     PaiementMethodType,
     ProductSchoolType,
-    SportCategory,
 )
 from app.modules.sport_competition.utils.data_exporter.captain_exporter import (
     construct_captains_excel,
@@ -214,41 +213,6 @@ async def get_active_edition(
     Returns None if no edition is active.
     """
     return await cruds_sport_competition.load_active_edition(db)
-
-
-@module.router.get(
-    "/competition/editions/{edition_id}/stats",
-    response_model=schemas_sport_competition.CompetitionEditionStats,
-)
-async def get_edition_stats(
-    edition_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
-        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
-    ),
-) -> schemas_sport_competition.CompetitionEditionStats:
-    """
-    Get the stats of a competition edition.
-    """
-    revenues_stats = await cruds_sport_competition.load_revenues_stats_by_edition_id(
-        edition_id,
-        db,
-    )
-    users_stats = (
-        await cruds_sport_competition.load_competition_users_stats_by_edition_id(
-            edition_id,
-            db,
-        )
-    )
-    sports_stats = await cruds_sport_competition.load_sports_stats_by_edition_id(
-        edition_id,
-        db,
-    )
-    return schemas_sport_competition.CompetitionEditionStats(
-        revenues_stats=revenues_stats,
-        users_stats=users_stats,
-        sports_stats=sports_stats,
-    )
 
 
 @module.router.post(
@@ -536,8 +500,6 @@ async def edit_current_user_competition(
     Edit the current user's competition user for the current edition.
     The user must exist in the core users database.
     """
-    if user_edit.validated:
-        user_edit.validated = False
     stored = await cruds_sport_competition.load_competition_user_by_id(
         db=db,
         user_id=user.id,
@@ -604,7 +566,7 @@ async def edit_current_user_competition(
 )
 async def edit_competition_user(
     user_id: str,
-    user_edit: schemas_sport_competition.CompetitionUserEdit,
+    user: schemas_sport_competition.CompetitionUserEdit,
     db: AsyncSession = Depends(get_db),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -628,27 +590,23 @@ async def edit_competition_user(
             detail="Competition user not found",
         )
     if stored.validated:
-        user_edit.validated = False
-    user_edit.is_athlete = (
-        user_edit.is_athlete if user_edit.is_athlete is not None else stored.is_athlete
+        user.validated = False
+    user.is_athlete = (
+        user.is_athlete if user.is_athlete is not None else stored.is_athlete
     )
-    user_edit.is_cameraman = (
-        user_edit.is_cameraman
-        if user_edit.is_cameraman is not None
-        else stored.is_cameraman
+    user.is_cameraman = (
+        user.is_cameraman if user.is_cameraman is not None else stored.is_cameraman
     )
-    user_edit.is_pompom = (
-        user_edit.is_pompom if user_edit.is_pompom is not None else stored.is_pompom
-    )
-    user_edit.is_fanfare = (
-        user_edit.is_fanfare if user_edit.is_fanfare is not None else stored.is_fanfare
+    user.is_pompom = user.is_pompom if user.is_pompom is not None else stored.is_pompom
+    user.is_fanfare = (
+        user.is_fanfare if user.is_fanfare is not None else stored.is_fanfare
     )
     if (
         sum(
             [
-                user_edit.is_pompom,
-                user_edit.is_fanfare,
-                user_edit.is_cameraman,
+                user.is_pompom,
+                user.is_fanfare,
+                user.is_cameraman,
             ],
         )
         > 1
@@ -659,62 +617,17 @@ async def edit_competition_user(
         )
     if not any(
         [
-            user_edit.is_pompom,
-            user_edit.is_fanfare,
-            user_edit.is_cameraman,
-            user_edit.is_athlete,
+            user.is_pompom,
+            user.is_fanfare,
+            user.is_cameraman,
+            user.is_athlete,
         ],
     ):
         raise HTTPException(
             status_code=400,
             detail="A user must be at least in one of the following categories: pompoms, fanfares, cameramen, athletes",
         )
-    await cruds_sport_competition.update_competition_user(
-        user_id,
-        edition.id,
-        user_edit,
-        db,
-    )
-
-
-@module.router.patch(
-    "/competition/users/{user_id}/schools",
-    status_code=204,
-)
-async def edit_user_school(
-    user_id: str,
-    school_id: UUID = Body(),
-    db: AsyncSession = Depends(get_db),
-    current_user: models_users.CoreUser = Depends(
-        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
-    ),
-) -> None:
-    user = await cruds_users.get_user_by_id(db, user_id)
-    if user is None:
-        raise HTTPException(
-            status_code=404,
-            detail="User not found in the database",
-        )
-    if user.school_id != SchoolType.no_school.value:
-        raise HTTPException(
-            status_code=400,
-            detail="User already has a school, cannot change it",
-        )
-    if school_id == SchoolType.no_school.value:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot set the school to no_school",
-        )
-    await cruds_users.update_user(
-        db,
-        user_id,
-        schemas_users.CoreUserUpdateAdmin(
-            school_id=school_id,
-            account_type=AccountType.student
-            if school_id == SchoolType.centrale_lyon.value
-            else AccountType.other_school_student,
-        ),
-    )
+    await cruds_sport_competition.update_competition_user(user_id, edition.id, user, db)
 
 
 @module.router.patch(
@@ -784,86 +697,6 @@ async def validate_competition_user(
         db,
     )
     await cruds_sport_competition.validate_competition_user(
-        user_id,
-        edition.id,
-        db,
-    )
-
-
-@module.router.patch(
-    "/competition/users/{user_id}/cancel",
-    status_code=204,
-)
-async def cancel_competition_user(
-    user_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
-        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
-    ),
-    edition: schemas_sport_competition.CompetitionEdition = Depends(
-        get_current_edition,
-    ),
-) -> None:
-    user_to_cancel = await cruds_sport_competition.load_competition_user_by_id(
-        user_id,
-        edition.id,
-        db,
-    )
-    if user_to_cancel is None:
-        raise HTTPException(
-            status_code=404,
-            detail="User not found in the database",
-        )
-    payments = await cruds_sport_competition.load_user_payments(
-        user_id,
-        edition.id,
-        db,
-    )
-    if len(payments) == 0:
-        raise HTTPException(
-            status_code=400,
-            detail="User has no payment, consider deleting the user instead of cancelling",
-        )
-    await cruds_sport_competition.delete_purchases_by_user_id(
-        user_id,
-        edition.id,
-        db,
-    )
-    participant = await cruds_sport_competition.load_participant_by_user_id(
-        user_id,
-        edition.id,
-        db,
-    )
-    if participant is not None:
-        team = await cruds_sport_competition.load_team_by_id(
-            participant.team_id,
-            db,
-        )
-        if team is not None:
-            if team.captain_id == user_id:
-                next_user = next(
-                    (user for user in team.participants if user.user_id != user_id),
-                    None,
-                )
-                if next_user is not None:
-                    await cruds_sport_competition.update_team(
-                        team.id,
-                        schemas_sport_competition.TeamEdit(
-                            captain_id=next_user.user_id,
-                        ),
-                        db,
-                    )
-                else:
-                    await cruds_sport_competition.delete_team_by_id(
-                        team.id,
-                        db,
-                    )
-        await cruds_sport_competition.delete_participant_by_user_id(
-            user_id,
-            edition.id,
-            db,
-        )
-    await cruds_sport_competition.cancel_competition_user(
         user_id,
         edition.id,
         db,
@@ -2445,137 +2278,6 @@ async def upload_participant_certificate(
 
 
 @module.router.patch(
-    "/competition/participants/sports/{sport_id}/users/{user_id}",
-    status_code=201,
-    response_model=schemas_sport_competition.Participant,
-)
-async def edit_participant(
-    sport_id: UUID,
-    user_id: str,
-    participant_edit: schemas_sport_competition.ParticipantEdit,
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
-        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
-    ),
-    edition: schemas_sport_competition.CompetitionEdition = Depends(
-        get_current_edition,
-    ),
-) -> schemas_sport_competition.Participant:
-    participant = await cruds_sport_competition.load_participant_by_ids(
-        user_id,
-        sport_id,
-        edition.id,
-        db,
-    )
-    if participant is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Participant not found in the database",
-        )
-    delete_old_team = False
-    if (
-        participant_edit.sport_id is not None
-        and participant_edit.sport_id != participant.sport_id
-    ):
-        new_sport = await cruds_sport_competition.load_sport_by_id(
-            participant_edit.sport_id,
-            db,
-        )
-        if new_sport is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Sport not found in the database",
-            )
-        if new_sport.team_size > 1:
-            if participant_edit.team_id is None:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Sport needs to be played in a team, participant is currently not in a team",
-                )
-            new_team_db = await cruds_sport_competition.load_team_by_id(
-                participant_edit.team_id,
-                db,
-            )
-            if new_team_db is None or new_team_db.sport_id != participant_edit.sport_id:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Participant team is not compatible with the new sport",
-                )
-        if new_sport.team_size == 1:
-            if participant_edit.team_id is not None:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Sport needs to be played individually, participant is currently in a team",
-                )
-            new_team = schemas_sport_competition.Team(
-                id=uuid4(),
-                edition_id=edition.id,
-                school_id=participant.school_id,
-                sport_id=participant_edit.sport_id,
-                captain_id=participant.user_id,
-                created_at=datetime.now(UTC),
-                name=f"{participant.user.user.firstname} {participant.user.user.name}",
-            )
-            await cruds_sport_competition.add_team(new_team, db)
-            participant_edit.team_id = new_team.id
-            delete_old_team = True
-    if (
-        participant_edit.team_id is not None
-        and participant_edit.team_id != participant.team_id
-    ):
-        new_team_db = await cruds_sport_competition.load_team_by_id(
-            participant_edit.team_id,
-            db,
-        )
-        if new_team_db is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Team not found in the database",
-            )
-        old_team = await cruds_sport_competition.load_team_by_id(
-            participant.team_id,
-            db,
-        )
-        if old_team is None:
-            raise HTTPException(
-                status_code=500,
-                detail="Old team not found in the database",
-            )
-        if len(old_team.participants) == 1:
-            delete_old_team = True
-        else:
-            new_captain = next(
-                (
-                    user
-                    for user in old_team.participants
-                    if user.user_id != participant.user_id
-                ),
-                None,
-            )
-            if new_captain is None:
-                raise HTTPException(
-                    status_code=500,
-                    detail="Cannot change team for the participant because there is no other participant in the current team to assign as captain",
-                )
-            await cruds_sport_competition.update_team(
-                old_team.id,
-                schemas_sport_competition.TeamEdit(captain_id=new_captain.user_id),
-                db,
-            )
-
-    await cruds_sport_competition.update_participant(
-        user_id=user_id,
-        sport_id=sport_id,
-        edition_id=edition.id,
-        participant_edit=participant_edit,
-        db=db,
-    )
-    if delete_old_team:
-        await cruds_sport_competition.delete_team_by_id(participant.team_id, db)
-    return participant
-
-
-@module.router.patch(
     "/competition/participants/sports/{sport_id}/users/{user_id}/license",
     status_code=204,
 )
@@ -4023,6 +3725,12 @@ async def create_user_purchase(
         quantity=purchase.quantity,
         purchased_on=datetime.now(UTC),
     )
+    if competition_user.validated:
+        await cruds_sport_competition.invalidate_competition_user(
+            competition_user.user_id,
+            edition.id,
+            db,
+        )
 
     await cruds_sport_competition.add_purchase(
         db_purchase,
@@ -4497,7 +4205,7 @@ async def get_payment_url(
 
 @module.router.get(
     "/competition/volunteers/shifts",
-    response_model=list[schemas_sport_competition.VolunteerShiftCompleteWithVolunteers],
+    response_model=list[schemas_sport_competition.VolunteerShiftComplete],
     status_code=200,
 )
 async def get_all_volunteer_shifts(
@@ -4719,30 +4427,6 @@ async def register_to_volunteer_shift(
             detail="This volunteer shift is full.",
         )
 
-    # Create or update the CompetitionUser with is_volunteer=True
-    competition_user = await cruds_sport_competition.load_competition_user_by_id(
-        user.id,
-        edition.id,
-        db,
-    )
-    if competition_user is None:
-        new_user = schemas_sport_competition.CompetitionUserSimple(
-            user_id=user.id,
-            edition_id=edition.id,
-            sport_category=SportCategory.masculine,
-            is_volunteer=True,
-            validated=False,
-            created_at=datetime.now(UTC),
-        )
-        await cruds_sport_competition.add_competition_user(new_user, db)
-    elif not competition_user.is_volunteer:
-        await cruds_sport_competition.update_competition_user(
-            user.id,
-            edition.id,
-            schemas_sport_competition.CompetitionUserEdit(is_volunteer=True),
-            db,
-        )
-
     db_registration = schemas_sport_competition.VolunteerRegistration(
         user_id=user.id,
         shift_id=shift_id,
@@ -4753,85 +4437,6 @@ async def register_to_volunteer_shift(
 
     await cruds_sport_competition.add_volunteer_registration(
         db_registration,
-        db,
-    )
-
-
-@module.router.patch(
-    "/competition/volunteers/shifts/{shift_id}/users/{user_id}/validation",
-    status_code=204,
-)
-async def validate_volunteer_registration(
-    shift_id: UUID,
-    user_id: str,
-    validated: bool = Body(..., embed=True),
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
-        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
-    ),
-):
-    """
-    Validate a volunteer registration.
-
-    **User must be a competition admin to use this endpoint**
-    """
-    db_registration = await cruds_sport_competition.load_volunteer_registration_by_ids(
-        user_id,
-        shift_id,
-        db,
-    )
-    if db_registration is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Volunteer registration not found.",
-        )
-
-    await cruds_sport_competition.update_volunteer_registration_validation(
-        user_id,
-        shift_id,
-        validated,
-        db,
-    )
-
-
-@module.router.delete(
-    "/competition/volunteers/shifts/{shift_id}/unregister",
-    status_code=204,
-)
-async def unregister_from_volunteer_shift(
-    shift_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
-        is_user_allowed_to(
-            [
-                SportCompetitionPermissions.volunteer_sport_competition,
-                SportCompetitionPermissions.manage_sport_competition,
-            ],
-        ),
-    ),
-):
-    """
-    Unregister from a volunteer shift.
-    """
-    db_registration = await cruds_sport_competition.load_volunteer_registration_by_ids(
-        user.id,
-        shift_id,
-        db,
-    )
-    if db_registration is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Volunteer registration not found.",
-        )
-    if db_registration.validated:
-        raise HTTPException(
-            status_code=403,
-            detail="You can't unregister from a validated volunteer shift.",
-        )
-
-    await cruds_sport_competition.delete_volunteer_registration(
-        user.id,
-        shift_id,
         db,
     )
 
@@ -4863,7 +4468,6 @@ async def export_competition_users_data(
         edition.id,
         db,
         exclude_non_validated=exclude_non_validated,
-        exclude_cancelled=False,
     )
     products = await cruds_sport_competition.load_products(
         edition.id,

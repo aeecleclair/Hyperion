@@ -35,21 +35,7 @@ To create a new migration file, use the following command:
 alembic revision --autogenerate -m "Your message"
 ```
 
-Files must be named with the following convention: `number-message.py`
-
-### Navigate the migration tree
-
-```bash
-alembic current # prints current revision
-alembic history # prints all revisions in order
-alembic show <revision_id> # prints revision details
-alembic upgrade +N # goes N revision forward
-alembic downgrade -N # goes N revisions backward
-alembic upgrade <revision_id> # goes to a specific revision forward
-alembic downgrade <revision_id> # goes to a specific revision backward
-alembic upgrade head # goes to the head revision, which is the tip of the branch
-alembic stamp head # goes to the head revision, without applying migrations (makes Alembic think the db is up-to-date)
-```
+Files must be names with the following convention: `number-message.py
 
 ## Best practices
 

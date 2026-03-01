@@ -8,16 +8,7 @@ Hyperion is the API of an open-source project launched by ÉCLAIR, the computer 
 
 The structure of this project is modular. Hyperion has a core that performs vital functions (authentication, database migration, authorization, etc). The other functions of Hyperion are realized in what we call modules. You can contribute to the project by adding modules if you wish.
 
-## 0. Prerequisites
-
-- Git
-- Python, at least 3.12
-- Remove Anaconda from your computer
-
 ## 1. Creating a virtual environment for Python 3.14
-
-> [!NOTE]
-> You can also create a 3.12 or 3.13 venv if 3.14 does not work for you!
 
 <details>
 <summary>
@@ -26,20 +17,13 @@ The structure of this project is modular. Hyperion has a core that performs vita
 
 </summary>
 
-Create the virtual environment.
+Create the virtual environment
 
 > You need to be in Hyperion main folder
 
 ```bash
 py -3.14 -m venv .venv
 ```
-
-Activate it
-
-```bash
-.\.venv\Scripts\activate
-```
-
 
 If you get an error saying roughly:
 
@@ -53,30 +37,10 @@ Then in a Powershell, run this to allow scripts executions for your user:
 Set-ExecutionPolicy Unrestricted -Scope CurrentUser
 ```
 
-and try again.
-
-
-</details>
-
-<details>
-<summary>
-
-### Linux
-
-</summary>
-
-Create the virtual environment
-
-> You need to be in Hyperion main folder
-
-```bash
-py -3.14 -m venv .venv
-```
-
 Activate it
 
 ```bash
-source ./.venv/bin/activate
+.\.venv\Scripts\activate
 ```
 
 </details>
@@ -118,32 +82,21 @@ pyenv activate hyperion
 
 ## 2. Install dependencies
 
-Before installing the dependencies, you need to check a few things to make things easier :
-
-<details>
-<summary>
-
 ### About Jellyfish and Rust (Windows only)
 
-</summary>
-
-If you don't have Rust installed on your Windows PC and don't want to install it, decrease the version of `jellyfish` to `0.10.0` in the [`requirements.txt`](requirements.txt) file:
+If you don't have Rust installed on your Windows PC or don't want to install it, decrease the version of `jellyfish` to `0.10.0` in the `requirements.txt` file:
 
 ```
 jellyfish==0.10.0                    # String Matching
 ```
 
-> if you don't know, go ahead with the next steps and see if an error mentioning Rust is raised.
-
-</details>
-
 ### About Weasyprint and Pango
 
-Weasyprint is only used to generate PDF files from HTML for some modules. As such, it is rarely needed for development, and its installation can be skipped. To do so, simply comment the line importing it (add a `#`) in the [`requirements.txt`](requirements.txt) file.
+Weasyprint is only used to generate PDF files from HTML for some modules. As such, it is rarely needed for development, and its installation can be skipped. To do so, simply comment the line importing it (add a #) in the requirements.txt file.
 
 If you need to use it, follow the installation steps at https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation.
 
-For Windows, the best way is through MSYS2. Mac users can simply install using Homebrew.
+For Windows, the best way is through MSYS2, Mac users can simply install using Homebrew.
 
 ### Install dependencies (for real)
 
@@ -153,8 +106,7 @@ Install the dependencies you'll need using `pip` (the common requirements are in
 pip install -r requirements-dev.txt
 ```
 
-> [!WARNING]
-> If you changed the version of Jellyfish or excluded Weasyprint, don't forget to set it back before committing your changes.
+If you changed the version of Jellyfish, don't forget to set it back:
 
 ```
 jellyfish==1.0.4                    # String Matching
@@ -166,12 +118,7 @@ jellyfish==1.0.4                    # String Matching
 
 Choose either SQLite or PostgreSQL.
 
-<details>
-<summary>
-
 ### SQLite
-
-</summary>
 
 #### Advantages
 
@@ -191,14 +138,7 @@ Being so light, it does not support some features nowadays common for relational
 
 There is nothing to do, it works out of the box.
 
-</details>
-
-<details>
-<summary>
-
 ### PostgreSQL
-
-</summary>
 
 #### Advantages
 
@@ -287,12 +227,11 @@ services:
 ```
 
 </details>
-</details>
 
 ## 4. Complete the dotenv (`.env`) and the `config.yaml`
 
 > [!IMPORTANT]
-> Copy the [`.env.template`](.env.template) file in a new `.env` file, likewise copy [`config.template.yaml`](config.template.yaml) in a new `config.yaml`.
+> Copy the `.env.template` file in a new `.env` file, likewise copy `config.template.yaml` in a new `config.yaml`.
 
 ```bash
 cp .env.template .env && cp config.template.yaml config.yaml
@@ -301,7 +240,7 @@ cp .env.template .env && cp config.template.yaml config.yaml
 > [!TIP]
 > These template files were carefully crafted to work for you with minimal personal changes to bring, and some preconfigured services.
 
-For later reference, these settings are documented in [app/core/utils/config.py](app/core/utils/config.py).
+For later reference, these settings are documented in [app/core/config.py](./app/core/config.py).
 Check this file to know what can and should be set using these two files.
 
 ### The `.env` file
@@ -355,7 +294,7 @@ The `config.yaml` contains environment variables that are internal to the Python
      Hyperion will fallback to PostgreSQL settings.
 3. `USE_FACTORIES`: `True` by default, factories seed your database, if empty, with mocked data.
    This is useful on SQLite to repopulate your new database after dropping the previous one, of to create automatically your own user with admin privileges (see `FACTORIES_DEMO_USERS` below).
-4. `FACTORIES_DEMO_USERS`: **Replace the first user's data with yours** (not commented) or add your own.
+4. `FACTORIES_DEMO_USERS`: **Replace the first user's data with yours**.
    These future users will be created automatically when launching Hyperion with an empty database.
    Plus, your user will be there with your password and be admin out of the box.
 
@@ -364,43 +303,22 @@ The `config.yaml` contains environment variables that are internal to the Python
 > [!WARNING]
 > Beforehand, check that your venv is activated.
 
-<details>
-<summary>
-
 ### Using VS Code
-
-</summary>
 
 1. In the activity bar (the leftmost part), click the _Run and Debug_ icon (the play button).
 2. Click the green play button.
 
-</details>
-
-<details>
-<summary>
+Check that your Hyperion instance is up and running by navigating to http://localhost:8000/information.
 
 ### Using the command-line interface
-
-</summary>
 
 ```bash
 fastapi dev
 ```
 
-</details>
-
-### Finally...
-
 Check that your Hyperion instance is up and running by navigating to http://localhost:8000/information.
 
-In your config.yaml, set `USE_FACTORIES: False`.
-
-<details>
-<summary>
-
 ## 6. Create your own user (if not yet the case using factories)
-
-</summary>
 
 There are at least 5 distinct ways to do so outside the use of factories, ranked here from easiest (~GUI) to hardest (~CLI).
 
@@ -527,24 +445,13 @@ insert into core_user (id, firstname, name, nickname, email, password_hash, scho
 ```
 
 </details>
-</details>
-
-<details>
-<summary>
 
 ## 7. Make your user admin (if not yet the case using factories)
-
-</summary>
 
 > [!IMPORTANT]
 > Again, using factories is the recommended way.
 
-<details>
-<summary>
-
 ### If there is exactly one user in the database
-
-</summary>
 
 Then you can make it admin using the following command:
 
@@ -552,14 +459,7 @@ Then you can make it admin using the following command:
 curl -X POST http://localhost:8000/users/make-admin
 ```
 
-</details>
-
-<details>
-<summary>
-
 ### Using a database client in command line
-
-</summary>
 
 > [!WARNING]
 > Work in progress
@@ -572,9 +472,6 @@ curl -X POST http://localhost:8000/users/make-admin
 ```sql
 insert into core_membership (user_id, group_id) values ('<Your user_id>', '0a25cb76-4b63-4fd3-b939-da6d9feabf28');
 ```
-
-</details>
-</details>
 
 ---
 
@@ -589,9 +486,9 @@ insert into core_membership (user_id, group_id) values ('<Your user_id>', '0a25c
 
 Install docker and the compose plugin (https://docs.docker.com/compose/install/)
 
-[`compose.yaml`](compose.yaml) includes the minimal settings required to run Hyperion using docker compose.
+`docker-compose.yaml` includes the minimal settings required to run Hyperion using docker compose.
 
-> During dev, [`compose.dev.yaml`](compose.dev.yaml) can be used to run the database, the redis server etc... If you really want to run the project without docker, you can do it but you will have to install the database, redis, etc ... yourself or disable corresponding features in the .env file (which is not recommended).
+> During dev, `docker-compose-dev.yaml` can be used to run the database, the redis server etc... If you really want to run the project without docker, you can do it but you will have to install the database, redis, etc ... yourself or disable corresponding features in the .env file (which is not recommended).
 
 ## Linting and formating
 
@@ -618,7 +515,7 @@ Hyperion support push notification using Firebase Messaging service.
 
 To enable the service:
 
-1. Add `USE_FIREBASE=true` to the .env file
+1. Add `USE_FIREBASE=true` to dotenv file
 2. Create a service account on Firebase console:
    1. Go to [Google cloud, IAM and administration, Service account](https://console.cloud.google.com/iam-admin/serviceaccounts) and add a new Service Account with Messaging API capabilities.
    2. Choose _Manage keys_ and create a new JSON key.
@@ -631,14 +528,14 @@ When using multiples workers, a Redis server must be configured to broadcast mes
 ## Google API usage
 
 Hyperion can use Google API to run App Script and upload files to Google Drive.
-See [app/core/google_api/README.md](app/core/google_api/README.md) for more information.
+See [app/core/google_api/README.md](./app/core/google_api/README.md) for more information.
 
 ---
 
 ## Hyperion deployment
 
-For production we encourage to use multiple Uvicorn workers. You can use our [docker image](Dockerfile) and [docker-compose file](compose.yaml) files to run Hyperion with Unicorn.
+For production we encourage to use multiple Uvicorn workers. You can use our [docker image](./Dockerfile) and [docker-compose file](./docker-compose.yaml) files to run Hyperion with Unicorn.
 
-You should use our [init file](app/app.py) to ensure that database initialization and migrations are only run once.
+You should use our [init file](./init.py) to ensure that database initialization and migrations are only run once.
 
 </details>

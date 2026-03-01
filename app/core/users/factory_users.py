@@ -4,7 +4,6 @@ import uuid
 from datetime import UTC, datetime
 from random import randint
 
-import unidecode
 from faker import Faker
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -89,7 +88,7 @@ class CoreUsersFactory(Factory):
                 school_id = SchoolType.centrale_lyon.value
                 account_type = groups_type.AccountType.former_student
             else:
-                email = faker.email()  # unrelated to the firstname and name
+                email = faker.email()
                 school_id = SchoolType.no_school.value
                 account_type = groups_type.AccountType.external
 
@@ -99,7 +98,7 @@ class CoreUsersFactory(Factory):
                 firstname=firstname[i],
                 nickname=nickname[i],
                 name=name[i],
-                email=unidecode.unidecode(email),
+                email=email,
                 floor=floors[i],
                 phone=phone[i],
                 promo=promos[i],
@@ -108,12 +107,7 @@ class CoreUsersFactory(Factory):
                 birthday=None,
                 created_on=datetime.now(tz=UTC),
             )
-            try:
-                await cruds_users.create_user(db=db, user=user)
-            except Exception:
-                hyperion_error_logger.exception(
-                    f"CoreUsersFactory: possible collision on user n°{i} for {email}, skipping user creation.",
-                )
+            await cruds_users.create_user(db=db, user=user)
 
         for i, user_info in enumerate(cls.demo_users):
             user = CoreUser(

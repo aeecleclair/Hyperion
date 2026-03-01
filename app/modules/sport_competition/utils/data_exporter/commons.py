@@ -198,6 +198,4 @@ def get_user_types(user: schemas_sport_competition.CompetitionUser) -> list[str]
         types.append("Cameraman")
     if user.is_fanfare:
         types.append("Fanfare")
-    if user.is_volunteer:
-        types.append("Bénévole")
     return types

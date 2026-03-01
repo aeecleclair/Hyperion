@@ -17,7 +17,6 @@ def competition_user_model_to_schema(
         is_cameraman=user.is_cameraman,
         is_pompom=user.is_pompom,
         is_fanfare=user.is_fanfare,
-        is_volunteer=user.is_volunteer,
         allow_pictures=user.allow_pictures,
         validated=user.validated,
         created_at=user.created_at,

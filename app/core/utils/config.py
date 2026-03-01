@@ -360,10 +360,10 @@ class Settings(BaseSettings):
 
     @computed_field  # type: ignore[prop-decorator]
     @cached_property
-    def MINIMAL_TITAN_VERSION_CODE(cls) -> int:
+    def MINIMAL_TITAN_VERSION_CODE(cls) -> str:
         with Path("pyproject.toml").open("rb") as pyproject_binary:
             pyproject = tomllib.load(pyproject_binary)
-        return int(pyproject["tool"]["titan"]["minimal-titan-version-code"])
+        return str(pyproject["tool"]["titan"]["minimal-titan-version-code"])
 
     ######################################
     # Automatically generated parameters #

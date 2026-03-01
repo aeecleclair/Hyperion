@@ -72,22 +72,20 @@ class CoreMembershipsFactory(Factory):
 
     @classmethod
     async def should_run(cls, db: AsyncSession):
-        registered_memberships = await cruds_memberships.get_association_memberships(
-            db=db,
+        result = (
+            len(
+                await cruds_memberships.get_association_memberships(
+                    db=db,
+                ),
+            )
+            == 0
         )
-        registered_names = {membership.name for membership in registered_memberships}
-
-        required_names = set(cls.memberships_names)
-        missing_memberships = required_names - registered_names
-
-        if not missing_memberships:
-            # All required memberships exist, update IDs
-            name_to_membership = {
-                membership.name: membership for membership in registered_memberships
-            }
+        if not result:
+            registered_memberships = (
+                await cruds_memberships.get_association_memberships(
+                    db=db,
+                )
+            )
             cls.memberships_ids = [
-                name_to_membership[name].id for name in cls.memberships_names
+                membership.id for membership in registered_memberships
             ]
-            return False
-
-        return True

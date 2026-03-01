@@ -22,7 +22,6 @@ FIXED_COLUMNS = [
     "École",
     "Type",
     "Statut",
-    "Catégorie",
     "Licence",
     "Licence valide",
     "Équipe",
@@ -59,7 +58,6 @@ def build_data_rows(
             else "Validé et payé"
             if all(purchase.validated for purchase in participant_purchases)
             else "Validé non payé",
-            participant.user.sport_category.value,
             participant.license or "Certificat médical"
             if participant.certificate_file_id
             else "Aucune",
