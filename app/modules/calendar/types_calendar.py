@@ -16,8 +16,15 @@ class CalendarEventType(str, Enum):
 
 class Decision(str, Enum):
     approved = "approved"
+    not_sent = "not_sent"
     declined = "declined"
     pending = "pending"
 
     def __str__(self) -> str:
         return f"{self.name}<{self.value}>"
+
+
+class Question_type(str, Enum):
+    boolean = "bool"
+    open = "open"
+    dates = "date"
