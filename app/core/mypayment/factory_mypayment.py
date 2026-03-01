@@ -33,7 +33,8 @@ class MyPaymentFactory(Factory):
                 schemas_mypayment.StructureSimple(
                     id=uuid.uuid4(),
                     short_id="".join(faker.random_letters(3)).upper(),
-                    name=CoreUsersFactory.demo_users[i].nickname,
+                    name=CoreUsersFactory.demo_users[i].nickname
+                    or CoreUsersFactory.demo_users[i].name,
                     manager_user_id=user_id,
                     siege_address_street=faker.street_address(),
                     siege_address_city=faker.city(),

@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Sequence
 from uuid import UUID
 
 from pydantic import (
@@ -284,10 +285,10 @@ class IntegrityCheckData(BaseModel):
     """Schema for Hyperion data"""
 
     date: datetime
-    wallets: list[WalletBase]
-    transactions: list[TransactionBase]
-    transfers: list[Transfer]
-    refunds: list[RefundBase]
+    wallets: Sequence[WalletBase]
+    transactions: Sequence[TransactionBase]
+    transfers: Sequence[Transfer]
+    refunds: Sequence[RefundBase]
 
 
 class BankAccountHolderEdit(BaseModel):

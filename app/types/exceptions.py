@@ -189,6 +189,13 @@ class MissingHelloAssoCheckoutIdError(Exception):
         )
 
 
+class MissingHelloAssoRedirectUrlError(Exception):
+    def __init__(self):
+        super().__init__(
+            "HelloAsso redirect URL is missing in response",
+        )
+
+
 class InvalidS3BucketNameError(Exception):
     def __init__(self, bucket_name: str):
         super().__init__(f"Invalid S3 bucket name: {bucket_name}")
