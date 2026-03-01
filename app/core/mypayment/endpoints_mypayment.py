@@ -332,7 +332,7 @@ async def create_structure_administrator(
     """
     Create a new administrator for a structure.
 
-    **The user must be an admin to use this endpoint**
+    **The user must be a manager to use this endpoint**
     """
     structure = await cruds_mypayment.get_structure_by_id(
         structure_id=structure_id,
@@ -414,7 +414,7 @@ async def delete_structure_administrator(
     """
     Delete an administrator for a structure.
 
-    **The user must be an admin to use this endpoint**
+    **The user must be a manager to use this endpoint**
     """
     structure = await cruds_mypayment.get_structure_by_id(
         structure_id=structure_id,
