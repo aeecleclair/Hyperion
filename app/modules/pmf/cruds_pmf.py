@@ -21,7 +21,6 @@ async def create_offer(offer: schemas_pmf.OfferSimple, db: AsyncSession) -> None
             location=offer.location,
             location_type=offer.location_type,
             start_date=offer.start_date,
-            end_date=offer.end_date,
             duration=offer.duration,
             created_at=date.today(),
             tags=[],
@@ -101,7 +100,6 @@ async def get_offers(
             location=offer.location,
             location_type=offer.location_type,
             start_date=offer.start_date,
-            end_date=offer.end_date,
             duration=offer.duration,
             author=schemas_users.CoreUserSimple.model_validate(offer.author),
             tags=[
