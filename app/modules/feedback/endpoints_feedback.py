@@ -57,7 +57,6 @@ async def get_feedbacks(
 
 @module.router.post(
     "/feedback/feedbacks",
-    response_model=schemas_feedback.Feedback,
     status_code=201,
 )
 async def create_feedback(
@@ -79,7 +78,7 @@ async def create_feedback(
         **feedback.model_dump(),
     )
 
-    return await cruds_feedback.add_feedback(
+    await cruds_feedback.add_feedback(
         feedback=feedback_db,
         db=db,
     )

@@ -19,8 +19,9 @@ async def get_feedbacks(db: AsyncSession) -> list[schemas_feedback.Feedback] | N
     ]
 
 
-async def add_feedback(db: AsyncSession, feedback: schemas_feedback.Feedback) -> None:
-    db.add(models_feedback.Feedback(**feedback.model_dump()))
+async def add_feedback(db: AsyncSession, feedback: model_feedback.Feedback) -> None:
+    db.add(feedback)
+    await db.flush()
 
 
 async def delete_feedback(db: AsyncSession, feedback_id: UUID):
