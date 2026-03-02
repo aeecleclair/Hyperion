@@ -92,7 +92,6 @@ async def init_objects():
         location="Toulouse, France",
         location_type=LocationType.On_site,
         start_date=date(2023, 6, 1),
-        end_date=date(2023, 8, 31),
         created_at=date(2023, 5, 1),
         duration=92,
     )
@@ -110,7 +109,6 @@ async def init_objects():
         location="Remote",
         location_type=LocationType.Remote,
         start_date=date(2023, 7, 1),
-        end_date=date(2023, 9, 30),
         created_at=date(2023, 6, 1),
         duration=92,
     )
@@ -129,7 +127,6 @@ async def init_objects():
         location="Hybrid - Paris, France / Remote",
         location_type=LocationType.Hybrid,
         start_date=date(2023, 8, 1),
-        end_date=date(2023, 10, 31),
         created_at=date(2023, 7, 1),
         duration=92,
     )
@@ -228,12 +225,11 @@ def test_create_offer(
         "location": "Test City",
         "location_type": LocationType.On_site.value,
         "start_date": "2024-01-01",
-        "end_date": "2024-06-30",
         "duration": 181,
     }
 
     response = client.post(
-        "/pmf/offer/",
+        "/pmf/offers/",
         json=offer_data,
         headers={"Authorization": f"Bearer {actual_token}"},
     )
@@ -249,7 +245,7 @@ def test_update_offer_success(client: TestClient):
     }
 
     response = client.put(
-        f"/pmf/offer/{offer1_id}",
+        f"/pmf/offers/{offer1_id}",
         json=offer_update,
         headers={"Authorization": f"Bearer {alumni_token}"},
     )
@@ -263,7 +259,7 @@ def test_update_offer_by_admin(client: TestClient):
     }
 
     response = client.put(
-        f"/pmf/offer/{offer2_id}",
+        f"/pmf/offers/{offer2_id}",
         json=offer_update,
         headers={"Authorization": f"Bearer {admin_token}"},
     )
@@ -277,7 +273,7 @@ def test_update_offer_forbidden(client: TestClient):
     }
 
     response = client.put(
-        f"/pmf/offer/{offer1_id}",
+        f"/pmf/offers/{offer1_id}",
         json=offer_update,
         headers={"Authorization": f"Bearer {student_token}"},
     )
@@ -291,7 +287,7 @@ def test_update_nonexistent_offer(client: TestClient):
     }
 
     response = client.put(
-        f"/pmf/offer/{offer_fake_id}",
+        f"/pmf/offers/{offer_fake_id}",
         json=offer_update,
         headers={"Authorization": f"Bearer {alumni_token}"},
     )
@@ -301,7 +297,7 @@ def test_update_nonexistent_offer(client: TestClient):
 def test_delete_offer_success(client: TestClient):
     """Test successful offer deletion by the author"""
     response = client.delete(
-        f"/pmf/offer/{offer3_id}",
+        f"/pmf/offers/{offer3_id}",
         headers={"Authorization": f"Bearer {alumni_token}"},
     )
     assert response.status_code == 204
@@ -319,12 +315,11 @@ def test_delete_offer_by_admin(client: TestClient):
         "location": "Delete Test City",
         "location_type": LocationType.Remote.value,
         "start_date": "2024-01-01",
-        "end_date": "2024-06-30",
         "duration": 181,
     }
 
     create_response = client.post(
-        "/pmf/offer/",
+        "/pmf/offers/",
         json=offer_data,
         headers={"Authorization": f"Bearer {alumni_token}"},
     )
@@ -333,7 +328,7 @@ def test_delete_offer_by_admin(client: TestClient):
 
     # Now delete it as admin
     response = client.delete(
-        f"/pmf/offer/{created_offer_id}",
+        f"/pmf/offers/{created_offer_id}",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 204
@@ -342,7 +337,7 @@ def test_delete_offer_by_admin(client: TestClient):
 def test_delete_offer_forbidden(client: TestClient):
     """Test forbidden offer deletion by non-author"""
     response = client.delete(
-        f"/pmf/offer/{offer2_id}",
+        f"/pmf/offers/{offer2_id}",
         headers={"Authorization": f"Bearer {student_token}"},
     )
     assert response.status_code == 403
@@ -351,7 +346,7 @@ def test_delete_offer_forbidden(client: TestClient):
 def test_delete_nonexistent_offer(client: TestClient):
     """Test deletion of non-existent offer"""
     response = client.delete(
-        f"/pmf/offer/{offer_fake_id}",
+        f"/pmf/offers/{offer_fake_id}",
         headers={"Authorization": f"Bearer {alumni_token}"},
     )
     assert response.status_code == 404
