@@ -11,6 +11,18 @@ if TYPE_CHECKING:
     from app.core.mypayment.models_mypayment import Store
 
 
+class Organiser(Base):
+    __tablename__ = "ticketing_organiser"
+
+    id: Mapped[PrimaryKey]
+    name: Mapped[str]
+    store_id: Mapped[UUID] = mapped_column(ForeignKey("mypayment_store.id"))
+    store: Mapped["Store"] = relationship(
+        init=False,
+        lazy="selectin",
+    )
+
+
 class CategorySessionAssociation(Base):
     __tablename__ = "ticketing_category_session"
 
@@ -28,11 +40,12 @@ class TicketingEvent(Base):
     __tablename__ = "ticketing_event"
 
     id: Mapped[PrimaryKey]
-    store_id: Mapped[UUID] = mapped_column(ForeignKey("mypayment_store.id"))
-    store: Mapped["Store"] = relationship(
+    organiser_id: Mapped[UUID] = mapped_column(ForeignKey("ticketing_organiser.id"))
+    organiser: Mapped["Organiser"] = relationship(
         init=False,
         lazy="selectin",
     )
+
     creator_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
     name: Mapped[str]
     open_date: Mapped[datetime]
@@ -42,16 +55,12 @@ class TicketingEvent(Base):
     user_quota: Mapped[int | None]
     disabled: Mapped[bool]
 
-    sessions: Mapped[
-        list["TicketingSession"]
-    ] = relationship(
+    sessions: Mapped[list["TicketingSession"]] = relationship(
         back_populates="event",
         init=False,
         lazy="selectin",
     )
-    categories: Mapped[
-        list["TicketingCategory"]
-    ] = relationship(
+    categories: Mapped[list["TicketingCategory"]] = relationship(
         back_populates="event",
         init=False,
         lazy="selectin",
@@ -74,9 +83,7 @@ class TicketingSession(Base):
     user_quota: Mapped[int | None]
     disabled: Mapped[bool]
 
-    categories: Mapped[
-        list["TicketingCategory"]
-    ] = relationship(
+    categories: Mapped[list["TicketingCategory"]] = relationship(
         secondary=CategorySessionAssociation.__table__,
         back_populates="sessions",
         init=False,
@@ -96,9 +103,7 @@ class TicketingCategory(Base):
         lazy="selectin",
     )
     name: Mapped[str]
-    sessions: Mapped[
-        list["TicketingSession"]
-    ] = relationship(
+    sessions: Mapped[list["TicketingSession"]] = relationship(
         secondary=CategorySessionAssociation.__table__,
         back_populates="categories",
         init=False,
