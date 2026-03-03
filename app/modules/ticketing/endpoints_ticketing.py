@@ -13,7 +13,7 @@ from app.types.module import Module
 
 
 class TicketingPermissions(ModulePermissions):
-    acess_ticketing = "acess_ticketing"
+    access_ticketing = "access_ticketing"
     manage_events = "manage_events"
 
 
@@ -25,6 +25,63 @@ module = Module(
     router=router,
     factory=TicketingFactory(),
 )
+
+
+@module.router.get(
+    "/ticketing/organisers/",
+    response_model=list[schemas_ticketing.OrganiserComplete],
+    status_code=200,
+)
+async def get_organisers(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([TicketingPermissions.access_ticketing])
+    ),
+):
+    """
+    Get all organisers.
+    """
+    return await cruds_ticketing.get_organisers(db=db)
+
+
+@module.router.get(
+    "/ticketing/organisers/{organiser_id}",
+    response_model=schemas_ticketing.OrganiserComplete,
+    status_code=200,
+)
+async def get_organiser(
+    organiser_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([TicketingPermissions.access_ticketing])
+    ),
+) -> schemas_ticketing.OrganiserComplete:
+    """
+    Get an Organiser by its id.
+    """
+    return await cruds_ticketing.get_organiser_by_id(db=db, organiser_id=organiser_id)
+
+
+# @module.router.post(
+#     "/ticketing/organisers/",
+#     response_model=schemas_ticketing.OrganiserComplete,
+#     status_code=201,
+# )
+# async def create_organiser(
+#     organiser: schemas_ticketing.OrganiserBase,
+#     db: AsyncSession = Depends(get_db),
+#     user: models_users.CoreUser = Depends(
+#         is_user_allowed_to([TicketingPermissions.access_ticketing])),
+
+# ) -> None:
+#     """Create an organiser"""
+#     await cruds_ticketing.create_organiser(
+#         organiser=schemas_ticketing.OrganiserComplete(
+#             id=uuid4(),
+#             group_id=
+#             store_id=
+#             name=organiser.name,
+#         ))
 
 
 @module.router.get(
@@ -510,6 +567,7 @@ async def update_ticket(
         ticket_update=ticket_update,
         db=db,
     )
+
 
 # Could be deleted if the user is the one who has created the ticket
 # or if the user has the right permissions to manage events
