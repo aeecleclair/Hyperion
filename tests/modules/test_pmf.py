@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.users import models_users
-from app.modules.pmf import models_pmf, schemas_pmf
+from app.modules.pmf import models_pmf
 
 # We need to import event_loop for pytest-asyncio routine defined bellow
 from app.modules.pmf.types_pmf import LocationType, OfferType

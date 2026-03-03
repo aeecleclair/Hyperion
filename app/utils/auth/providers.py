@@ -114,6 +114,7 @@ class AuthPermissions(ModulePermissions):
     overleaf = "overleaf"
     planka = "planka"
     slash = "slash"
+    pmf = "pmf"
 
 
 class AppAuthClient(BaseAuthClient):
@@ -359,10 +360,9 @@ class SiarnaqAuthClient(BaseAuthClient):
     permission = AuthPermissions.siarnaq
 
 
-class EnceladusAuthClient(BaseAuthClient):
+class PMFAuthClient(BaseAuthClient):
     allowed_scopes: set[ScopeType | str] = {ScopeType.API}
-
-    allowed_account_types: list[AccountType] | None = None
+    permission = AuthPermissions.pmf
 
 
 class OverleafAuthClient(BaseAuthClient):
