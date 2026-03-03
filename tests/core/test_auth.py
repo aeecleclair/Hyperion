@@ -34,7 +34,7 @@ revoked_refresh_token = "RevokedRefreshToken"
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
     global group
-    group = await create_groups_with_permissions([AuthPermissions.app], "auth_group")
+    group = await create_groups_with_permissions([AuthPermissions.app], "BDE")
 
     await add_object_to_db(
         models_permissions.CorePermissionAccountType(

@@ -28,7 +28,7 @@ async def init_objects() -> None:
     global amap_group
     amap_group = await create_groups_with_permissions(
         [],
-        "association",
+        "BDE",
     )
 
     global user_token, admin_user_token, AMAP_user_token
