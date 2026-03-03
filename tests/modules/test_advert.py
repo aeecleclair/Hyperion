@@ -7,7 +7,6 @@ from fastapi.testclient import TestClient
 
 from app.core.associations import models_associations
 from app.core.groups import models_groups
-from app.core.groups.groups_type import GroupType
 from app.core.users import models_users
 from app.modules.advert import models_advert
 from app.modules.advert.endpoints_advert import AdvertPermissions

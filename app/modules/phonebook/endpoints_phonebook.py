@@ -802,7 +802,6 @@ async def create_association_logo(
             detail=f"You are not allowed to update association {association_id}",
         )
 
-
     await compress_and_save_image_file(
         upload_file=image,
         directory="associations",

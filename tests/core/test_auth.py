@@ -539,6 +539,7 @@ def test_authorization_code_flow_with_group_permission_and_user_not_member_of_an
     )
     assert response.status_code == 302
 
+
 # def test_authorization_code_flow_with_auth_client_restricting_allowed_groups_and_user_not_member_of_an_allowed_group(
 #     client: TestClient,
 # ) -> None:

@@ -10,7 +10,6 @@ async def get_users(db: AsyncSession = Depends(get_db)):
 import logging
 from collections.abc import AsyncGenerator, Callable, Coroutine
 from functools import lru_cache
-from types import CoroutineType
 from typing import TYPE_CHECKING, Annotated, Any, cast
 from uuid import UUID
 

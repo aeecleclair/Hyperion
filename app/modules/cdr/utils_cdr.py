@@ -10,7 +10,6 @@ from fastapi import (
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.checkout import schemas_checkout
-from app.core.groups.groups_type import GroupType
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users
 from app.dependencies import (

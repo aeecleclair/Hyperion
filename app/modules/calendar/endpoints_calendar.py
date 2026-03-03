@@ -5,19 +5,13 @@ from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import AccountType
-from app.core.permissions.type_permissions import ModulePermissions
-from app.core.users import models_users
-from app.dependencies import (
-    get_db,
-    is_user_allowed_to,
-    )
 from app.core.associations import cruds_associations
 from app.core.feed import cruds_feed
 from app.core.feed.types_feed import NewsStatus
-from app.core.groups.groups_type import AccountType, GroupType
+from app.core.groups.groups_type import AccountType
 from app.core.notification.schemas_notification import Message
 from app.core.notification.utils_notification import get_topic_by_root_and_identifier
+from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users
 from app.core.utils.config import Settings
 from app.core.utils.security import generate_token
@@ -28,7 +22,7 @@ from app.dependencies import (
     get_settings,
     is_user,
     is_user_a_school_member,
-    is_user_in,
+    is_user_allowed_to,
     is_user_in_association,
 )
 from app.modules.calendar import (
@@ -47,10 +41,9 @@ from app.utils.tools import (
     compress_and_save_image_file,
     delete_file_from_data,
     get_file_from_data,
+    has_user_permission,
     is_user_member_of_an_association,
-    is_user_member_of_any_group,
 )
-from app.utils.tools import has_user_permission
 
 
 class CalendarPermissions(ModulePermissions):
@@ -151,7 +144,13 @@ async def get_event_by_id(
         if not is_user_member_of_an_association(
             user=user,
             association=event.association,
-        ) and not is_user_member_of_any_group(user, [GroupType.admin_calendar]):
+        ) and not (
+            await has_user_permission(
+                user=user,
+                permission_name=CalendarPermissions.manage_events,
+                db=db,
+            )
+        ):
             raise HTTPException(
                 status_code=403,
                 detail="You are not allowed to access this event",
@@ -210,7 +209,13 @@ async def get_event_image(
     if not is_user_member_of_an_association(
         user=user,
         association=event.association,
-    ) and not is_user_member_of_any_group(user, [GroupType.admin_calendar]):
+    ) and not (
+        await has_user_permission(
+            user=user,
+            permission_name=CalendarPermissions.manage_events,
+            db=db,
+        )
+    ):
         raise HTTPException(
             status_code=403,
             detail="You are not allowed to access this event",
@@ -247,7 +252,13 @@ async def create_event_image(
     if not is_user_member_of_an_association(
         user=user,
         association=event.association,
-    ) and not is_user_member_of_any_group(user, [GroupType.admin_calendar]):
+    ) and not (
+        await has_user_permission(
+            user=user,
+            permission_name=CalendarPermissions.manage_events,
+            db=db,
+        )
+    ):
         raise HTTPException(
             status_code=403,
             detail="You are not allowed to access this event",
@@ -416,10 +427,10 @@ async def edit_envent(
             )
 
     has_user_calendar_admin_access = await has_user_permission(
-            user,
-            CalendarPermissions.manage_events,
-            db,
-        )
+        user,
+        CalendarPermissions.manage_events,
+        db,
+    )
 
     if (
         not is_user_member_of_an_association(
@@ -434,7 +445,7 @@ async def edit_envent(
         )
 
     new_decision = event.decision
-    if event.decision != Decision.pending and not is_user_member_of_BDE:
+    if event.decision != Decision.pending and not has_user_calendar_admin_access:
         # If the event is not pending and the user is not a member of the group BDE, we will change the decision back to pending
         new_decision = Decision.pending
 
@@ -558,10 +569,10 @@ async def delete_event(
         raise HTTPException(status_code=404)
 
     has_user_calendar_admin_access = await has_user_permission(
-            user,
-            CalendarPermissions.manage_events,
-            db,
-        )
+        user,
+        CalendarPermissions.manage_events,
+        db,
+    )
     is_user_member_of_the_event_association = is_user_member_of_an_association(
         user=user,
         association=event.association,

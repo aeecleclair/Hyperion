@@ -73,11 +73,9 @@ async def webhook(
     ):
         # We may receive the webhook multiple times, we only want to save a CheckoutPayment
         # in the database the first time
-        existing_checkout_payment_model = (
-            await cruds_checkout.get_checkout_payment_by_hello_asso_payment_id(
-                hello_asso_payment_id=content.data.id,  # ty:ignore[unresolved-attribute]
-                db=db,
-            )
+        existing_checkout_payment_model = await cruds_checkout.get_checkout_payment_by_hello_asso_payment_id(
+            hello_asso_payment_id=content.data.id,  # ty:ignore[unresolved-attribute]
+            db=db,
         )
         if existing_checkout_payment_model is not None:
             hyperion_error_logger.debug(

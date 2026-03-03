@@ -92,6 +92,7 @@ ignore = [
     "PLR0915", # "Too many statements"
     "PLR2004", # "Magic value used in comparison"
     "G004",    # "Logging statement uses f-string"
+    "TC001",   # "Move into type-checking block"
 ]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.

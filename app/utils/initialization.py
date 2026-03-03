@@ -205,7 +205,7 @@ def delete_core_data_crud_sync(schema: str, db: Session) -> None:
 CoreDataClass = TypeVar("CoreDataClass", bound=core_data.BaseCoreData)
 
 
-def get_core_data_sync(
+def get_core_data_sync[CoreDataClass: core_data.BaseCoreData](
     core_data_class: type[CoreDataClass],
     db: Session,
 ) -> CoreDataClass:
@@ -341,7 +341,7 @@ async def use_lock_for_workers(
 
     elif redis_client.set(key, "1", nx=True, ex=120):
         # We acquired the lock, we execute the function
-        logger.info(f"Running {job_function.__name__}")
+        logger.info(f"Running {job_function.__name__}")  # ty:ignore[unresolved-attribute]
 
         await execute_async_or_sync_method(job_function, *args, **kwargs)
 
@@ -360,7 +360,9 @@ async def use_lock_for_workers(
     elif unlock_key:
         # As an `unlock_key` is provided, we will wait until an other worker has finished executing `job_function`
         while redis_client.get(unlock_key) is None:
-            logger.debug(f"Waiting for {job_function.__name__} to finish")
+            logger.debug(
+                f"Waiting for {job_function.__name__} to finish",  # ty:ignore[unresolved-attribute]
+            )
             await asyncio.sleep(1)
 
 

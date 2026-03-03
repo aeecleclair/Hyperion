@@ -17,7 +17,6 @@ from app.dependencies import (
     get_db,
     get_notification_manager,
     get_notification_tool,
-    is_user_a_school_member,
     is_user_allowed_to,
 )
 from app.modules.advert import (
@@ -34,10 +33,6 @@ from app.utils.tools import (
     get_file_from_data,
     is_user_member_of_an_association,
     is_user_member_of_an_association_id,
-    has_user_permission,
-    is_group_id_valid,
-    is_user_member_of_any_group,
-    save_file_as_data,
 )
 
 root = "advert"
