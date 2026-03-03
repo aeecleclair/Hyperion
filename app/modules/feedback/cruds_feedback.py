@@ -19,7 +19,7 @@ async def get_feedbacks(db: AsyncSession) -> list[schemas_feedback.Feedback] | N
     ]
 
 
-async def add_feedback(db: AsyncSession, feedback: model_feedback.Feedback) -> None:
+async def add_feedback(db: AsyncSession, feedback: models_feedback.Feedback) -> None:
     db.add(feedback)
     await db.flush()
 
