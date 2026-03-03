@@ -4,8 +4,79 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.mypayment import schemas_mypayment
 from app.modules.ticketing import models_ticketing, schemas_ticketing
+
+
+async def get_organisers(
+    db: AsyncSession,
+) -> list[schemas_ticketing.OrganiserComplete]:
+    """Get all organisers."""
+
+    organisers = await db.execute(select(models_ticketing.Organiser))
+    return [
+        schemas_ticketing.OrganiserComplete(
+            id=organiser.id,
+            name=organiser.name,
+            store_id=organiser.store_id,
+        )
+        for organiser in organisers.scalars().all()
+    ]
+
+
+async def get_organiser_by_id(
+    db: AsyncSession,
+    organiser_id: UUID,
+) -> schemas_ticketing.OrganiserComplete | None:
+    """Get an organiser by its ID."""
+
+    organiser = (
+        (
+            await db.execute(
+                select(models_ticketing.Organiser).where(
+                    models_ticketing.Organiser.id == organiser_id,
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+
+    return (
+        schemas_ticketing.OrganiserComplete(
+            id=organiser.id,
+            name=organiser.name,
+            store_id=organiser.store_id,
+        )
+        if organiser
+        else None
+    )
+
+
+async def create_organiser(
+    db: AsyncSession,
+    organiser: schemas_ticketing.OrganiserBase,
+) -> None:
+    """Create a new organiser."""
+
+    db.add(
+        models_ticketing.Organiser(**organiser.model_dump()),
+    )
+    await db.flush()
+
+
+async def update_organiser(
+    db: AsyncSession,
+    organiser_id: UUID,
+    organiser_update: schemas_ticketing.OrganiserEdit,
+) -> None:
+    """Update an existing organiser."""
+
+    await db.execute(
+        update(models_ticketing.Organiser)
+        .where(models_ticketing.Organiser.id == organiser_id)
+        .values(**organiser_update.model_dump(exclude_unset=True)),
+    )
+    await db.flush()
 
 
 async def get_events(
@@ -17,7 +88,7 @@ async def get_events(
     return [
         schemas_ticketing.EventSimple(
             id=event.id,
-            store_id=event.store_id,
+            organiser_id=event.organiser_id,
             creator_id=event.creator_id,
             name=event.name,
             open_date=event.open_date,
@@ -26,13 +97,6 @@ async def get_events(
             user_quota=event.user_quota,
             used_quota=event.used_quota,
             disabled=event.disabled,
-            store=schemas_mypayment.StoreSimple(
-                id=event.store.id,
-                structure_id=event.store.structure_id,
-                wallet_id=event.store.wallet_id,
-                name=event.store.name,
-                creation=event.store.creation,
-            ),
         )
         for event in events.scalars().all()
     ]
@@ -64,7 +128,7 @@ async def get_event_by_id(
     return (
         schemas_ticketing.EventComplete(
             id=event.id,
-            store_id=event.store_id,
+            organiser_id=event.organiser_id,
             creator_id=event.creator_id,
             name=event.name,
             open_date=event.open_date,
@@ -73,12 +137,10 @@ async def get_event_by_id(
             user_quota=event.user_quota,
             used_quota=event.used_quota,
             disabled=event.disabled,
-            store=schemas_mypayment.StoreSimple(
-                id=event.store.id,
-                structure_id=event.store.structure_id,
-                wallet_id=event.store.wallet_id,
-                name=event.store.name,
-                creation=event.store.creation,
+            organiser=schemas_ticketing.OrganiserComplete(
+                id=event.organiser.id,
+                name=event.organiser.name,
+                store_id=event.organiser.store_id,
             ),
             sessions=[
                 schemas_ticketing.SessionSimple(
@@ -137,7 +199,7 @@ async def get_event_by_name(
     return (
         schemas_ticketing.EventComplete(
             id=event.id,
-            store_id=event.store_id,
+            organiser_id=event.organiser_id,
             creator_id=event.creator_id,
             name=event.name,
             open_date=event.open_date,
@@ -146,12 +208,10 @@ async def get_event_by_name(
             user_quota=event.user_quota,
             used_quota=event.used_quota,
             disabled=event.disabled,
-            store=schemas_mypayment.StoreSimple(
-                id=event.store.id,
-                structure_id=event.store.structure_id,
-                wallet_id=event.store.wallet_id,
-                name=event.store.name,
-                creation=event.store.creation,
+            organiser=schemas_ticketing.OrganiserComplete(
+                id=event.organiser.id,
+                name=event.organiser.name,
+                store_id=event.organiser.store_id,
             ),
             sessions=[
                 schemas_ticketing.SessionSimple.model_validate(session)

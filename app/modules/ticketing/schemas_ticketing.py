@@ -3,11 +3,23 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from app.core.mypayment.schemas_mypayment import StoreSimple
+
+class OrganiserBase(BaseModel):
+    name: str
+
+
+class OrganiserComplete(OrganiserBase):
+    id: UUID
+    store_id: UUID
+
+
+class OrganiserEdit(BaseModel):
+    name: str | None = None
+    store_id: UUID | None = None
 
 
 class EventBase(BaseModel):
-    store_id: UUID
+    organiser_id: UUID
     name: str
     open_date: datetime
     close_date: datetime | None = None
@@ -23,7 +35,7 @@ class EventSimple(EventBase):
 
 
 class EventComplete(EventSimple):
-    store: StoreSimple
+    organiser: "OrganiserComplete"
     sessions: list["SessionSimple"]
     categories: list["CategorySimple"]
 
