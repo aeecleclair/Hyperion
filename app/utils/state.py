@@ -103,6 +103,7 @@ def init_redis_client(
 
 def disconnect_redis_client(redis_client: redis.Redis | None) -> None:
     if redis_client is not None:
+        redis_client.flushdb()
         redis_client.close()
 
 
