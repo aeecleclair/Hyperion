@@ -1,9 +1,10 @@
 import random
 from datetime import UTC, datetime, timedelta
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.groups.factory_groups import CoreGroupsFactory
 from app.core.memberships.factory_memberships import CoreMembershipsFactory
 from app.core.mypayment.factory_mypayment import MyPaymentFactory
 from app.core.users.factory_users import CoreUsersFactory
@@ -17,8 +18,10 @@ class TicketingFactory(Factory):
         CoreUsersFactory,
         MyPaymentFactory,
         CoreMembershipsFactory,
+        CoreGroupsFactory,
     ]
 
+    organiser_id = uuid4()
     event_id = uuid4()
     session1_id = uuid4()
     session2_id = uuid4()
@@ -28,10 +31,23 @@ class TicketingFactory(Factory):
 
     @classmethod
     async def run(cls, db: AsyncSession, settings: Settings) -> None:
+        await cls.add_organiser(db)
         await cls.add_event(db)
         await cls.add_sessions(db)
         await cls.add_categories(db)
         await cls.add_tickets(db)
+
+    @classmethod
+    async def add_organiser(cls, db: AsyncSession) -> None:
+        """Create an organiser"""
+        await cruds_ticketing.create_organiser(
+            db,
+            schemas_ticketing.OrganiserComplete(
+                id=cls.organiser_id,
+                store_id=MyPaymentFactory.other_stores_id[0][0],
+                name="ECLAIR",
+            ),
+        )
 
     @classmethod
     async def add_event(cls, db: AsyncSession) -> None:
@@ -40,7 +56,7 @@ class TicketingFactory(Factory):
             db,
             schemas_ticketing.EventSimple(
                 id=cls.event_id,
-                store_id=MyPaymentFactory.other_stores_id[0][0],
+                organiser_id=cls.organiser_id,
                 creator_id=CoreUsersFactory.other_users_id[0],
                 name="Commuz 2025",
                 open_date=datetime.now(UTC),
