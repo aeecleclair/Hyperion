@@ -358,6 +358,18 @@ async def create_structure_administrator(
             status_code=404,
             detail="User does not exist",
         )
+    admin_db = (
+        await cruds_mypayment.get_structure_administrator_by_user_id_and_structure_id(
+            user_id=user_id,
+            structure_id=structure_id,
+            db=db,
+        )
+    )
+    if admin_db is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="User is already an admin",
+        )
 
     await cruds_mypayment.create_structure_administrator(
         user_id=user_id,
@@ -429,6 +441,18 @@ async def delete_structure_administrator(
         raise HTTPException(
             status_code=403,
             detail="User is not the manager for this structure",
+        )
+    admin_db = (
+        await cruds_mypayment.get_structure_administrator_by_user_id_and_structure_id(
+            user_id=user_id,
+            structure_id=structure_id,
+            db=db,
+        )
+    )
+    if admin_db is None:
+        raise HTTPException(
+            status_code=400,
+            detail="User is not an admin",
         )
 
     await cruds_mypayment.delete_structure_administrator(
