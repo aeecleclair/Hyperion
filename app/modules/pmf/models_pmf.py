@@ -46,7 +46,7 @@ class PmfOffer(Base):
     duration: Mapped[int]  # days
 
     created_at: Mapped[date] = mapped_column(insert_default=date.today)
-
+    hidden: Mapped[bool]
     tags: Mapped[list["Tags"]] = relationship(
         "Tags",
         back_populates="offers",

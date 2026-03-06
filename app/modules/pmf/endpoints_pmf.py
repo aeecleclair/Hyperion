@@ -6,13 +6,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import AccountType, GroupType
+from app.core.users import models_users
 from app.core.users.models_users import CoreUser
-from app.dependencies import get_db, is_user, is_user_in, is_user_allowed_to
+from app.dependencies import get_db, is_user, is_user_allowed_to, is_user_in
 from app.modules.pmf import cruds_pmf, factory_pmf, schemas_pmf, types_pmf
 from app.types.module import Module
-from app.utils.tools import is_user_member_of_any_group
 from app.utils.auth.providers import AuthPermissions
-from app.core.users import models_users
+from app.utils.tools import is_user_member_of_any_group
 
 router = APIRouter(tags=["pmf"])
 
@@ -50,13 +50,14 @@ async def get_offer(
 
     return offer
 
+
 @router.get(
     "/pmf/users/{author_id}/offers",
     response_model=list[schemas_pmf.OfferSimple],
     status_code=200,
 )
 async def get_offers_by_author_id(
-    author_id:str,
+    author_id: str,
     db: AsyncSession = Depends(get_db),
     includedOfferTypes: list[types_pmf.OfferType] = Query(default=[]),
     includedTags: list[str] = Query(default=[]),
@@ -74,6 +75,7 @@ async def get_offers_by_author_id(
         offset=offset,
     )
 
+
 @router.get(
     "/pmf/me/offers",
     response_model=list[schemas_pmf.OfferSimple],
@@ -86,11 +88,8 @@ async def get_me_offers(
     includedLocationTypes: list[types_pmf.LocationType] = Query(default=[]),
     limit: int | None = Query(default=50, gt=0, le=50),
     offset: int | None = Query(default=0, ge=0),
-    user: models_users.CoreUser = Depends(
-        is_user_allowed_to([AuthPermissions.pmf]),
-    ),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
-    print(user.id)
     return await cruds_pmf.get_offers_by_author_id(
         author_id=user.id,
         db=db,
@@ -100,6 +99,7 @@ async def get_me_offers(
         limit=limit,
         offset=offset,
     )
+
 
 @router.get(
     "/pmf/offers/",

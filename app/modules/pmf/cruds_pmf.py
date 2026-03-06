@@ -23,6 +23,7 @@ async def create_offer(offer: schemas_pmf.OfferSimple, db: AsyncSession) -> None
             start_date=offer.start_date,
             duration=offer.duration,
             created_at=datetime.now(UTC).date(),
+            hidden=True,
             tags=[],
         ),
     )
@@ -114,6 +115,7 @@ async def get_offers(
         for offer in offers.scalars().all()
     ]
 
+
 async def get_offers_by_author_id(
     author_id: str,
     db: AsyncSession,
@@ -139,9 +141,8 @@ async def get_offers_by_author_id(
             if included_location_types
             else true()
         )
-        & (
-            models_pmf.PmfOffer.author_id==author_id
-        )
+        & (models_pmf.PmfOffer.author_id == author_id)
+        & (not models_pmf.PmfOffer.hidden)
     )
 
     offers = await db.execute(
@@ -172,7 +173,9 @@ async def get_offers_by_author_id(
         for offer in offers.scalars().all()
     ]
 
+
 async def get_me_offers(
+    author_id: str,
     db: AsyncSession,
     included_offer_types: list[types_pmf.OfferType] | None = None,
     included_tags: list[str] | None = None,
@@ -196,9 +199,7 @@ async def get_me_offers(
             if included_location_types
             else true()
         )
-        & (
-            models_pmf.PmfOffer.author_id==user
-        )
+        & (models_pmf.PmfOffer.author_id == author_id)
     )
 
     offers = await db.execute(
@@ -216,6 +217,7 @@ async def get_me_offers(
             location_type=offer.location_type,
             start_date=offer.start_date,
             duration=offer.duration,
+            hidden=offer.hidden,
             author=schemas_users.CoreUserSimple.model_validate(offer.author),
             tags=[
                 schemas_pmf.TagComplete(
