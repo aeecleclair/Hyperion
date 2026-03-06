@@ -85,7 +85,7 @@ def build_data_rows(
             row[4] = "Validé mais non payé"
         else:
             row[4] = "Non validé"
-        thick_columns = [4]
+        thick_columns = [len(FIXED_COLUMNS) - 1]
         purchases_map = {
             p.product_variant_id: p for p in users_purchases.get(user.user.id, [])
         }
@@ -107,11 +107,11 @@ def build_data_rows(
                 row[offset + 2] = ""
                 row[offset + 3] = ""
                 row[offset + 4] = ""
-            thick_columns.append(offset + 4)
+            thick_columns.append(offset + len(PARTICIPANTS_COLUMNS) - 1)
 
         if ExcelExportParams.purchases in parameters and product_structure is not None:
             offset = (
-                len(FIXED_COLUMNS) + 4
+                len(FIXED_COLUMNS) + len(PARTICIPANTS_COLUMNS)
                 if ExcelExportParams.participants in parameters
                 else len(FIXED_COLUMNS)
             )

@@ -104,7 +104,7 @@ def build_data_rows(
             thick_columns.append(len(FIXED_COLUMNS) + len(PARTICIPANTS_COLUMNS) - 1)
 
         if ExcelExportParams.purchases in parameters and product_structure is not None:
-            offset = 10 if ExcelExportParams.participants in parameters else 7
+            offset = len(FIXED_COLUMNS)+len(PARTICIPANTS_COLUMNS) if ExcelExportParams.participants in parameters else len(FIXED_COLUMNS)
             for prod_struct in product_structure[0]:
                 for vinfo in prod_struct["variants_info"]:
                     p = purchases_map.get(vinfo["variant"].id)
