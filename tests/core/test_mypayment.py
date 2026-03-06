@@ -45,6 +45,10 @@ structure_manager_user: models_users.CoreUser
 structure_manager_user_token: str
 structure2_manager_user: models_users.CoreUser
 structure2_manager_user_token: str
+structure_admin_user: models_users.CoreUser
+structure_admin_user_token: str
+structure_admin_to_add: models_users.CoreUser
+structure_admin_to_add_token: str
 
 ecl_user: models_users.CoreUser
 ecl_user_access_token: str
@@ -127,10 +131,18 @@ async def init_objects() -> None:
         structure, \
         structure2_manager_user, \
         structure2_manager_user_token, \
-        structure2
+        structure2, \
+        structure_admin_user, \
+        structure_admin_user_token, \
+        structure_admin_to_add, \
+        structure_admin_to_add_token
 
     structure_manager_user = await create_user_with_groups(groups=[])
     structure_manager_user_token = create_api_access_token(structure_manager_user)
+    structure_admin_user = await create_user_with_groups(groups=[])
+    structure_admin_user_token = create_api_access_token(structure_admin_user)
+    structure_admin_to_add = await create_user_with_groups(groups=[])
+    structure_admin_to_add_token = create_api_access_token(structure_admin_to_add)
 
     structure = models_mypayment.Structure(
         id=uuid4(),
@@ -148,6 +160,13 @@ async def init_objects() -> None:
         bic="AZERTYUIOP",
     )
     await add_object_to_db(structure)
+
+    await add_object_to_db(
+        models_mypayment.StructureAdministrator(
+            structure_id=structure.id,
+            user_id=structure_admin_user.id,
+        ),
+    )
 
     await add_coredata_to_db(
         MyPaymentBankAccountHolder(
@@ -607,6 +626,12 @@ async def test_get_structures(client: TestClient):
     )
     assert response.status_code == 200
     assert len(response.json()) == 2
+    structure_from_response = next(
+        s for s in response.json() if s["id"] == str(structure.id)
+    )
+    assert structure_from_response["administrators"][0]["id"] == str(
+        structure_admin_user.id,
+    )
 
 
 async def test_create_structure(client: TestClient):
@@ -703,6 +728,82 @@ async def test_delete_structure_as_admin(client: TestClient):
         headers={"Authorization": f"Bearer {admin_user_token}"},
     )
     assert response.status_code == 204
+
+
+async def test_add_structure_administrator_as_manager(client: TestClient):
+    response = client.post(
+        f"/mypayment/structures/{structure.id}/admin/{structure_admin_to_add.id}",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
+    )
+    assert response.status_code == 201
+
+    response = client.get(
+        "/mypayment/structures",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.status_code == 200
+    structure_from_response = next(
+        s for s in response.json() if s["id"] == str(structure.id)
+    )
+    new_admin = next(
+        (
+            a
+            for a in structure_from_response["administrators"]
+            if a["id"] == str(structure_admin_to_add.id)
+        ),
+        None,
+    )
+    assert new_admin is not None
+
+    sellers = client.get(
+        "/mypayment/users/me/stores",
+        headers={"Authorization": f"Bearer {structure_admin_to_add_token}"},
+    )
+    assert sellers.status_code == 200
+    assert len(sellers.json()) == 1
+    assert sellers.json()[0]["id"] == str(store.id)
+    assert sellers.json()[0]["can_bank"] is True
+    assert sellers.json()[0]["can_cancel"] is True
+    assert sellers.json()[0]["can_manage_sellers"] is True
+    assert sellers.json()[0]["can_see_history"] is True
+
+
+async def test_delete_structure_administrator_as_manager(client: TestClient):
+    response = client.delete(
+        f"/mypayment/structures/{structure.id}/admin/{structure_admin_to_add.id}",
+        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
+    )
+    assert response.status_code == 204
+
+    response = client.get(
+        "/mypayment/structures",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.status_code == 200
+    structure_from_response = next(
+        s for s in response.json() if s["id"] == str(structure.id)
+    )
+    new_admin = next(
+        (
+            a
+            for a in structure_from_response["administrators"]
+            if a["id"] == str(structure_admin_to_add.id)
+        ),
+        None,
+    )
+    assert new_admin is None
+
+    sellers = client.get(
+        "/mypayment/users/me/stores",
+        headers={"Authorization": f"Bearer {structure_admin_to_add_token}"},
+    )
+    assert sellers.status_code == 200
+    assert len(sellers.json()) == 1
+    assert sellers.json()[0]["id"] == str(store.id)
+    assert sellers.json()[0]["can_bank"] is True
+    assert sellers.json()[0]["can_cancel"] is False
+    assert sellers.json()[0]["can_manage_sellers"] is False
+    assert sellers.json()[0]["can_see_history"] is True
 
 
 async def test_transfer_non_existing_structure_manager(client: TestClient):
