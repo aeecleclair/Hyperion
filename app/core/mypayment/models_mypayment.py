@@ -143,6 +143,21 @@ class Structure(Base):
     association_membership: Mapped[
         models_memberships.CoreAssociationMembership | None
     ] = relationship(init=False, lazy="joined")
+    administrators: Mapped[list["StructureAdministrator"]] = relationship(
+        init=False,
+        lazy="selectin",
+    )
+
+
+class StructureAdministrator(Base):
+    __tablename__ = "mypayment_structure_administrator"
+
+    structure_id: Mapped[UUID] = mapped_column(
+        ForeignKey("mypayment_structure.id"),
+        primary_key=True,
+    )
+    user_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"), primary_key=True)
+    user: Mapped[models_users.CoreUser] = relationship(init=False, lazy="joined")
 
 
 class StructureManagerTransfert(Base):

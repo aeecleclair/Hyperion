@@ -320,6 +320,142 @@ async def delete_structure(
 
 
 @router.post(
+    "/mypayment/structures/{structure_id}/admin/{user_id}",
+    status_code=201,
+)
+async def create_structure_administrator(
+    structure_id: UUID,
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user()),
+):
+    """
+    Create a new administrator for a structure.
+
+    **The user must be an admin to use this endpoint**
+    """
+    structure = await cruds_mypayment.get_structure_by_id(
+        structure_id=structure_id,
+        db=db,
+    )
+    if structure is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Structure does not exist",
+        )
+    if structure.manager_user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="User is not the manager for this structure",
+        )
+
+    db_user = await cruds_users.get_user_by_id(
+        user_id=user_id,
+        db=db,
+    )
+    if db_user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User does not exist",
+        )
+
+    await cruds_mypayment.create_structure_administrator(
+        user_id=user_id,
+        structure_id=structure_id,
+        db=db,
+    )
+
+    # We will add the new manager as a seller for all stores of the structure
+    stores = await cruds_mypayment.get_stores_by_structure_id(
+        structure_id=structure_id,
+        db=db,
+    )
+    sellers = await cruds_mypayment.get_sellers_by_user_id(
+        user_id=user_id,
+        db=db,
+    )
+    sellers_store_ids = [seller.store_id for seller in sellers]
+    for store in stores:
+        if store.id not in sellers_store_ids:
+            await cruds_mypayment.create_seller(
+                user_id=user_id,
+                store_id=store.id,
+                can_bank=True,
+                can_see_history=True,
+                can_cancel=True,
+                can_manage_sellers=True,
+                db=db,
+            )
+        else:
+            await cruds_mypayment.update_seller(
+                seller_user_id=user_id,
+                store_id=store.id,
+                seller_update=schemas_mypayment.SellerUpdate(
+                    can_bank=True,
+                    can_see_history=True,
+                    can_cancel=True,
+                    can_manage_sellers=True,
+                ),
+                db=db,
+            )
+    return db_user
+
+
+@router.delete(
+    "/mypayment/structures/{structure_id}/admin/{user_id}",
+    status_code=204,
+)
+async def delete_structure_administrator(
+    structure_id: UUID,
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user()),
+):
+    """
+    Delete an administrator for a structure.
+
+    **The user must be an admin to use this endpoint**
+    """
+    structure = await cruds_mypayment.get_structure_by_id(
+        structure_id=structure_id,
+        db=db,
+    )
+    if structure is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Structure does not exist",
+        )
+    if structure.manager_user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="User is not the manager for this structure",
+        )
+
+    await cruds_mypayment.delete_structure_administrator(
+        user_id=user_id,
+        structure_id=structure_id,
+        db=db,
+    )
+
+    # We will remove critical administrator's rights for all stores of the structure
+    stores = await cruds_mypayment.get_stores_by_structure_id(
+        structure_id=structure_id,
+        db=db,
+    )
+
+    for store in stores:
+        await cruds_mypayment.update_seller(
+            seller_user_id=user_id,
+            store_id=store.id,
+            seller_update=schemas_mypayment.SellerUpdate(
+                can_cancel=False,
+                can_manage_sellers=False,
+            ),
+            db=db,
+        )
+
+
+@router.post(
     "/mypayment/structures/{structure_id}/init-manager-transfer",
     status_code=201,
 )
@@ -506,7 +642,9 @@ async def create_store(
             status_code=404,
             detail="Structure does not exist",
         )
-    if structure.manager_user_id != user.id:
+    if structure.manager_user_id != user.id and user.id not in [
+        user.id for user in structure.administrators
+    ]:
         raise HTTPException(
             status_code=403,
             detail="User is not the manager for this structure",
@@ -544,9 +682,9 @@ async def create_store(
     )
     await db.flush()
 
-    # Add manager as an full right seller for the store
+    # Add manager as a full right seller for the store
     await cruds_mypayment.create_seller(
-        user_id=user.id,
+        user_id=structure.manager_user_id,
         store_id=store_db.id,
         can_bank=True,
         can_see_history=True,
@@ -554,6 +692,16 @@ async def create_store(
         can_manage_sellers=True,
         db=db,
     )
+    for admin in structure.administrators:
+        await cruds_mypayment.create_seller(
+            user_id=admin.id,
+            store_id=store_db.id,
+            can_bank=True,
+            can_see_history=True,
+            can_cancel=True,
+            can_manage_sellers=True,
+            db=db,
+        )
 
     hyperion_mypayment_logger.info(
         f"store.name: {store_db.name}, structure_id: {store_db.structure_id}",
@@ -876,7 +1024,10 @@ async def update_store(
         structure_id=store.structure_id,
         db=db,
     )
-    if structure is None or structure.manager_user_id != user.id:
+    if structure is None or (
+        structure.manager_user_id != user.id
+        and user.id not in [user.id for user in structure.administrators]
+    ):
         raise HTTPException(
             status_code=403,
             detail="User is not the manager for this structure",
@@ -925,7 +1076,10 @@ async def delete_store(
         structure_id=store.structure_id,
         db=db,
     )
-    if structure is None or structure.manager_user_id != user.id:
+    if structure is None or (
+        structure.manager_user_id != user.id
+        and user.id not in [user.id for user in structure.administrators]
+    ):
         raise HTTPException(
             status_code=403,
             detail="User is not the manager for this structure",
@@ -1122,7 +1276,14 @@ async def update_store_seller(
         structure_id=store.structure_id,
         db=db,
     )
-    if structure is None or structure.manager_user_id == seller_user_id:
+    if (
+        structure is None
+        or structure.manager_user_id == seller_user_id
+        or (
+            seller_user_id in [user.id for user in structure.administrators]
+            and structure.manager_user_id != user.id
+        )
+    ):
         raise HTTPException(
             status_code=400,
             detail="User is the manager for this structure and cannot be updated as a seller",
@@ -1189,7 +1350,14 @@ async def delete_store_seller(
         structure_id=store.structure_id,
         db=db,
     )
-    if structure is None or structure.manager_user_id == seller_user_id:
+    if (
+        structure is None
+        or structure.manager_user_id == seller_user_id
+        or (
+            seller_user_id in [user.id for user in structure.administrators]
+            and structure.manager_user_id != user.id
+        )
+    ):
         raise HTTPException(
             status_code=400,
             detail="User is the manager for this structure and cannot be deleted as a seller",
@@ -2693,7 +2861,9 @@ async def get_structure_invoices(
             status_code=404,
             detail="Structure does not exist",
         )
-    if structure.manager_user_id != user.id:
+    if structure.manager_user_id != user.id and user.id not in [
+        admin.id for admin in structure.administrators
+    ]:
         raise HTTPException(
             status_code=403,
             detail="User is not allowed to access this structure invoices",
@@ -2740,6 +2910,7 @@ async def download_invoice(
     if user.id not in (
         structure.manager_user_id,
         bank_account_info.manager_user_id,
+        *[admin.id for admin in structure.administrators],
     ):
         raise HTTPException(
             status_code=403,
@@ -2999,7 +3170,9 @@ async def aknowledge_invoice_as_received(
             status_code=500,
             detail="Structure does not exist",
         )
-    if structure.manager_user_id != user.id:
+    if structure.manager_user_id != user.id and user.id not in [
+        admin.id for admin in structure.administrators
+    ]:
         raise HTTPException(
             status_code=403,
             detail="User is not allowed to edit this structure invoice",
