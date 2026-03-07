@@ -753,11 +753,16 @@ async def invalidate_password(
 ):
     """
     Invalidate one user's password.
+    Also revoke their refresh tokens to disable API access as soon as possible.
     The concerned user should change their password with a different one to use our services again.
 
     **This endpoint is only usable by administrators**
     """
     await cruds_users.update_should_user_change_password_by_id(db=db, user_id=user_id)
+    await cruds_auth.revoke_refresh_token_by_user_id(
+        db=db,
+        user_id=recover_request.user_id,
+    )
 
 
 @router.post(
