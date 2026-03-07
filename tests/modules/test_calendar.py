@@ -42,7 +42,7 @@ simple_user_ical_secret = "simple_user_ical_secret"
 async def init_objects() -> None:
     global admin_group, group_amap
     admin_group = await create_groups_with_permissions(
-        [CalendarPermissions.manage_events],
+        [CalendarPermissions.manage_events, CalendarPermissions.create_ical],
         "calendar_manager",
     )
     group_amap = await create_groups_with_permissions(
@@ -205,10 +205,10 @@ def test_get_event_by_id_pending_but_not_member_of_association(
 
 def test_get_nonexistent_event(client: TestClient) -> None:
     response = client.get(
-        "/calendar/events/bad_id",
+        f"/calendar/events/{uuid.uuid4()}",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
-    assert response.status_code == 404
+    assert response.status_code == 404, response.text
 
 
 def test_get_ticket_url_before(client: TestClient) -> None:
@@ -216,7 +216,7 @@ def test_get_ticket_url_before(client: TestClient) -> None:
         f"/calendar/events/{calendar_event.id}/ticket-url",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
-    assert response.status_code == 400
+    assert response.status_code == 400, response.text
 
 
 def test_get_ticket_url_after(client: TestClient) -> None:
@@ -224,7 +224,7 @@ def test_get_ticket_url_after(client: TestClient) -> None:
         f"/calendar/events/{confirmed_calendar_event.id}/ticket-url",
         headers={"Authorization": f"Bearer {token_simple}"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, response.text
     data = response.json()
     assert data["ticket_url"] == "url"
 
@@ -387,9 +387,9 @@ def test_approve_event(client: TestClient) -> None:
 def test_approve_non_existing_event(client: TestClient) -> None:
     response = client.patch(
         f"/calendar/events/{uuid.uuid4()}/reply/approved",
-        headers={"Authorization": f"Bearer {token_bde}"},
+        headers={"Authorization": f"Bearer {token_admin}"},
     )
-    assert response.status_code == 404
+    assert response.status_code == 404, response.text
 
 
 def test_delete_event(client: TestClient) -> None:

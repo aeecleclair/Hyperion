@@ -416,6 +416,8 @@ def is_user(
                     detail="Unauthorized, user is not a super admin",
                 )
             return user
+        if GroupType.admin in user.group_ids:
+            return user
 
         if user.account_type in excluded_account_types:
             raise HTTPException(

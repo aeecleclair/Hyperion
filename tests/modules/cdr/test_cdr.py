@@ -38,7 +38,6 @@ user_seller: models_users.CoreUser
 user: models_users.CoreUser
 
 token_admin: str
-token_seller: str
 token_bde: str
 token_user: str
 
@@ -94,15 +93,15 @@ async def init_objects():
     )
     seller_group = await create_groups_with_permissions(
         [],
-        "sller",
+        "BDE",
     )
     online_seller_group = await create_groups_with_permissions(
         [],
-        "online seller",
+        "CAA",
     )
     empty_seller_group = await create_groups_with_permissions(
         [],
-        "empty seller",
+        "cinema",
     )
 
     global user_admin
@@ -119,14 +118,8 @@ async def init_objects():
         [seller_group.id],
     )
 
-    global token_seller
-    token_seller = create_api_access_token(user_seller)
-
-    user_bde = await create_user_with_groups(
-        [online_seller_group.id],
-    )
     global token_bde
-    token_bde = create_api_access_token(user_bde)
+    token_bde = create_api_access_token(user_seller)
 
     global user
     user = await create_user_with_groups(
@@ -360,7 +353,7 @@ async def init_objects():
     global association_membership
     association_membership = models_memberships.CoreAssociationMembership(
         id=uuid.uuid4(),
-        name="AEECL cdr",
+        name="AEECL",
         manager_group_id=admin_group.id,
     )
     await add_object_to_db(association_membership)
@@ -428,7 +421,7 @@ async def init_objects():
 def test_get_all_cdr_users_seller(client: TestClient):
     response = client.get(
         "/cdr/users/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert str(user.id) in [x["id"] for x in response.json()]
@@ -445,7 +438,7 @@ def test_get_all_cdr_users_user(client: TestClient):
 def test_get_all_cdr_pending_users_seller(client: TestClient):
     response = client.get(
         "/cdr/users/pending",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     body = response.json()
@@ -553,7 +546,7 @@ def test_get_all_sellers_user(client: TestClient):
 def test_get_my_sellers_seller(client: TestClient):
     response = client.get(
         "/cdr/users/me/sellers/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert str(seller.id) in [x["id"] for x in response.json()]
@@ -622,7 +615,7 @@ def test_create_seller_not_admin(client: TestClient):
             "group_id": GroupType.admin.value,
             "order": 1,
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
@@ -696,7 +689,7 @@ def test_patch_seller_not_admin(client: TestClient):
         json={
             "name": "Seller modifié",
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
@@ -744,7 +737,7 @@ def test_delete_seller_has_product(client: TestClient):
 def test_delete_seller_not_admin(client: TestClient):
     response = client.delete(
         f"/cdr/sellers/{empty_seller.id!s}",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
@@ -769,7 +762,7 @@ def test_get_all_products(client: TestClient):
 def test_get_products_by_seller_id_seller(client: TestClient):
     response = client.get(
         f"/cdr/sellers/{seller.id}/products",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert str(product.id) in [x["id"] for x in response.json()]
@@ -821,7 +814,7 @@ def test_create_product_seller(client: TestClient):
             "product_constraints": [str(product.id)],
             "document_constraints": [str(document.id)],
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 201
 
@@ -829,7 +822,7 @@ def test_create_product_seller(client: TestClient):
 
     response = client.get(
         f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert str(product_id) in [x["id"] for x in response.json()]
@@ -851,7 +844,7 @@ def test_create_product_user(client: TestClient):
 
     response = client.get(
         f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert "Produit créé" in [x["name_fr"] for x in response.json()]
@@ -865,13 +858,13 @@ def test_patch_product_seller(client: TestClient):
             "product_constraints": [str(product.id)],
             "document_constraints": [str(document.id)],
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 204
 
     response = client.get(
         f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert str(product.id) in [x["id"] for x in response.json()]
@@ -886,7 +879,7 @@ def test_patch_product_wrong_product(client: TestClient):
         json={
             "esytyd": "Produit modifié",
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 400
     assert response.json() == {
@@ -906,7 +899,7 @@ def test_patch_product_user(client: TestClient):
 
     response = client.get(
         f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert str(product.id) in [x["id"] for x in response.json()]
@@ -918,13 +911,13 @@ def test_patch_product_user(client: TestClient):
 def test_delete_product_seller(client: TestClient):
     response = client.delete(
         f"/cdr/sellers/{seller.id!s}/products/{empty_product.id}/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 204
 
     response = client.get(
         f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert str(empty_product.id) not in [x["id"] for x in response.json()]
@@ -933,13 +926,13 @@ def test_delete_product_seller(client: TestClient):
 def test_delete_product_has_variant(client: TestClient):
     response = client.delete(
         f"/cdr/sellers/{seller.id!s}/products/{product.id}/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
     response = client.get(
         f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert str(product.id) in [x["id"] for x in response.json()]
@@ -954,7 +947,7 @@ def test_delete_product_user(client: TestClient):
 
     response = client.get(
         f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert str(product.id) in [x["id"] for x in response.json()]
@@ -963,7 +956,7 @@ def test_delete_product_user(client: TestClient):
 def test_delete_document_used(client: TestClient):
     response = client.delete(
         f"/cdr/sellers/{seller.id}/documents/{document.id}/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
@@ -980,7 +973,7 @@ def test_create_product_variant_seller(client: TestClient):
             "allowed_curriculum": [str(curriculum.id)],
             "year": year,
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 201
 
@@ -988,7 +981,7 @@ def test_create_product_variant_seller(client: TestClient):
 
     response = client.get(
         f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert str(product.id) in [x["id"] for x in response.json()]
@@ -1015,7 +1008,7 @@ def test_create_product_variant_user(client: TestClient):
 
     response = client.get(
         f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert str(product.id) in [x["id"] for x in response.json()]
@@ -1033,13 +1026,13 @@ def test_patch_product_variant_seller(client: TestClient):
             "name_fr": "Variante modifiée",
             "allowed_curriculum": [str(curriculum.id)],
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 204
 
     response = client.get(
         f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert str(product.id) in [x["id"] for x in response.json()]
@@ -1058,7 +1051,7 @@ def test_patch_product_variant_wrong_product(client: TestClient):
         json={
             "xrsyed": "Variante modifiée",
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 400
     assert response.json() == {
@@ -1072,7 +1065,7 @@ def test_patch_product_variant_wrong_id(client: TestClient):
         json={
             "name_fr": "Variante modifiée",
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 404
 
@@ -1083,7 +1076,7 @@ def test_patch_product_variant_other_product_variant(client: TestClient):
         json={
             "name_fr": "Variante modifiée",
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
@@ -1100,7 +1093,7 @@ def test_patch_product_variant_user(client: TestClient):
 
     response = client.get(
         f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert str(product.id) in [x["id"] for x in response.json()]
@@ -1121,7 +1114,7 @@ def test_delete_product_variant_user(client: TestClient):
 
     response = client.get(
         f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert str(product.id) in [x["id"] for x in response.json()]
@@ -1133,13 +1126,13 @@ def test_delete_product_variant_user(client: TestClient):
 def test_delete_product_variant_seller(client: TestClient):
     response = client.delete(
         f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/variants/{empty_variant.id}/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 204
 
     response = client.get(
         f"/cdr/sellers/{seller.id!s}/products/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert str(product.id) in [x["id"] for x in response.json()]
@@ -1160,7 +1153,7 @@ def test_get_all_documents_admin(client: TestClient):
 def test_get_all_documents_seller(client: TestClient):
     response = client.get(
         "/cdr/documents/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert str(document.id) in [x["id"] for x in response.json()]
@@ -1177,7 +1170,7 @@ def test_get_all_documents_user(client: TestClient):
 def test_get_documents_seller(client: TestClient):
     response = client.get(
         f"/cdr/sellers/{seller.id}/documents/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert str(document.id) in [x["id"] for x in response.json()]
@@ -1206,14 +1199,14 @@ def test_create_document_seller(client: TestClient):
         json={
             "name": "Document créé",
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 201
 
     document_id = uuid.UUID(response.json()["id"])
     response = client.get(
         f"/cdr/sellers/{seller.id}/documents/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert str(document_id) in [x["id"] for x in response.json()]
@@ -1231,7 +1224,7 @@ def test_create_document_user(client: TestClient):
 
     response = client.get(
         f"/cdr/sellers/{seller.id}/documents/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert "Document créé par user" not in [x["name"] for x in response.json()]
@@ -1246,7 +1239,7 @@ def test_delete_document_user(client: TestClient):
 
     response = client.get(
         f"/cdr/sellers/{seller.id}/documents/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert str(unused_document.id) in [x["id"] for x in response.json()]
@@ -1255,13 +1248,13 @@ def test_delete_document_user(client: TestClient):
 def test_delete_document_seller(client: TestClient):
     response = client.delete(
         f"/cdr/sellers/{seller.id}/documents/{unused_document.id}/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 204
 
     response = client.get(
         f"/cdr/sellers/{seller.id}/documents/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert str(unused_document.id) not in [x["id"] for x in response.json()]
@@ -1379,7 +1372,7 @@ def test_create_purchase_cdr_not_started(client: TestClient):
         json={
             "quantity": 1,
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
@@ -1390,7 +1383,7 @@ def test_patch_purchase_cdr_not_started(client: TestClient):
         json={
             "quantity": 2,
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
@@ -1401,7 +1394,7 @@ def test_create_signature_cdr_not_started(client: TestClient):
         json={
             "signature_type": DocumentSignatureType.material,
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
@@ -1496,7 +1489,7 @@ def test_change_status_admin_pending_not_closed(client: TestClient):
 def test_delete_product_cdr_started(client: TestClient):
     response = client.delete(
         f"/cdr/sellers/{seller.id!s}/products/{product.id}/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
@@ -1507,7 +1500,7 @@ def test_patch_product_variant_cdr_started(client: TestClient):
         json={
             "price": "700",
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
@@ -1515,7 +1508,7 @@ def test_patch_product_variant_cdr_started(client: TestClient):
 def test_delete_product_variant_cdr_started(client: TestClient):
     response = client.delete(
         f"/cdr/sellers/{seller.id!s}/products/{product.id!s}/variants/{variant.id}/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
@@ -1544,7 +1537,7 @@ def test_create_purchase_seller(client: TestClient):
         json={
             "quantity": 1,
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 201
 
@@ -1562,7 +1555,7 @@ def test_create_purchase_wrong_id(client: TestClient):
         json={
             "quantity": 1,
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 404
 
@@ -1573,7 +1566,7 @@ def test_create_purchase_other_user(client: TestClient):
         json={
             "quantity": 1,
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 404
 
@@ -1584,7 +1577,7 @@ def test_patch_purchase_seller(client: TestClient):
         json={
             "quantity": 2,
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 201
 
@@ -1605,7 +1598,7 @@ def test_patch_purchase_wrong_purchase(client: TestClient):
         json={
             "erstrdyfgu": 2,
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 422
 
@@ -1616,7 +1609,7 @@ def test_patch_purchase_wrong_purchase_id(client: TestClient):
         json={
             "quantity": 2,
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 404
 
@@ -1656,7 +1649,7 @@ def test_create_signature_seller(client: TestClient):
         json={
             "signature_type": DocumentSignatureType.material,
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 201
 
@@ -1852,7 +1845,7 @@ def test_create_signature_wrong_document(client: TestClient):
         json={
             "signature_type": DocumentSignatureType.material,
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 404
 
@@ -1863,7 +1856,7 @@ def test_create_signature_numeric_no_id(client: TestClient):
         json={
             "signature_type": DocumentSignatureType.numeric,
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
@@ -1921,7 +1914,7 @@ def test_create_curriculum_not_admin(client: TestClient):
         json={
             "name": "Cursus créé par user",
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
@@ -1956,7 +1949,7 @@ def test_create_curriculum_admin(client: TestClient):
 def test_delete_curriculum_not_admin(client: TestClient):
     response = client.delete(
         f"/cdr/curriculums/{unused_curriculum.id}/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
@@ -2064,7 +2057,7 @@ def test_create_payment_not_admin(client: TestClient):
             "total": 12345,
             "payment_type": PaymentType.card,
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
@@ -2168,7 +2161,7 @@ def test_create_product_closed(client: TestClient):
             "product_constraints": [],
             "document_constraints": [],
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
@@ -2185,7 +2178,7 @@ def test_create_product_variant_closed(client: TestClient):
             "allowed_curriculum": [str(curriculum.id)],
             "year": year,
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
@@ -2196,7 +2189,7 @@ def test_create_document_closed(client: TestClient):
         json={
             "name": "Document créé",
         },
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
@@ -2299,7 +2292,7 @@ async def test_pay(mocker: MockerFixture, client: TestClient):
 
     response = client.post(
         "/cdr/pay/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert response.json()["url"] == "https://some.url.fr/checkout"
@@ -2364,7 +2357,7 @@ def test_get_ticket_secret_wrong_id(client: TestClient):
 def test_get_ticket_by_secret(client: TestClient):
     response = client.get(
         f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/{ticket.secret}/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert response.json()["id"] == str(ticket.id)
@@ -2381,7 +2374,7 @@ def test_get_ticket_by_secret_user(client: TestClient):
 def test_get_ticket_by_secret_wrong_id(client: TestClient):
     response = client.get(
         f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/{uuid.uuid4()}/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 404
 
@@ -2389,7 +2382,7 @@ def test_get_ticket_by_secret_wrong_id(client: TestClient):
 def test_get_ticket_by_secret_wrong_product(client: TestClient):
     response = client.get(
         f"/cdr/sellers/{seller.id}/products/{product.id}/tickets/{ticket_generator.id}/{ticket.secret}/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 404
 
@@ -2398,13 +2391,13 @@ def test_scan_ticket(client: TestClient):
     response = client.patch(
         f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/{ticket.secret}/",
         json={"tag": "Bus 2"},
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 204
 
     response = client.get(
         f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/{ticket.secret}/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 200
     assert response.json()["scan_left"] == 0
@@ -2424,7 +2417,7 @@ def test_scan_ticket_wrong_id(client: TestClient):
     response = client.patch(
         f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/{uuid.uuid4()}/",
         json={"tag": "Bus 2"},
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 404
 
@@ -2433,7 +2426,7 @@ def test_scan_ticket_wrong_product(client: TestClient):
     response = client.patch(
         f"/cdr/sellers/{seller.id}/products/{product.id}/tickets/{ticket_generator.id}/{ticket.secret}/",
         json={"tag": "Bus 2"},
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 404
 
@@ -2455,7 +2448,7 @@ async def test_scan_ticket_no_scan_left(client: TestClient):
     response = client.patch(
         f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/{no_scan_ticket.secret}/",
         json={"tag": "Bus 2"},
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
@@ -2477,7 +2470,7 @@ async def test_scan_ticket_expired(client: TestClient):
     response = client.patch(
         f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/{expired_ticket.secret}/",
         json={"tag": "Bus 2"},
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
 
@@ -2485,7 +2478,7 @@ async def test_scan_ticket_expired(client: TestClient):
 def test_get_ticket_tags(client: TestClient):
     response = client.get(
         f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tags/{ticket_generator.id}/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert "bus 2" in response.json()
 
@@ -2493,7 +2486,7 @@ def test_get_ticket_tags(client: TestClient):
 def test_get_ticket_list(client: TestClient):
     response = client.get(
         f"/cdr/sellers/{seller.id}/products/{ticket_product.id}/tickets/{ticket_generator.id}/lists/Bus 2/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert str(user.id) in [user["id"] for user in response.json()]
 
@@ -2643,7 +2636,7 @@ async def test_delete_customdata_field(client: TestClient):
 
     response = client.delete(
         f"/cdr/sellers/{seller.id}/products/{product.id}/data/{field.id}/",
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 204
 
@@ -2659,7 +2652,7 @@ async def test_create_customdata(client: TestClient):
     response = client.post(
         f"/cdr/sellers/{seller.id}/products/{product.id}/users/{user.id}/data/{customdata_field.id}/",
         json={"value": "ABCD"},
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 201
 
@@ -2698,7 +2691,7 @@ async def test_update_customdata(client: TestClient):
     response = client.patch(
         f"/cdr/sellers/{seller.id}/products/{product.id}/users/{user.id}/data/{field.id}/",
         json={"value": "ABCD"},
-        headers={"Authorization": f"Bearer {token_seller}"},
+        headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 204
 

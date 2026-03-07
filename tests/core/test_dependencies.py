@@ -141,13 +141,10 @@ def test_restrict_access_on_group(
 def test_restrict_access_on_account_type(
     client: TestClient,
 ) -> None:
-    with pytest.raises(
-        HTTPException,
-        match="Unauthorized, user account type is not allowed",
-    ):
-        is_user(
-            included_account_types=[AccountType.demo],
-        )(admin_user)
+    user = is_user(
+        included_account_types=[AccountType.demo],
+    )(admin_user)
+    assert user == admin_user
     user = is_user(
         included_account_types=[AccountType.demo],
     )(user_with_needed_account_type)

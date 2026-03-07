@@ -21,7 +21,6 @@ from app.dependencies import (
     get_notification_tool,
     get_settings,
     is_user,
-    is_user_a_school_member,
     is_user_allowed_to,
     is_user_in_association,
 )
@@ -168,7 +167,7 @@ async def get_event_ticket_url(
     event_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([CalendarPermissions.manage_events]),
+        is_user_allowed_to([CalendarPermissions.access_calendar]),
     ),
 ):
     event = await cruds_calendar.get_event(db=db, event_id=event_id)
@@ -193,7 +192,9 @@ async def get_event_ticket_url(
 async def get_event_image(
     event_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_school_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.access_calendar]),
+    ),
 ):
     """
     Get the image of an event
@@ -235,7 +236,9 @@ async def get_event_image(
 async def create_event_image(
     event_id: uuid.UUID,
     image: UploadFile = File(...),
-    user: models_users.CoreUser = Depends(is_user_a_school_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CalendarPermissions.access_calendar]),
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """

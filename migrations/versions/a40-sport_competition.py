@@ -359,7 +359,7 @@ def upgrade() -> None:
         sa.Column("checkout_id", sa.Uuid(), nullable=False),
         sa.ForeignKeyConstraint(
             ["checkout_id"],
-            ["payment_checkout.id"],
+            ["checkout_checkout.id"],
         ),
         sa.ForeignKeyConstraint(
             ["edition_id"],

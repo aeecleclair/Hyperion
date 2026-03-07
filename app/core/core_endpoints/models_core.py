@@ -39,20 +39,6 @@ class EmailQueue(Base):
     created_on: Mapped[datetime]
 
 
-class ModuleGroupVisibility(Base):
-    __tablename__ = "module_group_visibility"
-
-    root: Mapped[str] = mapped_column(primary_key=True)
-    allowed_group_id: Mapped[str] = mapped_column(primary_key=True)
-
-
-class ModuleAccountTypeVisibility(Base):
-    __tablename__ = "module_account_type_visibility"
-
-    root: Mapped[str] = mapped_column(primary_key=True)
-    allowed_account_type: Mapped[AccountType] = mapped_column(primary_key=True)
-
-
 class AlembicVersion(Base):
     """
     A table managed exclusively by Alembic, used to keep track of the database schema version.
