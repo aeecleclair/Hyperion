@@ -4,7 +4,6 @@ from datetime import datetime
 
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.groups.groups_type import AccountType
 from app.types.sqlalchemy import Base, PrimaryKey
 
 
