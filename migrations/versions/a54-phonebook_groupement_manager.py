@@ -38,7 +38,7 @@ def upgrade() -> None:
     admin_group = conn.execute(
         sa.text(
             """SELECT id FROM core_group
-        WHERE name = :group_name
+        WHERE id = :group_name
         """,
         ).bindparams(group_name=GroupType.admin.value),
     ).fetchone()
