@@ -147,6 +147,60 @@ async def get_structure_by_id(
     return structure_model_to_schema(structure) if structure else None
 
 
+async def get_structure_administrator_by_user_id_and_structure_id(
+    user_id: str,
+    structure_id: UUID,
+    db: AsyncSession,
+) -> schemas_mypayment.StructureAdministrator | None:
+    result = (
+        (
+            await db.execute(
+                select(models_mypayment.StructureAdministrator).where(
+                    models_mypayment.StructureAdministrator.user_id == user_id,
+                    models_mypayment.StructureAdministrator.structure_id
+                    == structure_id,
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return (
+        schemas_mypayment.StructureAdministrator(
+            user_id=result.user_id,
+            structure_id=result.structure_id,
+        )
+        if result
+        else None
+    )
+
+
+async def create_structure_administrator(
+    user_id: str,
+    structure_id: UUID,
+    db: AsyncSession,
+) -> None:
+    db.add(
+        models_mypayment.StructureAdministrator(
+            user_id=user_id,
+            structure_id=structure_id,
+        ),
+    )
+
+
+async def delete_structure_administrator(
+    user_id: str,
+    structure_id: UUID,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        delete(models_mypayment.StructureAdministrator).where(
+            models_mypayment.StructureAdministrator.user_id == user_id,
+            models_mypayment.StructureAdministrator.structure_id == structure_id,
+        ),
+    )
+
+
 async def create_store(
     store: models_mypayment.Store,
     db: AsyncSession,

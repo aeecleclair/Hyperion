@@ -147,6 +147,17 @@ def structure_model_to_schema(
             account_type=structure.manager_user.account_type,
             school_id=structure.manager_user.school_id,
         ),
+        administrators=[
+            schemas_users.CoreUserSimple(
+                id=admin.user.id,
+                firstname=admin.user.firstname,
+                name=admin.user.name,
+                nickname=admin.user.nickname,
+                account_type=admin.user.account_type,
+                school_id=admin.user.school_id,
+            )
+            for admin in structure.administrators
+        ],
         siret=structure.siret,
         siege_address_street=structure.siege_address_street,
         siege_address_city=structure.siege_address_city,
