@@ -4,7 +4,6 @@ from uuid import UUID, uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.factory_groups import CoreGroupsFactory
 from app.core.memberships.factory_memberships import CoreMembershipsFactory
 from app.core.mypayment.factory_mypayment import MyPaymentFactory
 from app.core.users.factory_users import CoreUsersFactory
@@ -18,7 +17,6 @@ class TicketingFactory(Factory):
         CoreUsersFactory,
         MyPaymentFactory,
         CoreMembershipsFactory,
-        CoreGroupsFactory,
     ]
 
     organiser_id = uuid4()
@@ -76,6 +74,7 @@ class TicketingFactory(Factory):
             schemas_ticketing.SessionSimple(
                 id=cls.session1_id,
                 event_id=cls.event_id,
+                date=datetime.now(UTC) + timedelta(days=10),
                 name="TicketingSession du Samedi Soir",
                 quota=300,
                 user_quota=2,
@@ -88,6 +87,7 @@ class TicketingFactory(Factory):
             schemas_ticketing.SessionSimple(
                 id=cls.session2_id,
                 event_id=cls.event_id,
+                date=datetime.now(UTC) + timedelta(days=11),
                 name="TicketingSession du Dimanche Après-midi",
                 quota=200,
                 user_quota=2,
