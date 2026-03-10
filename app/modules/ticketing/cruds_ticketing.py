@@ -146,6 +146,7 @@ async def get_event_by_id(
                 schemas_ticketing.SessionSimple(
                     id=session.id,
                     event_id=session.event_id,
+                    date=session.date,
                     name=session.name,
                     quota=session.quota,
                     user_quota=session.user_quota,
@@ -310,6 +311,7 @@ async def get_session_by_id(
         schemas_ticketing.SessionComplete(
             id=session.id,
             name=session.name,
+            date=session.date,
             quota=session.quota,
             user_quota=session.user_quota,
             used_quota=session.used_quota,
