@@ -78,6 +78,7 @@ class TicketingSession(Base):
         lazy="selectin",
     )
     name: Mapped[str]
+    date: Mapped[datetime]
     quota: Mapped[int | None]
     used_quota: Mapped[int]
     user_quota: Mapped[int | None]
