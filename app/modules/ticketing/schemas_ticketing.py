@@ -51,6 +51,7 @@ class EventUpdate(BaseModel):
 
 class SessionBase(BaseModel):
     event_id: UUID
+    date: datetime
     name: str
     quota: int | None = None
     user_quota: int | None = None
