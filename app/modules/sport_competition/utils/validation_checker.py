@@ -73,9 +73,13 @@ async def check_validation_consistency(
             status_code=400,
             detail="User is an athlete but is not registered as a participant",
         )
+    is_participant = (
+        user.is_athlete or user.is_cameraman or user.is_pompom or user.is_fanfare
+    )
     required_product_ids = {product.id for product in required_products}
     if (
-        not any(
+        is_participant
+        and not any(
             purchase.product_variant.product_id in required_product_ids
             for purchase in purchases
         )
