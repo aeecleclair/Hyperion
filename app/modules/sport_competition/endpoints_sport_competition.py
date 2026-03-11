@@ -788,6 +788,19 @@ async def validate_competition_user(
         edition.id,
         db,
     )
+    purchases = await cruds_sport_competition.load_purchases_by_user_id(
+        user_id,
+        edition.id,
+        db,
+    )
+    for purchase in purchases:
+        if purchase.product_variant.price == 0:
+            await cruds_sport_competition.mark_purchase_as_validated(
+                user.id,
+                purchase.product_variant_id,
+                True,
+                db,
+            )
 
 
 @module.router.patch(
@@ -839,6 +852,7 @@ async def cancel_competition_user(
             participant.team_id,
             db,
         )
+        delete_team = False
         if team is not None:
             if team.captain_id == user_id:
                 next_user = next(
@@ -854,15 +868,17 @@ async def cancel_competition_user(
                         db,
                     )
                 else:
-                    await cruds_sport_competition.delete_team_by_id(
-                        team.id,
-                        db,
-                    )
+                    delete_team = True
         await cruds_sport_competition.delete_participant_by_user_id(
             user_id,
             edition.id,
             db,
         )
+        if delete_team and team is not None:
+            await cruds_sport_competition.delete_team_by_id(
+                team.id,
+                db,
+            )
     await cruds_sport_competition.cancel_competition_user(
         user_id,
         edition.id,
