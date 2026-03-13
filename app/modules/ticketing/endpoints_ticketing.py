@@ -140,6 +140,7 @@ async def create_event(
         disabled=False,
     )
     await cruds_ticketing.create_event(event=event, db=db)
+
     event_complete = await cruds_ticketing.get_event_by_id(event_id=event.id, db=db)
     if event_complete is None:
         await db.rollback()
@@ -211,9 +212,15 @@ async def delete_event(
 async def get_session_by_id(
     session_id: UUID,
     db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([TicketingPermissions.access_ticketing]),
+    ),
 ) -> schemas_ticketing.SessionComplete | None:
     """Get a session by its ID."""
-    session = await cruds_ticketing.get_session_by_id(session_id=session_id, db=db)
+    session = await cruds_ticketing.get_session_by_id(
+        session_id=session_id,
+        db=db,
+    )
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
     return session
