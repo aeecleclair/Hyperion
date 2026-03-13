@@ -1,12 +1,12 @@
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import and_, delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import noload, selectinload
 
-from app.core.mypayment import models_mypayment, schemas_mypayment
+from app.core.mypayment import models_mypayment, schemas_mypayment, types_mypayment
 from app.core.mypayment.exceptions_mypayment import WalletNotFoundOnUpdateError
 from app.core.mypayment.types_mypayment import (
     TransactionStatus,
@@ -14,6 +14,7 @@ from app.core.mypayment.types_mypayment import (
     WalletType,
 )
 from app.core.mypayment.utils_mypayment import (
+    REQUEST_EXPIRATION,
     invoice_model_to_schema,
     refund_model_to_schema,
     structure_model_to_schema,
@@ -947,6 +948,146 @@ async def get_refunds_and_sellers_by_wallet_id(
         refunds_with_sellers.append((refund, user.full_name))
 
     return refunds_with_sellers
+
+
+async def get_requests_by_wallet_id(
+    wallet_id: UUID,
+    db: AsyncSession,
+    include_used: bool = False,
+) -> list[schemas_mypayment.Request]:
+    result = await db.execute(
+        select(models_mypayment.Request)
+        .where(
+            models_mypayment.Request.wallet_id == wallet_id,
+        )
+        .where(
+            models_mypayment.Request.status == types_mypayment.RequestStatus.PROPOSED
+            if not include_used
+            else and_(True),
+        ),
+    )
+    return [
+        schemas_mypayment.Request(
+            id=request.id,
+            wallet_id=request.wallet_id,
+            status=request.status,
+            creation=request.creation,
+            total=request.total,
+            store_note=request.store_note,
+            store_id=request.store_id,
+            name=request.name,
+            module=request.module,
+        )
+        for request in result.scalars().all()
+    ]
+
+
+async def get_request_by_id(
+    request_id: UUID,
+    db: AsyncSession,
+) -> schemas_mypayment.Request | None:
+    result = await db.execute(
+        select(models_mypayment.Request).where(
+            models_mypayment.Request.id == request_id,
+        ),
+    )
+    request = result.scalars().first()
+    return (
+        schemas_mypayment.Request(
+            id=request.id,
+            wallet_id=request.wallet_id,
+            status=request.status,
+            creation=request.creation,
+            total=request.total,
+            store_note=request.store_note,
+            store_id=request.store_id,
+            name=request.name,
+            module=request.module,
+        )
+        if request
+        else None
+    )
+
+
+async def get_request_by_store_id(
+    store_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_mypayment.Request]:
+    result = await db.execute(
+        select(models_mypayment.Request).where(
+            models_mypayment.Request.store_id == store_id,
+        ),
+    )
+    return [
+        schemas_mypayment.Request(
+            id=request.id,
+            wallet_id=request.wallet_id,
+            status=request.status,
+            creation=request.creation,
+            total=request.total,
+            store_note=request.store_note,
+            store_id=request.store_id,
+            name=request.name,
+            module=request.module,
+        )
+        for request in result.scalars().all()
+    ]
+
+
+async def create_request(
+    request: schemas_mypayment.Request,
+    db: AsyncSession,
+) -> None:
+    request_db = models_mypayment.Request(
+        id=request.id,
+        wallet_id=request.wallet_id,
+        status=request.status,
+        creation=request.creation,
+        total=request.total,
+        store_note=request.store_note,
+        store_id=request.store_id,
+        name=request.name,
+        module=request.module,
+        transaction_id=request.transaction_id,
+    )
+    db.add(request_db)
+
+
+async def mark_expired_requests_as_expired(
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_mypayment.Request)
+        .where(
+            models_mypayment.Request.status == schemas_mypayment.RequestStatus.PROPOSED,
+            models_mypayment.Request.creation + timedelta(minutes=REQUEST_EXPIRATION)
+            <= datetime.now(tz=UTC),
+        )
+        .values(status=schemas_mypayment.RequestStatus.EXPIRED),
+    )
+
+
+async def update_request(
+    request_id: UUID,
+    request_update: schemas_mypayment.RequestEdit,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_mypayment.Request)
+        .where(models_mypayment.Request.id == request_id)
+        .values(**request_update.model_dump(exclude_none=True)),
+    )
+
+
+async def delete_request(
+    request_id: UUID,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        delete(models_mypayment.Request).where(
+            models_mypayment.Request.id == request_id,
+        ),
+    )
 
 
 async def get_store(

@@ -1,25 +1,35 @@
 import base64
 import logging
-from uuid import UUID
+from datetime import UTC, datetime
+from uuid import UUID, uuid4
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric import ed25519
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.checkout import schemas_checkout
 from app.core.memberships import schemas_memberships
 from app.core.mypayment import cruds_mypayment, models_mypayment, schemas_mypayment
-from app.core.mypayment.integrity_mypayment import format_transfer_log
-from app.core.mypayment.models_mypayment import UserPayment
-from app.core.mypayment.schemas_mypayment import (
-    QRCodeContentData,
-)
-from app.core.mypayment.types_mypayment import (
+from app.core.mypayment.exceptions_mypayment import (
     TransferAlreadyConfirmedInCallbackError,
     TransferNotFoundByCallbackError,
     TransferTotalDontMatchInCallbackError,
 )
+from app.core.mypayment.integrity_mypayment import (
+    format_transaction_log,
+    format_transfer_log,
+)
+from app.core.mypayment.models_mypayment import UserPayment
+from app.core.mypayment.schemas_mypayment import (
+    QRCodeContentData,
+    RequestValidationData,
+)
+from app.core.notification.schemas_notification import Message
 from app.core.users import schemas_users
+from app.core.utils.config import Settings
+from app.module import all_modules
+from app.utils.communication.notifications import NotificationTool
 
 hyperion_security_logger = logging.getLogger("hyperion.security")
 hyperion_mypayment_logger = logging.getLogger("hyperion.mypayment")
@@ -27,14 +37,20 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 
 LATEST_TOS = 2
 QRCODE_EXPIRATION = 5  # minutes
-MYPAYMENT_LOGS_S3_SUBFOLDER = "logs"
+REQUEST_EXPIRATION = 15  # minutes
 RETENTION_DURATION = 10 * 365  # 10 years in days
+
+MYPAYMENT_STRUCTURE_S3_SUBFOLDER = "structures"
+MYPAYMENT_STORES_S3_SUBFOLDER = "stores"
+MYPAYMENT_USERS_S3_SUBFOLDER = "users"
+MYPAYMENT_DEVICES_S3_SUBFOLDER = "devices"
+MYPAYMENT_LOGS_S3_SUBFOLDER = "logs"
 
 
 def verify_signature(
     public_key_bytes: bytes,
     signature: str,
-    data: QRCodeContentData,
+    data: QRCodeContentData | RequestValidationData,
     wallet_device_id: UUID,
     request_id: str,
 ) -> bool:
@@ -118,6 +134,132 @@ async def validate_transfer_callback(
             "s3_retention": RETENTION_DURATION,
         },
     )
+
+
+async def request_transfer(
+    user_id: str,
+    store_id: UUID,
+    total: int,
+    name: str,
+    note: str | None,
+    module: str,
+    db: AsyncSession,
+    notification_tool: NotificationTool,
+    settings: Settings,
+) -> UUID:
+    """
+    Create a transfer request for a user from a store.
+    """
+    payment_user = await cruds_mypayment.get_user_payment(user_id, db)
+    if not payment_user:
+        raise HTTPException(
+            status_code=400,
+            detail=f"User {user_id} does not have a payment account",
+        )
+    request_id = uuid4()
+    await cruds_mypayment.create_request(
+        db=db,
+        request=schemas_mypayment.Request(
+            id=request_id,
+            wallet_id=payment_user.wallet_id,
+            creation=datetime.now(UTC),
+            total=total,
+            store_id=store_id,
+            name=name,
+            store_note=note,
+            module=module,
+            status=schemas_mypayment.RequestStatus.PROPOSED,
+        ),
+    )
+    message = Message(
+        title=f"💸 Nouvelle demande de paiement - {name}",
+        content=f"Une nouvelle demande de paiement de {total / 100} € attend votre validation",
+        action_module=settings.school.payment_name,
+    )
+    await notification_tool.send_notification_to_user(
+        user_id=user_id,
+        message=message,
+    )
+    return request_id
+
+
+async def apply_transaction(
+    user_id: str,
+    transaction: schemas_mypayment.TransactionBase,
+    debited_wallet_device: models_mypayment.WalletDevice,
+    store: models_mypayment.Store,
+    settings: Settings,
+    notification_tool: NotificationTool,
+    db: AsyncSession,
+):
+    # We increment the receiving wallet balance
+    await cruds_mypayment.increment_wallet_balance(
+        wallet_id=transaction.credited_wallet_id,
+        amount=transaction.total,
+        db=db,
+    )
+
+    # We decrement the debited wallet balance
+    await cruds_mypayment.increment_wallet_balance(
+        wallet_id=transaction.debited_wallet_id,
+        amount=-transaction.total,
+        db=db,
+    )
+    # We create a transaction
+    await cruds_mypayment.create_transaction(
+        transaction=transaction,
+        debited_wallet_device_id=debited_wallet_device.id,
+        store_note=None,
+        db=db,
+    )
+
+    hyperion_mypayment_logger.info(
+        format_transaction_log(transaction),
+        extra={
+            "s3_subfolder": MYPAYMENT_LOGS_S3_SUBFOLDER,
+            "s3_retention": RETENTION_DURATION,
+        },
+    )
+    message = Message(
+        title=f"💳 Paiement - {store.name}",
+        content=f"Une transaction de {transaction.total / 100} € a été effectuée",
+        action_module=settings.school.payment_name,
+    )
+    await notification_tool.send_notification_to_user(
+        user_id=user_id,
+        message=message,
+    )
+
+
+async def call_request_callback(
+    request: schemas_mypayment.Request,
+    db: AsyncSession,
+):
+    # If a callback is defined for the module, we want to call it
+    try:
+        for module in all_modules:
+            if module.root == request.module:
+                if module.request_callback is None:
+                    hyperion_error_logger.info(
+                        f"MyPayment: module {request.module} does not define a request callback (request_id: {request.id})",
+                    )
+                    return
+                hyperion_error_logger.info(
+                    f"Payment: calling module {request.module} payment callback",
+                )
+                await module.request_callback(request, db)
+                hyperion_error_logger.info(
+                    f"Payment: call to module {request.module} payment callback for checkout (request_id: {request.id}) succeeded",
+                )
+                return
+
+        hyperion_error_logger.info(
+            f"Payment: callback for checkout (hyperion_cherequest_idckout_id: {request.id}) was not called for module {request.module}",
+        )
+    except Exception:
+        hyperion_error_logger.exception(
+            f"Payment: call to module {request.module} payment callback for checkout (request_id: {request.id}) failed",
+        )
 
 
 def structure_model_to_schema(

@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.checkout import schemas_checkout
 from app.core.groups.groups_type import AccountType, GroupType
+from app.core.mypayment import schemas_mypayment
 from app.core.notification.schemas_notification import Topic
 from app.core.permissions.type_permissions import ModulePermissions
 from app.types.factory import Factory
@@ -19,6 +20,11 @@ class CoreModule:
         router: APIRouter | None = None,
         payment_callback: Callable[
             [schemas_checkout.CheckoutPayment, AsyncSession],
+            Awaitable[None],
+        ]
+        | None = None,
+        request_callback: Callable[
+            [schemas_mypayment.Request, AsyncSession],
             Awaitable[None],
         ]
         | None = None,
@@ -42,6 +48,9 @@ class CoreModule:
             Callable[[schemas_checkout.CheckoutPayment, AsyncSession], Awaitable[None]]
             | None
         ) = payment_callback
+        self.request_callback: (
+            Callable[[schemas_mypayment.Request, AsyncSession], Awaitable[None]] | None
+        ) = request_callback
         self.registred_topics = registred_topics
         self.factory = factory
         self.permissions = permissions
@@ -58,6 +67,11 @@ class Module(CoreModule):
         router: APIRouter | None = None,
         payment_callback: Callable[
             [schemas_checkout.CheckoutPayment, AsyncSession],
+            Awaitable[None],
+        ]
+        | None = None,
+        request_callback: Callable[
+            [schemas_mypayment.Request, AsyncSession],
             Awaitable[None],
         ]
         | None = None,
@@ -85,6 +99,9 @@ class Module(CoreModule):
             Callable[[schemas_checkout.CheckoutPayment, AsyncSession], Awaitable[None]]
             | None
         ) = payment_callback
+        self.request_callback: (
+            Callable[[schemas_mypayment.Request, AsyncSession], Awaitable[None]] | None
+        ) = request_callback
         self.registred_topics = registred_topics
         self.factory = factory
         self.permissions = permissions
