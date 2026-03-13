@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class OrganiserBase(BaseModel):
@@ -11,6 +11,8 @@ class OrganiserBase(BaseModel):
 class OrganiserComplete(OrganiserBase):
     id: UUID
     store_id: UUID
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OrganiserEdit(BaseModel):
@@ -33,11 +35,15 @@ class EventSimple(EventBase):
     used_quota: int
     disabled: bool
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class EventComplete(EventSimple):
     organiser: "OrganiserComplete"
     sessions: list["SessionSimple"]
     categories: list["CategorySimple"]
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EventUpdate(BaseModel):
@@ -62,9 +68,13 @@ class SessionSimple(SessionBase):
     used_quota: int
     disabled: bool
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class SessionComplete(SessionSimple):
     event: EventSimple
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SessionUpdate(BaseModel):
@@ -88,10 +98,14 @@ class CategorySimple(CategoryBase):
     used_quota: int
     disabled: bool
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class CategoryComplete(CategorySimple):
     event: EventSimple
     sessions: list[UUID] | None = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CategoryUpdate(BaseModel):
@@ -118,8 +132,12 @@ class TicketSimple(TicketBase):
     status: str
     nb_scan: int
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class TicketComplete(TicketSimple):
     event: EventComplete
     category: CategoryComplete
     session: SessionComplete
+
+    model_config = ConfigDict(from_attributes=True)
