@@ -51,11 +51,11 @@ from app.core.mypayment.types_mypayment import (
     WalletType,
 )
 from app.core.mypayment.utils.data_exporter import generate_store_history_csv
+from app.core.mypayment.utils.schema_converters import structure_model_to_schema
 from app.core.mypayment.utils_mypayment import (
     LATEST_TOS,
     QRCODE_EXPIRATION,
     is_user_latest_tos_signed,
-    structure_model_to_schema,
     validate_transfer_callback,
     verify_signature,
 )

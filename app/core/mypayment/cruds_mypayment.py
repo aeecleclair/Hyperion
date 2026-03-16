@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Sequence
 from datetime import datetime
 from uuid import UUID
@@ -13,12 +14,14 @@ from app.core.mypayment.types_mypayment import (
     WalletDeviceStatus,
     WalletType,
 )
-from app.core.mypayment.utils_mypayment import (
+from app.core.mypayment.utils.schema_converters import (
     invoice_model_to_schema,
     refund_model_to_schema,
     structure_model_to_schema,
 )
 from app.core.users import models_users, schemas_users
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 async def create_structure(
@@ -1264,3 +1267,53 @@ async def get_withdrawals_by_wallet_id(
         )
         for withdrawal in result.scalars().all()
     ]
+
+
+async def fuse_mypayment_users(
+    db: AsyncSession,
+    user_kept_id: str,
+    user_deleted_id: str,
+) -> None:
+    """
+    This function is used to fuse two users in the mypayment module.
+    """
+    kept_user_payment = await get_user_payment(user_kept_id, db)
+    deleted_user_payment = await get_user_payment(user_deleted_id, db)
+    hyperion_error_logger.warning("Fusing mypayment users")
+    hyperion_error_logger.warning(f"User kept id: {user_kept_id}")
+    hyperion_error_logger.warning(f"User deleted id: {user_deleted_id}")
+    hyperion_error_logger.warning(f"Kept user payment: {kept_user_payment}")
+    hyperion_error_logger.warning(f"Deleted user payment: {deleted_user_payment}")
+    if not deleted_user_payment:
+        # If the deleted user doesn't have a payment, we don't need to do anything
+        return
+    if not kept_user_payment:
+        # If the deleted user has a payment and the kept user doesn't, we update the user_id of the payment to the kept user's id
+        await db.execute(
+            update(models_mypayment.UserPayment)
+            .where(models_mypayment.UserPayment.user_id == user_deleted_id)
+            .values(user_id=user_kept_id),
+        )
+        return
+    kept_wallet = await get_wallet(kept_user_payment.wallet_id, db)
+    deleted_wallet = await get_wallet(deleted_user_payment.wallet_id, db)
+    if not kept_wallet:
+        raise WalletNotFoundOnUpdateError(wallet_id=kept_user_payment.wallet_id)
+    if not deleted_wallet:
+        raise WalletNotFoundOnUpdateError(wallet_id=deleted_user_payment.wallet_id)
+    # If both users have a payment, we keep the most recent one and delete the other one
+    await db.execute(
+        update(models_mypayment.Wallet)
+        .where(models_mypayment.Wallet.id == kept_wallet.id)
+        .values(balance=kept_wallet.balance + deleted_wallet.balance),
+    )
+    await db.execute(
+        delete(models_mypayment.UserPayment).where(
+            models_mypayment.UserPayment.user_id == user_deleted_id,
+        ),
+    )
+    await db.execute(
+        delete(models_mypayment.Wallet).where(
+            models_mypayment.Wallet.id == deleted_wallet.id,
+        ),
+    )
