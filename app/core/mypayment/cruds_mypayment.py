@@ -1301,7 +1301,7 @@ async def fuse_mypayment_users(
         raise WalletNotFoundOnUpdateError(wallet_id=kept_user_payment.wallet_id)
     if not deleted_wallet:
         raise WalletNotFoundOnUpdateError(wallet_id=deleted_user_payment.wallet_id)
-    # If both users have a payment, we keep the most recent one and delete the other one
+    # If both users have a payment, we transfer balance from deleted one to kept one
     await db.execute(
         update(models_mypayment.Wallet)
         .where(models_mypayment.Wallet.id == kept_wallet.id)
