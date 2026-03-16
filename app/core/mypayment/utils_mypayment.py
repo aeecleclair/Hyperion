@@ -6,8 +6,7 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.memberships import schemas_memberships
-from app.core.mypayment import cruds_mypayment, models_mypayment, schemas_mypayment
+from app.core.mypayment import cruds_mypayment
 from app.core.mypayment.integrity_mypayment import (
     format_transfer_log,
     format_user_fusion_log,
@@ -22,7 +21,6 @@ from app.core.mypayment.types_mypayment import (
     TransferTotalDontMatchInCallbackError,
 )
 from app.core.payment import schemas_payment
-from app.core.users import schemas_users
 
 hyperion_security_logger = logging.getLogger("hyperion.security")
 hyperion_mypayment_logger = logging.getLogger("hyperion.mypayment")
