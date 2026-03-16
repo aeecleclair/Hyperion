@@ -495,6 +495,7 @@ async def init_objects() -> None:
         score_team1=None,
         score_team2=None,
         winner_id=None,
+        ended=False,
     )
     await add_object_to_db(match1)
 
@@ -754,7 +755,7 @@ async def test_patch_sport_as_admin(
             "team_size": 6,
             "substitute_max": 3,
             "active": True,
-            "sport_category": SportCategory.feminine.value,
+            "sport_category": None,
         },
     )
     assert response.status_code == 204, response.json()
@@ -771,6 +772,9 @@ async def test_patch_sport_as_admin(
     )
     assert updated_sport_check is not None
     assert updated_sport_check["name"] == "Updated Sport"
+    assert updated_sport_check["team_size"] == 6
+    assert updated_sport_check["substitute_max"] == 3
+    assert updated_sport_check["sport_category"] is None
 
 
 async def test_patch_sport_with_duplicate_name(
@@ -2797,6 +2801,7 @@ async def test_create_match_as_random(
         team2_id=team2.id,
         location_id=location.id,
         date=datetime.now(UTC),
+        ended=False,
     )
     response = client.post(
         f"/competition/matches/sports/{sport_with_team.id}",
@@ -2827,6 +2832,7 @@ async def test_create_match_as_admin(
         team2_id=team2.id,
         location_id=location.id,
         date=datetime(2024, 6, 15, 15, 0, 0, tzinfo=UTC),
+        ended=False,
     )
     response = client.post(
         f"/competition/matches/sports/{sport_with_team.id}",
@@ -2886,6 +2892,7 @@ async def test_patch_match_as_admin(
             "score_team1": 3,
             "score_team2": 2,
             "winner_id": str(team1.id),
+            "ended": True,
         },
     )
     assert response.status_code == 204, response.json()
@@ -2905,6 +2912,7 @@ async def test_patch_match_as_admin(
     assert updated_match_check["score_team1"] == 3
     assert updated_match_check["score_team2"] == 2
     assert updated_match_check["winner_id"] == str(team1.id)
+    assert updated_match_check["ended"] is True
 
 
 async def test_edit_match_as_sport_manager(
@@ -2918,6 +2926,7 @@ async def test_edit_match_as_sport_manager(
             "score_team1": 1,
             "score_team2": 1,
             "winner_id": None,
+            "ended": True,
         },
     )
     assert response.status_code == 204, response.json()
@@ -2937,6 +2946,7 @@ async def test_edit_match_as_sport_manager(
     assert updated_match_check["score_team1"] == 1
     assert updated_match_check["score_team2"] == 1
     assert updated_match_check["winner_id"] is None
+    assert updated_match_check["ended"] is True
 
 
 async def test_delete_match_as_random(
@@ -2976,6 +2986,7 @@ async def test_delete_match_as_admin(
         score_team1=None,
         score_team2=None,
         winner_id=None,
+        ended=False,
     )
     await add_object_to_db(new_match)
     response = client.delete(
@@ -3012,6 +3023,7 @@ async def test_delete_match_as_sport_manager(
         score_team1=None,
         score_team2=None,
         winner_id=None,
+        ended=False,
     )
     await add_object_to_db(new_match)
     response = client.delete(

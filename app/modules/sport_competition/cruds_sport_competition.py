@@ -46,7 +46,7 @@ async def add_edition(
             end_date=edition.end_date,
             active=edition.active,
             inscription_enabled=edition.inscription_enabled,
-        )
+        ),
     )
     await db.flush()
 
