@@ -8,6 +8,7 @@ from app.core.groups import models_groups
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import models_memberships
 from app.core.mypayment import models_mypayment
+from app.core.mypayment.types_mypayment import WalletType
 from app.core.users import models_users
 from tests.commons import (
     add_object_to_db,
@@ -103,13 +104,13 @@ async def init_objects() -> None:
     global payment_wallet_to_delete, payment_wallet_to_keep
     payment_wallet_to_delete = models_mypayment.Wallet(
         id=uuid4(),
-        type=models_mypayment.WalletType.USER,
+        type=WalletType.USER,
         balance=1000,
     )
     await add_object_to_db(payment_wallet_to_delete)
     payment_wallet_to_keep = models_mypayment.Wallet(
         id=uuid4(),
-        type=models_mypayment.WalletType.USER,
+        type=WalletType.USER,
         balance=2000,
     )
     await add_object_to_db(payment_wallet_to_keep)
