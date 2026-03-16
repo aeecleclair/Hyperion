@@ -3148,6 +3148,7 @@ async def create_match(
         winner_id=None,
         score_team1=None,
         score_team2=None,
+        ended=False,
     )
     await cruds_sport_competition.add_match(match, db)
     return match
@@ -4035,7 +4036,7 @@ async def create_user_purchase(
         user_id=user_id,
         product_variant_id=purchase.product_variant_id,
         edition_id=edition.id,
-        validated=False,
+        validated=(product_variant.price == 0 and competition_user.validated),
         quantity=purchase.quantity,
         purchased_on=datetime.now(UTC),
     )

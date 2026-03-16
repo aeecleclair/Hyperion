@@ -116,6 +116,7 @@ def match_model_to_schema(
         score_team1=match.score_team1,
         score_team2=match.score_team2,
         winner_id=match.winner_id,
+        ended=match.ended,
         team1=schemas_sport_competition.Team(
             name=match.team1.name,
             school_id=match.team1.school_id,
