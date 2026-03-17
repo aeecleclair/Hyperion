@@ -43,7 +43,7 @@ module = Module(
 async def get_feedbacks(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([FeedbackPermissions.manage_feedback]),
+        is_user_allowed_to([FeedbackPermissions.access_feedback]), #todo : manage_feedback permission
     ),
 ):
     """
@@ -63,24 +63,18 @@ async def create_feedback(
     feedback: schemas_feedback.FeedbackBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([FeedbackPermissions.manage_feedback]),
+        is_user_allowed_to([FeedbackPermissions.access_feedback]),
     ),
 ):
     """
-    Create a feedback.
-
-    **This endpoint is only usable by members of the group BDE**
+    Creates a feedback.
     """
 
-    feedback_db = models_feedback.Feedback(
-        id=uuid.uuid4(),
-        creation=datetime.now(UTC),
-        **feedback.model_dump(),
-    )
-
     await cruds_feedback.add_feedback(
-        feedback=feedback_db,
+        feedback=feedback,
         db=db,
+        user_id=user.id,
+        id=uuid.uuid4(),
     )
 
 
@@ -92,13 +86,11 @@ async def delete_feedback(
     feedback_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([FeedbackPermissions.manage_feedback]),
+        is_user_allowed_to([FeedbackPermissions.access_feedback]), #todo : manage_feedback permission
     ),
 ):
     """
-    Delete a feedback.
-
-    **This endpoint is only usable by members of the group BDE**
+    Deletes a feedback.
     """
 
     try:

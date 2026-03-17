@@ -1,4 +1,5 @@
 from uuid import UUID
+from datetime import UTC, datetime
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,8 +20,16 @@ async def get_feedbacks(db: AsyncSession) -> list[schemas_feedback.Feedback] | N
     ]
 
 
-async def add_feedback(db: AsyncSession, feedback: models_feedback.Feedback) -> None:
-    db.add(feedback)
+async def add_feedback(db: AsyncSession, feedback: schemas_feedback.FeedbackBase, user_id: str, id: str) -> None:
+    
+    feedback_db = models_feedback.Feedback(
+        id=id,
+        creation=datetime.now(UTC),
+        user_id=user_id,
+        **feedback.model_dump(),
+    )
+
+    db.add(feedback_db)
     await db.flush()
 
 
