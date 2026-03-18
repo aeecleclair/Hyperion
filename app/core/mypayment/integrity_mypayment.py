@@ -50,3 +50,10 @@ def format_withdrawal_log(
     total: int,
 ):
     return f"{ActionType.WITHDRAWAL.name} {wallet_id} {total}"
+
+
+def format_user_fusion_log(
+    user_kept_id: str,
+    user_deleted_id: str,
+):
+    return f"{ActionType.USER_FUSION.name} {user_kept_id} {user_deleted_id}"

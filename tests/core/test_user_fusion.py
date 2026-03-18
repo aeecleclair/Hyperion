@@ -7,6 +7,8 @@ from fastapi.testclient import TestClient
 from app.core.groups import models_groups
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import models_memberships
+from app.core.mypayment import models_mypayment
+from app.core.mypayment.types_mypayment import WalletType
 from app.core.users import models_users
 from tests.commons import (
     add_object_to_db,
@@ -28,6 +30,12 @@ core_association_membership: models_memberships.CoreAssociationMembership
 
 core_association_membership_user_del: models_memberships.CoreAssociationUserMembership
 core_association_membership_user_kept: models_memberships.CoreAssociationUserMembership
+
+payment_user_to_delete: models_mypayment.UserPayment
+payment_user_to_keep: models_mypayment.UserPayment
+
+payment_wallet_to_delete: models_mypayment.Wallet
+payment_wallet_to_keep: models_mypayment.Wallet
 
 FABRISTPP_EMAIL_1 = "fabristpp.eclair1@etu.ec-lyon.fr"
 FABRISTPP_EMAIL_2 = "fabristpp.eclair3@ecl21.ec-lyon.fr"
@@ -92,6 +100,36 @@ async def init_objects() -> None:
         )
     )
     await add_object_to_db(core_association_membership_user_kept)
+
+    global payment_wallet_to_delete, payment_wallet_to_keep
+    payment_wallet_to_delete = models_mypayment.Wallet(
+        id=uuid4(),
+        type=WalletType.USER,
+        balance=1000,
+    )
+    await add_object_to_db(payment_wallet_to_delete)
+    payment_wallet_to_keep = models_mypayment.Wallet(
+        id=uuid4(),
+        type=WalletType.USER,
+        balance=2000,
+    )
+    await add_object_to_db(payment_wallet_to_keep)
+
+    global payment_user_to_delete, payment_user_to_keep
+    payment_user_to_delete = models_mypayment.UserPayment(
+        user_id=student_user_to_delete.id,
+        wallet_id=payment_wallet_to_delete.id,
+        accepted_tos_signature=datetime.now(tz=UTC) - timedelta(days=30),
+        accepted_tos_version=2,
+    )
+    await add_object_to_db(payment_user_to_delete)
+    payment_user_to_keep = models_mypayment.UserPayment(
+        user_id=student_user_to_keep.id,
+        wallet_id=payment_wallet_to_keep.id,
+        accepted_tos_signature=datetime.now(tz=UTC) - timedelta(days=15),
+        accepted_tos_version=2,
+    )
+    await add_object_to_db(payment_user_to_keep)
 
     global token_admin_user, token_student_user
     token_admin_user = create_api_access_token(admin_user)
@@ -167,3 +205,12 @@ def test_fusion_users(client: TestClient) -> None:
         simple_memberships.append(membership)
     assert user_kept_membership_aeecl_json in simple_memberships
     assert user_del_membership_aeecl_json in simple_memberships
+
+    response = client.get(
+        "/mypayment/users/me/wallet",
+        headers={"Authorization": f"Bearer {token_student_user}"},
+    )
+    assert response.status_code == 200
+    wallet = response.json()
+    assert wallet["id"] == str(payment_wallet_to_keep.id)
+    assert wallet["balance"] == 3000
