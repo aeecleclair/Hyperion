@@ -1,6 +1,7 @@
 import base64
 import logging
-import urllib
+import re
+import urllib.parse
 import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -14,9 +15,9 @@ from fastapi import (
     Header,
     HTTPException,
     Query,
+    Response,
 )
 from fastapi.responses import FileResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
@@ -54,6 +55,7 @@ from app.core.mypayment.types_mypayment import (
     WalletDeviceStatus,
     WalletType,
 )
+from app.core.mypayment.utils.data_exporter import generate_store_history_csv
 from app.core.mypayment.utils_mypayment import (
     LATEST_TOS,
     QRCODE_EXPIRATION,
@@ -82,7 +84,7 @@ from app.dependencies import (
 from app.types import standard_responses
 from app.types.module import CoreModule
 from app.types.scopes_type import ScopeType
-from app.utils.auth.auth_utils import get_user_from_token_with_scopes
+from app.utils.auth.auth_utils import get_user_id_from_token_with_scopes
 from app.utils.communication.notifications import NotificationTool
 from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
@@ -102,8 +104,6 @@ core_module = CoreModule(
     payment_callback=validate_transfer_callback,
     factory=MyPaymentFactory(),
 )
-
-templates = Jinja2Templates(directory="assets/templates")
 
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -660,7 +660,6 @@ async def get_store_history(
                 ),
             )
 
-    # TODO: do we accept transfers to empty a store wallet?
     transfers = await cruds_mypayment.get_transfers_by_wallet_id(
         wallet_id=store.wallet_id,
         db=db,
@@ -702,6 +701,113 @@ async def get_store_history(
 
 
 @router.get(
+    "/mypayment/stores/{store_id}/history/data-export",
+    status_code=200,
+    response_model=None,
+)
+async def export_store_history(
+    store_id: UUID,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user()),
+):
+    """
+    Export store payment history as a CSV file.
+    """
+    store = await cruds_mypayment.get_store(
+        store_id=store_id,
+        db=db,
+    )
+    if store is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Store does not exist",
+        )
+
+    seller = await cruds_mypayment.get_seller(
+        user_id=user.id,
+        store_id=store_id,
+        db=db,
+    )
+    if seller is None or not seller.can_see_history:
+        raise HTTPException(
+            status_code=403,
+            detail="User is not authorized to see the store history",
+        )
+
+    transactions_with_sellers = (
+        await cruds_mypayment.get_transactions_and_sellers_by_wallet_id(
+            wallet_id=store.wallet_id,
+            db=db,
+            start_datetime=start_date,
+            end_datetime=end_date,
+        )
+    )
+
+    transfers_with_sellers = (
+        await cruds_mypayment.get_transfers_and_sellers_by_wallet_id(
+            wallet_id=store.wallet_id,
+            db=db,
+            start_datetime=start_date,
+            end_datetime=end_date,
+        )
+    )
+    if len(transfers_with_sellers) > 0:
+        hyperion_error_logger.error(
+            f"Store {store.id} should never have transfers",
+        )
+
+    # We add refunds
+    refunds_with_sellers = await cruds_mypayment.get_refunds_and_sellers_by_wallet_id(
+        wallet_id=store.wallet_id,
+        db=db,
+        start_datetime=start_date,
+        end_datetime=end_date,
+    )
+
+    # Create refunds map
+    refunds_map = {
+        refund.transaction_id: (refund, seller_name)
+        for refund, seller_name in refunds_with_sellers
+    }
+
+    # Generate CSV content
+    csv_content = generate_store_history_csv(
+        transactions_with_sellers=list(transactions_with_sellers),
+        refunds_map=refunds_map,
+        store_wallet_id=store.wallet_id,
+    )
+
+    # Generate filename
+    date_range = ""
+    if start_date and end_date:
+        date_range = (
+            f"_{start_date.strftime('%Y-%m-%d')}_to_{end_date.strftime('%Y-%m-%d')}"
+        )
+    elif start_date:
+        date_range = f"_from_{start_date.strftime('%Y-%m-%d')}"
+    elif end_date:
+        date_range = f"_until_{end_date.strftime('%Y-%m-%d')}"
+
+    # Sanitize store name for filename
+    safe_store_name = "".join(
+        c for c in store.name if c.isalnum() or c in (" ", "-", "_")
+    ).rstrip()
+
+    filename = f"store_history_{safe_store_name}{date_range}.csv"
+
+    headers = {
+        "Content-Disposition": f'attachment; filename="{filename}"',
+    }
+    return Response(
+        csv_content,
+        headers=headers,
+        media_type="text/csv; charset=utf-8",
+    )
+
+
+@router.get(
     "/mypayment/users/me/stores",
     status_code=200,
     response_model=list[schemas_mypayment.UserStore],
@@ -731,8 +837,8 @@ async def get_user_stores(
                 schemas_mypayment.UserStore(
                     id=store.id,
                     name=store.name,
-                    structure_id=store.structure_id,
                     creation=store.creation,
+                    structure_id=store.structure_id,
                     structure=structure_model_to_schema(store.structure),
                     wallet_id=store.wallet_id,
                     can_bank=seller.can_bank,
@@ -1262,7 +1368,7 @@ async def sign_tos(
         background_tasks.add_task(
             send_email,
             recipient=user.email,
-            subject=f"MyECL - You signed the Terms of Service for {settings.school.payment_name}",
+            subject=f"{settings.school.application_name} - You signed the Terms of Service for {settings.school.payment_name}",
             content=mail,
             settings=settings,
         )
@@ -1813,7 +1919,7 @@ async def init_ha_transfer(
     checkout = await payment_tool.init_checkout(
         module=core_module.root,
         checkout_amount=transfer_info.amount,
-        checkout_name="Recharge MyPayment",
+        checkout_name=f"Recharge {settings.school.payment_name}",
         redirection_uri=f"{settings.CLIENT_URL}mypayment/transfer/redirect?url={transfer_info.redirect_url}",
         payer_user=user_schema,
         db=db,
@@ -2671,11 +2777,14 @@ async def create_structure_invoice(
     now = await cruds_core.start_isolation_mode(db)
     # Database isolation requires to be the first statement of the transaction
     # We can't use reguler dependencies to check user permissions as they access the database
-    user = await get_user_from_token_with_scopes(
+    user_id = get_user_id_from_token_with_scopes(
         scopes=[[ScopeType.API]],
-        db=db,
         token_data=token_data,
     )
+    user = await cruds_users.get_user_by_id(db, user_id)
+    if user is None:
+        raise HTTPException(404, "User not found in the database")
+
     bank_holder_structure = await get_bank_account_holder(
         user=user,
         db=db,
@@ -2749,8 +2858,6 @@ async def create_structure_invoice(
                 schemas_mypayment.InvoiceDetailBase(
                     invoice_id=invoice_id,
                     store_id=store.id,
-                    store_name=store.name,
-                    wallet_id=store_wallet.id,
                     total=store_wallet.balance,
                 ),
             )
@@ -2763,15 +2870,20 @@ async def create_structure_invoice(
         structure_id=structure_id,
         db=db,
     )
-    last_invoice_number = (
-        int(last_structure_invoice.reference[-4:])
-        if last_structure_invoice
-        and int(last_structure_invoice.reference[5:9]) == security_now.year
-        else 0
-    )
+    if last_structure_invoice:
+        year, last_invoice_number = re.findall(
+            r"[a-zA-Z]*(\d{4})[a-zA-Z]*(\d{4})",
+            last_structure_invoice.reference,
+        )[0]
+        last_invoice_number = int(last_invoice_number)
+        year = int(year)
+        if int(year) != security_now.year:
+            last_invoice_number = 0
+    else:
+        last_invoice_number = 0
     invoice = schemas_mypayment.InvoiceInfo(
         id=invoice_id,
-        reference=f"MYPAY{security_now.year}{structure.short_id}{last_invoice_number + 1:04d}",
+        reference=f"PAY{security_now.year}{structure.short_id}{last_invoice_number + 1:04d}",
         structure_id=structure_id,
         creation=datetime.now(UTC),
         start_date=last_structure_invoice.end_date

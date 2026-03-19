@@ -1,6 +1,5 @@
 import logging
 import uuid
-from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from helloasso_python.models.hello_asso_api_v5_models_api_notifications_api_notification_type import (
@@ -41,11 +40,12 @@ async def webhook(
         # We validate the body of the request ourself
         # to prevent FastAPI from returning a 422 error to HelloAsso
         # without logging the error
-        type_adapter = TypeAdapter(NotificationResultContent)
-        validated_content = type_adapter.validate_python(
+        type_adapter: TypeAdapter[NotificationResultContent] = TypeAdapter(
+            NotificationResultContent,
+        )
+        content = type_adapter.validate_python(
             await request.json(),
         )
-        content = cast("NotificationResultContent", validated_content)
         if content.metadata:
             checkout_metadata = (
                 schemas_checkout.HelloAssoCheckoutMetadata.model_validate(
@@ -73,15 +73,13 @@ async def webhook(
     ):
         # We may receive the webhook multiple times, we only want to save a CheckoutPayment
         # in the database the first time
-        existing_checkout_payment_model = (
-            await cruds_checkout.get_checkout_payment_by_hello_asso_payment_id(
-                hello_asso_payment_id=content.data.id,
-                db=db,
-            )
+        existing_checkout_payment_model = await cruds_checkout.get_checkout_payment_by_hello_asso_payment_id(
+            hello_asso_payment_id=content.data.id,  # ty:ignore[unresolved-attribute]
+            db=db,
         )
         if existing_checkout_payment_model is not None:
             hyperion_error_logger.debug(
-                f"Payment: ignoring webhook call for helloasso checkout payment id {content.data.id} as it already exists in the database",
+                f"Payment: ignoring webhook call for helloasso checkout payment id {content.data.id} as it already exists in the database",  # ty:ignore[unresolved-attribute]
             )
             return
 
@@ -100,7 +98,7 @@ async def webhook(
         # we should raise an error
         if not checkout:
             hyperion_error_logger.error(
-                f"Payment: could not find checkout (hyperion_checkout_id: {checkout_metadata.hyperion_checkout_id}) in database for payment HelloAsso payment_id: {content.data.id}",
+                f"Payment: could not find checkout (hyperion_checkout_id: {checkout_metadata.hyperion_checkout_id}) in database for payment HelloAsso payment_id: {content.data.id}",  # ty:ignore[unresolved-attribute]
             )
             raise HTTPException(
                 status_code=400,
@@ -119,9 +117,9 @@ async def webhook(
         checkout_payment_model = models_checkout.CheckoutPayment(
             id=uuid.uuid4(),
             checkout_id=checkout.id,
-            paid_amount=content.data.amount,
-            tip_amount=content.data.amountTip,
-            hello_asso_payment_id=content.data.id,
+            paid_amount=content.data.amount,  # ty:ignore[unresolved-attribute]
+            tip_amount=content.data.amountTip,  # ty:ignore[unresolved-attribute]
+            hello_asso_payment_id=content.data.id,  # ty:ignore[unresolved-attribute]
         )
         await cruds_checkout.create_checkout_payment(
             checkout_payment=checkout_payment_model,

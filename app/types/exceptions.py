@@ -1,15 +1,9 @@
 from typing import Any
+from uuid import UUID
 
 from fastapi import HTTPException
 
 from app.core.checkout.types_checkout import HelloAssoConfigName
-
-
-class MultipleWorkersWithoutRedisInitializationError(Exception):
-    def __init__(self):
-        super().__init__(
-            "Initialization steps could not be run with multiple workers as no Redis client were configured",
-        )
 
 
 class InvalidAppStateTypeError(Exception):
@@ -223,4 +217,23 @@ class UnknownContentTypeExtensionError(Exception):
     def __init__(self, content_type: str):
         super().__init__(
             f"Unknown content type extension for content type: {content_type}",
+        )
+
+
+class MissingDataError(Exception):
+    def __init__(self, data_name: str):
+        super().__init__(f"Missing data: {data_name}")
+
+
+class ObjectExpectedInDbNotFoundError(Exception):
+    """
+    This exception should be raised when an object is expected to be found in database, but the select crud return None.
+    It may be used when selecting an object to load relationship just after this creation, or selecting an object we know existing because of a foreign key.
+
+    This should never happen. Raising this exception should lead to a logged 500 internal server error.
+    """
+
+    def __init__(self, object_name: str, object_id: str | UUID):
+        super().__init__(
+            f"Object {object_name} with id {object_id} was expected in database but not found",
         )

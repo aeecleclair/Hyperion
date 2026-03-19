@@ -1,10 +1,14 @@
 import uuid
 from collections.abc import Sequence
+from typing import TYPE_CHECKING, cast
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.recommendation import models_recommendation, schemas_recommendation
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import CursorResult
 
 
 async def get_recommendations(
@@ -36,7 +40,7 @@ async def update_recommendation(
         .where(models_recommendation.Recommendation.id == recommendation_id)
         .values(**recommendation.model_dump(exclude_none=True)),
     )
-    if result.rowcount == 1:
+    if cast("CursorResult", result).rowcount == 1:
         await db.flush()
     else:
         await db.rollback()
@@ -52,7 +56,7 @@ async def delete_recommendation(
             models_recommendation.Recommendation.id == recommendation_id,
         ),
     )
-    if result.rowcount == 1:
+    if cast("CursorResult", result).rowcount == 1:
         await db.flush()
     else:
         await db.rollback()

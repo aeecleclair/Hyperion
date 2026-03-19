@@ -80,37 +80,33 @@ def upgrade() -> None:
             for file_path in Path("data/" + data_folder).iterdir():
                 print(" - ", file_path)  # noqa: T201
                 if file_path.suffix in (".png", ".jpg", ".webp"):
-                    with Path(file_path).open("rb") as file:
-                        file_bytes = file.read()
+                    file_bytes = file_path.read_bytes()
 
-                        Path(f"data/{data_folder}/original/").mkdir(
-                            parents=True,
-                            exist_ok=True,
-                        )
+                    Path(f"data/{data_folder}/original/").mkdir(
+                        parents=True,
+                        exist_ok=True,
+                    )
 
-                        # Save the original file
-                        with Path(f"data/{data_folder}/original/{file_path.name}").open(
-                            "wb",
-                        ) as out_file:
-                            out_file.write(file_bytes)
+                    # Save the original file
+                    with Path(f"data/{data_folder}/original/{file_path.name}").open(
+                        "wb",
+                    ) as out_file:
+                        out_file.write(file_bytes)
 
-                        # Compress and save the image
-                        res = compress_image(
-                            file_bytes,
-                            height=height,
-                            width=width,
-                            quality=quality,
-                            output_format=PillowImageFormat.webp,
-                            fit=fit,
-                        )
+                    # Compress and save the image
+                    res = compress_image(
+                        file_bytes,
+                        height=height,
+                        width=width,
+                        quality=quality,
+                        output_format=PillowImageFormat.webp,
+                        fit=fit,
+                    )
 
-                        # Delete the original file
-                        Path(f"data/{data_folder}/{file_path.name}").unlink()
+                    Path(f"data/{data_folder}/{file_path.stem}.webp").write_bytes(res)
 
-                        with Path(f"data/{data_folder}/{file_path.stem}.webp").open(
-                            "wb",
-                        ) as out_file:
-                            out_file.write(res)
+                    # Delete the original file
+                    Path(f"data/{data_folder}/{file_path.name}").unlink()
 
 
 def downgrade() -> None:

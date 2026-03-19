@@ -75,6 +75,9 @@ class CdrProduct(Base):
     name_fr: Mapped[str]
     name_en: Mapped[str | None]
     available_online: Mapped[bool]
+    year: Mapped[int]
+
+    needs_validation: Mapped[bool]
 
     description_fr: Mapped[str | None] = mapped_column(default=None)
     description_en: Mapped[str | None] = mapped_column(default=None)
@@ -132,7 +135,6 @@ class CurriculumMembership(Base):
     )
     curriculum_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("cdr_curriculum.id"),
-        primary_key=True,
     )
 
 
@@ -161,6 +163,8 @@ class ProductVariant(Base):
     price: Mapped[int]
     enabled: Mapped[bool]
     unique: Mapped[bool]
+    year: Mapped[int]
+
     related_membership_added_duration: Mapped[timedelta | None] = mapped_column(
         default=None,
     )
@@ -236,6 +240,7 @@ class Payment(Base):
     payment_type: Mapped[PaymentType] = mapped_column(
         index=True,
     )
+    year: Mapped[int]
 
 
 class CdrAction(Base):
@@ -299,6 +304,7 @@ class CustomDataField(Base):
         ForeignKey("cdr_product.id"),
     )
     name: Mapped[str]
+    can_user_answer: Mapped[bool]
 
 
 class CustomData(Base):

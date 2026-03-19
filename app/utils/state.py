@@ -14,7 +14,6 @@ from sqlalchemy.ext.asyncio import (
 from app.core.checkout.payment_tool import PaymentTool
 from app.core.checkout.types_checkout import HelloAssoConfigName
 from app.core.utils.config import Settings
-from app.modules.raid.utils.drive.drive_file_manager import DriveFileManager
 from app.types.scheduler import OfflineScheduler, Scheduler
 from app.types.sqlalchemy import SessionLocalType
 from app.types.websocket import WebsocketConnectionManager
@@ -35,7 +34,6 @@ class GlobalState(TypedDict):
     scheduler: Scheduler
     ws_manager: WebsocketConnectionManager
     notification_manager: NotificationManager
-    drive_file_manager: DriveFileManager
     payment_tools: dict[HelloAssoConfigName, PaymentTool]
     mail_templates: calypsso.MailTemplates
 
@@ -87,7 +85,7 @@ def init_redis_client(
     Returns None if Redis is not configured.
     """
     redis_client: redis.Redis | None = None
-    if settings.REDIS_HOST:
+    if settings.REDIS_HOST is not None and settings.REDIS_HOST != "":
         try:
             redis_client = redis.Redis(
                 host=settings.REDIS_HOST,
@@ -105,6 +103,7 @@ def init_redis_client(
 
 def disconnect_redis_client(redis_client: redis.Redis | None) -> None:
     if redis_client is not None:
+        redis_client.flushdb()
         redis_client.close()
 
 
@@ -112,7 +111,7 @@ async def init_scheduler(
     settings: Settings,
     _dependency_overrides: dict[Callable[..., Any], Callable[..., Any]],
 ) -> Scheduler:
-    if settings.REDIS_HOST:
+    if settings.REDIS_HOST is not None and settings.REDIS_HOST != "":
         scheduler = Scheduler()
 
         await scheduler.start(
@@ -154,7 +153,7 @@ def init_payment_tools(
     hyperion_error_logger: logging.Logger,
 ) -> dict[HelloAssoConfigName, PaymentTool]:
     if settings.HELLOASSO_API_BASE is None:
-        hyperion_error_logger.error(
+        hyperion_error_logger.warning(
             "HelloAsso API base URL is not set in settings, payment won't be available",
         )
         return {}

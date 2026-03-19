@@ -48,6 +48,10 @@ class CoreUser(CoreUserSimple):
     school: CoreSchool | None = None
     is_super_admin: bool = False
 
+    @property
+    def group_ids(self) -> list[str]:
+        return [group.id for group in self.groups]
+
 
 class CoreUserUpdate(BaseModel):
     """Schema for user update"""
@@ -194,6 +198,6 @@ class MailMigrationRequest(BaseModel):
 
 
 # Importing here to avoid circular imports
-from app.core.groups.schemas_groups import CoreGroupSimple  # noqa: E402, TC001
+from app.core.groups.schemas_groups import CoreGroupSimple  # noqa: E402
 
 CoreUserSimple.model_rebuild()

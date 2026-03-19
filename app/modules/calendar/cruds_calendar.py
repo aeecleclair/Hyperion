@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from datetime import date, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import delete, select, update
@@ -12,7 +13,7 @@ from app.modules.calendar.utils_calendar import create_icalendar_file
 
 
 async def get_all_events(db: AsyncSession) -> Sequence[models_calendar.Event]:
-    """Retriveve all the events in the database."""
+    """Retrieve all the events in the database."""
     result = await db.execute(
         select(models_calendar.Event).options(
             selectinload(models_calendar.Event.association),
@@ -155,3 +156,12 @@ async def add_ical_secret(
         secret=secret,
     )
     db.add(ical_secret)
+
+
+def date_all_day(dt: datetime, all_day: bool) -> date | datetime:
+    """
+    RFC 5545 3.6.1 :
+    * The DTEND name is exclusive, so we add one day on the iCalendar file.
+    * The DTSTART is inclusive, but midnight in "Europe/Paris" is one day after 11PM in UTC, so we add one day as well.
+    """
+    return (dt + timedelta(1)).date() if all_day else dt

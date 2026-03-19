@@ -4,9 +4,10 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.feed import cruds_feed, models_feed, schemas_feed
+from app.core.feed.permissions_feed import FeedPermissions
 from app.core.feed.types_feed import NewsStatus
-from app.core.groups.groups_type import GroupType
 from app.core.notification.schemas_notification import Message
+from app.core.permissions import cruds_permissions
 from app.utils.communication.notifications import NotificationTool
 
 
@@ -63,10 +64,15 @@ async def create_feed_news(
             content=f"{entity} has created {title}",
             action_module="feed",
         )
-        await notification_tool.send_notification_to_group(
-            group_id=GroupType.admin_feed,
-            message=message,
+        permission = await cruds_permissions.get_permissions_by_permission_name(
+            db,
+            FeedPermissions.manage_feed,
         )
+        for group in permission.groups:
+            await notification_tool.send_notification_to_group(
+                group_id=group,
+                message=message,
+            )
 
 
 async def edit_feed_news(
@@ -120,7 +126,12 @@ async def edit_feed_news(
             content=f"{entity} has modified {title}",
             action_module="feed",
         )
-        await notification_tool.send_notification_to_group(
-            group_id=GroupType.admin_feed,
-            message=message,
+        permission = await cruds_permissions.get_permissions_by_permission_name(
+            db,
+            FeedPermissions.manage_feed,
         )
+        for group in permission.groups:
+            await notification_tool.send_notification_to_group(
+                group_id=group,
+                message=message,
+            )

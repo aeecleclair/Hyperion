@@ -14,6 +14,16 @@ updates:
         patterns:
           - "*"
 
+  # Maintain dependencies for npm
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      actions:
+        applies-to: version-updates
+        patterns:
+          - "*"
 
   # Maintain Python dependencies
   - package-ecosystem: "pip"

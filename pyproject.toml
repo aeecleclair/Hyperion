@@ -6,9 +6,8 @@ authors = [{ name = "AEECL ECLAIR" }]
 
 # Hyperion follows Semantic Versioning
 # https://semver.org/
-version = "5.3.0"
-minimal-titan-version-code = 179
-requires-python = ">= 3.11, < 3.13"
+version = "6.0.0"
+requires-python = ">= 3.14, < 3.15"
 
 license = "MIT"
 license-files = [
@@ -18,13 +17,15 @@ license-files = [
     "assets/mypayment-terms-of-service.txt",
 ]
 
+[tool.titan]
+minimal-titan-version-code = 158
 
 [tool.ruff]
 # By default ruff also respect gitignore files
 # Same as Black.
 line-length = 88
 indent-width = 4
-target-version = "py311"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = [
@@ -69,7 +70,7 @@ select = [
     "FURB",
     "RUF",
     "TRY",
-    "TCH",
+    "TC",
 ]
 # We may want to enable "ERA" to found commented-out code
 ignore = [
@@ -91,6 +92,10 @@ ignore = [
     "PLR0915", # "Too many statements"
     "PLR2004", # "Magic value used in comparison"
     "G004",    # "Logging statement uses f-string"
+    "TC001",   # "Move into type-checking block"
+    "TC002",   # "Move into type-checking block"
+    "TC003",   # "Move into type-checking block"
+    "UP037",   # Remove quotes from type annotations
 ]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
@@ -129,7 +134,7 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.14"
 plugins = ["pydantic.mypy"]
 
 warn_unreachable = true
@@ -152,6 +157,7 @@ disallow_untyped_defs = false
 disallow_any_generics = false
 disallow_untyped_calls = false
 
+
 [[tool.mypy.overrides]]
 # google_auth_oauthlib : https://github.com/googleapis/google-auth-library-python-oauthlib/issues/288
 # googleapiclient : https://github.com/googleapis/google-api-python-client/issues/2426
@@ -163,6 +169,7 @@ module = [
     "googleapiclient.*",
     "sqlalchemy_utils",
     "weasyprint",
+    "xlsxwriter",
 ]
 ignore_missing_imports = true
 
@@ -171,13 +178,8 @@ ignore_missing_imports = true
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "module"
 asyncio_default_test_loop_scope = "module"
-filterwarnings = [
-    "error",
-    # We don't know how to fix the warning:
-    # `ResourceWarning: connection <psycopg.Connection [IDLE] (host=... user=... database=...) at 0x1166bf310> was deleted while still open. Please use 'with' or '.close()' to close the connection`
-    # It only happen when running tests with Postgresql
-    "ignore:connection <.*> was deleted while still open.:ResourceWarning",
-]
+filterwarnings = ["error", "ignore::DeprecationWarning"]
+
 
 [tool.coverage.run]
 source_pkgs = ["app"]

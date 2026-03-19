@@ -76,7 +76,7 @@ async def run_task(
         # `_get_db` may be the real dependency or an override
         _get_db: Callable[
             [],
-            AsyncGenerator[AsyncSession, None],
+            AsyncGenerator[AsyncSession],
         ] = _dependency_overrides.get(
             dependencies.get_db,
             dependencies.get_db,
@@ -101,7 +101,7 @@ def get_send_emails_from_queue_task(
     # We can not get the db and settings from the scheduler, we will thus get them from the dependency overrides directly
     _get_db: Callable[
         [],
-        AsyncGenerator[AsyncSession, None],
+        AsyncGenerator[AsyncSession],
     ] = _dependency_overrides.get(
         dependencies.get_db,
         dependencies.get_db,

@@ -4,7 +4,6 @@ from datetime import datetime
 
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.groups.groups_type import AccountType
 from app.types.sqlalchemy import Base, PrimaryKey
 
 
@@ -37,20 +36,6 @@ class EmailQueue(Base):
     subject: Mapped[str]
     body: Mapped[str]
     created_on: Mapped[datetime]
-
-
-class ModuleGroupVisibility(Base):
-    __tablename__ = "module_group_visibility"
-
-    root: Mapped[str] = mapped_column(primary_key=True)
-    allowed_group_id: Mapped[str] = mapped_column(primary_key=True)
-
-
-class ModuleAccountTypeVisibility(Base):
-    __tablename__ = "module_account_type_visibility"
-
-    root: Mapped[str] = mapped_column(primary_key=True)
-    allowed_account_type: Mapped[AccountType] = mapped_column(primary_key=True)
 
 
 class AlembicVersion(Base):
