@@ -207,7 +207,7 @@ async def init_objects():
         [TicketingPermissions.access_ticketing],
         "group_student",
     )
-    #await add_object_to_db(student_group)
+    # await add_object_to_db(student_group)
 
     # manage_group = await create_groups_with_permissions(
     #     [TicketingPermissions.manage_events],
