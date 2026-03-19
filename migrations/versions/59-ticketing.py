@@ -4,7 +4,7 @@ Create Date: 2026-03-19 17:38:31.400400
 """
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pytest_alembic import MigrationContext
@@ -60,7 +60,7 @@ def upgrade() -> None:
         sa.Column("disabled", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(["event_id"], ["ticketing_event.id"]),
         sa.ForeignKeyConstraint(
-            ["required_mebership"], ["core_association_membership.id"]
+            ["required_mebership"], ["core_association_membership.id"],
         ),
         sa.PrimaryKeyConstraint("id"),
     )
