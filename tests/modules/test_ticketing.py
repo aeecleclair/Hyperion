@@ -35,6 +35,7 @@ structure: models_mypayment.Structure
 store_wallet: models_mypayment.Wallet
 store: models_mypayment.Store
 
+organiser: models_ticketing.Organiser
 
 student_user: models_users.CoreUser
 
@@ -111,6 +112,14 @@ async def init_objects():
     )
     await add_object_to_db(store)
 
+    global organiser
+    organiser = models_ticketing.Organiser(
+        id=uuid4(),
+        name="Test Organiser",
+        store_id=store.id,
+    )
+    await add_object_to_db(organiser)
+
     # Create events
     global event1, event2
     event1 = models_ticketing.TicketingEvent(
@@ -124,7 +133,7 @@ async def init_objects():
         used_quota=1,
         disabled=False,
         creator_id=str(admin_user.id),
-        store_id=store.id,
+        organiser_id=organiser.id,
     )
     await add_object_to_db(event1)
     # Event will be used to test disabled state etc.
@@ -138,7 +147,7 @@ async def init_objects():
         used_quota=1,
         disabled=False,
         creator_id=str(admin_user.id),
-        store_id=store.id,
+        organiser_id=organiser.id,
     )
     await add_object_to_db(event2)
 
@@ -152,6 +161,7 @@ async def init_objects():
         user_quota=1,
         used_quota=1,
         disabled=False,
+        date=datetime(2024, 1, 1, tzinfo=UTC),
     )
     await add_object_to_db(session1)
     session2 = models_ticketing.TicketingSession(
@@ -162,7 +172,9 @@ async def init_objects():
         user_quota=1,
         used_quota=0,
         disabled=False,
+        date=datetime(2024, 1, 2, tzinfo=UTC),
     )
+
     await add_object_to_db(session2)
     session3 = models_ticketing.TicketingSession(
         id=uuid4(),
@@ -172,6 +184,7 @@ async def init_objects():
         user_quota=1,
         used_quota=0,
         disabled=True,
+        date=datetime(2024, 2, 3, tzinfo=UTC),
     )
     await add_object_to_db(session3)
 
@@ -247,7 +260,7 @@ async def test_create_event(client: TestClient):
         "close_date": "2200-12-31T23:59:59Z",
         "quota": 10,
         "user_quota": 2,
-        "store_id": str(store.id),
+        "organiser_id": str(organiser.id),
     }
     response = client.post(
         "/ticketing/events",
@@ -268,7 +281,7 @@ async def test_create_event_without_perms(client: TestClient):
         "close_date": "2200-12-31T23:59:59Z",
         "quota": 10,
         "user_quota": 2,
-        "store_id": str(store.id),
+        "organiser_id": str(organiser.id),
     }
     response = client.post(
         "/ticketing/events",
@@ -278,14 +291,14 @@ async def test_create_event_without_perms(client: TestClient):
     assert response.status_code == 403
 
 
-async def test_create_event_with_invalid_store(client: TestClient):
+async def test_create_event_with_invalid_organiser(client: TestClient):
     new_event_data = {
         "name": "New Event",
         "open_date": "2024-01-01T00:00:00Z",
         "close_date": "2200-12-31T23:59:59Z",
         "quota": 10,
         "user_quota": 2,
-        "store_id": str(uuid4()),  # Invalid store ID
+        "organiser_id": str(uuid4()),  # Invalid organiser ID
     }
     response = client.post(
         "/ticketing/events",
@@ -370,7 +383,7 @@ async def test_delete_event_as_admin(client: TestClient):
         used_quota=0,
         disabled=False,
         creator_id=str(admin_user.id),
-        store_id=store.id,
+        organiser_id=organiser.id,
     )
     await add_object_to_db(to_delete_event)
     response = client.delete(
