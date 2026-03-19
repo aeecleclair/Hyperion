@@ -303,6 +303,7 @@ class MatchBase(BaseModel):
     score_team1: int | None = None
     score_team2: int | None = None
     winner_id: UUID | None = None
+    ended: bool
 
 
 class Match(MatchBase):
@@ -327,6 +328,7 @@ class MatchEdit(BaseModel):
     score_team1: int | None = None
     score_team2: int | None = None
     winner_id: UUID | None = None
+    ended: bool | None = None
 
 
 class TeamSportResultBase(BaseModel):

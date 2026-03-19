@@ -37,7 +37,17 @@ async def add_edition(
     edition: schemas_sport_competition.CompetitionEdition,
     db: AsyncSession,
 ):
-    db.add(models_sport_competition.CompetitionEdition(**edition.model_dump()))
+    db.add(
+        models_sport_competition.CompetitionEdition(
+            id=edition.id,
+            name=edition.name,
+            year=edition.year,
+            start_date=edition.start_date,
+            end_date=edition.end_date,
+            active=edition.active,
+            inscription_enabled=edition.inscription_enabled,
+        ),
+    )
     await db.flush()
 
 
@@ -1428,7 +1438,16 @@ async def add_sport(
     sport: schemas_sport_competition.Sport,
     db: AsyncSession,
 ):
-    db.add(models_sport_competition.Sport(**sport.model_dump()))
+    db.add(
+        models_sport_competition.Sport(
+            id=sport.id,
+            name=sport.name,
+            team_size=sport.team_size,
+            substitute_max=sport.substitute_max,
+            sport_category=sport.sport_category,
+            active=sport.active,
+        ),
+    )
     await db.flush()
 
 
@@ -1530,7 +1549,17 @@ async def add_team(
     team: schemas_sport_competition.Team,
     db: AsyncSession,
 ):
-    db.add(models_sport_competition.CompetitionTeam(**team.model_dump()))
+    db.add(
+        models_sport_competition.CompetitionTeam(
+            id=team.id,
+            name=team.name,
+            school_id=team.school_id,
+            sport_id=team.sport_id,
+            edition_id=team.edition_id,
+            captain_id=team.captain_id,
+            created_at=team.created_at,
+        ),
+    )
     await db.flush()
 
 
@@ -1851,7 +1880,22 @@ async def add_match(
     match: schemas_sport_competition.Match,
     db: AsyncSession,
 ):
-    db.add(models_sport_competition.Match(**match.model_dump()))
+    db.add(
+        models_sport_competition.Match(
+            id=match.id,
+            sport_id=match.sport_id,
+            edition_id=match.edition_id,
+            name=match.name,
+            team1_id=match.team1_id,
+            team2_id=match.team2_id,
+            date=match.date,
+            location_id=match.location_id,
+            score_team1=match.score_team1,
+            score_team2=match.score_team2,
+            winner_id=match.winner_id,
+            ended=match.ended,
+        ),
+    )
     await db.flush()
 
 

@@ -265,6 +265,7 @@ class Match(Base):
     score_team1: Mapped[int | None]
     score_team2: Mapped[int | None]
     winner_id: Mapped[UUID | None] = mapped_column(ForeignKey("competition_team.id"))
+    ended: Mapped[bool]
 
     team1: Mapped[CompetitionTeam] = relationship(
         "CompetitionTeam",
