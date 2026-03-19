@@ -1,4 +1,3 @@
-import datetime
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -36,7 +35,7 @@ module = Module(
 async def get_organisers(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([TicketingPermissions.access_ticketing])
+        is_user_allowed_to([TicketingPermissions.access_ticketing]),
     ),
 ):
     """
@@ -54,7 +53,7 @@ async def get_organiser(
     organiser_id: str,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([TicketingPermissions.access_ticketing])
+        is_user_allowed_to([TicketingPermissions.access_ticketing]),
     ),
 ) -> schemas_ticketing.OrganiserComplete:
     """
@@ -226,6 +225,23 @@ async def get_session_by_id(
     return session
 
 
+@module.router.get(
+    "/ticketing/events/{event_id}/sessions/",
+    summary="Get all sessions for a specific event",
+    response_model=list[schemas_ticketing.SessionComplete],
+    status_code=200,
+)
+async def get_sessions_by_event_id(
+    event_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([TicketingPermissions.access_ticketing]),
+    ),
+) -> list[schemas_ticketing.SessionComplete]:
+    """Get all sessions for a specific event."""
+    return await cruds_ticketing.get_sessions_by_event_id(event_id=event_id, db=db)
+
+
 @module.router.post(
     "/ticketing/sessions/",
     summary="Create a new session",
@@ -246,6 +262,23 @@ async def create_session(
         used_quota=0,
         disabled=False,
     )
+    # Verify that the event exists before
+    event = await cruds_ticketing.get_event_by_id(
+        event_id=session_simple.event_id,
+        db=db,
+    )
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+    if event.open_date is not None and session.date < event.open_date:
+        raise HTTPException(
+            status_code=400,
+            detail="Session date cannot be before event open date",
+        )
+    if event.close_date is not None and session.date > event.close_date:
+        raise HTTPException(
+            status_code=400,
+            detail="Session date cannot be after event close date",
+        )
     await cruds_ticketing.create_session(session=session_simple, db=db)
     session_complete = await cruds_ticketing.get_session_by_id(
         session_id=session_simple.id,
@@ -275,6 +308,11 @@ async def update_session(
     stored = await cruds_ticketing.get_session_by_id(session_id=session_id, db=db)
     if stored is None:
         raise HTTPException(status_code=404, detail="Session not found")
+    if session_update.quota is not None and stored.used_quota > session_update.quota:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot set quota less than used quota",
+        )
     await cruds_ticketing.update_session(
         session_id=session_id,
         session_update=session_update,
@@ -303,6 +341,24 @@ async def delete_session(
         raise HTTPException(
             status_code=400,
             detail="Cannot delete a session with used quota",
+        )
+    categories = await cruds_ticketing.get_categories_by_session_id(
+        session_id=session_id,
+        db=db,
+    )
+    if len(categories) > 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete a session with associated categories",
+        )
+    tickets = await cruds_ticketing.get_tickets_by_session_id(
+        session_id=session_id,
+        db=db,
+    )
+    if len(tickets) > 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete a session with associated tickets",
         )
     await cruds_ticketing.delete_session(session_id=session_id, db=db)
 
