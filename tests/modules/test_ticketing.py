@@ -168,9 +168,9 @@ async def init_objects():
         id=uuid4(),
         event_id=event1.id,
         name="Session 2",
-        quota=2,
+        quota=5,
         user_quota=1,
-        used_quota=0,
+        used_quota=3,
         disabled=False,
         date=datetime(2024, 1, 2, tzinfo=UTC),
     )
@@ -203,9 +203,20 @@ async def init_objects():
     category1.sessions = [session1, session2]
     await add_object_to_db(category1)
 
+    student_group = await create_groups_with_permissions(
+        [TicketingPermissions.access_ticketing],
+        "group_student",
+    )
+    #await add_object_to_db(student_group)
+
+    # manage_group = await create_groups_with_permissions(
+    #     [TicketingPermissions.manage_events],
+    #     "Group 2",
+    # )
+
     global student_user, student_token
     student_user = await create_user_with_groups(
-        groups=[],
+        groups=[student_group.id],
         account_type=AccountType.student,
     )
     student_token = create_api_access_token(student_user)
@@ -423,3 +434,254 @@ async def test_deleted_as_admin_with_tickets(client: TestClient):
 
 
 # -------------------------- Test session basic cruds -------------------------- #
+
+
+async def test_get_sessions_list(client: TestClient):
+    response = client.get(
+        f"/ticketing/events/{event1.id}/sessions",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 200
+    sessions = response.json()
+    assert isinstance(sessions, list)
+    assert len(sessions) >= 3  # We created 3 sessions for event1
+
+
+async def test_get_session(client: TestClient):
+    # Test with session1 (should succeed)
+    response = client.get(
+        f"/ticketing/sessions/{session1.id}",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 200
+
+    # Test with session2 (should succeed)
+    response = client.get(
+        f"/ticketing/sessions/{session2.id}",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 200
+
+    # Test with session_fake (not in DB, should return 404)
+    response = client.get(
+        f"/ticketing/sessions/{uuid4()}",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 404
+
+
+async def test_create_session(client: TestClient):
+    new_session_data = {
+        "name": "New Session",
+        "date": "2024-01-03T00:00:00Z",
+        "quota": 2,
+        "user_quota": 1,
+        "event_id": str(event1.id),
+    }
+    response = client.post(
+        "/ticketing/sessions",
+        json=new_session_data,
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 201
+    created_session = response.json()
+    assert created_session["name"] == new_session_data["name"]
+    assert created_session["date"] == new_session_data["date"]
+
+
+# create session without perms
+async def test_create_session_without_perms(client: TestClient):
+    new_session_data = {
+        "name": "New Session",
+        "date": "2024-01-03T00:00:00Z",
+        "quota": 2,
+        "user_quota": 1,
+        "event_id": str(event1.id),
+    }
+    response = client.post(
+        "/ticketing/sessions",
+        json=new_session_data,
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 403
+
+
+# create session with date before event open date, should fail
+async def test_create_session_with_date_before_event_open_date(client: TestClient):
+    new_session_data = {
+        "name": "New Session",
+        "date": "2023-12-31T00:00:00Z",  # Before event1 open date
+        "quota": 2,
+        "user_quota": 1,
+        "event_id": str(event1.id),
+    }
+    response = client.post(
+        "/ticketing/sessions",
+        json=new_session_data,
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 400
+
+
+# create session with date after event close date, should fail
+async def test_create_session_with_date_after_event_close_date(client: TestClient):
+    new_session_data = {
+        "name": "New Session",
+        "date": "2201-01-01T00:00:00Z",  # After event1 close date
+        "quota": 2,
+        "user_quota": 1,
+        "event_id": str(event1.id),
+    }
+    response = client.post(
+        "/ticketing/sessions",
+        json=new_session_data,
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 400
+
+
+# test create session with negative quota, should fail
+async def test_create_session_with_negative_quota(client: TestClient):
+    new_session_data = {
+        "name": "New Session",
+        "date": "2024-01-03T00:00:00Z",
+        "quota": -1,  # Negative quota
+        "user_quota": 1,
+        "event_id": str(event1.id),
+    }
+    response = client.post(
+        "/ticketing/sessions",
+        json=new_session_data,
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 422
+
+
+# update session as admin
+async def test_update_session_as_admin(client: TestClient):
+    update_data = {
+        "name": "Updated Session Name",
+        "quota": 10,
+    }
+    response = client.patch(
+        f"/ticketing/sessions/{session1.id}",
+        json=update_data,
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 204
+
+
+# update session as lambda, should fail
+async def test_update_session_as_lambda(client: TestClient):
+    update_data = {
+        "name": "Updated Session Name",
+        "quota": 10,
+    }
+    response = client.patch(
+        f"/ticketing/sessions/{session1.id}",
+        json=update_data,
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 403
+
+
+# update session with invalid id, should fail
+async def test_update_session_with_invalid_id(client: TestClient):
+    update_data = {
+        "name": "Updated Session Name",
+        "quota": 10,
+    }
+    response = client.patch(
+        f"/ticketing/sessions/{uuid4()}",
+        json=update_data,
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 404
+
+
+# update session with quota less than used_quota, should fail
+async def test_update_session_with_quota_less_than_used_quota(client: TestClient):
+    update_data = {
+        "quota": 1,  # session2 has used_quota=3
+    }
+    response = client.patch(
+        f"/ticketing/sessions/{session2.id}",
+        json=update_data,
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 400
+
+
+# test delete session as lambda, should fail
+async def test_delete_session_as_lambda(client: TestClient):
+    response = client.delete(
+        f"/ticketing/sessions/{session2.id}",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 403
+
+
+# test delete session as admin, should succeed
+async def test_delete_session_as_admin(client: TestClient):
+    # First create a new session to delete
+    to_delete_session = models_ticketing.TicketingSession(
+        id=uuid4(),
+        event_id=event1.id,
+        name="To Delete Session",
+        quota=2,
+        user_quota=1,
+        used_quota=0,
+        disabled=False,
+        date=datetime(2024, 1, 3, tzinfo=UTC),
+    )
+    await add_object_to_db(to_delete_session)
+    response = client.delete(
+        f"/ticketing/sessions/{to_delete_session.id}",
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 204
+
+
+# test delete session as admin with tickets, should fail
+async def test_delete_session_as_admin_with_tickets(client: TestClient):
+    # Create a ticket for the session
+    ticket = models_ticketing.TicketingTicket(
+        id=uuid4(),
+        event_id=event1.id,
+        session_id=session2.id,
+        category_id=category1.id,
+        user_id=student_user.id,
+        status="active",
+        nb_scan=0,
+        total=1,
+        created_at=datetime.now(UTC),
+    )
+    await add_object_to_db(ticket)
+    # Try to delete the session with existing tickets
+    response = client.delete(
+        f"/ticketing/sessions/{session2.id}",
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 400
+
+
+# test delete session with invalid id, should fail
+async def test_delete_session_with_invalid_id(client: TestClient):
+    response = client.delete(
+        f"/ticketing/sessions/{uuid4()}",
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 404
+
+
+# test delete session with categories, should fail
+async def test_delete_session_with_categories(client: TestClient):
+    # session1 is linked to category1, so deleting it should fail
+    response = client.delete(
+        f"/ticketing/sessions/{session1.id}",
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 400
+
+
+# -------------------------- Test category basic cruds -------------------------- #
