@@ -31,6 +31,7 @@ def increment_quota_event(
     """Increment the quota for an event."""
     redis.incrby(f"ticketing:event:{event_id}:quota", amount)
 
+
 def increment_quota_category(
     redis: Redis,
     category_id: UUID,
@@ -38,6 +39,7 @@ def increment_quota_category(
 ) -> None:
     """Increment the quota for a category."""
     redis.incrby(f"ticketing:category:{category_id}:quota", amount)
+
 
 def increment_quota_session(
     redis: Redis,
