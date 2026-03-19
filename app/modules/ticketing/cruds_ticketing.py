@@ -289,6 +289,24 @@ async def delete_event(
     await db.flush()
 
 
+async def get_sessions_by_event_id(
+    db: AsyncSession,
+    event_id: UUID,
+) -> list[schemas_ticketing.SessionComplete]:
+    """Get all sessions for a specific event."""
+
+    return [
+        schemas_ticketing.SessionComplete.model_validate(session)
+        for session in (
+            await db.execute(
+                select(models_ticketing.TicketingSession).where(
+                    models_ticketing.TicketingSession.event_id == event_id,
+                ),
+            )
+        ).scalars().all()
+    ]
+
+
 async def get_session_by_id(
     session_id: UUID,
     db: AsyncSession,
@@ -421,6 +439,36 @@ async def get_category_by_id(
         else None
     )
 
+async def get_categories_by_session_id(
+    session_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_ticketing.CategoryComplete]:
+    """Get all categories for a specific session."""
+
+    return [
+        schemas_ticketing.CategoryComplete(
+            id=category.id,
+            event_id=category.event_id,
+            event=category.event,
+            name=category.name,
+            sessions=category.sessions,
+            required_mebership=category.required_mebership,
+            quota=category.quota,
+            user_quota=category.user_quota,
+            used_quota=category.used_quota,
+            price=category.price,
+            disabled=category.disabled,
+        )
+        for category in (
+            await db.execute(
+                select(models_ticketing.TicketingCategory)
+                .join(models_ticketing.CategorySessionAssociation)
+                .where(
+                    models_ticketing.CategorySessionAssociation.session_id == session_id,
+                ),
+            )
+        ).scalars().all()
+    ]
 
 async def create_category(
     db: AsyncSession,
@@ -488,6 +536,36 @@ async def get_tickets(
     """Get all tickets."""
 
     tickets = await db.execute(select(models_ticketing.TicketingTicket))
+    return [
+        schemas_ticketing.TicketComplete(
+            id=ticket.id,
+            user_id=ticket.user_id,
+            event_id=ticket.event_id,
+            category_id=ticket.category_id,
+            session_id=ticket.session_id,
+            total=ticket.total,
+            created_at=ticket.created_at,
+            event=ticket.event,
+            category=ticket.category,
+            session=ticket.session,
+            status=ticket.status,
+            nb_scan=ticket.nb_scan,
+        )
+        for ticket in tickets.scalars().all()
+    ]
+
+
+async def get_tickets_by_session_id(
+    session_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_ticketing.TicketComplete]:
+    """Get all tickets for a specific session."""
+
+    tickets = await db.execute(
+        select(models_ticketing.TicketingTicket).where(
+            models_ticketing.TicketingTicket.session_id == session_id,
+        ),
+    )
     return [
         schemas_ticketing.TicketComplete(
             id=ticket.id,

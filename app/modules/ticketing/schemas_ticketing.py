@@ -1,7 +1,8 @@
 from datetime import datetime
+from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class OrganiserBase(BaseModel):
@@ -59,8 +60,8 @@ class SessionBase(BaseModel):
     event_id: UUID
     date: datetime
     name: str
-    quota: int | None = None
-    user_quota: int | None = None
+    quota: Annotated[int, Field(gt=0)] | None = None
+    user_quota: Annotated[int, Field(gt=0)] | None = None
 
 
 class SessionSimple(SessionBase):
@@ -79,8 +80,8 @@ class SessionComplete(SessionSimple):
 
 class SessionUpdate(BaseModel):
     name: str | None = None
-    quota: int | None = None
-    user_quota: int | None = None
+    quota: Annotated[int, Field(gt=0)] | None = None
+    user_quota: Annotated[int, Field(gt=0)] | None = None
     disabled: bool | None = None
 
 
@@ -88,8 +89,8 @@ class CategoryBase(BaseModel):
     event_id: UUID
     name: str
     required_mebership: UUID | None = None
-    quota: int | None = None
-    user_quota: int | None = None
+    quota: Annotated[int, Field(gt=0)] | None = None
+    user_quota: Annotated[int, Field(gt=0)] | None = None
     price: int
 
 
@@ -112,9 +113,9 @@ class CategoryUpdate(BaseModel):
     name: str | None = None
     sessions: list[UUID] | None = None
     required_mebership: UUID | None = None
-    quota: int | None = None
-    user_quota: int | None = None
-    price: int | None = None
+    quota: Annotated[int, Field(gt=0)] | None = None
+    user_quota: Annotated[int, Field(gt=0)] | None = None
+    price: Annotated[int, Field(gt=0)] | None = None
     disabled: bool | None = None
 
 
