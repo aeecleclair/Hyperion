@@ -303,7 +303,9 @@ async def get_sessions_by_event_id(
                     models_ticketing.TicketingSession.event_id == event_id,
                 ),
             )
-        ).scalars().all()
+        )
+        .scalars()
+        .all()
     ]
 
 
@@ -439,6 +441,7 @@ async def get_category_by_id(
         else None
     )
 
+
 async def get_categories_by_session_id(
     session_id: UUID,
     db: AsyncSession,
@@ -464,11 +467,15 @@ async def get_categories_by_session_id(
                 select(models_ticketing.TicketingCategory)
                 .join(models_ticketing.CategorySessionAssociation)
                 .where(
-                    models_ticketing.CategorySessionAssociation.session_id == session_id,
+                    models_ticketing.CategorySessionAssociation.session_id
+                    == session_id,
                 ),
             )
-        ).scalars().all()
+        )
+        .scalars()
+        .all()
     ]
+
 
 async def create_category(
     db: AsyncSession,
