@@ -3354,7 +3354,13 @@ async def create_sport_podium(
             rank=i + 1,
             points=team.points,
         )
-        for i, team in enumerate(rankings.rankings)
+        for i, team in enumerate(
+            sorted(
+                rankings.rankings,
+                key=lambda x: x.points,
+                reverse=True,
+            ),
+        )
     ]
     await cruds_sport_competition.add_sport_ranking(
         ranking_complete,
