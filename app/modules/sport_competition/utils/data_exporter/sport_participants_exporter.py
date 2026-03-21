@@ -19,6 +19,7 @@ FIXED_COLUMNS = [
     "Nom",
     "Prénom",
     "Email",
+    "Téléphone",
     "École",
     "Type",
     "Statut",
@@ -52,6 +53,7 @@ def build_data_rows(
             participant.user.user.name,
             participant.user.user.firstname,
             participant.user.user.email,
+            participant.user.user.phone or "",
             school.name,
             ", ".join(get_user_types(participant.user)),
             "Non validé"
