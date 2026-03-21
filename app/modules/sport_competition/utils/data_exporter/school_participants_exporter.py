@@ -12,7 +12,7 @@ from app.modules.sport_competition.utils.data_exporter.commons import (
 )
 from app.types.exceptions import MissingDataError
 
-FIXED_COLUMNS = ["Nom", "Prénom", "Email", "Type", "Statut"]
+FIXED_COLUMNS = ["Nom", "Prénom", "Email", "Téléphone", "Type", "Statut"]
 PARTICIPANTS_COLUMNS = ["Catégorie", "Sport", "Licence", "Licence valide", "Équipe"]
 PAYMENTS_COLUMNS = ["Total à payer", "Total payé", "Tout payé"]
 
@@ -74,17 +74,18 @@ def build_data_rows(
     data_rows: list[list[str | int]] = []
     for user in users:
         user_purchases = users_purchases.get(user.user.id, [])
-        row: list[str | int] = [""] * col_idx
+        row: list[str | int] = [""] * col_idx  # ty:ignore[invalid-assignment]
         row[0] = user.user.name
         row[1] = user.user.firstname
         row[2] = user.user.email
-        row[3] = ", ".join(get_user_types(user))
+        row[3] = user.user.phone or ""
+        row[4] = ", ".join(get_user_types(user))
         if user.validated and all(p.validated for p in user_purchases):
-            row[4] = "Validé et payé"
+            row[5] = "Validé et payé"
         elif user.validated:
-            row[4] = "Validé mais non payé"
+            row[5] = "Validé mais non payé"
         else:
-            row[4] = "Non validé"
+            row[5] = "Non validé"
         thick_columns = [len(FIXED_COLUMNS) - 1]
         purchases_map = {
             p.product_variant_id: p for p in users_purchases.get(user.user.id, [])
