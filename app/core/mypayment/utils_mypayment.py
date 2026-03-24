@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.checkout import schemas_checkout
 from app.core.checkout.payment_tool import PaymentTool
-from app.core.memberships import schemas_memberships
 from app.core.mypayment import cruds_mypayment, models_mypayment, schemas_mypayment
 from app.core.mypayment.exceptions_mypayment import (
     TransferAlreadyConfirmedInCallbackError,

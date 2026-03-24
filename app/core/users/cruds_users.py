@@ -326,9 +326,7 @@ async def fusion_users(
             b. If it does, we delete the row
     """
 
-    from app.core.mypayment.utils_mypayment import (  # noqa: PLC0415
-        fuse_mypayment_users_utils,
-    )
+    from app.core.mypayment.utils_mypayment import fuse_mypayment_users_utils
 
     await fuse_mypayment_users_utils(db, user_kept_id, user_deleted_id)
 

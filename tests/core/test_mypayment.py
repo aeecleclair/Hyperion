@@ -16,7 +16,7 @@ from app.core.checkout import schemas_checkout
 from app.core.groups import models_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.memberships import models_memberships
-from app.core.mypayment import cruds_mypayment, models_mypayment, schemas_mypayment
+from app.core.mypayment import cruds_mypayment, models_mypayment
 from app.core.mypayment.coredata_mypayment import (
     MyPaymentBankAccountHolder,
 )
@@ -27,7 +27,6 @@ from app.core.mypayment.schemas_mypayment import (
     RequestValidationData,
 )
 from app.core.mypayment.types_mypayment import (
-    MyPaymentCallType,
     RequestStatus,
     TransactionStatus,
     TransactionType,
