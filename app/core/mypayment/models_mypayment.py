@@ -207,6 +207,12 @@ class Transfer(Base):
     creation: Mapped[datetime]
     confirmed: Mapped[bool]
 
+    # Store transfer can occur when a user ask for a direct payment instead of a payment request.
+    # In this case, we want to keep the information of module and object that generated the transfer,
+    # to be able to call the right callback when the transfer is confirmed
+    module: Mapped[str | None]
+    object_id: Mapped[UUID | None]
+
 
 class Seller(Base):
     __tablename__ = "mypayment_seller"

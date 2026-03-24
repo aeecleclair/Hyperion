@@ -706,6 +706,8 @@ async def get_transfers(
             total=transfer.total,
             creation=transfer.creation,
             confirmed=transfer.confirmed,
+            module=transfer.module,
+            object_id=transfer.object_id,
         )
         for transfer in result.scalars().all()
     ]
@@ -724,6 +726,8 @@ async def create_transfer(
         total=transfer.total,
         creation=transfer.creation,
         confirmed=transfer.confirmed,
+        module=transfer.module,
+        object_id=transfer.object_id,
     )
     db.add(transfer_db)
 
@@ -744,7 +748,7 @@ async def get_transfers_by_wallet_id(
     db: AsyncSession,
     start_datetime: datetime | None = None,
     end_datetime: datetime | None = None,
-) -> Sequence[models_mypayment.Transfer]:
+) -> list[schemas_mypayment.Transfer]:
     result = await db.execute(
         select(models_mypayment.Transfer)
         .where(
@@ -759,7 +763,21 @@ async def get_transfers_by_wallet_id(
             else and_(True),
         ),
     )
-    return result.scalars().all()
+    return [
+        schemas_mypayment.Transfer(
+            id=transfer.id,
+            type=transfer.type,
+            transfer_identifier=transfer.transfer_identifier,
+            approver_user_id=transfer.approver_user_id,
+            wallet_id=transfer.wallet_id,
+            total=transfer.total,
+            creation=transfer.creation,
+            confirmed=transfer.confirmed,
+            module=transfer.module,
+            object_id=transfer.object_id,
+        )
+        for transfer in result.scalars().all()
+    ]
 
 
 async def get_transfers_and_sellers_by_wallet_id(
@@ -801,13 +819,36 @@ async def get_transfers_and_sellers_by_wallet_id(
 async def get_transfer_by_transfer_identifier(
     db: AsyncSession,
     transfer_identifier: str,
-) -> models_mypayment.Transfer | None:
-    result = await db.execute(
-        select(models_mypayment.Transfer).where(
-            models_mypayment.Transfer.transfer_identifier == transfer_identifier,
-        ),
+) -> schemas_mypayment.Transfer | None:
+    result = (
+        (
+            await db.execute(
+                select(models_mypayment.Transfer).where(
+                    models_mypayment.Transfer.transfer_identifier
+                    == transfer_identifier,
+                ),
+            )
+        )
+        .scalars()
+        .first()
     )
-    return result.scalars().first()
+
+    return (
+        schemas_mypayment.Transfer(
+            id=result.id,
+            type=result.type,
+            transfer_identifier=result.transfer_identifier,
+            approver_user_id=result.approver_user_id,
+            wallet_id=result.wallet_id,
+            total=result.total,
+            creation=result.creation,
+            confirmed=result.confirmed,
+            module=result.module,
+            object_id=result.object_id,
+        )
+        if result
+        else None
+    )
 
 
 async def get_refunds(
