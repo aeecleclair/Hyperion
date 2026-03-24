@@ -924,18 +924,12 @@ async def export_store_history(
         )
     )
 
-    transfers_with_sellers = (
-        await cruds_mypayment.get_transfers_and_sellers_by_wallet_id(
-            wallet_id=store.wallet_id,
-            db=db,
-            start_datetime=start_date,
-            end_datetime=end_date,
-        )
+    direct_transfers = await cruds_mypayment.get_transfers_by_wallet_id(
+        wallet_id=store.wallet_id,
+        db=db,
+        start_datetime=start_date,
+        end_datetime=end_date,
     )
-    if len(transfers_with_sellers) > 0:
-        hyperion_error_logger.error(
-            f"Store {store.id} should never have transfers",
-        )
 
     # We add refunds
     refunds_with_sellers = await cruds_mypayment.get_refunds_and_sellers_by_wallet_id(
@@ -955,6 +949,7 @@ async def export_store_history(
     csv_content = generate_store_history_csv(
         transactions_with_sellers=list(transactions_with_sellers),
         refunds_map=refunds_map,
+        direct_transfers=direct_transfers,
         store_wallet_id=store.wallet_id,
     )
 
@@ -2132,6 +2127,8 @@ async def init_ha_transfer(
             wallet_id=user_payment.wallet_id,
             creation=datetime.now(UTC),
             confirmed=False,
+            module=None,
+            object_id=None,
         ),
     )
 
