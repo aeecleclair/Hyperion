@@ -127,7 +127,7 @@ async def init_objects() -> None:
     for account_type in AccountType:
         await add_object_to_db(
             models_permissions.CorePermissionAccountType(
-                permission_name=MyPaymentPermissions.access_payment.value,
+                permission_name=MyPaymentPermissions.access_mypayment.value,
                 account_type=account_type,
             ),
         )

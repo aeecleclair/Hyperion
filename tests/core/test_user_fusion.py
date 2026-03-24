@@ -5,10 +5,12 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.core.groups import models_groups
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.core.memberships import models_memberships
 from app.core.mypayment import models_mypayment
+from app.core.mypayment.endpoints_mypayment import MyPaymentPermissions
 from app.core.mypayment.types_mypayment import WalletType
+from app.core.permissions import models_permissions
 from app.core.users import models_users
 from tests.commons import (
     add_object_to_db,
@@ -43,6 +45,12 @@ FABRISTPP_EMAIL_2 = "fabristpp.eclair3@ecl21.ec-lyon.fr"
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
+    await add_object_to_db(
+        models_permissions.CorePermissionAccountType(
+            account_type=AccountType.student,
+            permission_name=MyPaymentPermissions.access_mypayment,
+        ),
+    )
     global group1, group2
     group1 = models_groups.CoreGroup(
         id=str(uuid4()),
@@ -210,7 +218,7 @@ def test_fusion_users(client: TestClient) -> None:
         "/mypayment/users/me/wallet",
         headers={"Authorization": f"Bearer {token_student_user}"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, response.text
     wallet = response.json()
     assert wallet["id"] == str(payment_wallet_to_keep.id)
     assert wallet["balance"] == 3000
