@@ -27,6 +27,7 @@ from app.core.mypayment.schemas_mypayment import (
     RequestValidationData,
 )
 from app.core.mypayment.types_mypayment import (
+    LATEST_TOS,
     RequestStatus,
     TransactionStatus,
     TransactionType,
@@ -34,7 +35,7 @@ from app.core.mypayment.types_mypayment import (
     WalletDeviceStatus,
     WalletType,
 )
-from app.core.mypayment.utils_mypayment import LATEST_TOS, validate_transfer_callback
+from app.core.mypayment.utils_mypayment import validate_transfer_callback
 from app.core.permissions import models_permissions
 from app.core.users import models_users
 from app.types.module import Module
