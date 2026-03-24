@@ -177,13 +177,14 @@ class Request(Base):
     __tablename__ = "mypayment_request"
 
     id: Mapped[PrimaryKey]
-    wallet_id: Mapped[str] = mapped_column(ForeignKey("mypayment_wallet.id"))
+    wallet_id: Mapped[UUID] = mapped_column(ForeignKey("mypayment_wallet.id"))
     creation: Mapped[datetime]
     total: Mapped[int]  # Stored in cents
-    store_id: Mapped[str] = mapped_column(ForeignKey("mypayment_store.id"))
+    store_id: Mapped[UUID] = mapped_column(ForeignKey("mypayment_store.id"))
     name: Mapped[str]
     store_note: Mapped[str | None]
-    callback: Mapped[str]
+    module: Mapped[str]
+    object_id: Mapped[UUID]
     status: Mapped[RequestStatus]
     transaction_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("mypayment_transaction.id"),

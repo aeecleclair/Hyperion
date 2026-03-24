@@ -10,6 +10,7 @@ from pydantic import (
 from app.core.memberships import schemas_memberships
 from app.core.mypayment.types_mypayment import (
     HistoryType,
+    RequestStatus,
     TransactionStatus,
     TransactionType,
     TransferType,
@@ -342,3 +343,35 @@ class Withdrawal(BaseModel):
     wallet_id: UUID
     total: int  # Stored in cents
     creation: datetime
+
+
+class Request(BaseModel):
+    id: UUID
+    wallet_id: UUID
+    creation: datetime
+    total: int  # Stored in cents
+    store_id: UUID
+    name: str
+    store_note: str | None = None
+    module: str
+    object_id: UUID
+    status: RequestStatus
+    transaction_id: UUID | None = None
+
+
+class RequestEdit(BaseModel):
+    name: str | None = None
+    store_note: str | None = None
+    status: RequestStatus | None = None
+    transaction_id: UUID | None = None
+
+
+class RequestValidationData(BaseModel):
+    request_id: UUID
+    key: UUID
+    iat: datetime
+    tot: int
+
+
+class RequestValidation(RequestValidationData):
+    signature: str
