@@ -21,6 +21,7 @@ from app.core.mypayment.exceptions_mypayment import (
 from app.core.mypayment.integrity_mypayment import (
     format_transaction_log,
     format_transfer_log,
+    format_user_fusion_log,
 )
 from app.core.mypayment.models_mypayment import UserPayment
 from app.core.mypayment.schemas_mypayment import (
@@ -28,6 +29,10 @@ from app.core.mypayment.schemas_mypayment import (
     RequestValidationData,
 )
 from app.core.mypayment.types_mypayment import (
+    LATEST_TOS,
+    MYPAYMENT_LOGS_S3_SUBFOLDER,
+    MYPAYMENT_ROOT,
+    RETENTION_DURATION,
     MyPaymentCallType,
     RequestStatus,
     TransferType,
@@ -41,18 +46,6 @@ from app.utils.communication.notifications import NotificationTool
 hyperion_security_logger = logging.getLogger("hyperion.security")
 hyperion_mypayment_logger = logging.getLogger("hyperion.mypayment")
 hyperion_error_logger = logging.getLogger("hyperion.error")
-
-LATEST_TOS = 2
-QRCODE_EXPIRATION = 5  # minutes
-REQUEST_EXPIRATION = 15  # minutes
-RETENTION_DURATION = 10 * 365  # 10 years in days
-MYPAYMENT_ROOT = "mypayment"
-
-MYPAYMENT_STRUCTURE_S3_SUBFOLDER = "structures"
-MYPAYMENT_STORES_S3_SUBFOLDER = "stores"
-MYPAYMENT_USERS_S3_SUBFOLDER = "users"
-MYPAYMENT_DEVICES_S3_SUBFOLDER = "devices"
-MYPAYMENT_LOGS_S3_SUBFOLDER = "logs"
 
 
 def verify_signature(
@@ -122,7 +115,7 @@ async def fuse_mypayment_users_utils(
 
 
 async def validate_transfer_callback(
-    checkout_payment: schemas_payment.CheckoutPayment,
+    checkout_payment: schemas_checkout.CheckoutPayment,
     db: AsyncSession,
 ):
     paid_amount = checkout_payment.paid_amount
@@ -377,121 +370,3 @@ async def call_mypayment_callback(
         hyperion_error_logger.exception(
             f"MyPayment: call to module {module_root} request callback ({id_name}: {call_id}) failed",
         )
-
-
-def structure_model_to_schema(
-    structure: models_mypayment.Structure,
-) -> schemas_mypayment.Structure:
-    """
-    Convert a structure model to a schema.
-    """
-    return schemas_mypayment.Structure(
-        id=structure.id,
-        short_id=structure.short_id,
-        name=structure.name,
-        association_membership_id=structure.association_membership_id,
-        association_membership=schemas_memberships.MembershipSimple(
-            id=structure.association_membership.id,
-            name=structure.association_membership.name,
-            manager_group_id=structure.association_membership.manager_group_id,
-        )
-        if structure.association_membership
-        else None,
-        manager_user_id=structure.manager_user_id,
-        manager_user=schemas_users.CoreUserSimple(
-            id=structure.manager_user.id,
-            firstname=structure.manager_user.firstname,
-            name=structure.manager_user.name,
-            nickname=structure.manager_user.nickname,
-            account_type=structure.manager_user.account_type,
-            school_id=structure.manager_user.school_id,
-        ),
-        siret=structure.siret,
-        siege_address_street=structure.siege_address_street,
-        siege_address_city=structure.siege_address_city,
-        siege_address_zipcode=structure.siege_address_zipcode,
-        siege_address_country=structure.siege_address_country,
-        iban=structure.iban,
-        bic=structure.bic,
-        creation=structure.creation,
-    )
-
-
-def refund_model_to_schema(
-    refund: models_mypayment.Refund,
-) -> schemas_mypayment.Refund:
-    """
-    Convert a refund model to a schema.
-    """
-    return schemas_mypayment.Refund(
-        id=refund.id,
-        transaction_id=refund.transaction_id,
-        credited_wallet_id=refund.credited_wallet_id,
-        debited_wallet_id=refund.debited_wallet_id,
-        total=refund.total,
-        creation=refund.creation,
-        seller_user_id=refund.seller_user_id,
-        transaction=schemas_mypayment.Transaction(
-            id=refund.transaction.id,
-            debited_wallet_id=refund.transaction.debited_wallet_id,
-            credited_wallet_id=refund.transaction.credited_wallet_id,
-            transaction_type=refund.transaction.transaction_type,
-            seller_user_id=refund.transaction.seller_user_id,
-            total=refund.transaction.total,
-            creation=refund.transaction.creation,
-            status=refund.transaction.status,
-        ),
-        debited_wallet=schemas_mypayment.WalletInfo(
-            id=refund.debited_wallet.id,
-            type=refund.debited_wallet.type,
-            owner_name=refund.debited_wallet.store.name
-            if refund.debited_wallet.store
-            else refund.debited_wallet.user.full_name
-            if refund.debited_wallet.user
-            else None,
-        ),
-        credited_wallet=schemas_mypayment.WalletInfo(
-            id=refund.credited_wallet.id,
-            type=refund.credited_wallet.type,
-            owner_name=refund.credited_wallet.store.name
-            if refund.credited_wallet.store
-            else refund.credited_wallet.user.full_name
-            if refund.credited_wallet.user
-            else None,
-        ),
-    )
-
-
-def invoice_model_to_schema(
-    invoice: models_mypayment.Invoice,
-) -> schemas_mypayment.Invoice:
-    """
-    Convert an invoice model to a schema.
-    """
-    return schemas_mypayment.Invoice(
-        id=invoice.id,
-        reference=invoice.reference,
-        structure_id=invoice.structure_id,
-        creation=invoice.creation,
-        start_date=invoice.start_date,
-        end_date=invoice.end_date,
-        total=invoice.total,
-        paid=invoice.paid,
-        received=invoice.received,
-        structure=structure_model_to_schema(invoice.structure),
-        details=[
-            schemas_mypayment.InvoiceDetail(
-                invoice_id=invoice.id,
-                store_id=detail.store_id,
-                total=detail.total,
-                store=schemas_mypayment.StoreSimple(
-                    id=detail.store.id,
-                    name=detail.store.name,
-                    structure_id=detail.store.structure_id,
-                    wallet_id=detail.store.wallet_id,
-                    creation=detail.store.creation,
-                ),
-            )
-            for detail in invoice.details
-        ],
-    )

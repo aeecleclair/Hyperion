@@ -9,7 +9,7 @@ from fastapi import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.payment import schemas_payment
+from app.core.checkout import schemas_checkout
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users
 from app.dependencies import (
@@ -34,7 +34,7 @@ class CdrPermissions(ModulePermissions):
 
 
 async def validate_payment(
-    checkout_payment: schemas_payment.CheckoutPayment,
+    checkout_payment: schemas_checkout.CheckoutPayment,
     db: AsyncSession,
 ) -> None:
     paid_amount = checkout_payment.paid_amount

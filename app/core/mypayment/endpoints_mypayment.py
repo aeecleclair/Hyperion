@@ -21,6 +21,9 @@ from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
+from app.core.checkout import schemas_checkout
+from app.core.checkout.payment_tool import PaymentTool
+from app.core.checkout.types_checkout import HelloAssoConfigName
 from app.core.core_endpoints import cruds_core
 from app.core.groups.groups_type import GroupType
 from app.core.memberships.utils_memberships import (
@@ -42,6 +45,16 @@ from app.core.mypayment.integrity_mypayment import (
 )
 from app.core.mypayment.models_mypayment import Store, WalletDevice
 from app.core.mypayment.types_mypayment import (
+    LATEST_TOS,
+    MYPAYMENT_DEVICES_S3_SUBFOLDER,
+    MYPAYMENT_LOGS_S3_SUBFOLDER,
+    MYPAYMENT_ROOT,
+    MYPAYMENT_STORES_S3_SUBFOLDER,
+    MYPAYMENT_STRUCTURE_S3_SUBFOLDER,
+    MYPAYMENT_USERS_S3_SUBFOLDER,
+    QRCODE_EXPIRATION,
+    REQUEST_EXPIRATION,
+    RETENTION_DURATION,
     HistoryType,
     MyPaymentCallType,
     RequestStatus,
@@ -54,16 +67,6 @@ from app.core.mypayment.types_mypayment import (
 from app.core.mypayment.utils.data_exporter import generate_store_history_csv
 from app.core.mypayment.utils.schema_converters import structure_model_to_schema
 from app.core.mypayment.utils_mypayment import (
-    LATEST_TOS,
-    MYPAYMENT_DEVICES_S3_SUBFOLDER,
-    MYPAYMENT_LOGS_S3_SUBFOLDER,
-    MYPAYMENT_ROOT,
-    MYPAYMENT_STORES_S3_SUBFOLDER,
-    MYPAYMENT_STRUCTURE_S3_SUBFOLDER,
-    MYPAYMENT_USERS_S3_SUBFOLDER,
-    QRCODE_EXPIRATION,
-    REQUEST_EXPIRATION,
-    RETENTION_DURATION,
     apply_transaction,
     call_mypayment_callback,
     is_user_latest_tos_signed,
@@ -71,9 +74,6 @@ from app.core.mypayment.utils_mypayment import (
     verify_signature,
 )
 from app.core.notification.schemas_notification import Message
-from app.core.payment import schemas_payment
-from app.core.payment.payment_tool import PaymentTool
-from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users, schemas_users
 from app.core.users.models_users import CoreUser
@@ -2027,7 +2027,7 @@ async def get_user_wallet_history(
 
 @router.post(
     "/mypayment/transfer/init",
-    response_model=schemas_payment.PaymentUrl,
+    response_model=schemas_checkout.PaymentUrl,
     status_code=201,
 )
 async def init_ha_transfer(
@@ -2132,14 +2132,14 @@ async def init_ha_transfer(
         ),
     )
 
-    return schemas_payment.PaymentUrl(
+    return schemas_checkout.PaymentUrl(
         url=checkout.payment_url,
     )
 
 
 @router.get(
     "/mypayment/transfer/redirect",
-    response_model=schemas_payment.PaymentUrl,
+    response_model=schemas_checkout.PaymentUrl,
     status_code=201,
 )
 async def redirect_from_ha_transfer(
