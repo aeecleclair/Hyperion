@@ -989,7 +989,7 @@ async def export_store_history(
 async def get_user_stores(
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(
-        is_user_allowed_to([MyPaymentPermissions.access_mypayment])
+        is_user_allowed_to([MyPaymentPermissions.access_mypayment]),
     ),
 ):
     """
@@ -1421,7 +1421,7 @@ async def delete_store_seller(
 async def register_user(
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(
-        is_user_allowed_to([MyPaymentPermissions.access_mypayment])
+        is_user_allowed_to([MyPaymentPermissions.access_mypayment]),
     ),
 ):
     """
@@ -1480,7 +1480,7 @@ async def register_user(
 async def get_user_tos(
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(
-        is_user_allowed_to([MyPaymentPermissions.access_mypayment])
+        is_user_allowed_to([MyPaymentPermissions.access_mypayment]),
     ),
     settings: Settings = Depends(get_settings),
 ):
@@ -1517,7 +1517,7 @@ async def sign_tos(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(
-        is_user_allowed_to([MyPaymentPermissions.access_mypayment])
+        is_user_allowed_to([MyPaymentPermissions.access_mypayment]),
     ),
     mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     settings: Settings = Depends(get_settings),
@@ -1581,7 +1581,7 @@ async def sign_tos(
 async def get_user_devices(
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(
-        is_user_allowed_to([MyPaymentPermissions.access_mypayment])
+        is_user_allowed_to([MyPaymentPermissions.access_mypayment]),
     ),
 ):
     """
@@ -1615,7 +1615,7 @@ async def get_user_device(
     wallet_device_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(
-        is_user_allowed_to([MyPaymentPermissions.access_mypayment])
+        is_user_allowed_to([MyPaymentPermissions.access_mypayment]),
     ),
 ):
     """
@@ -1662,7 +1662,7 @@ async def get_user_device(
 async def get_user_wallet(
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(
-        is_user_allowed_to([MyPaymentPermissions.access_mypayment])
+        is_user_allowed_to([MyPaymentPermissions.access_mypayment]),
     ),
 ):
     """
@@ -1705,7 +1705,7 @@ async def create_user_devices(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(
-        is_user_allowed_to([MyPaymentPermissions.access_mypayment])
+        is_user_allowed_to([MyPaymentPermissions.access_mypayment]),
     ),
     mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     settings: Settings = Depends(get_settings),
@@ -1920,7 +1920,7 @@ async def revoke_user_devices(
 async def get_user_wallet_history(
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(
-        is_user_allowed_to([MyPaymentPermissions.access_mypayment])
+        is_user_allowed_to([MyPaymentPermissions.access_mypayment]),
     ),
     start_date: datetime | None = None,
     end_date: datetime | None = None,
@@ -2052,7 +2052,7 @@ async def init_ha_transfer(
     transfer_info: schemas_mypayment.TransferInfo,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(
-        is_user_allowed_to([MyPaymentPermissions.access_mypayment])
+        is_user_allowed_to([MyPaymentPermissions.access_mypayment]),
     ),
     settings: Settings = Depends(get_settings),
     payment_tool: PaymentTool = Depends(
@@ -2837,7 +2837,7 @@ async def get_user_requests(
     used: bool | None = None,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(
-        is_user_allowed_to([MyPaymentPermissions.access_mypayment])
+        is_user_allowed_to([MyPaymentPermissions.access_mypayment]),
     ),
 ):
     """
@@ -2870,7 +2870,7 @@ async def accept_request(
     request_validation: schemas_mypayment.RequestValidation,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(
-        is_user_allowed_to([MyPaymentPermissions.access_mypayment])
+        is_user_allowed_to([MyPaymentPermissions.access_mypayment]),
     ),
     http_request_id: str = Depends(get_request_id),
     notification_tool: NotificationTool = Depends(get_notification_tool),
@@ -3046,7 +3046,7 @@ async def refuse_request(
     request_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(
-        is_user_allowed_to([MyPaymentPermissions.access_mypayment])
+        is_user_allowed_to([MyPaymentPermissions.access_mypayment]),
     ),
 ):
     """
