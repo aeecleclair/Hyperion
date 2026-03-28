@@ -80,7 +80,7 @@ module = Module(
     root="sport_competition",
     tag="Sport Competition",
     default_allowed_account_types=get_account_types_except_externals(),
-    payment_callback=validate_payment,
+    checkout_callback=validate_payment,
     factory=None,
     permissions=SportCompetitionPermissions,
 )

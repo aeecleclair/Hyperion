@@ -73,9 +73,11 @@ async def webhook(
     ):
         # We may receive the webhook multiple times, we only want to save a CheckoutPayment
         # in the database the first time
-        existing_checkout_payment_model = await cruds_checkout.get_checkout_payment_by_hello_asso_payment_id(
-            hello_asso_payment_id=content.data.id,  # ty:ignore[unresolved-attribute]
-            db=db,
+        existing_checkout_payment_model = (
+            await cruds_checkout.get_checkout_payment_by_hello_asso_payment_id(
+                hello_asso_payment_id=content.data.id,  # ty:ignore[unresolved-attribute]
+                db=db,
+            )
         )
         if existing_checkout_payment_model is not None:
             hyperion_error_logger.debug(
@@ -134,7 +136,7 @@ async def webhook(
         try:
             for module in all_modules:
                 if module.root == checkout.module:
-                    if module.payment_callback is None:
+                    if module.checkout_callback is None:
                         hyperion_error_logger.info(
                             f"Payment: module {checkout.module} does not define a payment callback for checkout (hyperion_checkout_id: {checkout_metadata.hyperion_checkout_id}, HelloAsso checkout_id: {checkout.id})",
                         )
@@ -147,7 +149,7 @@ async def webhook(
                         paid_amount=checkout_payment_model.paid_amount,
                         checkout_id=checkout_payment_model.checkout_id,
                     )
-                    await module.payment_callback(checkout_payment_schema, db)
+                    await module.checkout_callback(checkout_payment_schema, db)
                     hyperion_error_logger.info(
                         f"Payment: call to module {checkout.module} payment callback for checkout (hyperion_checkout_id: {checkout_metadata.hyperion_checkout_id}, HelloAsso checkout_id: {checkout.id}) succeeded",
                     )

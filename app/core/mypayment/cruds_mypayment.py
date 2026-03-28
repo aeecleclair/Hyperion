@@ -998,11 +998,8 @@ async def get_requests_by_wallet_id(
     include_used: bool = False,
 ) -> list[schemas_mypayment.Request]:
     result = await db.execute(
-        select(models_mypayment.Request)
-        .where(
+        select(models_mypayment.Request).where(
             models_mypayment.Request.wallet_id == wallet_id,
-        )
-        .where(
             models_mypayment.Request.status == RequestStatus.PROPOSED
             if not include_used
             else and_(True),

@@ -118,7 +118,7 @@ core_module = CoreModule(
     root=MYPAYMENT_ROOT,
     tag="MyPayment",
     router=router,
-    payment_callback=validate_transfer_callback,
+    checkout_callback=validate_transfer_callback,
     factory=MyPaymentFactory(),
     permissions=MyPaymentPermissions,
 )
@@ -2761,7 +2761,7 @@ async def accept_request(
     if debited_wallet.user is None or debited_wallet.store is not None:
         raise HTTPException(
             status_code=400,
-            detail="Stores are not allowed to make transaction by QR code",
+            detail="Wrong type of wallet's owner",
         )
 
     debited_user_payment = await cruds_mypayment.get_user_payment(
@@ -2795,7 +2795,7 @@ async def accept_request(
         id=uuid.uuid4(),
         debited_wallet_id=debited_wallet_device.wallet_id,
         credited_wallet_id=store.wallet_id,
-        transaction_type=TransactionType.DIRECT,
+        transaction_type=TransactionType.REQUEST,
         seller_user_id=user.id,
         total=request_validation.tot,
         creation=datetime.now(UTC),
