@@ -6,7 +6,7 @@ Version 2
 Les présentes Conditions Générales d’Utilisation (CGU) ont pour objet de définir les modalités et conditions d’utilisation de la solution de paiement dématérialisée {payment_name}, éditée par {entity_name}, destinée aux élèves et étudiants de {school_name}.
 
 ## Présentation de {payment_name}
-{payment_name} est une solution de paiement virtuel et dématérialisé utilisable au sein de {school_name} exclusivement, avec les associations participantes. Elle repose sur une monnaie virtuelle appelée <nom de la devise>, qui n’a aucune valeur légale et ne constitue pas une monnaie électronique au sens du Code monétaire et financier. Un (1) euro correspond à un (1) <nom de la devise>.
+{payment_name} est une solution de paiement virtuel et dématérialisé utilisable au sein de {school_name} exclusivement, avec les associations participantes. Elle repose sur une monnaie virtuelle appelée MyEuros, qui n’a aucune valeur légale et ne constitue pas une monnaie électronique au sens du Code monétaire et financier. Un (1) euro correspond à un (1) MyEuros.
 
 ## Fonctionnement du portefeuille virtuel
 Lors de son inscription, l’utilisateur se voit attribuer un portefeuille numérique personnel plafonné. Il s’engage à ne pas tenter de dépasser ce plafond par quelque moyen que ce soit. En validant son inscription, l’utilisateur reconnaît renoncer expressément à son droit de rétractation, conformément à l’article L221-28 du Code de la Consommation.
