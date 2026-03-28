@@ -179,13 +179,7 @@ async def validate_transfer_callback(
 
 
 async def request_transaction(
-    user_id: str,
-    store_id: UUID,
-    total: int,
-    name: str,
-    note: str | None,
-    module: str,
-    object_id: UUID,
+    request_info: schemas_mypayment.RequestInfo,
     db: AsyncSession,
     notification_tool: NotificationTool,
     settings: Settings,
@@ -193,11 +187,11 @@ async def request_transaction(
     """
     Create a transaction request for a user from a store.
     """
-    payment_user = await cruds_mypayment.get_user_payment(user_id, db)
+    payment_user = await cruds_mypayment.get_user_payment(request_info.user_id, db)
     if not payment_user:
         raise HTTPException(
             status_code=400,
-            detail=f"User {user_id} does not have a payment account",
+            detail=f"User {request_info.user_id} does not have a payment account",
         )
     request_id = uuid4()
     await cruds_mypayment.create_request(
@@ -206,22 +200,22 @@ async def request_transaction(
             id=request_id,
             wallet_id=payment_user.wallet_id,
             creation=datetime.now(UTC),
-            total=total,
-            store_id=store_id,
-            name=name,
-            store_note=note,
-            module=module,
-            object_id=object_id,
+            total=request_info.total,
+            store_id=request_info.store_id,
+            name=request_info.name,
+            store_note=request_info.note,
+            module=request_info.module,
+            object_id=request_info.object_id,
             status=RequestStatus.PROPOSED,
         ),
     )
     message = Message(
-        title=f"💸 Nouvelle demande de paiement - {name}",
-        content=f"Une nouvelle demande de paiement de {total / 100} € attend votre validation",
+        title=f"💸 Nouvelle demande de paiement - {request_info.name}",
+        content=f"Une nouvelle demande de paiement de {request_info.total / 100} € attend votre validation",
         action_module=settings.school.payment_name,
     )
     await notification_tool.send_notification_to_user(
-        user_id=user_id,
+        user_id=request_info.user_id,
         message=message,
     )
     return request_id
