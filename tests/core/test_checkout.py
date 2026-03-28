@@ -304,7 +304,7 @@ async def test_webhook_payment_callback(
         root=TEST_MODULE_ROOT,
         tag="Tests",
         default_allowed_groups_ids=[],
-        payment_callback=callback,
+        checkout_callback=callback,
         factory=None,
         permissions=None,
     )
@@ -347,7 +347,7 @@ async def test_webhook_payment_callback_fail(
         root=TEST_MODULE_ROOT,
         tag="Tests",
         default_allowed_groups_ids=[],
-        payment_callback=callback,
+        checkout_callback=callback,
         factory=None,
         permissions=None,
     )

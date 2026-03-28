@@ -71,7 +71,7 @@ class CdrPermissions(ModulePermissions):
 module = Module(
     root="cdr",
     tag="Cdr",
-    payment_callback=validate_payment,
+    checkout_callback=validate_payment,
     default_allowed_account_types=list(AccountType),
     factory=None,
     permissions=CdrPermissions,
