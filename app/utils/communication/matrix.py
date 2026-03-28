@@ -24,7 +24,7 @@ class Matrix:
 
         self.access_token = token
 
-    async def post(
+    def post(
         self,
         url: str,
         json: dict[str, Any],
@@ -44,20 +44,19 @@ class Matrix:
             headers["Authorization"] = "Bearer " + self.access_token
 
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    url,
-                    json=json,
-                    headers=headers,
-                    timeout=10,
-                )
+            response = httpx.post(
+                url,
+                json=json,
+                headers=headers,
+                timeout=10,
+            )
             response.raise_for_status()
         except httpx.RequestError as err:
             raise MatrixRequestError() from err
 
         return response.json()
 
-    async def send_message(self, room_id: str, formatted_body: str) -> None:
+    def send_message(self, room_id: str, formatted_body: str) -> None:
         """
         Send a message to the room `room_id`.
         `formatted_body` can contain html formatted text
@@ -77,6 +76,6 @@ class Matrix:
         }
 
         try:
-            await self.post(url, json=data, headers=None)
+            self.post(url, json=data, headers=None)
         except MatrixRequestError as error:
             raise MatrixSendMessageError(room_id=room_id) from error
