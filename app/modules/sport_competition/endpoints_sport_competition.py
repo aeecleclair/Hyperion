@@ -7,9 +7,9 @@ from fastapi import Body, Depends, File, HTTPException, Query, Response, UploadF
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.checkout.payment_tool import PaymentTool
+from app.core.checkout.types_checkout import HelloAssoConfigName
 from app.core.groups.groups_type import AccountType, get_account_types_except_externals
-from app.core.payment.payment_tool import PaymentTool
-from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.schools import cruds_schools
 from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users, models_users, schemas_users
@@ -81,7 +81,7 @@ module = Module(
     root="sport_competition",
     tag="Sport Competition",
     default_allowed_account_types=get_account_types_except_externals(),
-    payment_callback=validate_payment,
+    checkout_callback=validate_payment,
     factory=None,
     permissions=SportCompetitionPermissions,
 )

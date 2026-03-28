@@ -4,7 +4,7 @@ from uuid import uuid4
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.payment import schemas_payment
+from app.core.checkout import schemas_checkout
 from app.core.schools.schools_type import SchoolType
 from app.modules.sport_competition import (
     cruds_sport_competition,
@@ -123,7 +123,7 @@ def validate_product_variant_purchase(
 
 
 async def validate_payment(
-    checkout_payment: schemas_payment.CheckoutPayment,
+    checkout_payment: schemas_checkout.CheckoutPayment,
     db: AsyncSession,
 ) -> None:
     paid_amount = checkout_payment.paid_amount

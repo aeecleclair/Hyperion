@@ -10,24 +10,35 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
 )
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.checkout import schemas_checkout
 from app.core.groups import models_groups
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.core.memberships import models_memberships
 from app.core.mypayment import cruds_mypayment, models_mypayment
 from app.core.mypayment.coredata_mypayment import (
     MyPaymentBankAccountHolder,
 )
-from app.core.mypayment.schemas_mypayment import QRCodeContentData
+from app.core.mypayment.endpoints_mypayment import MyPaymentPermissions
+from app.core.mypayment.schemas_mypayment import (
+    QRCodeContentData,
+    RequestValidation,
+    RequestValidationData,
+)
 from app.core.mypayment.types_mypayment import (
+    LATEST_TOS,
+    RequestStatus,
     TransactionStatus,
     TransactionType,
     TransferType,
     WalletDeviceStatus,
     WalletType,
 )
-from app.core.mypayment.utils_mypayment import LATEST_TOS
+from app.core.mypayment.utils_mypayment import validate_transfer_callback
+from app.core.permissions import models_permissions
 from app.core.users import models_users
+from app.types.module import Module
 from tests.commons import (
     add_coredata_to_db,
     add_object_to_db,
@@ -36,6 +47,8 @@ from tests.commons import (
     create_user_with_groups,
     get_TestingSessionLocal,
 )
+
+TEST_MODULE_ROOT = "tests"
 
 bde_group: models_groups.CoreGroup
 
@@ -76,6 +89,7 @@ store2: models_mypayment.Store
 store3: models_mypayment.Store
 store_wallet_device_private_key: Ed25519PrivateKey
 store_wallet_device: models_mypayment.WalletDevice
+store_direct_transfer: models_mypayment.Transfer
 
 
 transaction_from_ecl_user_to_store: models_mypayment.Transaction
@@ -92,6 +106,10 @@ invoice1_detail: models_mypayment.InvoiceDetail
 invoice2_detail: models_mypayment.InvoiceDetail
 invoice3_detail: models_mypayment.InvoiceDetail
 
+proposed_request: models_mypayment.Request
+expired_request: models_mypayment.Request
+refused_request: models_mypayment.Request
+
 store_seller_can_bank_user: models_users.CoreUser
 store_seller_no_permission_user_access_token: str
 store_seller_can_bank_user_access_token: str
@@ -107,6 +125,14 @@ UNIQUE_TOKEN = "UNIQUE_TOKEN"
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
+    for account_type in AccountType:
+        await add_object_to_db(
+            models_permissions.CorePermissionAccountType(
+                permission_name=MyPaymentPermissions.access_mypayment.value,
+                account_type=account_type,
+            ),
+        )
+
     global bde_group
     bde_group = await create_groups_with_permissions(
         [],
@@ -371,6 +397,21 @@ async def init_objects() -> None:
     )
     await add_object_to_db(store_wallet_device)
 
+    global store_direct_transfer
+    store_direct_transfer = models_mypayment.Transfer(
+        id=uuid4(),
+        type=TransferType.HELLO_ASSO,
+        transfer_identifier=str(uuid4()),
+        approver_user_id=None,
+        wallet_id=store_wallet.id,
+        total=1500,  # 15€
+        creation=datetime.now(UTC),
+        confirmed=False,
+        module=TEST_MODULE_ROOT,
+        object_id=uuid4(),
+    )
+    await add_object_to_db(store_direct_transfer)
+
     # Create test transactions
     global transaction_from_ecl_user_to_store
     transaction_from_ecl_user_to_store = models_mypayment.Transaction(
@@ -449,6 +490,8 @@ async def init_objects() -> None:
         total=1000,  # 10€
         creation=datetime.now(UTC),
         confirmed=True,
+        module=None,
+        object_id=None,
     )
     await add_object_to_db(ecl_user_transfer)
 
@@ -617,6 +660,50 @@ async def init_objects() -> None:
         total=1000,
     )
     await add_object_to_db(invoice3_detail)
+
+    global proposed_request, expired_request, refused_request
+    proposed_request = models_mypayment.Request(
+        id=uuid4(),
+        wallet_id=ecl_user_wallet.id,
+        store_id=store.id,
+        total=1000,
+        name="Proposed Request",
+        store_note="Proposed Request Note",
+        status=RequestStatus.PROPOSED,
+        module=TEST_MODULE_ROOT,
+        object_id=uuid4(),
+        transaction_id=None,
+        creation=datetime.now(UTC),
+    )
+    await add_object_to_db(proposed_request)
+    expired_request = models_mypayment.Request(
+        id=uuid4(),
+        wallet_id=ecl_user_wallet.id,
+        store_id=store.id,
+        total=1000,
+        name="Expired Request",
+        store_note="Expired Request Note",
+        status=RequestStatus.EXPIRED,
+        module=TEST_MODULE_ROOT,
+        object_id=uuid4(),
+        transaction_id=None,
+        creation=datetime.now(UTC) - timedelta(days=30),
+    )
+    await add_object_to_db(expired_request)
+    refused_request = models_mypayment.Request(
+        id=uuid4(),
+        wallet_id=ecl_user_wallet.id,
+        store_id=store.id,
+        total=1000,
+        name="Refused Request",
+        store_note="Refused Request Note",
+        status=RequestStatus.REFUSED,
+        module=TEST_MODULE_ROOT,
+        object_id=uuid4(),
+        transaction_id=None,
+        creation=datetime.now(UTC) - timedelta(days=30),
+    )
+    await add_object_to_db(refused_request)
 
 
 async def test_get_structures(client: TestClient):
@@ -3312,3 +3399,130 @@ async def test_delete_invoice(
     )
     assert response.status_code == 200
     assert not any(invoice["id"] == invoice3.id for invoice in response.json())
+
+
+async def mypayment_callback(
+    object_id: UUID,
+    db: AsyncSession,
+) -> None:
+    pass
+
+
+async def test_get_request(
+    client: TestClient,
+):
+    response = client.get(
+        "/mypayment/requests",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["id"] == str(proposed_request.id)
+
+
+async def test_get_request_with_used_filter(
+    client: TestClient,
+):
+    response = client.get(
+        "/mypayment/requests?used=true",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 3
+
+
+async def test_accept_request(
+    mocker: MockerFixture,
+    client: TestClient,
+):
+    # We patch the callback to be able to check if it was called
+    mocked_callback = mocker.patch(
+        "tests.core.test_mypayment.mypayment_callback",
+    )
+
+    # We patch the module_list to inject our custom test module
+    test_module = Module(
+        root=TEST_MODULE_ROOT,
+        tag="Tests",
+        default_allowed_groups_ids=[],
+        mypayment_callback=mypayment_callback,
+        factory=None,
+        permissions=None,
+    )
+    mocker.patch(
+        "app.core.mypayment.utils_mypayment.all_modules",
+        [test_module],
+    )
+
+    validation_data = RequestValidationData(
+        request_id=proposed_request.id,
+        key=ecl_user_wallet_device.id,
+        iat=datetime.now(UTC),
+        tot=proposed_request.total,
+    )
+    validation_data_signature = ecl_user_wallet_device_private_key.sign(
+        validation_data.model_dump_json().encode("utf-8"),
+    )
+    validation = RequestValidation(
+        **validation_data.model_dump(),
+        signature=base64.b64encode(validation_data_signature).decode("utf-8"),
+    )
+    response = client.post(
+        f"/mypayment/requests/{proposed_request.id}/accept",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        json=validation.model_dump(mode="json"),
+    )
+    assert response.status_code == 204
+
+    responser = client.get(
+        "/mypayment/requests?used=true",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert responser.status_code == 200
+    accepted = next(
+        (
+            request
+            for request in responser.json()
+            if request["id"] == str(proposed_request.id)
+        ),
+        None,
+    )
+    assert accepted is not None
+    assert accepted["status"] == RequestStatus.ACCEPTED
+    mocked_callback.assert_called_once()
+
+
+async def test_direct_transfer_callback(
+    mocker: MockerFixture,
+    client: TestClient,
+):
+    # We patch the callback to be able to check if it was called
+    mocked_callback = mocker.patch(
+        "tests.core.test_mypayment.mypayment_callback",
+    )
+
+    # We patch the module_list to inject our custom test module
+    test_module = Module(
+        root=TEST_MODULE_ROOT,
+        tag="Tests",
+        default_allowed_groups_ids=[],
+        mypayment_callback=mypayment_callback,
+        factory=None,
+        permissions=None,
+    )
+    mocker.patch(
+        "app.core.mypayment.utils_mypayment.all_modules",
+        [test_module],
+    )
+
+    async with get_TestingSessionLocal()() as db:
+        await validate_transfer_callback(
+            checkout_payment=schemas_checkout.CheckoutPayment(
+                id=uuid4(),
+                paid_amount=1500,
+                checkout_id=UUID(store_direct_transfer.transfer_identifier),
+            ),
+            db=db,
+        )
+
+    mocked_callback.assert_called_once()

@@ -14,11 +14,11 @@ from sqlalchemy.ext.asyncio import (
 
 from app import dependencies
 from app.core.auth import schemas_auth
+from app.core.checkout import cruds_checkout, models_checkout, schemas_checkout
+from app.core.checkout.payment_tool import PaymentTool
+from app.core.checkout.types_checkout import HelloAssoConfig, HelloAssoConfigName
 from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import AccountType, GroupType
-from app.core.payment import cruds_payment, models_payment, schemas_payment
-from app.core.payment.payment_tool import PaymentTool
-from app.core.payment.types_payment import HelloAssoConfig, HelloAssoConfigName
 from app.core.permissions import cruds_permissions, schemas_permissions
 from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users, models_users, schemas_users
@@ -372,10 +372,10 @@ class MockedPaymentTool(PaymentTool):
         db: AsyncSession,
         payer_user: schemas_users.CoreUser | None = None,
         redirection_uri: str | None = None,
-    ) -> schemas_payment.Checkout:
-        exist = await cruds_payment.get_checkout_by_id(mocked_checkout_id, db)
+    ) -> schemas_checkout.Checkout:
+        exist = await cruds_checkout.get_checkout_by_id(mocked_checkout_id, db)
         if exist is None:
-            checkout_model = models_payment.Checkout(
+            checkout_model = models_checkout.Checkout(
                 id=mocked_checkout_id,
                 module=module,
                 name=checkout_name,
@@ -383,9 +383,9 @@ class MockedPaymentTool(PaymentTool):
                 hello_asso_checkout_id=123,
                 secret="checkoutsecret",
             )
-            await cruds_payment.create_checkout(db, checkout_model)
+            await cruds_checkout.create_checkout(db, checkout_model)
 
-        return schemas_payment.Checkout(
+        return schemas_checkout.Checkout(
             id=mocked_checkout_id,
             payment_url="https://some.url.fr/checkout",
         )
@@ -394,7 +394,7 @@ class MockedPaymentTool(PaymentTool):
         self,
         checkout_id: uuid.UUID,
         db: AsyncSession,
-    ) -> schemas_payment.CheckoutComplete | None:
+    ) -> schemas_checkout.CheckoutComplete | None:
         return await self.payment_tool.get_checkout(
             checkout_id=checkout_id,
             db=db,

@@ -192,13 +192,14 @@ class Request(Base):
     __tablename__ = "mypayment_request"
 
     id: Mapped[PrimaryKey]
-    wallet_id: Mapped[str] = mapped_column(ForeignKey("mypayment_wallet.id"))
+    wallet_id: Mapped[UUID] = mapped_column(ForeignKey("mypayment_wallet.id"))
     creation: Mapped[datetime]
     total: Mapped[int]  # Stored in cents
-    store_id: Mapped[str] = mapped_column(ForeignKey("mypayment_store.id"))
+    store_id: Mapped[UUID] = mapped_column(ForeignKey("mypayment_store.id"))
     name: Mapped[str]
     store_note: Mapped[str | None]
-    callback: Mapped[str]
+    module: Mapped[str]
+    object_id: Mapped[UUID]
     status: Mapped[RequestStatus]
     transaction_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("mypayment_transaction.id"),
@@ -220,6 +221,12 @@ class Transfer(Base):
     total: Mapped[int]  # Stored in cents
     creation: Mapped[datetime]
     confirmed: Mapped[bool]
+
+    # Store transfer can occur when a user ask for a direct payment instead of a payment request.
+    # In this case, we want to keep the information of module and object that generated the transfer,
+    # to be able to call the right callback when the transfer is confirmed
+    module: Mapped[str | None]
+    object_id: Mapped[UUID | None]
 
 
 class Seller(Base):
