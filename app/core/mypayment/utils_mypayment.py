@@ -26,7 +26,7 @@ hyperion_security_logger = logging.getLogger("hyperion.security")
 hyperion_mypayment_logger = logging.getLogger("hyperion.mypayment")
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
-LATEST_TOS = 2
+LATEST_TOS = 3
 QRCODE_EXPIRATION = 5  # minutes
 MYPAYMENT_LOGS_S3_SUBFOLDER = "logs"
 RETENTION_DURATION = 10 * 365  # 10 years in days
