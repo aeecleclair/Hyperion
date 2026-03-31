@@ -114,6 +114,7 @@ class AuthPermissions(ModulePermissions):
     overleaf = "overleaf"
     planka = "planka"
     slash = "slash"
+    pmf = "pmf"
 
 
 class AppAuthClient(BaseAuthClient):
@@ -357,6 +358,11 @@ class RAIDRegisteringAuthClient(BaseAuthClient):
 class SiarnaqAuthClient(BaseAuthClient):
     allowed_scopes: set[ScopeType | str] = {ScopeType.API}
     permission = AuthPermissions.siarnaq
+
+
+class PMFAuthClient(BaseAuthClient):
+    allowed_scopes: set[ScopeType | str] = {ScopeType.API}
+    permission = AuthPermissions.pmf
 
 
 class OverleafAuthClient(BaseAuthClient):
