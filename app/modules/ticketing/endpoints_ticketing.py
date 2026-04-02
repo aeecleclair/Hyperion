@@ -380,6 +380,38 @@ async def get_category_by_id(
     return category
 
 
+@module.router.get(
+    "/ticketing/events/{event_id}/categories/",
+    summary="Get all categories for an event",
+    response_model=list[schemas_ticketing.CategoryComplete],
+    status_code=200,
+)
+async def get_categories_by_event(
+    event_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> list[schemas_ticketing.CategoryComplete]:
+    """Get all categories for an event."""
+    return await cruds_ticketing.get_categories_by_event_id(
+        event_id=event_id, db=db,
+    )
+
+
+@module.router.get(
+    "/ticketing/sessions/{session_id}/categories/",
+    summary="Get all categories for a session",
+    response_model=list[schemas_ticketing.CategoryComplete],
+    status_code=200,
+)
+async def get_categories_by_session(
+    session_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> list[schemas_ticketing.CategoryComplete]:
+    """Get all categories for a session."""
+    return await cruds_ticketing.get_categories_by_session_id(
+        session_id=session_id, db=db,
+    )
+
+
 @module.router.post(
     "/ticketing/categories/",
     summary="Create a new category",

@@ -685,3 +685,178 @@ async def test_delete_session_with_categories(client: TestClient):
 
 
 # -------------------------- Test category basic cruds -------------------------- #
+
+# Get categories by session id
+async def test_get_categories_list_by_session(client: TestClient):
+    response = client.get(
+        f"/ticketing/sessions/{session1.id}/categories",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 200
+    categories = response.json()
+    assert isinstance(categories, list)
+    assert len(categories) >= 1  # We created 1 category for event1
+
+
+# Get categories by event id
+async def test_get_categories_list_by_event(client: TestClient):
+    response = client.get(
+        f"/ticketing/events/{event1.id}/categories",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 200
+    categories = response.json()
+    assert isinstance(categories, list)
+    assert len(categories) >= 1  # We created 1 category for event1
+
+
+async def test_get_category(client: TestClient):
+    # Test with category1 (should succeed)
+    response = client.get(
+        f"/ticketing/categories/{category1.id}",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 200
+
+    # Test with category_fake (not in DB, should return 404)
+    response = client.get(
+        f"/ticketing/categories/{uuid4()}",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 404
+
+
+async def test_create_category(client: TestClient):
+    new_category_data = {
+        "name": "New Category",
+        "quota": 2,
+        "user_quota": 1,
+        "event_id": str(event1.id),
+        "price": 50,
+        "sessions": [str(session1.id), str(session2.id)],
+    }
+    response = client.post(
+        "/ticketing/categories",
+        json=new_category_data,
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 201
+    created_category = response.json()
+    assert created_category["name"] == new_category_data["name"]
+    assert created_category["price"] == new_category_data["price"]
+
+
+# create category without perms
+async def test_create_category_without_perms(client: TestClient):
+    new_category_data = {
+        "name": "New Category",
+        "quota": 2,
+        "user_quota": 1,
+        "event_id": str(event1.id),
+        "price": 50,
+    }
+    response = client.post(
+        "/ticketing/categories",
+        json=new_category_data,
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 403
+
+
+# test create category with incorrect event id, should fail
+async def test_create_category_with_incorrect_event_id(client: TestClient):
+    new_category_data = {
+        "name": "New Category",
+        "quota": 2,
+        "user_quota": 1,
+        "event_id": str(uuid4()),  # Incorrect event ID
+        "price": 50,
+    }
+    response = client.post(
+        "/ticketing/categories",
+        json=new_category_data,
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 400
+
+
+# test create category with incorrect sessions ids, should fail
+async def test_create_category_with_incorrect_sessions_ids(client: TestClient):
+    new_category_data = {
+        "name": "New Category",
+        "quota": 2,
+        "user_quota": 1,
+        "event_id": str(event1.id),
+        "price": 50,
+        "sessions": [str(uuid4()), str(uuid4())],  # Incorrect session IDs
+    }
+    response = client.post(
+        "/ticketing/categories",
+        json=new_category_data,
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 400
+
+
+async def test_create_category_with_sessions_from_different_event(client: TestClient):
+    # Create a session for event2
+    session_event2 = models_ticketing.TicketingSession(
+        id=uuid4(),
+        event_id=event2.id,
+        name="Session Event 2",
+        quota=2,
+        user_quota=1,
+        used_quota=0,
+        disabled=False,
+        date=datetime(2024, 1, 4, tzinfo=UTC),
+    )
+    await add_object_to_db(session_event2)
+
+    new_category_data = {
+        "name": "New Category",
+        "quota": 2,
+        "user_quota": 1,
+        "event_id": str(event1.id),
+        "price": 50,
+        "sessions": [str(session1.id), str(session_event2.id)],  # session_event2 belongs to event2
+    }
+    response = client.post(
+        "/ticketing/categories",
+        json=new_category_data,
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 400
+
+
+# test create category with quota less than used_quota, should fail
+async def test_create_category_with_quota_less_than_used_quota(client: TestClient):
+    new_category_data = {
+        "name": "New Category",
+        "quota": 0,  # category1 has used_quota=1
+        "user_quota": 1,
+        "event_id": str(event1.id),
+        "price": 50,
+    }
+    response = client.post(
+        "/ticketing/categories",
+        json=new_category_data,
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 400
+
+
+# test create category with negative price, should fail
+async def test_create_category_with_negative_price(client: TestClient):
+    new_category_data = {
+        "name": "New Category",
+        "quota": 2,
+        "user_quota": 1,
+        "event_id": str(event1.id),
+        "price": -10,  # Negative price
+    }
+    response = client.post(
+        "/ticketing/categories",
+        json=new_category_data,
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 422
