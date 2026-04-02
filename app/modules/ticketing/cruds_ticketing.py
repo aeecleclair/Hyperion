@@ -477,6 +477,38 @@ async def get_categories_by_session_id(
     ]
 
 
+async def get_categories_by_event_id(
+    event_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_ticketing.CategoryComplete]:
+    """Get all categories for a specific event."""
+
+    return [
+        schemas_ticketing.CategoryComplete(
+            id=category.id,
+            event_id=category.event_id,
+            event=category.event,
+            name=category.name,
+            sessions=category.sessions,
+            required_mebership=category.required_mebership,
+            quota=category.quota,
+            user_quota=category.user_quota,
+            used_quota=category.used_quota,
+            price=category.price,
+            disabled=category.disabled,
+        )
+        for category in (
+            await db.execute(
+                select(models_ticketing.TicketingCategory).where(
+                    models_ticketing.TicketingCategory.event_id == event_id,
+                ),
+            )
+        )
+        .scalars()
+        .all()
+    ]
+
+
 async def create_category(
     db: AsyncSession,
     category: schemas_ticketing.CategorySimple,
