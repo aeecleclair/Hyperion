@@ -23,6 +23,7 @@ class CoreUser(Base):
     email: Mapped[str] = mapped_column(unique=True, index=True)
     school_id: Mapped[UUID] = mapped_column(ForeignKey("core_school.id"))
     password_hash: Mapped[str]
+    should_change_password: Mapped[bool]
     # Depending on the account type, the user may have different rights and access to different features
     # External users may exist for:
     # - accounts meant to be used by external services based on Hyperion SSO or Hyperion backend

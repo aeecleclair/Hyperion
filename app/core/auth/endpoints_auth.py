@@ -85,6 +85,12 @@ async def login_for_access_token(
             detail="Incorrect login or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    if user.should_change_password:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Should change password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     # We put the user id in the subject field of the token.
     # The subject `sub` is a JWT registered claim name, see https://datatracker.ietf.org/doc/html/rfc7519#section-4.1
     data = schemas_auth.TokenData(sub=user.id, scopes=ScopeType.auth)
@@ -310,6 +316,19 @@ async def authorize_validation(
             + calypsso.get_login_relative_url(
                 **authorizereq.model_dump(exclude={"email", "password"}),
                 credentials_error=True,
+            ),
+            status_code=status.HTTP_302_FOUND,
+        )
+
+    if user.should_change_password:
+        hyperion_access_logger.warning(
+            f"Authorize-validation: User {authorizereq.email} should change password ({request_id})",
+        )
+        return RedirectResponse(
+            settings.CLIENT_URL
+            + calypsso.get_recover_password_relative_url(  # ty:ignore[unresolved-attribute]
+                email=authorizereq.email,
+                should_change_password=True,
             ),
             status_code=status.HTTP_302_FOUND,
         )
