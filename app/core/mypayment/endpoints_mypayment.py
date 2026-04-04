@@ -89,6 +89,7 @@ from app.utils.tools import (
     generate_pdf_from_template,
     get_core_data,
     get_file_from_data,
+    patch_identity_in_text,
     set_core_data,
 )
 
@@ -1491,7 +1492,10 @@ async def get_user_tos(
     return schemas_mypayment.TOSSignatureResponse(
         accepted_tos_version=existing_user_payment.accepted_tos_version,
         latest_tos_version=LATEST_TOS,
-        tos_content=Path("assets/mypayment-terms-of-service.txt").read_text("utf-8"),
+        tos_content=patch_identity_in_text(
+            Path("assets/mypayment-terms-of-service.txt").read_text("utf-8"),
+            settings,
+        ),
         max_wallet_balance=settings.MYPAYMENT_MAXIMUM_WALLET_BALANCE,
     )
 
