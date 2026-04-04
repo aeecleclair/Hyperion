@@ -1493,7 +1493,8 @@ async def get_user_tos(
         accepted_tos_version=existing_user_payment.accepted_tos_version,
         latest_tos_version=LATEST_TOS,
         tos_content=patch_identity_in_text(
-            Path("assets/mypayment-terms-of-service.txt").read_text("utf-8"), settings,
+            Path("assets/mypayment-terms-of-service.txt").read_text("utf-8"),
+            settings,
         ),
         max_wallet_balance=settings.MYPAYMENT_MAXIMUM_WALLET_BALANCE,
     )
