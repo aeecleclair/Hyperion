@@ -42,6 +42,10 @@ async def update_offer(
 
 
 async def delete_offer(offer_id: UUID, db: AsyncSession) -> None:
+    # First, delete associations in pmf_offer_tags
+    await db.execute(
+        delete(models_pmf.OfferTags).where(models_pmf.OfferTags.offer_id == offer_id),
+    )
     await db.execute(
         delete(models_pmf.PmfOffer).where(models_pmf.PmfOffer.id == offer_id),
     )
@@ -117,27 +121,34 @@ async def get_all_tags(db: AsyncSession) -> list[schemas_pmf.TagComplete]:
     tags = await db.execute(
         select(models_pmf.Tags).distinct(models_pmf.Tags.tag),
     )
-    return [schemas_pmf.TagComplete.model_validate(tag) for tag in tags.scalars().all()]
+    return [
+        schemas_pmf.TagComplete(
+            id=tag.id,
+            tag=tag.tag,
+            created_at=tag.created_at,
+        )
+        for tag in tags.scalars().all()
+    ]
 
 
 async def get_tag_by_name(
     tag_name: str,
     db: AsyncSession,
-) -> schemas_pmf.TagComplete | None:
+) -> models_pmf.Tags | None:
     result = await db.execute(
         select(models_pmf.Tags).where(models_pmf.Tags.tag == tag_name),
     )
-    return schemas_pmf.TagComplete.model_validate(result.scalars().first())
+    return result.scalars().first()
 
 
 async def get_tag_by_id(
     tag_id: UUID,
     db: AsyncSession,
-) -> schemas_pmf.TagComplete | None:
+) -> models_pmf.Tags | None:
     result = await db.execute(
         select(models_pmf.Tags).where(models_pmf.Tags.id == tag_id),
     )
-    return schemas_pmf.TagComplete.model_validate(result.scalars().first())
+    return result.scalars().first()
 
 
 async def create_tag(
@@ -168,6 +179,10 @@ async def delete_tag(
     tag_id: UUID,
     db: AsyncSession,
 ) -> None:
+    # First, delete associations in pmf_offer_tags
+    await db.execute(
+        delete(models_pmf.OfferTags).where(models_pmf.OfferTags.tag_id == tag_id),
+    )
     await db.execute(
         delete(models_pmf.Tags).where(models_pmf.Tags.id == tag_id),
     )
