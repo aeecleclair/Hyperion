@@ -43,7 +43,6 @@ class PmfOffer(Base):
     location_type: Mapped[LocationType]  # Enum (On_site, Hybrid, Remote)
 
     start_date: Mapped[date]
-    end_date: Mapped[date]
     duration: Mapped[int]  # days
 
     created_at: Mapped[date] = mapped_column(insert_default=date.today)

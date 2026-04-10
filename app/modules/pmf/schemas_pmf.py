@@ -27,7 +27,6 @@ class OfferBase(BaseModel):
     location_type: LocationType
 
     start_date: date
-    end_date: date
     duration: int  # days
 
 
@@ -44,7 +43,6 @@ class OfferUpdate(BaseModel):
     location: str | None = None
     location_type: LocationType | None = None
     start_date: date | None = None
-    end_date: date | None = None
     duration: int | None = None  # days
 
     tags: list[TagBase] | None = None

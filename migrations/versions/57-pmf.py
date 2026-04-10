@@ -49,7 +49,6 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("start_date", sa.Date(), nullable=False),
-        sa.Column("end_date", sa.Date(), nullable=False),
         sa.Column("duration", sa.Integer(), nullable=False),
         sa.Column("created_at", sa.Date(), nullable=False),
         sa.ForeignKeyConstraint(["author_id"], ["core_user.id"]),
