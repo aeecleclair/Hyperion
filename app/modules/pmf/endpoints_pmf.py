@@ -75,7 +75,7 @@ async def get_offers(
 
 
 @router.post(
-    "/pmf/offer/",
+    "/pmf/offers/",
     response_model=schemas_pmf.OfferComplete,
     status_code=200,
 )
@@ -108,8 +108,8 @@ async def create_offer(
     return await cruds_pmf.get_offer_by_id(offer_id=offer_db.id, db=db)
 
 
-@router.put(
-    "/pmf/offer/{offer_id}",
+@router.patch(
+    "/pmf/offers/{offer_id}",
     response_model=None,
     status_code=204,
 )
@@ -146,7 +146,7 @@ async def update_offer(
 
 
 @router.delete(
-    "/pmf/offer/{offer_id}",
+    "/pmf/offers/{offer_id}",
     response_model=None,
     status_code=204,
 )
