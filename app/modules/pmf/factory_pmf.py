@@ -28,6 +28,23 @@ class PmfFactory(Factory):
             ),
             db=db,
         )
+        await cruds_pmf.create_offer(
+            offer=models_pmf.PmfOffer(
+                id=uuid.uuid4(),
+                author_id=CoreUsersFactory.demo_users_id[1],
+                company_name="EDF",
+                start_date=date(2025,12,12),
+                end_date=date(2026,6,5),
+                duration=0,
+                title="Ingeneirue",
+                description="elec",
+                location="Ecully",
+                location_type=types_pmf.LocationType.On_site,
+                offer_type=types_pmf.OfferType.CDI,
+                created_at=date.today
+            ),
+            db=db,
+        )
 
 
     @classmethod
