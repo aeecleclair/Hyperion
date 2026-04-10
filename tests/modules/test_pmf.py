@@ -94,6 +94,7 @@ async def init_objects():
         start_date=date(2023, 6, 1),
         created_at=date(2023, 5, 1),
         duration=92,
+        hidden=True,
     )
     await add_object_to_db(offer_1)
     offer_tag = models_pmf.OfferTags(offer_id=offer_1.id, tag_id=tag1.id)
@@ -111,6 +112,7 @@ async def init_objects():
         start_date=date(2023, 7, 1),
         created_at=date(2023, 6, 1),
         duration=92,
+        hidden=False,
     )
     await add_object_to_db(offer_2)
     offer_tag = models_pmf.OfferTags(offer_id=offer_2.id, tag_id=tag2.id)
@@ -129,6 +131,7 @@ async def init_objects():
         start_date=date(2023, 8, 1),
         created_at=date(2023, 7, 1),
         duration=92,
+        hidden=True,
     )
     await add_object_to_db(offer_3)
     offer_tag1 = models_pmf.OfferTags(offer_id=offer_3.id, tag_id=tag1.id)

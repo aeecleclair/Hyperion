@@ -102,6 +102,7 @@ async def get_offers(
             location_type=offer.location_type,
             start_date=offer.start_date,
             duration=offer.duration,
+            hidden=offer.hidden,
             author=schemas_users.CoreUserSimple.model_validate(offer.author),
             tags=[
                 schemas_pmf.TagComplete(

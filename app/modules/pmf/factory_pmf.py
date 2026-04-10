@@ -19,7 +19,7 @@ class PmfFactory(Factory):
                 id=uuid.uuid4(),
                 author_id=CoreUsersFactory.demo_users_id[0],
                 company_name="Centrale Innovation",
-                start_date=date(2025,12,1),
+                start_date=date(2025, 12, 1),
                 duration=6,
                 title="Stage",
                 description="Stageant",
@@ -27,6 +27,7 @@ class PmfFactory(Factory):
                 location_type=types_pmf.LocationType.On_site,
                 offer_type=types_pmf.OfferType.TFE,
                 created_at=date.today,
+                hidden=True,
             ),
             db=db,
         )
@@ -35,7 +36,7 @@ class PmfFactory(Factory):
                 id=uuid.uuid4(),
                 author_id=CoreUsersFactory.demo_users_id[1],
                 company_name="EDF",
-                start_date=date(2025,12,12),
+                start_date=date(2025, 12, 12),
                 duration=4,
                 title="Ingeneirue",
                 description="elec",
@@ -43,10 +44,10 @@ class PmfFactory(Factory):
                 location_type=types_pmf.LocationType.On_site,
                 offer_type=types_pmf.OfferType.APP,
                 created_at=date.today,
+                hidden=False,
             ),
             db=db,
         )
-
 
     @classmethod
     async def run(cls, db: AsyncSession, settings: Settings) -> None:
