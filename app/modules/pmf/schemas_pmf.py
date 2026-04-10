@@ -25,13 +25,13 @@ class OfferBase(BaseModel):
     offer_type: OfferType
     location: str
     location_type: LocationType
-
     start_date: date
     duration: int  # days
 
 
 class OfferSimple(OfferBase):
     id: UUID
+    hidden: bool
 
 
 class OfferUpdate(BaseModel):
@@ -43,8 +43,8 @@ class OfferUpdate(BaseModel):
     location: str | None = None
     location_type: LocationType | None = None
     start_date: date | None = None
-    duration: int | None = None  # days
-
+    duration: int | None = None  # months
+    hidden: bool | None = None
     tags: list[TagBase] | None = None
 
 
