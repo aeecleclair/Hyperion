@@ -57,6 +57,8 @@ async def get_offers(
     includedOfferTypes: list[types_pmf.OfferType] = Query(default=[]),
     includedTags: list[str] = Query(default=[]),
     includedLocationTypes: list[types_pmf.LocationType] = Query(default=[]),
+    limit: int | None = Query(default=50, gt=0, le=50),
+    offset: int | None = Query(default=0, ge=0),
     # Allow only former students to access this endpoint
     # user: CoreUser = Depends(is_user(included_account_types=[AccountType.former_student])),
 ):
@@ -89,7 +91,8 @@ async def create_offer(
         ],
     ):
         raise HTTPException(
-            status_code=403, detail="Forbidden, you are not the author of this offer"
+            status_code=403,
+            detail="Forbidden, you are not the author of this offer",
         )
 
     offer_db = schemas_pmf.OfferSimple(
@@ -126,7 +129,8 @@ async def update_offer(
         ],
     ):
         raise HTTPException(
-            status_code=403, detail="Forbidden, you are not the author of this offer"
+            status_code=403,
+            detail="Forbidden, you are not the author of this offer",
         )
 
     await cruds_pmf.update_offer(
@@ -161,7 +165,8 @@ async def delete_offer(
         ],
     ):
         raise HTTPException(
-            status_code=403, detail="Forbidden, you are not the author of this offer"
+            status_code=403,
+            detail="Forbidden, you are not the author of this offer",
         )
 
     await cruds_pmf.delete_offer(offer_id=offer_id, db=db)
