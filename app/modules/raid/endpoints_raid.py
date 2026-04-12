@@ -1,8 +1,8 @@
 import logging
 import uuid
 from datetime import UTC, date, datetime
-from pathlib import Path
 
+from anyio import Path
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession

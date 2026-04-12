@@ -1,10 +1,10 @@
+import tomllib
 from functools import cached_property
-from pathlib import Path
 from re import Pattern
 from typing import Any, ClassVar
 
 import jwt
-import tomllib
+from anyio import Path
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from pydantic import BaseModel, computed_field, model_validator
@@ -353,16 +353,16 @@ class Settings(BaseSettings):
 
     @computed_field  # type: ignore[prop-decorator]
     @cached_property
-    def HYPERION_VERSION(cls) -> str:
-        with Path("pyproject.toml").open("rb") as pyproject_binary:
-            pyproject = tomllib.load(pyproject_binary)
+    async def HYPERION_VERSION(cls) -> str:
+        content = await Path("pyproject.toml").read_text("utf-8")
+        pyproject = tomllib.loads(content)
         return str(pyproject["project"]["version"])
 
     @computed_field  # type: ignore[prop-decorator]
     @cached_property
-    def MINIMAL_TITAN_VERSION_CODE(cls) -> int:
-        with Path("pyproject.toml").open("rb") as pyproject_binary:
-            pyproject = tomllib.load(pyproject_binary)
+    async def MINIMAL_TITAN_VERSION_CODE(cls) -> int:
+        content = await Path("pyproject.toml").read_text("utf-8")
+        pyproject = tomllib.loads(content)
         return int(pyproject["tool"]["titan"]["minimal-titan-version-code"])
 
     ######################################
