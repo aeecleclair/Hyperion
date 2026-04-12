@@ -1,25 +1,25 @@
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
 
 
-class WalletType(str, Enum):
+class WalletType(StrEnum):
     USER = "user"
     STORE = "store"
 
 
-class WalletDeviceStatus(str, Enum):
+class WalletDeviceStatus(StrEnum):
     INACTIVE = "inactive"
     ACTIVE = "active"
     REVOKED = "revoked"
 
 
-class TransactionType(str, Enum):
+class TransactionType(StrEnum):
     DIRECT = "direct"
     REQUEST = "request"
     REFUND = "refund"
 
 
-class HistoryType(str, Enum):
+class HistoryType(StrEnum):
     TRANSFER = "transfer"
     RECEIVED = "received"
     GIVEN = "given"
@@ -27,7 +27,7 @@ class HistoryType(str, Enum):
     REFUND_DEBITED = "refund_debited"
 
 
-class TransactionStatus(str, Enum):
+class TransactionStatus(StrEnum):
     """
     CONFIRMED: The transaction has been confirmed and is complete.
     CANCELED: The transaction has been canceled. It is used for transfer requests, for which the user has 15 minutes to complete the HelloAsso checkout
@@ -41,17 +41,17 @@ class TransactionStatus(str, Enum):
     PENDING = "pending"
 
 
-class RequestStatus(str, Enum):
+class RequestStatus(StrEnum):
     PROPOSED = "proposed"
     ACCEPTED = "accepted"
     REFUSED = "refused"
 
 
-class TransferType(str, Enum):
+class TransferType(StrEnum):
     HELLO_ASSO = "hello_asso"
 
 
-class ActionType(str, Enum):
+class ActionType(StrEnum):
     TRANSFER = "transfer"
     REFUND = "refund"
     CANCEL = "cancel"

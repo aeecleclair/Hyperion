@@ -83,7 +83,7 @@ async def test_save_file() -> None:
 async def test_save_file_with_invalid_content_type() -> None:
     valid_uuid = str(uuid.uuid4())
     with (
-        pytest.raises(HTTPException, match="400: Invalid file format, supported*"),
+        pytest.raises(HTTPException, match=r"400: Invalid file format, supported*"),
         pathlib.Path("assets/images/default_profile_picture.png").open("rb") as file,
     ):
         await save_file_as_data(
