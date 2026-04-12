@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class CalendarEventType(str, Enum):
+class CalendarEventType(StrEnum):
     eventAE = "Event AE"
     eventUSE = "Event USE"
     independentAssociation = "Asso indé"
@@ -14,7 +14,7 @@ class CalendarEventType(str, Enum):
         return f"{self.name}<{self.value}"
 
 
-class Decision(str, Enum):
+class Decision(StrEnum):
     approved = "approved"
     declined = "declined"
     pending = "pending"

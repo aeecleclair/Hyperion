@@ -1,12 +1,12 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class DocumentSignatureType(str, Enum):
+class DocumentSignatureType(StrEnum):
     material = "material"
     numeric = "numeric"
 
 
-class PaymentType(str, Enum):
+class PaymentType(StrEnum):
     cash = "cash"
     check = "check"
     helloasso = "HelloAsso"
@@ -14,14 +14,14 @@ class PaymentType(str, Enum):
     archived = "archived"
 
 
-class CdrStatus(str, Enum):
+class CdrStatus(StrEnum):
     pending = "pending"
     online = "online"
     onsite = "onsite"
     closed = "closed"
 
 
-class CdrLogActionType(str, Enum):
+class CdrLogActionType(StrEnum):
     purchase_add = "purchase_add"
     purchase_delete = "purchase_delete"
     payment_add = "payment_add"
