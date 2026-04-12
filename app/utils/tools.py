@@ -382,7 +382,8 @@ async def generate_pdf_from_template(
     You should only provide thrusted templates to this function.
     See [WeasyPrint security consideration](https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#security)
     """
-    from weasyprint import CSS, HTML
+    # We only import Weasyprint here to be able to launch Hyperion without installing the module
+    from weasyprint import CSS, HTML  # noqa: PLC0415
 
     templates = Environment(
         loader=FileSystemLoader("assets/templates"),
