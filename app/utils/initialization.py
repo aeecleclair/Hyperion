@@ -202,10 +202,7 @@ def delete_core_data_crud_sync(schema: str, db: Session) -> None:
     db.commit()
 
 
-CoreDataClass = TypeVar("CoreDataClass", bound=core_data.BaseCoreData)
-
-
-def get_core_data_sync(
+def get_core_data_sync[CoreDataClass: core_data.BaseCoreData](
     core_data_class: type[CoreDataClass],
     db: Session,
 ) -> CoreDataClass:
@@ -292,11 +289,7 @@ def drop_db_sync(conn: Connection):
     my_metadata.drop_all(bind=conn)
 
 
-P = ParamSpec("P")
-R = TypeVar("R")
-
-
-async def use_lock_for_workers(
+async def use_lock_for_workers[**P, R](
     job_function: Callable[P, R],
     key: str,
     redis_client: redis.Redis | None,
