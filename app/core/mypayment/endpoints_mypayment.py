@@ -1470,13 +1470,14 @@ async def patch_payment_identity_in_text(
     db: AsyncSession,
 ) -> str:
     account_holder = await get_bank_account_holder(user, db)
-    return patch_identity_in_text(
+    patched_text: str = patch_identity_in_text(
         text=text,
         settings=settings,
     ).replace(
         "{bank_account_holder}",
         account_holder.name,
     )
+    return patched_text
 
 
 @router.get(
