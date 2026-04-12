@@ -1,7 +1,7 @@
 import logging
 import logging.config
 import queue
-from enum import Enum
+from enum import StrEnum
 from logging.handlers import QueueHandler, QueueListener
 from pathlib import Path
 from typing import Any
@@ -12,7 +12,7 @@ from app.core.utils.config import Settings
 
 
 class ColoredConsoleFormatter(uvicorn.logging.DefaultFormatter):
-    class ConsoleColors(str, Enum):
+    class ConsoleColors(StrEnum):
         """Colors can be found here: https://talyian.github.io/ansicolors/"""
 
         DEBUG = "\033[38;5;12m"
