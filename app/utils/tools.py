@@ -315,7 +315,7 @@ async def get_file_path_from_data(
 
 async def get_file_from_data(
     directory: str,
-    filename: str,
+    filename: str | UUID,
     default_asset: str | None = None,
 ) -> FileResponse:
     """
@@ -334,7 +334,7 @@ async def get_file_from_data(
 
 async def delete_file_from_data(
     directory: str,
-    filename: str,
+    filename: str | UUID,
 ):
     """
     Delete all files with the provided filename in the data folder.
@@ -344,6 +344,9 @@ async def delete_file_from_data(
 
     WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
     """
+    if isinstance(filename, UUID):
+        filename = str(filename)
+
     if not uuid_regex.match(filename):
         hyperion_error_logger.error(
             f"get_file_from_data: security issue, the filename is not a valid UUID: {filename}. This mean that the user input was not properly checked.",
