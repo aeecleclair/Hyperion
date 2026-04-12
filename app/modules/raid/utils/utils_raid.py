@@ -233,7 +233,7 @@ async def get_all_security_files_zip(
                     information,
                     team.number,
                 )
-                src_pdf = get_file_path_from_data(
+                src_pdf = await get_file_path_from_data(
                     directory="raid/security_file",
                     filename=file_id,
                 )
@@ -272,7 +272,7 @@ async def get_all_team_files_zip(
             file_id = await generate_recap_file_pdf(
                 team,
             )
-            src_pdf = get_file_path_from_data(
+            src_pdf = await get_file_path_from_data(
                 directory="raid/recap",
                 filename=file_id,
             )

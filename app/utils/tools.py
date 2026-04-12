@@ -3,6 +3,7 @@ import logging
 import os
 import re
 import secrets
+import shutil
 import unicodedata
 from collections.abc import Callable, Sequence
 from inspect import iscoroutinefunction
@@ -361,7 +362,7 @@ async def delete_all_folder_from_data(
     """
     path = Path(f"data/{directory}")
     if await path.exists():
-        await path.rmdir()
+        shutil.rmtree(path)
 
 
 async def generate_pdf_from_template(
@@ -404,7 +405,7 @@ async def generate_pdf_from_template(
     )
 
 
-def concat_pdf(
+async def concat_pdf(
     source_directory: str,
     source_filename: str | UUID,
     output_pdf: fitz.Document,
@@ -413,7 +414,7 @@ def concat_pdf(
     Add the content of the PDF file located in data to
     the `output_pdf` document.
     """
-    source_file_path = get_file_path_from_data(
+    source_file_path = await get_file_path_from_data(
         directory=source_directory,
         filename=source_filename,
     )
@@ -435,7 +436,7 @@ async def save_pdf_first_page_as_image(
     WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
     """
 
-    pdf_file_path = get_file_path_from_data(
+    pdf_file_path = await get_file_path_from_data(
         input_pdf_directory,
         filename,
         default_pdf_path,

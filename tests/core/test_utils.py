@@ -224,8 +224,8 @@ async def test_delete_file_with_valid_uuid() -> None:
         directory="test",
         filename=valid_uuid,
     )
-    assert not Path(file_png_path).is_file()
-    assert not Path(file_jpg_path).is_file()
+    assert not await Path(file_png_path).is_file()
+    assert not await Path(file_jpg_path).is_file()
 
 
 async def test_delete_file_raise_a_value_error_if_filename_isnt_an_uuid() -> None:
@@ -249,7 +249,7 @@ async def test_save_pdf_first_page_as_image() -> None:
         filename=valid_uuid,
         default_pdf_path="assets/pdf/default_PDF.pdf",
     )
-    assert Path(f"data/test/image/{valid_uuid}.jpg").is_file()
+    assert await Path(f"data/test/image/{valid_uuid}.jpg").is_file()
 
 
 async def test_get_core_data() -> None:
