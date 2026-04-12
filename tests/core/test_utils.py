@@ -1,9 +1,10 @@
+import pathlib
 import shutil
 import uuid
-from pathlib import Path
 
 import pytest
 import pytest_asyncio
+from anyio import Path
 from fastapi import HTTPException, UploadFile
 from starlette.datastructures import Headers
 
@@ -68,7 +69,7 @@ async def init_objects() -> None:
 
 async def test_save_file() -> None:
     valid_uuid = str(uuid.uuid4())
-    with Path("assets/images/default_profile_picture.png").open("rb") as file:
+    with pathlib.Path("assets/images/default_profile_picture.png").open("rb") as file:
         await save_file_as_data(
             upload_file=UploadFile(
                 file,
@@ -83,7 +84,7 @@ async def test_save_file_with_invalid_content_type() -> None:
     valid_uuid = str(uuid.uuid4())
     with (
         pytest.raises(HTTPException, match="400: Invalid file format, supported*"),
-        Path("assets/images/default_profile_picture.png").open("rb") as file,
+        pathlib.Path("assets/images/default_profile_picture.png").open("rb") as file,
     ):
         await save_file_as_data(
             upload_file=UploadFile(
@@ -102,7 +103,7 @@ async def test_save_file_raise_a_value_error_if_filename_isnt_an_uuid() -> None:
             FileNameIsNotAnUUIDError,
             match="The filename is not a valid UUID",
         ),
-        Path("assets/images/default_profile_picture.png").open("rb") as file,
+        pathlib.Path("assets/images/default_profile_picture.png").open("rb") as file,
     ):
         await save_file_as_data(
             upload_file=UploadFile(file),
@@ -113,7 +114,7 @@ async def test_save_file_raise_a_value_error_if_filename_isnt_an_uuid() -> None:
 
 async def test_save_bytes() -> None:
     valid_uuid = str(uuid.uuid4())
-    with Path("assets/images/default_profile_picture.png").open("rb") as file:
+    with pathlib.Path("assets/images/default_profile_picture.png").open("rb") as file:
         await save_bytes_as_data(
             file_bytes=file.read(),
             directory="test",
@@ -129,7 +130,7 @@ async def test_save_bytes_raise_a_value_error_if_filename_isnt_an_uuid() -> None
             FileNameIsNotAnUUIDError,
             match="The filename is not a valid UUID",
         ),
-        Path("assets/images/default_profile_picture.png").open("rb") as file,
+        pathlib.Path("assets/images/default_profile_picture.png").open("rb") as file,
     ):
         await save_bytes_as_data(
             file_bytes=file.read(),
@@ -139,7 +140,7 @@ async def test_save_bytes_raise_a_value_error_if_filename_isnt_an_uuid() -> None
         )
 
 
-def test_get_existing_file_path_with_valid_uuid() -> None:
+async def test_get_existing_file_path_with_valid_uuid() -> None:
     valid_uuid = str(uuid.uuid4())
     default_asset = "assets/images/default_profile_picture.png"
     file_path = Path(f"data/test/{valid_uuid}.png")
@@ -147,7 +148,7 @@ def test_get_existing_file_path_with_valid_uuid() -> None:
         default_asset,
         file_path,
     )
-    returned_path = get_file_path_from_data(
+    returned_path = await get_file_path_from_data(
         directory="test",
         filename=valid_uuid,
         default_asset=default_asset,
@@ -155,9 +156,11 @@ def test_get_existing_file_path_with_valid_uuid() -> None:
     assert returned_path == file_path
 
 
-def test_get_non_existing_file_path_with_valid_uuid_return_default_asset() -> None:
+async def test_get_non_existing_file_path_with_valid_uuid_return_default_asset() -> (
+    None
+):
     valid_uuid = str(uuid.uuid4())
-    path = get_file_path_from_data(
+    path = await get_file_path_from_data(
         directory="test",
         filename=valid_uuid,
         default_asset="assets/images/default_profile_picture.png",
@@ -165,23 +168,23 @@ def test_get_non_existing_file_path_with_valid_uuid_return_default_asset() -> No
     assert path == Path("assets/images/default_profile_picture.png")
 
 
-def test_get_file_path_raise_a_value_error_if_filename_isnt_an_uuid() -> None:
+async def test_get_file_path_raise_a_value_error_if_filename_isnt_an_uuid() -> None:
     not_a_uuid = "not_a_uuid"
     with pytest.raises(
         FileNameIsNotAnUUIDError,
         match="The filename is not a valid UUID",
     ):
-        get_file_path_from_data(
+        await get_file_path_from_data(
             directory="test",
             filename=not_a_uuid,
             default_asset="default_asset",
         )
 
 
-def test_get_file_with_valid_uuid() -> None:
+async def test_get_file_with_valid_uuid() -> None:
     valid_uuid = str(uuid.uuid4())
     default_asset = "assets/images/default_profile_picture.png"
-    file = get_file_from_data(
+    file = await get_file_from_data(
         directory="test",
         filename=valid_uuid,
         default_asset=default_asset,
@@ -189,20 +192,20 @@ def test_get_file_with_valid_uuid() -> None:
     assert file.path == Path(default_asset)
 
 
-def test_get_file_raise_a_value_error_if_filename_isnt_an_uuid() -> None:
+async def test_get_file_raise_a_value_error_if_filename_isnt_an_uuid() -> None:
     not_a_uuid = "not_a_uuid"
     with pytest.raises(
         FileNameIsNotAnUUIDError,
         match="The filename is not a valid UUID",
     ):
-        get_file_from_data(
+        await get_file_from_data(
             directory="test",
             filename=not_a_uuid,
             default_asset="default_asset",
         )
 
 
-def test_delete_file_with_valid_uuid() -> None:
+async def test_delete_file_with_valid_uuid() -> None:
     valid_uuid = str(uuid.uuid4())
     default_asset = "assets/images/default_profile_picture.png"
     file_png_path = Path(f"data/test/{valid_uuid}.png")
@@ -217,7 +220,7 @@ def test_delete_file_with_valid_uuid() -> None:
         file_jpg_path,
     )
 
-    delete_file_from_data(
+    await delete_file_from_data(
         directory="test",
         filename=valid_uuid,
     )
@@ -225,13 +228,13 @@ def test_delete_file_with_valid_uuid() -> None:
     assert not Path(file_jpg_path).is_file()
 
 
-def test_delete_file_raise_a_value_error_if_filename_isnt_an_uuid() -> None:
+async def test_delete_file_raise_a_value_error_if_filename_isnt_an_uuid() -> None:
     not_a_uuid = "not_a_uuid"
     with pytest.raises(
         FileNameIsNotAnUUIDError,
         match="The filename is not a valid UUID",
     ):
-        delete_file_from_data(
+        await delete_file_from_data(
             directory="test",
             filename=not_a_uuid,
         )

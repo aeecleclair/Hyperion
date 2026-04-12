@@ -892,7 +892,7 @@ async def read_campaigns_logo(
             detail="The list does not exist.",
         )
 
-    return get_file_from_data(
+    return await get_file_from_data(
         directory="campaigns",
         filename=str(list_id),
         default_asset="assets/images/default_campaigns_logo.png",

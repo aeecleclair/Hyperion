@@ -391,7 +391,7 @@ async def delete_all_teams(
     # Delete all participants from the database
     await cruds_raid.delete_all_participant(db)
 
-    delete_all_folder_from_data("raid")
+    await delete_all_folder_from_data("raid")
 
 
 @module.router.post(
@@ -477,7 +477,7 @@ async def read_document(
         # The document can be a global document
         information = await get_core_data(coredata_raid.RaidInformation, db)
         if document_id in {information.raid_rules_id, information.raid_information_id}:
-            return get_file_from_data(
+            return await get_file_from_data(
                 default_asset="assets/pdf/default_PDF.pdf",
                 directory="raid",
                 filename=str(document_id),
@@ -501,7 +501,7 @@ async def read_document(
             detail="The owner of this document is not a member of your team.",
         )
 
-    return get_file_from_data(
+    return await get_file_from_data(
         default_asset="assets/images/default_advert.png",  # TODO: get a default document
         directory="raid",
         filename=str(document_id),

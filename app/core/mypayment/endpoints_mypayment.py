@@ -2944,7 +2944,7 @@ async def download_invoice(
             status_code=403,
             detail="User is not allowed to access this invoice",
         )
-    return get_file_from_data(
+    return await get_file_from_data(
         directory="mypayment/invoices",
         filename=str(invoice_id),
     )

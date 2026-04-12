@@ -73,7 +73,7 @@ async def get_paper_pdf(
             detail="The paper does not exist.",
         )
 
-    return get_file_from_data(
+    return await get_file_from_data(
         default_asset="assets/pdf/default_ph.pdf",
         directory="ph/pdf",
         filename=str(paper_id),
@@ -228,7 +228,7 @@ async def get_cover(
             detail="The paper does not exist.",
         )
 
-    return get_file_from_data(
+    return await get_file_from_data(
         default_asset="assets/images/default_cover.jpeg",
         directory="ph/cover",
         filename=str(paper_id),
@@ -279,12 +279,12 @@ async def delete_paper(
             detail="Invalid paper_id",
         )
 
-    delete_file_from_data(
+    await delete_file_from_data(
         directory="ph/pdf",
         filename=str(paper_id),
     )
 
-    delete_file_from_data(
+    await delete_file_from_data(
         directory="ph/cover",
         filename=str(paper_id),
     )

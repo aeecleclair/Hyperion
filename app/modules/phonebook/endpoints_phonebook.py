@@ -835,7 +835,7 @@ async def read_association_logo(
     if association is None:
         raise HTTPException(404, "The Association does not exist.")
 
-    return get_file_from_data(
+    return await get_file_from_data(
         directory="associations",
         filename=association_id,
         default_asset="assets/images/default_association_picture.png",
