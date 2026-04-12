@@ -3,8 +3,8 @@ import string
 import uuid
 from datetime import UTC, datetime, timedelta
 
-import aiofiles
 import calypsso
+from anyio import Path
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -788,8 +788,8 @@ async def migrate_mail_confirm(
         db=db,
     )
 
-    async with aiofiles.open(
-        "data/core/mail-migration-archives.txt",
+    path = Path("data/core/mail-migration-archives.txt")
+    async with await path.open(
         mode="a",
     ) as file:
         await file.write(
