@@ -3,8 +3,8 @@ import string
 import uuid
 from datetime import UTC, datetime, timedelta
 
-import aiofiles
 import calypsso
+from anyio import Path
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -788,8 +788,8 @@ async def migrate_mail_confirm(
         db=db,
     )
 
-    async with aiofiles.open(
-        "data/core/mail-migration-archives.txt",
+    path = Path("data/core/mail-migration-archives.txt")
+    async with await path.open(
         mode="a",
     ) as file:
         await file.write(
@@ -1034,7 +1034,7 @@ async def read_own_profile_picture(
     Get the profile picture of the authenticated user.
     """
 
-    return get_file_from_data(
+    return await get_file_from_data(
         directory="profile-pictures",
         filename=str(user.id),
         default_asset="assets/images/default_profile_picture.png",
@@ -1060,7 +1060,7 @@ async def read_user_profile_picture(
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    return get_file_from_data(
+    return await get_file_from_data(
         directory="profile-pictures",
         filename=str(user_id),
         default_asset="assets/images/default_profile_picture.png",

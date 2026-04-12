@@ -1,5 +1,5 @@
+import pathlib
 from functools import cached_property
-from pathlib import Path
 from re import Pattern
 from typing import Any, ClassVar
 
@@ -354,14 +354,14 @@ class Settings(BaseSettings):
     @computed_field  # type: ignore[prop-decorator]
     @cached_property
     def HYPERION_VERSION(cls) -> str:
-        with Path("pyproject.toml").open("rb") as pyproject_binary:
+        with pathlib.Path("pyproject.toml").open("rb") as pyproject_binary:
             pyproject = tomllib.load(pyproject_binary)
         return str(pyproject["project"]["version"])
 
     @computed_field  # type: ignore[prop-decorator]
     @cached_property
     def MINIMAL_TITAN_VERSION_CODE(cls) -> int:
-        with Path("pyproject.toml").open("rb") as pyproject_binary:
+        with pathlib.Path("pyproject.toml").open("rb") as pyproject_binary:
             pyproject = tomllib.load(pyproject_binary)
         return int(pyproject["tool"]["titan"]["minimal-titan-version-code"])
 

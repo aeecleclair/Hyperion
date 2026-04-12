@@ -268,7 +268,7 @@ async def read_session_poster(
             detail="The session does not exist.",
         )
 
-    return get_file_from_data(
+    return await get_file_from_data(
         default_asset="assets/images/default_movie.png",
         directory="cinemasessions",
         filename=str(session_id),

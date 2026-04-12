@@ -1,11 +1,11 @@
 import datetime
 import shutil
 import uuid
-from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
 import pytest_asyncio
+from anyio import Path
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
@@ -204,7 +204,7 @@ async def init_objects() -> None:
 
     await add_object_to_db(validated_team)
 
-    Path("data/raid/").mkdir(parents=True, exist_ok=True)
+    await Path("data/raid/").mkdir(parents=True, exist_ok=True)
     default_asset = "assets/pdf/default_PDF.pdf"
     expected_files = [
         "-1_ValidatedTeam_Captain_Validated.pdf",
