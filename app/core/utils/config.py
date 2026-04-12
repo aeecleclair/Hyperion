@@ -1,10 +1,11 @@
+import tomllib
 import pathlib
 from functools import cached_property
 from re import Pattern
 from typing import Any, ClassVar
 
 import jwt
-import tomllib
+from anyio import Path
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from pydantic import BaseModel, computed_field, model_validator

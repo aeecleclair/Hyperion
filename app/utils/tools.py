@@ -3,7 +3,6 @@ import logging
 import os
 import re
 import secrets
-import shutil
 import unicodedata
 from collections.abc import Callable, Sequence
 from inspect import iscoroutinefunction
