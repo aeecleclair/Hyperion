@@ -7,7 +7,7 @@ import shutil
 import unicodedata
 from collections.abc import Callable, Sequence
 from inspect import iscoroutinefunction
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import calypsso
@@ -467,10 +467,7 @@ def get_random_string(length: int = 5) -> str:
     )
 
 
-CoreDataClass = TypeVar("CoreDataClass", bound=core_data.BaseCoreData)
-
-
-async def get_core_data(
+async def get_core_data[CoreDataClass: core_data.BaseCoreData](
     core_data_class: type[CoreDataClass],
     db: AsyncSession,
 ) -> CoreDataClass:
