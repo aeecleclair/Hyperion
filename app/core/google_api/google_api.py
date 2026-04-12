@@ -1,5 +1,6 @@
 import logging
 from types import TracebackType
+from typing import Self
 
 from fastapi import HTTPException, Request
 from google.auth.transport import requests
@@ -217,7 +218,7 @@ class DriveGoogleAPI:
         self._db = db
         self._settings = settings
 
-    async def __aenter__(self) -> "DriveGoogleAPI":
+    async def __aenter__(self) -> Self:
         google_api = GoogleAPI()
         creds = await google_api.get_credentials(self._db, self._settings)
         self._drive: Resource = build("drive", "v3", credentials=creds)

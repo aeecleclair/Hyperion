@@ -33,24 +33,22 @@ class CoreUsersFactory(Factory):
 
     @classmethod
     def init_demo_users(cls, settings: Settings) -> None:
-        cls.demo_users = (
-            settings.FACTORIES_DEMO_USERS or [
-                UserDemoFactoryConfig(
-                    firstname="Alice",
-                    name="Dupont",
-                    nickname="alice",
-                    email="demo1@test.fr",
-                    password=Faker().password(16, True, True, True, True),
-                ),
-                UserDemoFactoryConfig(
-                    firstname="Bob",
-                    name="Martin",
-                    nickname="bob",
-                    email="demo2@test.fr",
-                    password=Faker().password(16, True, True, True, True),
-                ),
-            ]
-        )
+        cls.demo_users = settings.FACTORIES_DEMO_USERS or [
+            UserDemoFactoryConfig(
+                firstname="Alice",
+                name="Dupont",
+                nickname="alice",
+                email="demo1@test.fr",
+                password=Faker().password(16, True, True, True, True),
+            ),
+            UserDemoFactoryConfig(
+                firstname="Bob",
+                name="Martin",
+                nickname="bob",
+                email="demo2@test.fr",
+                password=Faker().password(16, True, True, True, True),
+            ),
+        ]
         cls.demo_users_id = [str(uuid.uuid4()) for _ in cls.demo_users]
 
     @classmethod
