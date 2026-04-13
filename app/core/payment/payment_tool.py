@@ -164,10 +164,16 @@ class PaymentTool:
             payer: HelloAssoApiV5ModelsCartsCheckoutPayer | None = None
             if payer_user is not None:
                 payer = HelloAssoApiV5ModelsCartsCheckoutPayer(
-                    firstName=payer_user.firstname,
-                    lastName=payer_user.name,
+                    first_name=payer_user.firstname,
+                    last_name=payer_user.name,
                     email=payer_user.email,
-                    dateOfBirth=payer_user.birthday,
+                    date_of_birth=datetime.combine(
+                        payer_user.birthday,
+                        datetime.min.time(),
+                        tzinfo=UTC,
+                    )
+                    if payer_user.birthday
+                    else None,
                 )
 
             checkout_model_id = uuid.uuid4()
@@ -222,7 +228,7 @@ class PaymentTool:
                                 f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}, with and without payer {payer_user_name} infos",
                             )
 
-            if response and response.id:
+            if response and response.id and response.redirect_url:
                 checkout_model = models_payment.Checkout(
                     id=checkout_model_id,
                     module=module,
@@ -239,7 +245,7 @@ class PaymentTool:
                     payment_url=response.redirect_url,
                 )
             hyperion_error_logger.error(
-                f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}. No checkout id returned",
+                f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}. No checkout id or redirect URL returned",
             )
             raise MissingHelloAssoCheckoutIdError()  # noqa: TRY301
 

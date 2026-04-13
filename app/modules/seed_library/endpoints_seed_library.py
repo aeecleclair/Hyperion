@@ -72,7 +72,7 @@ async def get_all_species_types(
     Return all available types of species from SpeciesType enum.
     """
     return schemas_seed_library.SpeciesTypesReturn(
-        species_type=[species_type.value for species_type in SpeciesType],
+        species_type=list(SpeciesType),
     )
 
 

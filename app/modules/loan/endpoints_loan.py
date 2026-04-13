@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.groups.groups_type import AccountType
 from app.core.notification.schemas_notification import Message
 from app.core.permissions.type_permissions import ModulePermissions
-from app.core.users import models_users
+from app.core.users import models_users, schemas_users
 from app.dependencies import (
     get_db,
     get_notification_tool,
@@ -233,8 +233,28 @@ async def get_loans_by_loaner(
             loans.append(
                 schemas_loan.Loan(
                     items_qty=items_qty_ret,
-                    loaner=loaner,
-                    **loan.__dict__,
+                    borrower_id=loan.borrower_id,
+                    loaner_id=loan.loaner_id,
+                    start=loan.start,
+                    end=loan.end,
+                    notes=loan.notes,
+                    caution=loan.caution,
+                    returned=loan.returned,
+                    returned_date=loan.returned_date,
+                    id=loan.id,
+                    borrower=schemas_users.CoreUserSimple(
+                        id=loan.borrower.id,
+                        account_type=loan.borrower.account_type,
+                        school_id=loan.borrower.school_id,
+                        name=loan.borrower.name,
+                        firstname=loan.borrower.firstname,
+                        nickname=loan.borrower.nickname,
+                    ),
+                    loaner=schemas_loan.Loaner(
+                        id=loan.loaner.id,
+                        name=loan.loaner.name,
+                        group_manager_id=loan.loaner.group_manager_id,
+                    ),
                 ),
             )
 
