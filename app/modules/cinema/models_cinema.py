@@ -14,4 +14,4 @@ class Session(Base):
     duration: Mapped[int]
     overview: Mapped[str | None]
     genre: Mapped[str | None]
-    tagline: Mapped[str | None]
+    year: Mapped[str | None]

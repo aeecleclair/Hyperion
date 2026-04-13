@@ -12,7 +12,7 @@ class CineSessionBase(CineSessionTime):
     name: str
     overview: str
     genre: str | None = None
-    tagline: str | None = None
+    year: str | None = None
 
 
 class CineSessionComplete(CineSessionBase):
@@ -26,7 +26,7 @@ class CineSessionUpdate(BaseModel):
     duration: int | None = None
     overview: str | None = None
     genre: str | None = None
-    tagline: str | None = None
+    year: str | None = None
 
 
 class TheMovieDB(BaseModel):
@@ -35,4 +35,4 @@ class TheMovieDB(BaseModel):
     poster_path: str
     title: str
     runtime: int
-    tagline: str
+    year: str
