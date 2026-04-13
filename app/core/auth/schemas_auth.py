@@ -6,6 +6,7 @@ from typing import Literal
 from fastapi import Form
 from pydantic import BaseModel, field_validator
 
+from app.core.groups.groups_type import AccountType
 from app.utils import validators
 from app.utils.examples import examples_auth
 
@@ -93,6 +94,8 @@ class AccessToken(BaseModel):
 
 class TokenData(BaseModel):
     sub: str  # Subject: the user id
+    account_type: AccountType | None = None
+    group_ids: list[str] | None = None
     iss: str | None = None
     aud: str | None = None
     cid: str | None = None  # The client_id of the service which receives the token
