@@ -2376,6 +2376,7 @@ async def join_sport(
                 status_code=400,
                 detail="Maximum number of substitutes in the team reached",
             )
+        team_id = participant_info.team_id
 
     elif participant_info.team_id is not None:
         raise HTTPException(
@@ -2394,6 +2395,8 @@ async def join_sport(
         )
         await cruds_sport_competition.add_team(new_team, db)
 
+        team_id = new_team.id
+
     participant = schemas_sport_competition.Participant(
         user_id=user.user_id,
         sport_id=sport_id,
@@ -2402,7 +2405,7 @@ async def join_sport(
         license=participant_info.license,
         substitute=participant_info.substitute,
         is_license_valid=False,
-        team_id=participant_info.team_id or new_team.id,
+        team_id=team_id,
     )
     await cruds_sport_competition.add_participant(
         participant,

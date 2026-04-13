@@ -163,8 +163,8 @@ class NotificationManager:
         if not self.use_firebase:
             return
 
+        topic = str(topic_id)
         try:
-            topic = str(topic_id)
             message = messaging.Message(
                 topic=topic,
                 data={"action_module": message_content.action_module},
