@@ -180,19 +180,19 @@ class PaymentTool:
             secret = security.generate_token(nbytes=12)
 
             init_checkout_body = HelloAssoApiV5ModelsCartsInitCheckoutBody(
-                total_amount=checkout_amount,
-                initial_amount=checkout_amount,
-                item_name=checkout_name,
-                back_url=redirection_uri,
-                error_url=redirection_uri,
-                return_url=redirection_uri,
-                contains_donation=False,
+                total_amount=checkout_amount,  # ty:ignore[unknown-argument]
+                initial_amount=checkout_amount,  # ty:ignore[unknown-argument]
+                item_name=checkout_name,  # ty:ignore[unknown-argument]
+                back_url=redirection_uri,  # ty:ignore[unknown-argument]
+                error_url=redirection_uri,  # ty:ignore[unknown-argument]
+                return_url=redirection_uri,  # ty:ignore[unknown-argument]
+                contains_donation=False,  # ty:ignore[unknown-argument]
                 payer=payer,
                 metadata=schemas_payment.HelloAssoCheckoutMetadata(
                     secret=secret,
                     hyperion_checkout_id=str(checkout_model_id),
                 ).model_dump(),
-            )
+            )  # ty:ignore[missing-argument] # See https://github.com/astral-sh/ty/issues/1438
 
             response: HelloAssoApiV5ModelsCartsInitCheckoutResponse
             with ApiClient(configuration) as api_client:
