@@ -62,6 +62,7 @@ def build_data_rows(
     col_idx: int,
 ) -> tuple[list[list[str | int]], list[int]]:
     data_rows: list[list[str | int]] = []
+    thick_columns = [len(FIXED_COLUMNS) - 1]
     for user in users:
         user_purchases = users_purchases.get(user.user.id, [])
         row: list[str | int] = [""] * col_idx
