@@ -2683,6 +2683,7 @@ async def refund_transaction(
         )
 
     if wallet_previously_credited.user is not None:
+        wallet_previously_debited_name: str = "Unknown"
         if wallet_previously_debited.user is not None:
             wallet_previously_debited_name = wallet_previously_debited.user.full_name
         elif wallet_previously_debited.store is not None:

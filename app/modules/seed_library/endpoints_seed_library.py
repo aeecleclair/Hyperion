@@ -331,13 +331,13 @@ async def create_plant(
             "Species not found",
         )
     date = datetime.now(tz=UTC)
-    if species_reference:
-        reference = f"{species_reference.prefix}-{date.day:02}-{date.month:02}-{str(date.year)[2:]}-"
-        plant_number = await cruds_seed_library.count_plants_created_today(
-            reference,
-            db,
-        )
-        reference = f"{species_reference.prefix}-{date.day:02}-{date.month:02}-{str(date.year)[2:]}-{plant_number:03}"
+
+    reference = f"{species_reference.prefix}-{date.day:02}-{date.month:02}-{str(date.year)[2:]}-"
+    plant_number = await cruds_seed_library.count_plants_created_today(
+        reference,
+        db,
+    )
+    reference = f"{species_reference.prefix}-{date.day:02}-{date.month:02}-{str(date.year)[2:]}-{plant_number:03}"
 
     plant = schemas_seed_library.PlantComplete(
         id=uuid.uuid4(),
