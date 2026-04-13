@@ -234,7 +234,7 @@ def test_create_and_activate_user(
             "activation_token": UNIQUE_TOKEN,
             "password": "password",
             "firstname": "firstname",
-            "name": email.split("@")[0],
+            "name": email.split("@", maxsplit=1)[0],
             "nickname": "nickname",
             "floor": "X1",
         },
@@ -246,7 +246,9 @@ def test_create_and_activate_user(
         "/users/",
         headers={"Authorization": f"Bearer {token_admin_user}"},
     )
-    user = next(user for user in users.json() if user["name"] == email.split("@")[0])
+    user = next(
+        user for user in users.json() if user["name"] == email.split("@", maxsplit=1)[0]
+    )
     assert user is not None
     assert user["account_type"] == expected_account_type.value
 

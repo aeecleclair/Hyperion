@@ -6,7 +6,7 @@ Create Date: 2025-02-02 04:01:15.306205
 import uuid
 from collections.abc import Sequence
 from datetime import date
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from app.core.schools.schools_type import SchoolType
@@ -24,7 +24,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-class AvailableAssociationMembership(str, Enum):
+class AvailableAssociationMembership(StrEnum):
     aeecl = "AEECL"
     useecl = "USEECL"
 
@@ -81,7 +81,7 @@ AEECL_ID = uuid.uuid4()
 USEECL_ID = uuid.uuid4()
 
 
-class GroupType(str, Enum):
+class GroupType(StrEnum):
     # Core groups
     admin = "0a25cb76-4b63-4fd3-b939-da6d9feabf28"
     AE = "45649735-866a-49df-b04b-a13c74fd5886"

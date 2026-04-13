@@ -1,10 +1,10 @@
 import logging
 import uuid
 from datetime import UTC, datetime
+from zoneinfo import ZoneInfo
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from zoneinfo import ZoneInfo
 
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import AccountType
@@ -302,7 +302,7 @@ async def create_booking(
     group = await cruds_groups.get_group_by_id(group_id=manager.group_id, db=db)
 
     local_start = result.start.astimezone(ZoneInfo("Europe/Paris"))
-    applicant_nickname = user.nickname if user.nickname else user.firstname
+    applicant_nickname = user.nickname or user.firstname
     content = f"{applicant_nickname} - {result.room.name} {local_start.strftime('%m/%d/%Y, %H:%M')} - {result.reason}"
     # Setting time to Paris timezone in order to have the correct time in the notification
 

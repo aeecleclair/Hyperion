@@ -4,7 +4,7 @@ Create Date: 2025-11-30 01:50:06.674367
 """
 
 from collections.abc import Sequence
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -20,7 +20,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-class FloorsType(str, Enum):
+class FloorsType(StrEnum):
     # WARNING: the key is used in the database. Use the same key and value.
     Autre = "Autre"
     Adoma = "Adoma"

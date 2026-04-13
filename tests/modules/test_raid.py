@@ -25,7 +25,7 @@ from app.modules.raid.raid_type import (
     MeetingPlace,
     Size,
 )
-from app.modules.raid.utils.utils_raid import calculate_raid_payment
+from app.modules.raid.utils.utils_raid import calculate_raid_payment, set_team_number
 from tests.commons import (
     add_coredata_to_db,
     add_object_to_db,
@@ -747,7 +747,6 @@ async def test_set_team_number_utility_empty_database(
     mock_update_team = mocker.patch("app.modules.raid.cruds_raid.update_team")
 
     # Call the function
-    from app.modules.raid.utils.utils_raid import set_team_number
 
     await set_team_number(mock_team, mock_db)
 
@@ -780,7 +779,6 @@ async def test_set_team_number_utility_existing_teams(
     mock_update_team = mocker.patch("app.modules.raid.cruds_raid.update_team")
 
     # Call the function
-    from app.modules.raid.utils.utils_raid import set_team_number
 
     await set_team_number(mock_team, mock_db)
 
@@ -807,7 +805,6 @@ async def test_set_team_number_utility_no_difficulty(
     mock_update_team = mocker.patch("app.modules.raid.cruds_raid.update_team")
 
     # Call the function
-    from app.modules.raid.utils.utils_raid import set_team_number
 
     await set_team_number(mock_team, mock_db)
 
@@ -836,7 +833,6 @@ async def test_set_team_number_utility_discovery_difficulty(
     mock_update_team = mocker.patch("app.modules.raid.cruds_raid.update_team")
 
     # Call the function
-    from app.modules.raid.utils.utils_raid import set_team_number
 
     await set_team_number(mock_team, mock_db)
 
