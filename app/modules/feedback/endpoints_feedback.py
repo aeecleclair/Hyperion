@@ -1,5 +1,4 @@
 import uuid
-from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,12 +42,13 @@ module = Module(
 async def get_feedbacks(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([FeedbackPermissions.access_feedback]), #todo : manage_feedback permission
+        is_user_allowed_to(
+            [FeedbackPermissions.access_feedback]
+        ),  # todo : manage_feedback permission
     ),
 ):
     """
-    Get feedbacks.
-
+    Get all feedbacks.
     **The user must be authenticated to use this endpoint**
     """
 
@@ -68,6 +68,7 @@ async def create_feedback(
 ):
     """
     Creates a feedback.
+    **The user must be authenticated to use this endpoint**
     """
 
     await cruds_feedback.add_feedback(
@@ -86,11 +87,14 @@ async def delete_feedback(
     feedback_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_allowed_to([FeedbackPermissions.access_feedback]), #todo : manage_feedback permission
+        is_user_allowed_to(
+            [FeedbackPermissions.access_feedback]
+        ),  # todo : manage_feedback permission
     ),
 ):
     """
     Deletes a feedback.
+    **The user must be authenticated to use this endpoint**
     """
 
     try:
