@@ -25,6 +25,7 @@ from app.core.auth import schemas_auth
 from app.core.checkout import schemas_checkout
 from app.core.checkout.payment_tool import CheckoutTool
 from app.core.checkout.types_checkout import HelloAssoConfigName
+from app.core.checkout.utils_checkout import CHECKOUT_EXPIRATION
 from app.core.core_endpoints import cruds_core
 from app.core.groups.groups_type import GroupType
 from app.core.memberships.utils_memberships import (
@@ -475,6 +476,7 @@ async def confirm_structure_manager_transfer(
                 can_see_history=True,
                 can_cancel=True,
                 can_manage_sellers=True,
+                can_manage_events=True,
                 db=db,
             )
         else:
@@ -604,6 +606,7 @@ async def create_store(
         can_see_history=True,
         can_cancel=True,
         can_manage_sellers=True,
+        can_manage_events=True,
         db=db,
     )
 
@@ -725,7 +728,9 @@ async def get_store_history(
     for transfer in transfers:
         if transfer.confirmed:
             status = TransactionStatus.CONFIRMED
-        elif datetime.now(UTC) < transfer.creation + timedelta(minutes=15):
+        elif datetime.now(UTC) < transfer.creation + timedelta(
+            minutes=CHECKOUT_EXPIRATION,
+        ):
             status = TransactionStatus.PENDING
         else:
             status = TransactionStatus.CANCELED
@@ -1140,6 +1145,7 @@ async def create_store_seller(
         can_see_history=seller.can_see_history,
         can_cancel=seller.can_cancel,
         can_manage_sellers=seller.can_manage_sellers,
+        can_manage_events=seller.can_manage_events,
         db=db,
     )
 
@@ -1903,7 +1909,9 @@ async def get_user_wallet_history(
     for transfer in transfers:
         if transfer.confirmed:
             status = TransactionStatus.CONFIRMED
-        elif datetime.now(UTC) < transfer.creation + timedelta(minutes=15):
+        elif datetime.now(UTC) < transfer.creation + timedelta(
+            minutes=CHECKOUT_EXPIRATION,
+        ):
             status = TransactionStatus.PENDING
         else:
             status = TransactionStatus.CANCELED

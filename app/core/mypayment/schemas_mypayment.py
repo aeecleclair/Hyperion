@@ -101,6 +101,7 @@ class SellerCreation(BaseModel):
     can_see_history: bool
     can_cancel: bool
     can_manage_sellers: bool
+    can_manage_events: bool = False
 
 
 class SellerUpdate(BaseModel):
@@ -108,6 +109,7 @@ class SellerUpdate(BaseModel):
     can_see_history: bool | None = None
     can_cancel: bool | None = None
     can_manage_sellers: bool | None = None
+    can_manage_events: bool | None = None
 
 
 class Seller(BaseModel):
@@ -117,6 +119,9 @@ class Seller(BaseModel):
     can_see_history: bool
     can_cancel: bool
     can_manage_sellers: bool
+
+    # Event module
+    can_manage_events: bool
 
     user: schemas_users.CoreUserSimple
 
@@ -365,6 +370,7 @@ class RequestInfo(BaseModel):
     request_name: str
     store_note: str | None
     module: str
+    # Id of the object from the module, this id will be passed to the module in the transaction callback
     object_id: UUID
 
 

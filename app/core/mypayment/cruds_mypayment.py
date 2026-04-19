@@ -208,6 +208,18 @@ async def get_store_by_association_id(
     return result.scalars().first()
 
 
+async def get_store_by_id(
+    store_id: UUID,
+    db: AsyncSession,
+) -> models_mypayment.Store | None:
+    result = await db.execute(
+        select(models_mypayment.Store).where(
+            models_mypayment.Store.id == store_id,
+        ),
+    )
+    return result.scalars().first()
+
+
 async def get_stores_by_structure_id(
     db: AsyncSession,
     structure_id: UUID,
@@ -227,6 +239,7 @@ async def create_seller(
     can_see_history: bool,
     can_cancel: bool,
     can_manage_sellers: bool,
+    can_manage_events: bool,
     db: AsyncSession,
 ) -> None:
     wallet = models_mypayment.Seller(
@@ -236,6 +249,7 @@ async def create_seller(
         can_see_history=can_see_history,
         can_cancel=can_cancel,
         can_manage_sellers=can_manage_sellers,
+        can_manage_events=can_manage_events,
     )
     db.add(wallet)
 
@@ -265,6 +279,7 @@ async def get_seller(
             can_see_history=result.can_see_history,
             can_cancel=result.can_cancel,
             can_manage_sellers=result.can_manage_sellers,
+            can_manage_events=result.can_manage_events,
             user=schemas_users.CoreUserSimple(
                 id=result.user.id,
                 firstname=result.user.firstname,
@@ -296,6 +311,7 @@ async def get_sellers_by_store_id(
             can_see_history=seller.can_see_history,
             can_cancel=seller.can_cancel,
             can_manage_sellers=seller.can_manage_sellers,
+            can_manage_events=seller.can_manage_events,
             user=schemas_users.CoreUserSimple(
                 id=seller.user.id,
                 firstname=seller.user.firstname,
@@ -334,7 +350,7 @@ async def update_seller(
             models_mypayment.Seller.store_id == store_id,
         )
         .values(
-            **seller_update.model_dump(exclude_none=True),
+            **seller_update.model_dump(exclude_unset=True),
         ),
     )
 

@@ -363,6 +363,7 @@ class MockedPaymentTool(CheckoutTool):
             ),
             helloasso_api_base="https://api.helloasso.com/v5",
         )
+        self.name = self.payment_tool.name
 
     def is_checkout_available(self) -> bool:
         return True

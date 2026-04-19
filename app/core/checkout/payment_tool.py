@@ -203,7 +203,7 @@ class CheckoutTool:
                         self._helloasso_slug,
                         init_checkout_body,
                     )
-                except UnauthorizedException, BadRequestException:
+                except (UnauthorizedException, BadRequestException):
                     # We know that HelloAsso may refuse some payer infos, like using the firstname "test"
                     # Even when prefilling the payer infos,the user will be able to edit them on the payment page,
                     # so we can safely retry without the payer infos

@@ -31,6 +31,7 @@ class CalendarFactory(Factory):
             ticket_url_opening=None,
             ticket_url=None,
             notification=False,
+            ticket_event_id=None,
         )
         await cruds_calendar.add_event(db, event)
 
@@ -49,6 +50,7 @@ class CalendarFactory(Factory):
             ticket_url_opening=None,
             ticket_url=None,
             notification=False,
+            ticket_event_id=None,
         )
         await cruds_calendar.add_event(db, day_long_event)
 

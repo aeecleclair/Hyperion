@@ -411,3 +411,16 @@ async def call_mypayment_callback(
         hyperion_error_logger.exception(
             f"MyPayment: call to module {module_root} request callback ({id_name}: {call_id}) failed",
         )
+
+
+async def can_user_manage_events(
+    user_id: str,
+    store_id: UUID,
+    db: AsyncSession,
+):
+    seller = await cruds_mypayment.get_seller(
+        user_id=user_id,
+        store_id=store_id,
+        db=db,
+    )
+    return seller is not None and seller.can_manage_events

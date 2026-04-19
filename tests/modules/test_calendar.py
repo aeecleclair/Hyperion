@@ -98,6 +98,7 @@ async def init_objects() -> None:
         + datetime.timedelta(days=6),
         ticket_url="url",
         notification=False,
+        ticket_event_id=None,
     )
     await add_object_to_db(calendar_event)
 
@@ -118,6 +119,7 @@ async def init_objects() -> None:
         - datetime.timedelta(days=6),
         ticket_url="url",
         notification=False,
+        ticket_event_id=None,
     )
     await add_object_to_db(confirmed_calendar_event)
 
@@ -137,6 +139,7 @@ async def init_objects() -> None:
         ticket_url_opening=None,
         ticket_url=None,
         notification=False,
+        ticket_event_id=None,
     )
     await add_object_to_db(calendar_event_to_delete)
 

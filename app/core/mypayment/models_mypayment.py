@@ -249,6 +249,8 @@ class Seller(Base):
     can_cancel: Mapped[bool]
     can_manage_sellers: Mapped[bool]
 
+    can_manage_events: Mapped[bool]
+
     user: Mapped[models_users.CoreUser] = relationship(init=False, lazy="joined")
 
 

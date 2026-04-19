@@ -12,7 +12,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     # Add a Redis container
     # https://docs.github.com/en/actions/using-containerized-services/creating-redis-service-containers#running-jobs-directly-on-the-runner-machine

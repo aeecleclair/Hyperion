@@ -205,7 +205,7 @@ def delete_core_data_crud_sync(schema: str, db: Session) -> None:
 CoreDataClass = TypeVar("CoreDataClass", bound=core_data.BaseCoreData)
 
 
-def get_core_data_sync[CoreDataClass: core_data.BaseCoreData](
+def get_core_data_sync(
     core_data_class: type[CoreDataClass],
     db: Session,
 ) -> CoreDataClass:

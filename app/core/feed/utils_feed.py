@@ -78,12 +78,7 @@ async def create_feed_news(
 async def edit_feed_news(
     module: str,
     module_object_id: uuid.UUID,
-    title: str | None,
-    start: datetime | None,
-    end: datetime | None,
-    entity: str | None,
-    location: str | None,
-    action_start: datetime | None,
+    news_edit: schemas_feed.NewsEdit,
     require_feed_admin_approval: bool,
     db: AsyncSession,
     notification_tool: NotificationTool,
@@ -103,14 +98,7 @@ async def edit_feed_news(
     await cruds_feed.edit_news_by_module_object_id(
         module=module,
         module_object_id=module_object_id,
-        news_edit=schemas_feed.NewsEdit(
-            title=title,
-            start=start,
-            end=end,
-            entity=entity,
-            location=location,
-            action_start=action_start,
-        ),
+        news_edit=news_edit,
         db=db,
     )
     if require_feed_admin_approval:
@@ -123,7 +111,7 @@ async def edit_feed_news(
     if require_feed_admin_approval:
         message = Message(
             title="🔔 Feed - a news has been modified",
-            content=f"{entity} has modified {title}",
+            content=f"{news_edit.entity} has modified {news_edit.title}",
             action_module="feed",
         )
         permission = await cruds_permissions.get_permissions_by_permission_name(
