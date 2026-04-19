@@ -1,38 +1,38 @@
 aiofiles==24.1.0                    # Asynchronous file manipulation
-alembic==1.13.2                     # database migrations
-arq==0.26.3                         # Scheduler 
+alembic==1.18.4                     # database migrations
+arq==0.28.0                         # Scheduler 
 asyncpg==0.31.0                     # PostgreSQL adapter for asynchronous operations
-authlib==1.6.5
-bcrypt==4.1.3                       # password hashing
-boto3==1.38.23
+authlib==1.7.0
+bcrypt==5.0.0                       # password hashing
+boto3==1.42.91                      # S3 storage
 broadcaster==0.3.1                  # Working with websockets with multiple workers.
 calypsso==2.7.0
-email-validator==2.2.0
-Faker==37.1.0
-fastapi[standard]==0.122.0
-firebase-admin==7.1.0               # Firebase is used for push notification
-google-api-python-client==2.187.0
-google-auth-oauthlib==1.2.1
-helloasso-python==1.0.5
+email-validator==2.3.0
+Faker==40.15.0
+fastapi[standard]==0.136.0
+firebase-admin==7.4.0               # Firebase is used for push notification
+google-api-python-client==2.194.0
+google-auth-oauthlib==1.3.1
+helloasso-python==1.0.8
 httpx==0.28.1
-icalendar==5.0.13
+icalendar==7.0.3
 jellyfish==1.2.1                    # String Matching
 Jinja2==3.1.6                       # template engine for html files
-phonenumbers==8.13.43               # Used for phone number validation
-psutil==7.0.0                       # psutil is used to determine the number of Hyperion workers
-psycopg[binary]==3.2.13             # PostgreSQL adapter for *synchronous* operations at startup (database initializations & migrations)
-pydantic-extra-types==2.10.5
-pydantic-settings==2.3.4
-pydantic==2.12.5
+phonenumbers==9.0.28                # Used for phone number validation
+psutil==7.2.2                       # psutil is used to determine the number of Hyperion workers
+psycopg[binary]==3.3.3              # PostgreSQL adapter for *synchronous* operations at startup (database initializations & migrations)
+pydantic-extra-types==2.11.1
+pydantic-settings==2.13.1
+pydantic==2.13.2
 pyjwt[crypto]==2.10.1                # generate and verify the JWT tokens, imported as `jwt`
-PyMuPDF==1.26.6                     # PDF processing, imported as `fitz`
-pypdf==6.4.0
-python-multipart==0.0.18             # a form data parser, as oauth flow requires form-data parameters
-redis==5.0.8
-requests==2.32.4
-sqlalchemy-utils == 0.41.2
-SQLAlchemy[asyncio]==2.0.44         # [asyncio] allows greenlet to be installed on Apple M1 devices.
-unidecode==1.3.8
-uvicorn[standard]==0.30.6
-weasyprint==65.1                    # HTML to PDF converter
-xlsxwriter==3.2.0
+PyMuPDF==1.27.2.2                    # PDF processing, imported as `fitz`
+pypdf==6.10.2
+python-multipart==0.0.26             # a form data parser, as oauth flow requires form-data parameters
+redis==5.3.1
+requests==2.33.1
+sqlalchemy-utils == 0.42.1          # used to identify foreign keys when merging users
+SQLAlchemy[asyncio]==2.0.49         # [asyncio] allows greenlet to be installed on Apple M1 devices.
+unidecode==1.4.0
+uvicorn[standard]==0.44.0
+weasyprint==68.1                    # HTML to PDF converter
+xlsxwriter==3.2.9
