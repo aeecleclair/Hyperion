@@ -1,12 +1,14 @@
 import csv
 from io import StringIO
+from uuid import UUID
 
-from app.core.mypayment import models_mypayment
+from app.core.mypayment import models_mypayment, schemas_mypayment
 
 
 def generate_store_history_csv(
     transactions_with_sellers: list[tuple[models_mypayment.Transaction, str | None]],
-    refunds_map: dict,
+    refunds_map: dict[UUID, tuple[models_mypayment.Refund, str | None]],
+    direct_transfers: list[schemas_mypayment.Transfer],
     store_wallet_id,
 ) -> str:
     """
@@ -79,6 +81,22 @@ def generate_store_history_csv(
                 refund_amount,
                 refund_date,
                 transaction.store_note or "",
+            ],
+        )
+
+    # Write direct transfers data
+    for transfer in direct_transfers:
+        writer.writerow(
+            [
+                transfer.creation.strftime("%d/%m/%Y %H:%M:%S"),
+                "REÇU",
+                "HelloAsso",
+                str(transfer.total / 100),
+                "CONFIRMÉ" if transfer.confirmed else "EN ATTENTE",
+                "N/A",
+                "",
+                "",
+                f"Transfert direct pour le module {transfer.module}",
             ],
         )
 

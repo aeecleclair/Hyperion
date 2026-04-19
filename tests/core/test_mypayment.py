@@ -10,25 +10,38 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
 )
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.associations import models_associations
+from app.core.checkout import schemas_checkout
 from app.core.groups import models_groups
-from app.core.groups.groups_type import GroupType
+from app.core.groups.groups_type import AccountType, GroupType
 from app.core.memberships import models_memberships
 from app.core.mypayment import cruds_mypayment, models_mypayment
 from app.core.mypayment.coredata_mypayment import (
     MyPaymentBankAccountHolder,
 )
-from app.core.mypayment.schemas_mypayment import QRCodeContentData
+from app.core.mypayment.endpoints_mypayment import MyPaymentPermissions
+from app.core.mypayment.schemas_mypayment import (
+    SecuredContentData,
+    SignedContent,
+)
 from app.core.mypayment.types_mypayment import (
+    LATEST_TOS,
+    REQUEST_EXPIRATION,
+    RequestStatus,
     TransactionStatus,
     TransactionType,
-    TransferType,
+    TransferOrigin,
     WalletDeviceStatus,
     WalletType,
 )
-from app.core.mypayment.utils_mypayment import LATEST_TOS
+from app.core.mypayment.utils_mypayment import (
+    validate_transfer_callback,
+)
+from app.core.permissions import models_permissions
 from app.core.users import models_users
+from app.types.module import Module
 from tests.commons import (
     add_coredata_to_db,
     add_object_to_db,
@@ -37,6 +50,8 @@ from tests.commons import (
     create_user_with_groups,
     get_TestingSessionLocal,
 )
+
+TEST_MODULE_ROOT = "tests"
 
 bde_group: models_groups.CoreGroup
 
@@ -76,6 +91,7 @@ store2: models_mypayment.Store
 store3: models_mypayment.Store
 store_wallet_device_private_key: Ed25519PrivateKey
 store_wallet_device: models_mypayment.WalletDevice
+store_direct_transfer: models_mypayment.Transfer
 
 
 transaction_from_ecl_user_to_store: models_mypayment.Transaction
@@ -92,6 +108,10 @@ invoice1_detail: models_mypayment.InvoiceDetail
 invoice2_detail: models_mypayment.InvoiceDetail
 invoice3_detail: models_mypayment.InvoiceDetail
 
+proposed_request: models_mypayment.Request
+expired_request: models_mypayment.Request
+refused_request: models_mypayment.Request
+
 store_seller_can_bank_user: models_users.CoreUser
 store_seller_no_permission_user_access_token: str
 store_seller_can_bank_user_access_token: str
@@ -107,6 +127,14 @@ UNIQUE_TOKEN = "UNIQUE_TOKEN"
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
+    for account_type in AccountType:
+        await add_object_to_db(
+            models_permissions.CorePermissionAccountType(
+                permission_name=MyPaymentPermissions.access_payment.value,
+                account_type=account_type,
+            ),
+        )
+
     global bde_group
     bde_group = await create_groups_with_permissions(
         [],
@@ -372,6 +400,21 @@ async def init_objects() -> None:
     )
     await add_object_to_db(store_wallet_device)
 
+    global store_direct_transfer
+    store_direct_transfer = models_mypayment.Transfer(
+        id=uuid4(),
+        origin=TransferOrigin.HELLO_ASSO,
+        transfer_identifier=str(uuid4()),
+        approver_user_id=None,
+        wallet_id=store_wallet.id,
+        total=1500,  # 15€
+        creation=datetime.now(UTC),
+        confirmed=False,
+        module=TEST_MODULE_ROOT,
+        object_id=uuid4(),
+    )
+    await add_object_to_db(store_direct_transfer)
+
     # Create test transactions
     global transaction_from_ecl_user_to_store
     transaction_from_ecl_user_to_store = models_mypayment.Transaction(
@@ -443,13 +486,15 @@ async def init_objects() -> None:
     global ecl_user_transfer
     ecl_user_transfer = models_mypayment.Transfer(
         id=uuid4(),
-        type=TransferType.HELLO_ASSO,
+        origin=TransferOrigin.HELLO_ASSO,
         transfer_identifier="transfer_identifier",
         approver_user_id=None,
         wallet_id=ecl_user_wallet.id,
         total=1000,  # 10€
         creation=datetime.now(UTC),
         confirmed=True,
+        module=None,
+        object_id=None,
     )
     await add_object_to_db(ecl_user_transfer)
 
@@ -495,7 +540,7 @@ async def init_objects() -> None:
         store_id=store.id,
         can_bank=True,
         can_see_history=False,
-        can_cancel=False,
+        can_cancel=True,
         can_manage_sellers=False,
     )
     await add_object_to_db(store_seller_can_bank)
@@ -618,6 +663,50 @@ async def init_objects() -> None:
         total=1000,
     )
     await add_object_to_db(invoice3_detail)
+
+    global proposed_request, expired_request, refused_request
+    proposed_request = models_mypayment.Request(
+        id=uuid4(),
+        wallet_id=ecl_user_wallet.id,
+        store_id=store.id,
+        total=1000,
+        name="Proposed Request",
+        store_note="Proposed Request Note",
+        status=RequestStatus.PROPOSED,
+        module=TEST_MODULE_ROOT,
+        object_id=uuid4(),
+        transaction_id=None,
+        creation=datetime.now(UTC),
+    )
+    await add_object_to_db(proposed_request)
+    expired_request = models_mypayment.Request(
+        id=uuid4(),
+        wallet_id=ecl_user_wallet.id,
+        store_id=store.id,
+        total=1000,
+        name="Expired Request",
+        store_note="Expired Request Note",
+        status=RequestStatus.EXPIRED,
+        module=TEST_MODULE_ROOT,
+        object_id=uuid4(),
+        transaction_id=None,
+        creation=datetime.now(UTC) - timedelta(days=30),
+    )
+    await add_object_to_db(expired_request)
+    refused_request = models_mypayment.Request(
+        id=uuid4(),
+        wallet_id=ecl_user_wallet.id,
+        store_id=store.id,
+        total=1000,
+        name="Refused Request",
+        store_note="Refused Request Note",
+        status=RequestStatus.REFUSED,
+        module=TEST_MODULE_ROOT,
+        object_id=uuid4(),
+        transaction_id=None,
+        creation=datetime.now(UTC) - timedelta(days=30),
+    )
+    await add_object_to_db(refused_request)
 
 
 async def test_get_structures(client: TestClient):
@@ -1056,13 +1145,18 @@ async def test_get_store_history(client: TestClient):
 
     assert response.status_code == 200
     history_list = response.json()
-    assert len(history_list) == 2
+    assert len(history_list) == 3
 
     history = {transaction["id"]: transaction for transaction in history_list}
     assert str(transaction_from_store_to_ecl_user.id) in history
     assert history[str(transaction_from_store_to_ecl_user.id)]["total"] == 700
     assert str(transaction_from_ecl_user_to_store.id) in history
     assert history[str(transaction_from_ecl_user_to_store.id)]["total"] == 500
+    assert str(store_direct_transfer.id) in history
+    assert history[str(store_direct_transfer.id)]["total"] == 1500
+    assert history[str(store_direct_transfer.id)]["type"] == "request_transfer"
+    assert history[str(store_direct_transfer.id)]["direction"] == "credited"
+    assert history[str(store_direct_transfer.id)]["status"] in ["pending", "canceled"]
 
 
 async def test_get_store_history_with_date(client: TestClient):
@@ -2221,7 +2315,10 @@ def test_get_transactions_success(client: TestClient):
         transactions_dict[transaction_from_ecl_user_to_store.id]["other_wallet_name"]
         == "Test Store"
     )
-    assert transactions_dict[transaction_from_ecl_user_to_store.id]["type"] == "given"
+    assert (
+        transactions_dict[transaction_from_ecl_user_to_store.id]["direction"]
+        == "debited"
+    )
     assert transactions_dict[transaction_from_ecl_user_to_store.id]["total"] == 500
     assert (
         transactions_dict[transaction_from_ecl_user_to_store.id]["status"]
@@ -2235,7 +2332,8 @@ def test_get_transactions_success(client: TestClient):
         == "firstname ECL User 2 (nickname)"
     )
     assert (
-        transactions_dict[transaction_from_ecl_user_to_ecl_user2.id]["type"] == "given"
+        transactions_dict[transaction_from_ecl_user_to_ecl_user2.id]["direction"]
+        == "debited"
     )
     assert transactions_dict[transaction_from_ecl_user_to_ecl_user2.id]["total"] == 600
     assert (
@@ -2248,7 +2346,12 @@ def test_get_transactions_success(client: TestClient):
         == "Test Store"
     )
     assert (
-        transactions_dict[transaction_from_store_to_ecl_user.id]["type"] == "received"
+        transactions_dict[transaction_from_store_to_ecl_user.id]["type"]
+        == "direct_transaction"
+    )
+    assert (
+        transactions_dict[transaction_from_store_to_ecl_user.id]["direction"]
+        == "credited"
     )
     assert transactions_dict[transaction_from_store_to_ecl_user.id]["total"] == 700
     assert (
@@ -2264,7 +2367,11 @@ def test_get_transactions_success(client: TestClient):
     )
     assert (
         transactions_dict[transaction_from_ecl_user2_to_ecl_user.id]["type"]
-        == "received"
+        == "direct_transaction"
+    )
+    assert (
+        transactions_dict[transaction_from_ecl_user2_to_ecl_user.id]["direction"]
+        == "credited"
     )
     assert transactions_dict[transaction_from_ecl_user2_to_ecl_user.id]["total"] == 800
     assert (
@@ -2296,7 +2403,12 @@ def test_get_transactions_success_with_date(client: TestClient):
         == "firstname ECL User 2 (nickname)"
     )
     assert (
-        transactions_dict[transaction_from_ecl_user_to_ecl_user2.id]["type"] == "given"
+        transactions_dict[transaction_from_ecl_user_to_ecl_user2.id]["type"]
+        == "direct_transaction"
+    )
+    assert (
+        transactions_dict[transaction_from_ecl_user_to_ecl_user2.id]["direction"]
+        == "debited"
     )
     assert transactions_dict[transaction_from_ecl_user_to_ecl_user2.id]["total"] == 600
     assert (
@@ -2309,7 +2421,12 @@ def test_get_transactions_success_with_date(client: TestClient):
         == "Test Store"
     )
     assert (
-        transactions_dict[transaction_from_store_to_ecl_user.id]["type"] == "received"
+        transactions_dict[transaction_from_store_to_ecl_user.id]["type"]
+        == "direct_transaction"
+    )
+    assert (
+        transactions_dict[transaction_from_store_to_ecl_user.id]["direction"]
+        == "credited"
     )
     assert transactions_dict[transaction_from_store_to_ecl_user.id]["total"] == 700
     assert (
@@ -2592,7 +2709,7 @@ def test_store_scan_store_invalid_signature(client: TestClient):
 def test_store_scan_store_with_non_store_qr_code(client: TestClient):
     qr_code_id = uuid4()
 
-    qr_code_content = QRCodeContentData(
+    qr_code_content = SecuredContentData(
         id=qr_code_id,
         tot=-1,
         iat=datetime.now(UTC),
@@ -2627,7 +2744,7 @@ def test_store_scan_store_with_non_store_qr_code(client: TestClient):
 def test_store_scan_store_negative_total(client: TestClient):
     qr_code_id = uuid4()
 
-    qr_code_content = QRCodeContentData(
+    qr_code_content = SecuredContentData(
         id=qr_code_id,
         tot=-1,
         iat=datetime.now(UTC),
@@ -2669,7 +2786,7 @@ def test_store_scan_store_missing_wallet(
 
     qr_code_id = uuid4()
 
-    qr_code_content = QRCodeContentData(
+    qr_code_content = SecuredContentData(
         id=qr_code_id,
         tot=100,
         iat=datetime.now(UTC),
@@ -2705,7 +2822,7 @@ def test_store_scan_store_missing_wallet(
 def test_store_scan_store_from_store_wallet(client: TestClient):
     qr_code_id = uuid4()
 
-    qr_code_content = QRCodeContentData(
+    qr_code_content = SecuredContentData(
         id=qr_code_id,
         tot=1100,
         iat=datetime.now(UTC),
@@ -2775,7 +2892,7 @@ async def test_store_scan_store_from_wallet_with_old_tos_version(client: TestCli
 
     qr_code_id = uuid4()
 
-    qr_code_content = QRCodeContentData(
+    qr_code_content = SecuredContentData(
         id=qr_code_id,
         tot=1100,
         iat=datetime.now(UTC),
@@ -2808,7 +2925,7 @@ async def test_store_scan_store_from_wallet_with_old_tos_version(client: TestCli
 def test_store_scan_store_insufficient_ballance(client: TestClient):
     qr_code_id = uuid4()
 
-    qr_code_content = QRCodeContentData(
+    qr_code_content = SecuredContentData(
         id=qr_code_id,
         tot=3000,
         iat=datetime.now(UTC),
@@ -2841,7 +2958,7 @@ def test_store_scan_store_insufficient_ballance(client: TestClient):
 async def test_store_scan_store_successful_scan(client: TestClient):
     qr_code_id = uuid4()
 
-    qr_code_content = QRCodeContentData(
+    qr_code_content = SecuredContentData(
         id=qr_code_id,
         tot=500,
         iat=datetime.now(UTC),
@@ -3149,6 +3266,37 @@ async def test_transaction_refund_partial(client: TestClient):
     )
 
 
+async def test_cancel_transaction(
+    client: TestClient,
+):
+    recent_transaction = models_mypayment.Transaction(
+        id=uuid4(),
+        debited_wallet_id=ecl_user_wallet.id,
+        credited_wallet_id=store_wallet.id,
+        total=100,
+        status=TransactionStatus.CONFIRMED,
+        creation=datetime.now(UTC),
+        transaction_type=TransactionType.DIRECT,
+        seller_user_id=store_seller_can_bank_user.id,
+        debited_wallet_device_id=ecl_user_wallet_device.id,
+        store_note="",
+        qr_code_id=None,
+    )
+    await add_object_to_db(recent_transaction)
+    response = client.post(
+        f"/mypayment/transactions/{recent_transaction.id}/cancel",
+        headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
+    )
+    assert response.status_code == 204, response.text
+    async with get_TestingSessionLocal()() as db:
+        transaction_after_cancel = await cruds_mypayment.get_transaction(
+            db=db,
+            transaction_id=recent_transaction.id,
+        )
+    assert transaction_after_cancel is not None
+    assert transaction_after_cancel.status == TransactionStatus.CANCELED
+
+
 async def test_get_invoices_as_random_user(client: TestClient):
     response = client.get(
         "/mypayment/invoices",
@@ -3414,3 +3562,503 @@ async def test_delete_invoice(
     )
     assert response.status_code == 200
     assert not any(invoice["id"] == invoice3.id for invoice in response.json())
+
+
+async def mypayment_callback(
+    object_id: UUID,
+    db: AsyncSession,
+) -> None:
+    pass
+
+
+async def test_get_request(
+    client: TestClient,
+):
+    response = client.get(
+        "/mypayment/requests",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["id"] == str(proposed_request.id)
+
+
+async def test_get_request_with_used_filter(
+    client: TestClient,
+):
+    response = client.get(
+        "/mypayment/requests?used=true",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 3
+
+
+async def test_accept_request_with_invalid_signature(
+    client: TestClient,
+):
+    response = client.post(
+        f"/mypayment/requests/{proposed_request.id}/accept",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        json=SignedContent(
+            id=proposed_request.id,
+            key=ecl_user_wallet_device.id,
+            iat=datetime.now(UTC),
+            tot=proposed_request.total,
+            store=True,
+            signature="invalid signature",
+        ).model_dump(mode="json"),
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid signature"
+
+
+async def test_accept_request_with_wrong_wallet_device(
+    client: TestClient,
+):
+    wrong_wallet_device_private_key = Ed25519PrivateKey.generate()
+    wrong_wallet_device = models_mypayment.WalletDevice(
+        id=uuid4(),
+        name="Wrong device",
+        wallet_id=ecl_user2_wallet.id,
+        ed25519_public_key=wrong_wallet_device_private_key.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        ),
+        creation=datetime.now(UTC),
+        status=WalletDeviceStatus.ACTIVE,
+        activation_token=str(uuid4()),
+    )
+    await add_object_to_db(wrong_wallet_device)
+
+    validation_data = SecuredContentData(
+        id=proposed_request.id,
+        key=wrong_wallet_device.id,
+        iat=datetime.now(UTC),
+        tot=proposed_request.total,
+        store=True,
+    )
+    validation_data_signature = wrong_wallet_device_private_key.sign(
+        validation_data.model_dump_json().encode("utf-8"),
+    )
+    validation = SignedContent(
+        **validation_data.model_dump(),
+        signature=base64.b64encode(validation_data_signature).decode("utf-8"),
+    )
+    response = client.post(
+        f"/mypayment/requests/{proposed_request.id}/accept",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        json=validation.model_dump(mode="json"),
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Wallet device is not associated with the user wallet"
+    )
+
+
+async def test_accept_request_with_wrong_user(
+    client: TestClient,
+):
+    validation_data = SecuredContentData(
+        id=proposed_request.id,
+        key=ecl_user_wallet_device.id,
+        iat=datetime.now(UTC),
+        tot=proposed_request.total,
+        store=True,
+    )
+    validation_data_signature = ecl_user_wallet_device_private_key.sign(
+        validation_data.model_dump_json().encode("utf-8"),
+    )
+    validation = SignedContent(
+        **validation_data.model_dump(),
+        signature=base64.b64encode(validation_data_signature).decode("utf-8"),
+    )
+    response = client.post(
+        f"/mypayment/requests/{proposed_request.id}/accept",
+        headers={"Authorization": f"Bearer {ecl_user2_access_token}"},
+        json=validation.model_dump(mode="json"),
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "User is not allowed to confirm this request"
+
+
+async def test_accept_request_with_different_total(
+    client: TestClient,
+):
+    validation_data = SecuredContentData(
+        id=proposed_request.id,
+        key=ecl_user_wallet_device.id,
+        iat=datetime.now(UTC),
+        tot=proposed_request.total + 100,
+        store=True,
+    )
+    validation_data_signature = ecl_user_wallet_device_private_key.sign(
+        validation_data.model_dump_json().encode("utf-8"),
+    )
+    validation = SignedContent(
+        **validation_data.model_dump(),
+        signature=base64.b64encode(validation_data_signature).decode("utf-8"),
+    )
+    response = client.post(
+        f"/mypayment/requests/{proposed_request.id}/accept",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        json=validation.model_dump(mode="json"),
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Request total in the body do not match the request total in the database"
+    )
+
+
+async def test_accept_request_with_inexistant_wallet_device(
+    client: TestClient,
+):
+    validation_data = SecuredContentData(
+        id=proposed_request.id,
+        key=uuid4(),
+        iat=datetime.now(UTC),
+        tot=proposed_request.total,
+        store=True,
+    )
+    validation_data_signature = ecl_user_wallet_device_private_key.sign(
+        validation_data.model_dump_json().encode("utf-8"),
+    )
+    validation = SignedContent(
+        **validation_data.model_dump(),
+        signature=base64.b64encode(validation_data_signature).decode("utf-8"),
+    )
+    response = client.post(
+        f"/mypayment/requests/{proposed_request.id}/accept",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        json=validation.model_dump(mode="json"),
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Wallet device does not exist"
+
+
+async def test_accept_request_with_wallet_device_linked_to_another_wallet(
+    client: TestClient,
+):
+    other_wallet = models_mypayment.Wallet(
+        id=uuid4(),
+        type=WalletType.USER,
+        balance=1000,
+    )
+    await add_object_to_db(other_wallet)
+
+    other_wallet_device_private_key = Ed25519PrivateKey.generate()
+    other_wallet_device = models_mypayment.WalletDevice(
+        id=uuid4(),
+        name="Other device",
+        wallet_id=other_wallet.id,
+        ed25519_public_key=other_wallet_device_private_key.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        ),
+        creation=datetime.now(UTC),
+        status=WalletDeviceStatus.ACTIVE,
+        activation_token=str(uuid4()),
+    )
+    await add_object_to_db(other_wallet_device)
+
+    validation_data = SecuredContentData(
+        id=proposed_request.id,
+        key=other_wallet_device.id,
+        iat=datetime.now(UTC),
+        tot=proposed_request.total,
+        store=True,
+    )
+    validation_data_signature = other_wallet_device_private_key.sign(
+        validation_data.model_dump_json().encode("utf-8"),
+    )
+    validation = SignedContent(
+        **validation_data.model_dump(),
+        signature=base64.b64encode(validation_data_signature).decode("utf-8"),
+    )
+    response = client.post(
+        f"/mypayment/requests/{proposed_request.id}/accept",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        json=validation.model_dump(mode="json"),
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Wallet device is not associated with the user wallet"
+    )
+
+
+async def test_accept_request_with_non_proposed_request(
+    client: TestClient,
+):
+    non_proposed_request = models_mypayment.Request(
+        id=uuid4(),
+        wallet_id=ecl_user_wallet.id,
+        store_id=store.id,
+        name="Test request",
+        store_note="",
+        module=TEST_MODULE_ROOT,
+        object_id=uuid4(),
+        transaction_id=None,
+        total=1000,
+        status=RequestStatus.ACCEPTED,
+        creation=datetime.now(UTC),
+    )
+    await add_object_to_db(non_proposed_request)
+
+    validation_data = SecuredContentData(
+        id=non_proposed_request.id,
+        key=ecl_user_wallet_device.id,
+        iat=datetime.now(UTC),
+        tot=non_proposed_request.total,
+        store=True,
+    )
+    validation_data_signature = ecl_user_wallet_device_private_key.sign(
+        validation_data.model_dump_json().encode("utf-8"),
+    )
+    validation = SignedContent(
+        **validation_data.model_dump(),
+        signature=base64.b64encode(validation_data_signature).decode("utf-8"),
+    )
+    response = client.post(
+        f"/mypayment/requests/{non_proposed_request.id}/accept",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        json=validation.model_dump(mode="json"),
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Only pending requests can be confirmed"
+
+
+async def test_accept_request(
+    mocker: MockerFixture,
+    client: TestClient,
+):
+    # We patch the callback to be able to check if it was called
+    mocked_callback = mocker.patch(
+        "tests.core.test_mypayment.mypayment_callback",
+    )
+
+    # We patch the module_list to inject our custom test module
+    test_module = Module(
+        root=TEST_MODULE_ROOT,
+        tag="Tests",
+        default_allowed_groups_ids=[],
+        mypayment_callback=mypayment_callback,
+        factory=None,
+        permissions=None,
+    )
+    mocker.patch(
+        "app.core.mypayment.utils_mypayment.all_modules",
+        [test_module],
+    )
+
+    validation_data = SecuredContentData(
+        id=proposed_request.id,
+        key=ecl_user_wallet_device.id,
+        iat=datetime.now(UTC),
+        tot=proposed_request.total,
+        store=True,
+    )
+    validation_data_signature = ecl_user_wallet_device_private_key.sign(
+        validation_data.model_dump_json().encode("utf-8"),
+    )
+    validation = SignedContent(
+        **validation_data.model_dump(),
+        signature=base64.b64encode(validation_data_signature).decode("utf-8"),
+    )
+    response = client.post(
+        f"/mypayment/requests/{proposed_request.id}/accept",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        json=validation.model_dump(mode="json"),
+    )
+    assert response.status_code == 204
+
+    responser = client.get(
+        "/mypayment/requests?used=true",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert responser.status_code == 200
+    accepted = next(
+        (
+            request
+            for request in responser.json()
+            if request["id"] == str(proposed_request.id)
+        ),
+        None,
+    )
+    assert accepted is not None
+    assert accepted["status"] == RequestStatus.ACCEPTED
+    mocked_callback.assert_called_once()
+
+
+async def test_accept_expired_request(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    # We patch the callback to be able to check if it was called
+    mocked_callback = mocker.patch(
+        "tests.core.test_mypayment.mypayment_callback",
+    )
+
+    # We patch the module_list to inject our custom test module
+    test_module = Module(
+        root=TEST_MODULE_ROOT,
+        tag="Tests",
+        default_allowed_groups_ids=[],
+        mypayment_callback=mypayment_callback,
+        factory=None,
+        permissions=None,
+    )
+    mocker.patch(
+        "app.core.mypayment.utils_mypayment.all_modules",
+        [test_module],
+    )
+
+    expired_request = models_mypayment.Request(
+        id=uuid4(),
+        wallet_id=ecl_user_wallet.id,
+        store_id=store.id,
+        name="Test request",
+        store_note="",
+        module=TEST_MODULE_ROOT,
+        object_id=uuid4(),
+        transaction_id=None,
+        total=1000,
+        status=RequestStatus.PROPOSED,
+        creation=datetime.now(UTC) - timedelta(minutes=REQUEST_EXPIRATION + 1),
+    )
+    await add_object_to_db(expired_request)
+
+    validation_data = SecuredContentData(
+        id=expired_request.id,
+        key=ecl_user_wallet_device.id,
+        iat=datetime.now(UTC),
+        tot=expired_request.total,
+        store=True,
+    )
+    validation_data_signature = ecl_user_wallet_device_private_key.sign(
+        validation_data.model_dump_json().encode("utf-8"),
+    )
+    validation = SignedContent(
+        **validation_data.model_dump(),
+        signature=base64.b64encode(validation_data_signature).decode("utf-8"),
+    )
+    response = client.post(
+        f"/mypayment/requests/{expired_request.id}/accept",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        json=validation.model_dump(mode="json"),
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Only pending requests can be confirmed"
+
+    mocked_callback.assert_not_called()
+
+
+async def test_refuse_request(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    # We patch the callback to be able to check if it was called
+    mocked_callback = mocker.patch(
+        "tests.core.test_mypayment.mypayment_callback",
+    )
+
+    # We patch the module_list to inject our custom test module
+    test_module = Module(
+        root=TEST_MODULE_ROOT,
+        tag="Tests",
+        default_allowed_groups_ids=[],
+        mypayment_callback=mypayment_callback,
+        factory=None,
+        permissions=None,
+    )
+    mocker.patch(
+        "app.core.mypayment.utils_mypayment.all_modules",
+        [test_module],
+    )
+
+    new_request = models_mypayment.Request(
+        id=uuid4(),
+        wallet_id=ecl_user_wallet.id,
+        store_id=store.id,
+        name="Test request",
+        store_note="",
+        module=TEST_MODULE_ROOT,
+        object_id=uuid4(),
+        transaction_id=None,
+        total=1000,
+        status=RequestStatus.PROPOSED,
+        creation=datetime.now(UTC),
+    )
+    await add_object_to_db(new_request)
+
+    response = client.post(
+        f"/mypayment/requests/{new_request.id}/refuse",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.status_code == 204
+
+    mocked_callback.assert_not_called()
+
+    responser = client.get(
+        "/mypayment/requests?used=true",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert responser.status_code == 200
+    refused = next(
+        (
+            request
+            for request in responser.json()
+            if request["id"] == str(new_request.id)
+        ),
+        None,
+    )
+    assert refused is not None
+    assert refused["status"] == RequestStatus.REFUSED
+
+
+async def test_direct_transfer_callback(
+    mocker: MockerFixture,
+    client: TestClient,
+):
+    # We patch the callback to be able to check if it was called
+    mocked_callback = mocker.patch(
+        "tests.core.test_mypayment.mypayment_callback",
+    )
+
+    # We patch the module_list to inject our custom test module
+    test_module = Module(
+        root=TEST_MODULE_ROOT,
+        tag="Tests",
+        default_allowed_groups_ids=[],
+        mypayment_callback=mypayment_callback,
+        factory=None,
+        permissions=None,
+    )
+    mocker.patch(
+        "app.core.mypayment.utils_mypayment.all_modules",
+        [test_module],
+    )
+
+    async with get_TestingSessionLocal()() as db:
+        await validate_transfer_callback(
+            checkout_payment=schemas_checkout.CheckoutPayment(
+                id=uuid4(),
+                paid_amount=1500,
+                checkout_id=UUID(store_direct_transfer.transfer_identifier),
+            ),
+            db=db,
+        )
+
+    mocked_callback.assert_called_once()
+
+
+async def test_integrity_check(
+    client: TestClient,
+):
+    response = client.get(
+        "/mypayment/integrity-check",
+        headers={"x-data-verifier-token": "test_data_verifier_access_token"},
+    )
+    assert response.status_code == 200, response.text

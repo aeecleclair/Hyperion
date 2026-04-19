@@ -9,9 +9,12 @@ from pydantic import (
 
 from app.core.memberships import schemas_memberships
 from app.core.mypayment.types_mypayment import (
+    HistoryDirection,
     HistoryType,
+    RequestStatus,
     TransactionStatus,
     TransactionType,
+    TransferOrigin,
     TransferType,
     WalletDeviceStatus,
     WalletType,
@@ -145,6 +148,12 @@ class TransferInfo(BaseModel):
     redirect_url: str
 
 
+class StoreTransferInfo(TransferInfo):
+    store_id: UUID
+    module: str
+    object_id: UUID
+
+
 class RefundInfo(BaseModel):
     complete_refund: bool
     amount: int | None = None
@@ -158,36 +167,12 @@ class HistoryRefund(BaseModel):
 class History(BaseModel):
     id: UUID
     type: HistoryType
+    direction: HistoryDirection
     other_wallet_name: str
     total: int
     creation: datetime
     status: TransactionStatus
     refund: HistoryRefund | None = None
-
-
-class QRCodeContentData(BaseModel):
-    """
-    Format of the data stored in the QR code.
-
-    This data will be signed using ed25519 and the private key of the WalletDevice that generated the QR Code.
-
-    id: Unique identifier of the QR Code
-    tot: Total amount of the transaction, in cents
-    iat: Generation datetime of the QR Code
-    key: Id of the WalletDevice that generated the QR Code, will be used to verify the signature
-    store: If the QR Code is intended to be scanned for a Store Wallet, or for an other user Wallet
-    """
-
-    id: UUID
-    tot: int
-    iat: datetime
-    key: UUID
-    store: bool
-
-
-class ScanInfo(QRCodeContentData):
-    signature: str
-    bypass_membership: bool = False
 
 
 class WalletBase(BaseModel):
@@ -243,9 +228,9 @@ class Transaction(TransactionBase):
     refund: "RefundBase | None" = None
 
 
-class Transfer(BaseModel):
+class TransferCreation(BaseModel):
     id: UUID
-    type: TransferType
+    origin: TransferOrigin
     transfer_identifier: str
 
     # TODO remove if we only accept hello asso
@@ -255,6 +240,12 @@ class Transfer(BaseModel):
     total: int  # Stored in cents
     creation: datetime
     confirmed: bool
+    module: str | None
+    object_id: UUID | None
+
+
+class Transfer(TransferCreation):
+    type: TransferType
 
 
 class RefundBase(BaseModel):
@@ -344,3 +335,71 @@ class Withdrawal(BaseModel):
     wallet_id: UUID
     total: int  # Stored in cents
     creation: datetime
+
+
+class Request(BaseModel):
+    id: UUID
+    wallet_id: UUID
+    creation: datetime
+    end_date: datetime
+    total: int  # Stored in cents
+    store_id: UUID
+    name: str
+    store_note: str | None = None
+    module: str  # module root, will be used to call the payment callback with the provided object_id
+    object_id: UUID
+    status: RequestStatus
+    transaction_id: UUID | None = None
+
+
+class RequestEdit(BaseModel):
+    name: str | None = None
+    store_note: str | None = None
+    status: RequestStatus | None = None
+    transaction_id: UUID | None = None
+
+
+class RequestInfo(BaseModel):
+    store_id: UUID
+    total: int
+    request_name: str
+    store_note: str | None
+    module: str
+    object_id: UUID
+
+
+class PaymentInfo(RequestInfo):
+    redirect_url: str
+
+
+class SecuredContentData(BaseModel):
+    """
+    Format of the data stored in the payment order.
+
+    This data will be signed using ed25519 and the private key of the WalletDevice that generated the payment order
+
+    id: Unique identifier of the payment
+    tot: Total amount of the transaction, in cents
+    iat: Generation datetime of the payment order
+    key: Id of the WalletDevice that generated the payment order, will be used to get the public key to verify the signature
+    store: If the payment is intended to be banked by a store or by an other user
+    """
+
+    id: UUID
+    tot: int
+    iat: datetime
+    key: UUID
+    store: bool
+
+
+class SignedContent(SecuredContentData):
+    signature: str
+
+
+class ScanInfo(SignedContent):
+    bypass_membership: bool = False
+
+
+class PaymentRequestInfo(BaseModel):
+    end_date: datetime
+    checkout_url: str | None = None

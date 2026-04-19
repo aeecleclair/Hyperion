@@ -22,7 +22,7 @@ from app.core.mypayment.types_mypayment import ActionType
 def format_transfer_log(
     transfer: schemas_mypayment.Transfer | models_mypayment.Transfer,
 ):
-    return f"{ActionType.TRANSFER.name} {transfer.id} {transfer.type.name} {transfer.total} {transfer.wallet_id}"
+    return f"{ActionType.TRANSFER.name} {transfer.id} {transfer.origin.name} {transfer.total} {transfer.wallet_id}"
 
 
 def format_transaction_log(

@@ -1,4 +1,5 @@
 from collections.abc import Awaitable, Callable
+from uuid import UUID
 
 from fastapi import APIRouter
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,8 +18,13 @@ class CoreModule:
         tag: str,
         factory: Factory | None,
         router: APIRouter | None = None,
-        payment_callback: Callable[
+        checkout_callback: Callable[
             [schemas_checkout.CheckoutPayment, AsyncSession],
+            Awaitable[None],
+        ]
+        | None = None,
+        mypayment_callback: Callable[
+            [UUID, AsyncSession],
             Awaitable[None],
         ]
         | None = None,
@@ -31,17 +37,21 @@ class CoreModule:
         :param tag: the tag of the module, used by FastAPI
         :param factory: a factory to use to create fake data for the module (development purpose)
         :param router: an optional custom APIRouter
-        :param payment_callback: an optional method to call when a payment is notified by HelloAsso. A CheckoutPayment and the database will be provided during the call
+        :param checkout_callback: an optional method to call when a payment is notified by HelloAsso. A CheckoutPayment and the database will be provided during the call
+        :param mypayment_callback: an optional method to call when a payment is notified by MyPayment. A request_id and the database will be provided during the call
         :param registred_topics: an optionnal list of Topics that should be registered by the module. Modules can also register topics dynamically.
             Once the Topic was registred, removing it from this list won't delete it
         :param permissions: enum declaring permissions strings used by module
         """
         self.root = root
         self.router = router or APIRouter(tags=[tag])
-        self.payment_callback: (
+        self.checkout_callback: (
             Callable[[schemas_checkout.CheckoutPayment, AsyncSession], Awaitable[None]]
             | None
-        ) = payment_callback
+        ) = checkout_callback
+        self.mypayment_callback: (
+            Callable[[UUID, AsyncSession], Awaitable[None]] | None
+        ) = mypayment_callback
         self.registred_topics = registred_topics
         self.factory = factory
         self.permissions = permissions
@@ -56,8 +66,13 @@ class Module(CoreModule):
         default_allowed_groups_ids: list[GroupType] | None = None,
         default_allowed_account_types: list[AccountType] | None = None,
         router: APIRouter | None = None,
-        payment_callback: Callable[
+        checkout_callback: Callable[
             [schemas_checkout.CheckoutPayment, AsyncSession],
+            Awaitable[None],
+        ]
+        | None = None,
+        mypayment_callback: Callable[
+            [UUID, AsyncSession],
             Awaitable[None],
         ]
         | None = None,
@@ -72,7 +87,8 @@ class Module(CoreModule):
         :param default_allowed_groups_ids: list of groups that should be able to see the module by default
         :param default_allowed_account_types: list of account_types that should be able to see the module by default
         :param router: an optional custom APIRouter
-        :param payment_callback: an optional method to call when a payment is notified by HelloAsso. A CheckoutPayment and the database will be provided during the call
+        :param checkout_callback: an optional method to call when a payment is notified by HelloAsso. A CheckoutPayment and the database will be provided during the call
+        :param mypayment_callback: an optional method to call when a payment is notified by MyPayment. An object_id and the database will be provided during the call
         :param registred_topics: an optionnal list of Topics that should be registered by the module. Modules can also register topics dynamically.
             Once the Topic was registred, removing it from this list won't delete it
         :param permissions: enum declaring permissions strings used by module
@@ -81,10 +97,13 @@ class Module(CoreModule):
         self.default_allowed_groups_ids = default_allowed_groups_ids
         self.default_allowed_account_types = default_allowed_account_types
         self.router = router or APIRouter(tags=[tag])
-        self.payment_callback: (
+        self.checkout_callback: (
             Callable[[schemas_checkout.CheckoutPayment, AsyncSession], Awaitable[None]]
             | None
-        ) = payment_callback
+        ) = checkout_callback
+        self.mypayment_callback: (
+            Callable[[UUID, AsyncSession], Awaitable[None]] | None
+        ) = mypayment_callback
         self.registred_topics = registred_topics
         self.factory = factory
         self.permissions = permissions

@@ -1,5 +1,8 @@
 from uuid import UUID
 
+from app.core.checkout.types_checkout import HelloAssoConfigName
+from app.core.mypayment.types_mypayment import RequestType
+
 
 class WalletNotFoundOnUpdateError(Exception):
     """
@@ -29,3 +32,47 @@ class ReferencedStructureNotFoundError(Exception):
 
     def __init__(self, structure_id: UUID):
         super().__init__(f"Referenced structure {structure_id} not found")
+
+
+class UnexpectedError(Exception):
+    pass
+
+
+class TransferNotFoundByCallbackError(Exception):
+    def __init__(self, checkout_id: UUID):
+        super().__init__(f"User transfer {checkout_id} not found.")
+
+
+class TransferTotalDontMatchInCallbackError(Exception):
+    def __init__(self, transfer_id: UUID):
+        super().__init__(
+            f"User transfer {transfer_id} amount does not match the paid amount",
+        )
+
+
+class TransferAlreadyConfirmedInCallbackError(Exception):
+    def __init__(self, transfer_id: UUID):
+        super().__init__(
+            f"User transfer {transfer_id} has already been confirmed",
+        )
+
+
+class PaymentUserNotFoundError(Exception):
+    def __init__(self, user_id: str):
+        super().__init__(
+            f"User {user_id} does not have a payment account",
+        )
+
+
+class InvalidRequestTypeError(Exception):
+    def __init__(self, request_type: RequestType):
+        super().__init__(
+            f"Request type {request_type.name} is not supported",
+        )
+
+
+class InvalidCheckoutToolError(Exception):
+    def __init__(self, name: HelloAssoConfigName):
+        super().__init__(
+            f"Checkout tool {name.name} is not supported",
+        )

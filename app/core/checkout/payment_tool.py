@@ -18,7 +18,7 @@ from helloasso_python.models.hello_asso_api_v5_models_carts_init_checkout_body i
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.checkout import cruds_checkout, models_checkout, schemas_checkout
-from app.core.checkout.types_checkout import HelloAssoConfig
+from app.core.checkout.types_checkout import HelloAssoConfig, HelloAssoConfigName
 from app.core.users import schemas_users
 from app.core.utils import security
 from app.types.exceptions import (
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
-class PaymentTool:
+class CheckoutTool:
     _access_token: str | None = None
     _refresh_token: str | None = None
     _access_token_expiry: int | None = None
@@ -48,9 +48,11 @@ class PaymentTool:
 
     def __init__(
         self,
+        name: HelloAssoConfigName,
         config: HelloAssoConfig,
         helloasso_api_base: str,
     ):
+        self.name = name
         self._helloasso_api_base = helloasso_api_base
         self._auth_client = OAuth2Session(
             client_id=config.helloasso_client_id,
@@ -111,7 +113,7 @@ class PaymentTool:
             retries=3,
         )
 
-    def is_payment_available(self) -> bool:
+    def is_checkout_available(self) -> bool:
         """
         If the API credentials are not set, payment won't be available. If credentials are set, this doesn't ensure that they are valid.
 
@@ -277,7 +279,7 @@ class PaymentTool:
         ]
         return schemas_checkout.CheckoutComplete(**checkout_dict)
 
-    async def refund_payment(
+    async def refund_checkout(
         self,
         checkout_id: uuid.UUID,
         hello_asso_payment_id: int,
