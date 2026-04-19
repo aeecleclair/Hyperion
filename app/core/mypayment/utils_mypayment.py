@@ -231,6 +231,7 @@ def invoice_model_to_schema(
                     structure_id=detail.store.structure_id,
                     wallet_id=detail.store.wallet_id,
                     creation=detail.store.creation,
+                    association_id=detail.store.association_id,
                 ),
             )
             for detail in invoice.details

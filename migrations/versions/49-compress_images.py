@@ -70,15 +70,14 @@ data_sources: dict[str, dict[str, int]] = {
 
 def upgrade() -> None:
     for data_folder, params in data_sources.items():
-        print("__________________________________________")  # noqa: T201
-        print(f"Processing folder: {data_folder}")  # noqa: T201
+        print(f"\nCompressing images from folder: {data_folder}", end="")  # noqa: T201
         height = params.get("height")
         width = params.get("width")
         quality = params.get("quality", 85)
         fit = bool(params.get("fit", 0))
         if Path("data/" + data_folder).exists():
             for file_path in Path("data/" + data_folder).iterdir():
-                print(" - ", file_path)  # noqa: T201
+                print(".", end="")  # noqa: T201
                 if file_path.suffix in (".png", ".jpg", ".webp"):
                     file_bytes = file_path.read_bytes()
 
@@ -105,8 +104,7 @@ def upgrade() -> None:
 
                     Path(f"data/{data_folder}/{file_path.stem}.webp").write_bytes(res)
 
-                    # Delete the original file
-                    Path(f"data/{data_folder}/{file_path.name}").unlink()
+    print()  # noqa: T201
 
 
 def downgrade() -> None:

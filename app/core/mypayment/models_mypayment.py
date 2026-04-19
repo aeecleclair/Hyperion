@@ -170,6 +170,11 @@ class Store(Base):
     )
     creation: Mapped[datetime]
 
+    association_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("associations_associations.id"),
+        unique=True,
+    )
+
     structure: Mapped[Structure] = relationship(init=False, lazy="joined")
 
 

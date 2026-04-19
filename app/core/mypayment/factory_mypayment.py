@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 from faker import Faker
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.associations.factory_associations import AssociationsFactory
 from app.core.mypayment import cruds_mypayment, models_mypayment, schemas_mypayment
 from app.core.mypayment.types_mypayment import WalletType
 from app.core.users.factory_users import CoreUsersFactory
@@ -17,7 +18,7 @@ OTHER_STRUCTURES = 2
 
 
 class MyPaymentFactory(Factory):
-    depends_on = [CoreUsersFactory]
+    depends_on = [CoreUsersFactory, AssociationsFactory]
 
     demo_structures_id: list[uuid.UUID]
     other_structures_id: list[uuid.UUID]
@@ -67,6 +68,7 @@ class MyPaymentFactory(Factory):
 
     @classmethod
     async def create_other_structures_stores(cls, db: AsyncSession):
+        association_id_index = 0
         for structure_id in cls.other_structures_id:
             structure_store_ids = []
             structure_wallet_ids = []
@@ -88,9 +90,13 @@ class MyPaymentFactory(Factory):
                         name=faker.company(),
                         creation=datetime.now(UTC),
                         wallet_id=wallet_id,
+                        association_id=AssociationsFactory.association_ids[
+                            association_id_index
+                        ],
                     ),
                     db,
                 )
+                association_id_index += 1
             cls.other_stores_id.append(structure_store_ids)
             cls.other_stores_wallet_id.append(structure_wallet_ids)
 

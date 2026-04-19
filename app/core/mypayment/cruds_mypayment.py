@@ -162,7 +162,7 @@ async def update_store(
     await db.execute(
         update(models_mypayment.Store)
         .where(models_mypayment.Store.id == store_id)
-        .values(**store_update.model_dump(exclude_none=True)),
+        .values(**store_update.model_dump(exclude_unset=True)),
     )
 
 
@@ -189,6 +189,18 @@ async def get_store_by_name(
     result = await db.execute(
         select(models_mypayment.Store).where(
             models_mypayment.Store.name == name,
+        ),
+    )
+    return result.scalars().first()
+
+
+async def get_store_by_association_id(
+    association_id: UUID,
+    db: AsyncSession,
+) -> models_mypayment.Store | None:
+    result = await db.execute(
+        select(models_mypayment.Store).where(
+            models_mypayment.Store.association_id == association_id,
         ),
     )
     return result.scalars().first()

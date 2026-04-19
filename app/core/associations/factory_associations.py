@@ -11,22 +11,14 @@ from app.types.factory import Factory
 
 
 class AssociationsFactory(Factory):
-    association_ids = [
-        uuid.uuid4(),
-        uuid.uuid4(),
-        uuid.uuid4(),
-        uuid.uuid4(),
-    ]
+    association_ids = [uuid.uuid4() for _ in range(len(CoreGroupsFactory.groups_ids))]
 
     depends_on = [CoreGroupsFactory]
 
     @classmethod
     async def create_associations(cls, db: AsyncSession):
         descriptions = [
-            "Association 1",
-            "Association 2",
-            "Association 3",
-            "Association 4",
+            f"Association {i + 1}" for i in range(len(CoreGroupsFactory.groups_ids))
         ]
         for i in range(len(CoreGroupsFactory.groups_ids)):
             await cruds_associations.create_association(
