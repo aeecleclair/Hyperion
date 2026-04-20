@@ -172,13 +172,14 @@ async def request_transaction(
     if not payment_user:
         raise PaymentUserNotFoundError(user.id)
     start_time = datetime.now(UTC)
+    expiration_time = start_time + timedelta(minutes=REQUEST_EXPIRATION)
     await cruds_mypayment.create_request(
         db=db,
         request=schemas_mypayment.Request(
             id=uuid4(),
             wallet_id=payment_user.wallet_id,
             creation=start_time,
-            end_date=start_time + timedelta(minutes=REQUEST_EXPIRATION),
+            expiration_date=expiration_time,
             total=request_info.total,
             store_id=request_info.store_id,
             name=request_info.request_name,
@@ -198,7 +199,7 @@ async def request_transaction(
         message=message,
     )
     return schemas_mypayment.PaymentRequestInfo(
-        end_date=start_time + timedelta(minutes=REQUEST_EXPIRATION),
+        end_date=expiration_time,
         checkout_url=None,
     )
 

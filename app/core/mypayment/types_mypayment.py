@@ -61,7 +61,6 @@ class RequestStatus(StrEnum):
     PROPOSED = "proposed"
     ACCEPTED = "accepted"
     REFUSED = "refused"
-    EXPIRED = "expired"
 
 
 class TransferOrigin(StrEnum):

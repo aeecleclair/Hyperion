@@ -199,7 +199,7 @@ class Request(Base):
     )
 
     @property
-    def end_date(self) -> datetime:
+    def expiration_date(self) -> datetime:
         return self.creation + timedelta(minutes=REQUEST_EXPIRATION)
 
 

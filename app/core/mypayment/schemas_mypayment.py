@@ -346,7 +346,7 @@ class Request(BaseModel):
     id: UUID
     wallet_id: UUID
     creation: datetime
-    end_date: datetime
+    expiration_date: datetime
     total: int  # Stored in cents
     store_id: UUID
     name: str

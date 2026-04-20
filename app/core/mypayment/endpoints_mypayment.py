@@ -57,7 +57,6 @@ from app.core.mypayment.types_mypayment import (
     MYPAYMENT_STRUCTURE_S3_SUBFOLDER,
     MYPAYMENT_USERS_S3_SUBFOLDER,
     QRCODE_EXPIRATION,
-    REQUEST_EXPIRATION,
     RETENTION_DURATION,
     HistoryDirection,
     HistoryType,
@@ -2796,10 +2795,6 @@ async def accept_request(
 
     **The user must be authenticated to use this endpoint**
     """
-    await cruds_mypayment.mark_expired_requests_as_expired(
-        db=db,
-    )
-    await db.flush()
     if request_id != request_validation.id:
         raise HTTPException(
             status_code=400,
@@ -2818,6 +2813,16 @@ async def accept_request(
         raise HTTPException(
             status_code=400,
             detail="Request total in the body do not match the request total in the database",
+        )
+    if request.status != RequestStatus.PROPOSED:
+        raise HTTPException(
+            status_code=400,
+            detail="Only pending requests can be confirmed",
+        )
+    if request.expiration_date < datetime.now(UTC):
+        raise HTTPException(
+            status_code=400,
+            detail="Request is expired",
         )
 
     user_payment = await cruds_mypayment.get_user_payment(
@@ -2849,17 +2854,6 @@ async def accept_request(
         raise HTTPException(
             status_code=400,
             detail="Wallet device is not associated with the user wallet",
-        )
-
-    if request.status != RequestStatus.PROPOSED:
-        raise HTTPException(
-            status_code=400,
-            detail="Only pending requests can be confirmed",
-        )
-    if request.creation < datetime.now(UTC) - timedelta(minutes=REQUEST_EXPIRATION):
-        raise HTTPException(
-            status_code=400,
-            detail="Request is expired",
         )
 
     if not verify_signature(
