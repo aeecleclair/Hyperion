@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from uuid import UUID
 
-import aiofiles
+from anyio import Path
 from icalendar import Calendar, Event, vRecur
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -104,5 +104,5 @@ async def create_icalendar_file(
 
             calendar.add_component(ical_event)
 
-    async with aiofiles.open(calendar_file_path, mode="wb") as calendar_file:
+    async with await Path(calendar_file_path).open(mode="wb") as calendar_file:
         await calendar_file.write(calendar.to_ical())

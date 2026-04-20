@@ -215,7 +215,7 @@ async def read_association_logo(
     if not association:
         raise HTTPException(status_code=404, detail="Association not found")
 
-    return get_file_from_data(
+    return await get_file_from_data(
         directory="associations/logos",
         filename=association_id,
         raise_http_exception=True,

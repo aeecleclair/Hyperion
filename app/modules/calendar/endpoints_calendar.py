@@ -624,7 +624,7 @@ async def delete_event(
             status=NewsStatus.REJECTED,
             db=db,
         )
-        delete_file_from_data(
+        await delete_file_from_data(
             directory="event",
             filename=event_id,
         )

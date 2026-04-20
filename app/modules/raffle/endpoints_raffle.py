@@ -287,7 +287,7 @@ async def read_raffle_logo(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    return get_file_from_data(
+    return await get_file_from_data(
         directory="raffle-pictures",
         filename=str(raffle_id),
         default_asset="assets/images/default_raffle_logo.png",
@@ -845,7 +845,7 @@ async def read_prize_logo(
     if not prize:
         raise HTTPException(status_code=404, detail="Prize not found")
 
-    return get_file_from_data(
+    return await get_file_from_data(
         directory="raffle-prize_picture",
         filename=str(prize_id),
         default_asset="assets/images/default_prize_picture.png",

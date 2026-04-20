@@ -1,5 +1,4 @@
-from pathlib import Path
-
+from anyio import Path
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import FileResponse
 
@@ -45,13 +44,13 @@ async def read_information(
     "/privacy",
     status_code=200,
 )
-def read_privacy(settings: Settings = Depends(get_settings)):
+async def read_privacy(settings: Settings = Depends(get_settings)):
     """
     Return Hyperion privacy
     """
 
     return patch_identity_in_text(
-        Path("assets/privacy.txt").read_text(encoding="utf-8"),
+        await Path("assets/privacy.txt").read_text(encoding="utf-8"),
         settings,
     )
 
@@ -60,13 +59,13 @@ def read_privacy(settings: Settings = Depends(get_settings)):
     "/terms-and-conditions",
     status_code=200,
 )
-def read_terms_and_conditions(settings: Settings = Depends(get_settings)):
+async def read_terms_and_conditions(settings: Settings = Depends(get_settings)):
     """
     Return Hyperion terms and conditions pages
     """
 
     return patch_identity_in_text(
-        Path("assets/terms-and-conditions.txt").read_text(encoding="utf-8"),
+        await Path("assets/terms-and-conditions.txt").read_text(encoding="utf-8"),
         settings,
     )
 
@@ -75,12 +74,12 @@ def read_terms_and_conditions(settings: Settings = Depends(get_settings)):
     "/mypayment-terms-of-service",
     status_code=200,
 )
-def read_mypayment_tos(settings: Settings = Depends(get_settings)):
+async def read_mypayment_tos(settings: Settings = Depends(get_settings)):
     """
     Return MyPayment latest ToS
     """
     return patch_identity_in_text(
-        Path("assets/mypayment-terms-of-service.txt").read_text(encoding="utf-8"),
+        await Path("assets/mypayment-terms-of-service.txt").read_text(encoding="utf-8"),
         settings,
     )
 
@@ -89,13 +88,13 @@ def read_mypayment_tos(settings: Settings = Depends(get_settings)):
     "/support",
     status_code=200,
 )
-def read_support(settings: Settings = Depends(get_settings)):
+async def read_support(settings: Settings = Depends(get_settings)):
     """
     Return Hyperion support
     """
 
     return patch_identity_in_text(
-        Path("assets/support.txt").read_text(encoding="utf-8"),
+        await Path("assets/support.txt").read_text(encoding="utf-8"),
         settings,
     )
 
@@ -104,12 +103,12 @@ def read_support(settings: Settings = Depends(get_settings)):
     "/security.txt",
     status_code=200,
 )
-def read_security_txt(settings: Settings = Depends(get_settings)):
+async def read_security_txt(settings: Settings = Depends(get_settings)):
     """
     Return Hyperion security.txt file
     """
     return patch_identity_in_text(
-        Path("assets/security.txt").read_text(encoding="utf-8"),
+        await Path("assets/security.txt").read_text(encoding="utf-8"),
         settings,
     )
 
@@ -118,13 +117,13 @@ def read_security_txt(settings: Settings = Depends(get_settings)):
     "/.well-known/security.txt",
     status_code=200,
 )
-def read_wellknown_security_txt(settings: Settings = Depends(get_settings)):
+async def read_wellknown_security_txt(settings: Settings = Depends(get_settings)):
     """
     Return Hyperion security.txt file
     """
 
     return patch_identity_in_text(
-        Path("assets/security.txt").read_text(encoding="utf-8"),
+        await Path("assets/security.txt").read_text(encoding="utf-8"),
         settings,
     )
 
@@ -133,13 +132,13 @@ def read_wellknown_security_txt(settings: Settings = Depends(get_settings)):
     "/robots.txt",
     status_code=200,
 )
-def read_robots_txt(settings: Settings = Depends(get_settings)):
+async def read_robots_txt(settings: Settings = Depends(get_settings)):
     """
     Return Hyperion robots.txt file
     """
 
     return patch_identity_in_text(
-        Path("assets/robots.txt").read_text(encoding="utf-8"),
+        await Path("assets/robots.txt").read_text(encoding="utf-8"),
         settings,
     )
 
@@ -148,13 +147,13 @@ def read_robots_txt(settings: Settings = Depends(get_settings)):
     "/account-deletion",
     status_code=200,
 )
-def read_account_deletion(settings: Settings = Depends(get_settings)):
+async def read_account_deletion(settings: Settings = Depends(get_settings)):
     """
     Return Hyperion account deletion information
     """
 
     return patch_identity_in_text(
-        Path("assets/account-deletion.md").read_text(encoding="utf-8"),
+        await Path("assets/account-deletion.md").read_text(encoding="utf-8"),
         settings,
     )
 

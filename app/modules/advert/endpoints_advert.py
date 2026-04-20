@@ -305,7 +305,7 @@ async def read_advert_image(
             detail="The advert does not exist",
         )
 
-    return get_file_from_data(
+    return await get_file_from_data(
         directory="adverts",
         filename=advert_id,
         raise_http_exception=True,

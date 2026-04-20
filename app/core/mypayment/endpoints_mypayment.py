@@ -4,10 +4,10 @@ import re
 import urllib.parse
 import uuid
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from uuid import UUID
 
 import calypsso
+from anyio import Path
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -1418,7 +1418,7 @@ async def get_user_tos(
         accepted_tos_version=existing_user_payment.accepted_tos_version,
         latest_tos_version=LATEST_TOS,
         tos_content=patch_identity_in_text(
-            Path("assets/mypayment-terms-of-service.txt").read_text(),
+            await Path("assets/mypayment-terms-of-service.txt").read_text(),
             settings=settings,
         ),
         max_wallet_balance=settings.MYPAYMENT_MAXIMUM_WALLET_BALANCE,
@@ -3112,7 +3112,7 @@ async def download_invoice(
             status_code=403,
             detail="User is not allowed to access this invoice",
         )
-    return get_file_from_data(
+    return await get_file_from_data(
         directory="mypayment/invoices",
         filename=invoice_id,
     )
