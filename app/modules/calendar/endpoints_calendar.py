@@ -365,9 +365,7 @@ async def add_event(
 
     if decision == Decision.approved:
         feed_module = "tickets" if event.ticket_event_id else utils_calendar.root
-        feed_module_object_id = (
-            event.ticket_event_id if event.ticket_event_id else event_id
-        )
+        feed_module_object_id = event.ticket_event_id or event_id
 
         await utils_calendar.add_event_to_feed(
             event=created_event,
@@ -524,9 +522,7 @@ async def confirm_event(
 
     if decision == Decision.approved:
         feed_module = "tickets" if event.ticket_event_id else utils_calendar.root
-        feed_module_object_id = (
-            event.ticket_event_id if event.ticket_event_id else event.id
-        )
+        feed_module_object_id = event.ticket_event_id or event.id
 
         await utils_calendar.add_event_to_feed(
             event=event,

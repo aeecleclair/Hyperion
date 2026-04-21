@@ -31,7 +31,7 @@ def get_token_data(
         hyperion_access_logger.info(
             f"Get_token_data: Decoded a token for user {token_data.sub} ({request_id})",
         )
-    except (InvalidTokenError, ValidationError):
+    except InvalidTokenError, ValidationError:
         hyperion_access_logger.exception(
             f"Get_token_data: Failed to decode a token ({request_id})",
         )

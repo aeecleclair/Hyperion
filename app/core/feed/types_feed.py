@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class NewsStatus(str, Enum):
+class NewsStatus(StrEnum):
     WAITING_APPROVAL = "waiting_approval"
     REJECTED = "rejected"
     PUBLISHED = "published"

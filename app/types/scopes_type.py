@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class ScopeType(str, Enum):
+class ScopeType(StrEnum):
     """
     Various scopes that can be included in JWT token
     """

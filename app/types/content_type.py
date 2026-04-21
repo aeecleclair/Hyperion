@@ -1,9 +1,9 @@
-from enum import Enum
+from enum import StrEnum
 
 from app.types.exceptions import UnknownContentTypeExtensionError
 
 
-class ContentType(str, Enum):
+class ContentType(StrEnum):
     """
     Accepted `content_type` for files
     """
@@ -32,7 +32,7 @@ class ContentType(str, Enum):
         return self.extension
 
 
-class PillowImageFormat(str, Enum):
+class PillowImageFormat(StrEnum):
     """
     Accepted image formats for Pillow
     """

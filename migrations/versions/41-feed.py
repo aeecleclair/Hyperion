@@ -4,7 +4,7 @@ Create Date: 2025-08-10 15:40:44.191402
 """
 
 from collections.abc import Sequence
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -22,7 +22,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-class Status(str, Enum):
+class Status(StrEnum):
     WAITING_APPROVAL = "WAITING_APPROVAL"
     REJECTED = "REJECTED"
     PUBLISHED = "PUBLISHED"

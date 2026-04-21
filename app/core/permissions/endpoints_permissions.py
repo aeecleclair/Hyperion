@@ -16,6 +16,7 @@ from app.dependencies import (
     is_user,
     is_user_super_admin,
 )
+from app.module import full_name_permissions_list, permissions_list
 from app.types.module import CoreModule
 from app.utils.tools import is_group_id_valid
 
@@ -45,7 +46,6 @@ async def read_permissions_list(
     """
     Return all permissions from database
     """
-    from app.module import full_name_permissions_list
 
     return full_name_permissions_list
 
@@ -62,7 +62,6 @@ async def read_permissions(
     """
     Return all permissions from database
     """
-    from app.module import permissions_list
 
     return await cruds_permissions.get_permissions(permissions_list, db)
 
@@ -80,7 +79,6 @@ async def read_permission(
     """
     Return permission with name from database
     """
-    from app.module import permissions_list
 
     if permission_name not in permissions_list:
         raise HTTPException(
@@ -111,7 +109,6 @@ async def create_permission(
     """
     Create a new permission in database
     """
-    from app.module import permissions_list
 
     if permission.permission_name not in permissions_list:
         raise HTTPException(
@@ -143,7 +140,6 @@ async def delete_permission(
     """
     Delete a permission from database by name
     """
-    from app.module import permissions_list
 
     if permission.permission_name not in permissions_list:
         raise HTTPException(

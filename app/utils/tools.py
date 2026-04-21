@@ -191,7 +191,7 @@ async def ensure_file_properties(
     upload_file: UploadFile,
     accepted_content_types: list[ContentType] | None = None,
     max_file_size: int = 1024 * 1024 * 5,  # 5 MB
-) -> None:
+) -> ContentType:
     """
     Ensure that the provided file respects the properties:
     - Maximum size is 5 MB by default, it can be changed using `max_file_size` (in bytes) parameter.
@@ -229,6 +229,8 @@ async def ensure_file_properties(
     # We go back to the beginning of the file to save it on the disk
     await upload_file.seek(0)
 
+    return ContentType(upload_file.content_type)
+
 
 async def save_file_as_data(
     upload_file: UploadFile,
@@ -265,13 +267,14 @@ async def save_file_as_data(
         )
         raise FileNameIsNotAnUUIDError()
 
-    await ensure_file_properties(
+    content_type = await ensure_file_properties(
         upload_file=upload_file,
         accepted_content_types=accepted_content_types,
         max_file_size=max_file_size,
     )
 
-    extension = ContentType(upload_file.content_type).name
+    extension = content_type.extension
+
     # Remove the existing file if any and create the new one
 
     # If the directory does not exist, we want to create it
@@ -458,7 +461,7 @@ async def generate_pdf_from_template(
     You should only provide thrusted templates to this function.
     See [WeasyPrint security consideration](https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#security)
     """
-    from weasyprint import CSS, HTML
+    from weasyprint import CSS, HTML  # noqa: PLC0415
 
     templates = Environment(
         loader=FileSystemLoader("assets/templates"),
@@ -631,7 +634,7 @@ async def compress_and_save_image_file(
 
     WARNING: **NEVER** trust user input when calling this function. Always check that parameters are valid.
     """
-    await ensure_file_properties(
+    content_type = await ensure_file_properties(
         upload_file=upload_file,
         accepted_content_types=accepted_content_types,
         max_file_size=max_file_size,
@@ -647,7 +650,7 @@ async def compress_and_save_image_file(
         file_bytes=original_file_bytes,
         directory=original_directory,
         filename=filename,
-        extension=ContentType(upload_file.content_type),
+        extension=content_type,
     )
 
     file_bytes = compress_image(
@@ -676,7 +679,7 @@ def get_random_string(length: int = 5) -> str:
 CoreDataClass = TypeVar("CoreDataClass", bound=core_data.BaseCoreData)
 
 
-async def get_core_data(
+async def get_core_data[CoreDataClass: core_data.BaseCoreData](
     core_data_class: type[CoreDataClass],
     db: AsyncSession,
 ) -> CoreDataClass:

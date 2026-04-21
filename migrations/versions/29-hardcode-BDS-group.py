@@ -4,7 +4,7 @@ Create Date: 2024-08-22 09:02:59.887161
 """
 
 from collections.abc import Sequence
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -25,7 +25,7 @@ depends_on: str | Sequence[str] | None = None
 BDS_ID = "61af3e52-7ef9-4608-823a-39d51e83d1db"
 
 
-class GroupType(str, Enum):
+class GroupType(StrEnum):
     # Core groups
     admin = "0a25cb76-4b63-4fd3-b939-da6d9feabf28"
     AE = "45649735-866a-49df-b04b-a13c74fd5886"

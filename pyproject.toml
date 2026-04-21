@@ -25,7 +25,6 @@ minimal-titan-version-code = 197
 # Same as Black.
 line-length = 88
 indent-width = 4
-target-version = "py314"
 
 [tool.ruff.lint]
 select = [

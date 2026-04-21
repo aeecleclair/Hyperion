@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class AnswerType(str, Enum):
+class AnswerType(StrEnum):
     TEXT = "text"
     NUMBER = "number"
     BOOLEAN = "boolean"

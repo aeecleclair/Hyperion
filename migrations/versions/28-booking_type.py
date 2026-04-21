@@ -5,7 +5,7 @@ Create Date: 2025-02-03 02:56:24.302160
 
 from collections.abc import Sequence
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -21,7 +21,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-class Decision(str, Enum):
+class Decision(StrEnum):
     approved = "approved"
     declined = "declined"
     pending = "pending"

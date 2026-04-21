@@ -11,6 +11,9 @@ module_list: list[Module] = []
 core_module_list: list[CoreModule] = []
 all_modules: list[CoreModule] = []
 
+permissions_list: list[str] = []
+full_name_permissions_list: list[str] = []
+
 for endpoints_file in Path().glob("app/modules/*/endpoints_*.py"):
     endpoint_module = importlib.import_module(
         ".".join(endpoints_file.with_suffix("").parts),
@@ -37,10 +40,6 @@ for endpoints_file in Path().glob("app/core/*/endpoints_*.py"):
         hyperion_error_logger.error(
             f"Core module {endpoints_file} does not declare a core module. It won't be enabled.",
         )
-
-
-permissions_list: list[str] = []
-full_name_permissions_list: list[str] = []
 
 
 class DuplicatePermissionsError(Exception):

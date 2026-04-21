@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class ListType(str, Enum):
+class ListType(StrEnum):
     """
     A list can be "Serios" or "Pipo". There will also be one "Blank" list by section that will be automatically added when the vote is open.
     """
@@ -11,7 +11,7 @@ class ListType(str, Enum):
     blank = "Blank"
 
 
-class StatusType(str, Enum):
+class StatusType(StrEnum):
     """
     Status of the voting
     """
