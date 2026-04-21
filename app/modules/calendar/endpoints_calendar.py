@@ -223,7 +223,7 @@ async def get_event_image(
             detail="You are not allowed to access this event",
         )
 
-    return get_file_from_data(
+    return await get_file_from_data(
         directory="event",
         filename=event_id,
         raise_http_exception=True,

@@ -71,7 +71,7 @@ async def get_news_image(
             detail="The news does not exist",
         )
 
-    return get_file_from_data(
+    return await get_file_from_data(
         directory=news.image_directory,
         filename=news.image_id,
         raise_http_exception=True,

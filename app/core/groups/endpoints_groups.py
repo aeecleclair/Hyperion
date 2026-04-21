@@ -410,7 +410,7 @@ async def read_user_profile_picture(
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
 
-    return get_file_from_data(
+    return await get_file_from_data(
         directory="groups/logos",
         filename=group_id,
         default_asset="assets/images/default_profile_picture.png",
