@@ -211,7 +211,7 @@ def upgrade() -> None:
     }
 
     module_awareness = ModuleVisibilityAwareness(
-        roots={group_visibility.root for group_visibility in group_visibilities},
+        roots=list({group_visibility.root for group_visibility in group_visibilities}),
     )
 
     conn.execute(

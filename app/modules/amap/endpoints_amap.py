@@ -11,6 +11,7 @@ from app.core.notification.schemas_notification import Message, Topic
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users, models_users, schemas_users
 from app.core.users.endpoints_users import read_user
+from app.core.users.schemas_users import CoreUserSimple
 from app.dependencies import (
     get_db,
     get_notification_tool,
@@ -20,7 +21,9 @@ from app.dependencies import (
 )
 from app.modules.amap import cruds_amap, models_amap, schemas_amap
 from app.modules.amap.factory_amap import AmapFactory
+from app.modules.amap.schemas_amap import ProductComplete
 from app.modules.amap.types_amap import DeliveryStatusType
+from app.types.exceptions import ObjectExpectedInDbNotFoundError
 from app.types.module import Module
 from app.utils.communication.notifications import NotificationTool
 from app.utils.redis import locker_get, locker_set
@@ -417,10 +420,33 @@ async def get_order_by_id(
 
     products = await cruds_amap.get_products_of_order(db=db, order_id=order_id)
     return schemas_amap.OrderReturn(
-        productsdetail=products,
         delivery_name=order.delivery.name,
+        productsdetail=[
+            schemas_amap.ProductQuantity(
+                quantity=product.quantity,
+                product=ProductComplete(
+                    name=product.product.name,
+                    price=product.product.price,
+                    category=product.product.category,
+                    id=product.product.id,
+                ),
+            )
+            for product in products
+        ],
+        user=schemas_users.CoreUserSimple(
+            id=order.user.id,
+            name=order.user.name,
+            firstname=order.user.firstname,
+            nickname=order.user.nickname,
+            school_id=order.user.school_id,
+            account_type=order.user.account_type,
+        ),
+        delivery_id=order.delivery_id,
+        collection_slot=order.collection_slot,
+        order_id=order.order_id,
+        amount=order.amount,
+        ordering_date=order.ordering_date,
         delivery_date=order.delivery.delivery_date,
-        **order.__dict__,
     )
 
 
@@ -539,13 +565,39 @@ async def add_order_to_delievery(
         )
 
         if orderret is None:
-            raise HTTPException(status_code=404, detail="added order not found")
+            raise ObjectExpectedInDbNotFoundError(
+                object_name="Order",
+                object_id=db_order.order_id,
+            )
 
         return schemas_amap.OrderReturn(
-            productsdetail=productsret,
-            delivery_name=orderret.delivery.name,
+            user=CoreUserSimple(
+                id=orderret.user.id,
+                account_type=orderret.user.account_type,
+                school_id=orderret.user.school_id,
+                name=orderret.user.name,
+                firstname=orderret.user.firstname,
+                nickname=orderret.user.nickname,
+            ),
+            productsdetail=[
+                schemas_amap.ProductQuantity(
+                    quantity=product.quantity,
+                    product=ProductComplete(
+                        name=product.product.name,
+                        price=product.product.price,
+                        category=product.product.category,
+                        id=product.product.id,
+                    ),
+                )
+                for product in productsret
+            ],
+            delivery_id=orderret.delivery_id,
+            collection_slot=orderret.collection_slot,
+            order_id=orderret.order_id,
+            amount=orderret.amount,
+            ordering_date=orderret.ordering_date,
             delivery_date=orderret.delivery.delivery_date,
-            **orderret.__dict__,
+            delivery_name=orderret.delivery.name,
         )
     finally:
         locker_set(redis_client=redis_client, key=redis_key, lock=False)
@@ -610,7 +662,7 @@ async def edit_order_from_delivery(
         ):
             raise HTTPException(status_code=400, detail="Invalid request")
 
-        amount = 0.0
+        amount = 0
         for product_id, product_quantity in zip(
             order.products_ids,
             order.products_quantity,
@@ -624,11 +676,16 @@ async def edit_order_from_delivery(
         db_order = schemas_amap.OrderComplete(
             order_id=order_id,
             ordering_date=previous_order.ordering_date,
-            delivery_date=delivery.delivery_date,
             delivery_id=previous_order.delivery_id,
             user_id=previous_order.user_id,
             amount=amount,
-            **order.model_dump(),
+            products_ids=order.products_ids,
+            collection_slot=order.collection_slot
+            if order.collection_slot is not None
+            else previous_order.collection_slot,
+            products_quantity=order.products_quantity
+            if order.products_quantity is not None
+            else previous_order.products_quantity,
         )
 
         previous_amount = previous_order.amount
@@ -1059,10 +1116,33 @@ async def get_orders_of_user(
             raise HTTPException(status_code=404, detail="at least one order not found")
         res.append(
             schemas_amap.OrderReturn(
-                productsdetail=products,
                 delivery_date=order.delivery.delivery_date,
                 delivery_name=order.delivery.name,
-                **order.__dict__,
+                user=CoreUserSimple(
+                    id=order.user.id,
+                    account_type=order.user.account_type,
+                    school_id=order.user.school_id,
+                    name=order.user.name,
+                    firstname=order.user.firstname,
+                    nickname=order.user.nickname,
+                ),
+                productsdetail=[
+                    schemas_amap.ProductQuantity(
+                        quantity=product.quantity,
+                        product=ProductComplete(
+                            name=product.product.name,
+                            price=product.product.price,
+                            category=product.product.category,
+                            id=product.product.id,
+                        ),
+                    )
+                    for product in products
+                ],
+                delivery_id=order.delivery_id,
+                collection_slot=order.collection_slot,
+                order_id=order.order_id,
+                amount=order.amount,
+                ordering_date=order.ordering_date,
             ),
         )
     return res

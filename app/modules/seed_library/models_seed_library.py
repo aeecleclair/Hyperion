@@ -17,10 +17,10 @@ class Species(Base):
     id: Mapped[PrimaryKey]
     prefix: Mapped[str] = mapped_column(unique=True)  # 3 letters
     name: Mapped[str] = mapped_column(unique=True)
-    difficulty: Mapped[int | None]
+    difficulty: Mapped[int]
     card: Mapped[str | None]
     nb_seeds_recommended: Mapped[int | None]
-    species_type: Mapped[SpeciesType | None]
+    species_type: Mapped[SpeciesType]
     start_season: Mapped[date | None]
     end_season: Mapped[date | None]
     time_maturation: Mapped[int | None]  # number of days
@@ -35,7 +35,7 @@ class Plant(Base):
         ForeignKey("seed_library_species.id"),
     )
     propagation_method: Mapped[PropagationMethod]
-    nb_seeds_envelope: Mapped[int | None]
+    nb_seeds_envelope: Mapped[int]
     ancestor_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("seed_library_plants.id"),
     )
@@ -45,7 +45,7 @@ class Plant(Base):
         ForeignKey("core_user.id"),
         index=True,
     )
-    confidential: Mapped[bool | None]
+    confidential: Mapped[bool]
     nickname: Mapped[str | None]
     planting_date: Mapped[date | None]
     borrowing_date: Mapped[date | None]

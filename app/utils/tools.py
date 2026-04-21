@@ -201,6 +201,7 @@ async def ensure_file_properties(
     An HTTP Exception will be raised if an error occurs.
 
     The file will not be saved nor modified.
+    Return the content type of the file.
     """
     if accepted_content_types is None:
         # Accept only images by default

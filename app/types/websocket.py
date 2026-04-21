@@ -179,9 +179,9 @@ class WebsocketConnectionManager:
                 f"Websocket: subscribed broadcaster to channel {room_id} for worker {os.getpid()}",
             )
 
-            async for event in subscriber:  # type: ignore[union-attr] # Should be fixed by https://github.com/encode/broadcaster/issues/136
+            async for event in subscriber:  # type: ignore[union-attr] # Should be fixed by https://github.com/encode/broadcaster/issues/136  # ty:ignore[not-iterable]
                 await self._consume_events_from_broadcaster(
-                    message_str=event.message,  # type: ignore[union-attr] # Should be fixed by https://github.com/encode/broadcaster/issues/136
+                    message_str=event.message,  # type: ignore[union-attr] # Should be fixed by https://github.com/encode/broadcaster/issues/136  # ty:ignore[unresolved-attribute]
                     room_id=room_id,
                 )
 

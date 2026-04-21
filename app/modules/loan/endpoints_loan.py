@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.groups.groups_type import AccountType
 from app.core.notification.schemas_notification import Message
 from app.core.permissions.type_permissions import ModulePermissions
-from app.core.users import models_users
+from app.core.users import models_users, schemas_users
 from app.dependencies import (
     get_db,
     get_notification_tool,
@@ -233,8 +233,28 @@ async def get_loans_by_loaner(
             loans.append(
                 schemas_loan.Loan(
                     items_qty=items_qty_ret,
-                    loaner=loaner,
-                    **loan.__dict__,
+                    borrower_id=loan.borrower_id,
+                    loaner_id=loan.loaner_id,
+                    start=loan.start,
+                    end=loan.end,
+                    notes=loan.notes,
+                    caution=loan.caution,
+                    returned=loan.returned,
+                    returned_date=loan.returned_date,
+                    id=loan.id,
+                    borrower=schemas_users.CoreUserSimple(
+                        id=loan.borrower.id,
+                        account_type=loan.borrower.account_type,
+                        school_id=loan.borrower.school_id,
+                        name=loan.borrower.name,
+                        firstname=loan.borrower.firstname,
+                        nickname=loan.borrower.nickname,
+                    ),
+                    loaner=schemas_loan.Loaner(
+                        id=loan.loaner.id,
+                        name=loan.loaner.name,
+                        group_manager_id=loan.loaner.group_manager_id,
+                    ),
                 ),
             )
 
@@ -738,6 +758,8 @@ async def update_loan(
                 detail="Invalid user_id",
             )
 
+    items: list[tuple[models_loan.Item, int]] = []
+
     # If a new list of items was provided, we need to mark old items as available and new items as not available
     if loan_update.items_borrowed:
         for old_item in loan.items:
@@ -754,8 +776,6 @@ async def update_loan(
                 )
         # We remove the old items from the database
         await cruds_loan.delete_loan_content_by_loan_id(loan_id=loan_id, db=db)
-
-        items: list[tuple[models_loan.Item, int]] = []
 
         # All items should be valid, available and belong to the loaner
         for item_borrowed in loan_update.items_borrowed:
@@ -796,14 +816,11 @@ async def update_loan(
             # We make a list of every new item with the quantity borrowed to update the loaned quantity and create the loaned content
             items.append((item, quantity))
 
-    try:
-        await cruds_loan.update_loan(
-            loan_id=loan_id,
-            loan_update=loan_update,
-            db=db,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error))
+    await cruds_loan.update_loan(
+        loan_id=loan_id,
+        loan_update=loan_update,
+        db=db,
+    )
 
     for item, quantity in items:
         # We add each item to the loan
@@ -959,7 +976,7 @@ async def extend_loan(
             status_code=400,
             detail="Invalid loan_id",
         )
-    end = loan.end
+
     # The user should be a member of the loaner's manager group
     if not is_user_member_of_any_group(user, [loan.loaner.group_manager_id]):
         raise HTTPException(
@@ -967,16 +984,15 @@ async def extend_loan(
             detail=f"Unauthorized to manage {loan.loaner_id} loaner",
         )
 
+    end = loan.end
     if loan_extend.end is not None:
         end = loan_extend.end
-        loan_update = schemas_loan.LoanUpdate(
-            end=end,
-        )
     elif loan_extend.duration is not None:
         end = loan.end + timedelta(seconds=loan_extend.duration)
-        loan_update = schemas_loan.LoanUpdate(
-            end=end,
-        )
+
+    loan_update = schemas_loan.LoanUpdate(
+        end=end,
+    )
 
     await cruds_loan.update_loan(
         loan_id=loan_id,

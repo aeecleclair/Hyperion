@@ -650,7 +650,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     use_route_path_as_operation_ids(app)
 
     app.add_middleware(
-        CORSMiddleware,  # ty:ignore[invalid-argument-type]
+        CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,
         allow_credentials=True,
         allow_methods=["*"],

@@ -200,3 +200,6 @@ exclude_also = []
 
 skip_covered = true
 show_missing = true
+
+[tool.ty.rules]
+all = "error"

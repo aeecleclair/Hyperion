@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import uuid
 from collections.abc import Callable
 from typing import ParamSpec, TypeVar
 
@@ -147,7 +148,7 @@ def set_core_data_crud_sync(
 
 
 def get_school_by_id_sync(
-    school_id: str,
+    school_id: uuid.UUID,
     db: Session,
 ) -> models_schools.CoreSchool | None:
     """
@@ -341,9 +342,7 @@ async def use_lock_for_workers[**P, R](
 
     elif redis_client.set(key, "1", nx=True, ex=120):
         # We acquired the lock, we execute the function
-        logger.info(
-            f"Running {job_function.__name__}",  # ty:ignore[unresolved-attribute]
-        )
+        logger.info(f"Running {getattr(job_function, '__name__', repr(job_function))}")
 
         await execute_async_or_sync_method(job_function, *args, **kwargs)
 
@@ -363,7 +362,7 @@ async def use_lock_for_workers[**P, R](
         # As an `unlock_key` is provided, we will wait until an other worker has finished executing `job_function`
         while redis_client.get(unlock_key) is None:
             logger.debug(
-                f"Waiting for {job_function.__name__} to finish",  # ty:ignore[unresolved-attribute]
+                f"Waiting for {getattr(job_function, '__name__', repr(job_function))} to finish",
             )
             await asyncio.sleep(1)
 

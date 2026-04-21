@@ -246,7 +246,7 @@ class DriveGoogleAPI:
             "mimeType": "application/vnd.google-apps.folder",
             "parents": [parent_folder_id],
         }
-        response = self._drive.files().create(body=file_metadata).execute()
+        response = self._drive.files().create(body=file_metadata).execute()  # ty:ignore[unresolved-attribute]
         folder_id: GoogleId = response.get("id")
         return folder_id
 
@@ -270,7 +270,7 @@ class DriveGoogleAPI:
             mimetype=mimetype,
         )
         response = (
-            self._drive.files().create(body=file_metadata, media_body=media).execute()
+            self._drive.files().create(body=file_metadata, media_body=media).execute()  # ty:ignore[unresolved-attribute]
         )
         uploaded_file_id: GoogleId = response.get("id")
         return uploaded_file_id
@@ -288,7 +288,7 @@ class DriveGoogleAPI:
             mimetype="application/pdf",
         )
         response = (
-            self._drive.files()
+            self._drive.files()  # ty:ignore[unresolved-attribute]
             .update(fileId=file_id, body=file_metadata, media_body=media)
             .execute()
         )
@@ -296,4 +296,4 @@ class DriveGoogleAPI:
         return result
 
     def delete_file(self, file_id: GoogleId) -> None:
-        self._drive.files().delete(fileId=file_id).execute()
+        self._drive.files().delete(fileId=file_id).execute()  # ty:ignore[unresolved-attribute]

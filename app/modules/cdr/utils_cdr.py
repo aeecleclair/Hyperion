@@ -437,6 +437,7 @@ def write_product_headers(
         custom_cols = prod_struct["custom_cols"]
         needs_validation = prod_struct["needs_validation"]
 
+        end_col = 0
         if variants_info:
             start_col = variants_info[0]["qty_col"]
             end_col = (

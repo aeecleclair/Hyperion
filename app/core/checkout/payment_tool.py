@@ -164,7 +164,7 @@ class CheckoutTool:
         # Thus we catch any exception and log it, then reraise it
         try:
             payer: HelloAssoApiV5ModelsCartsCheckoutPayer | None = None
-            if payer_user:
+            if payer_user is not None:
                 payer = HelloAssoApiV5ModelsCartsCheckoutPayer(
                     first_name=payer_user.firstname,
                     last_name=payer_user.name,
@@ -172,7 +172,8 @@ class CheckoutTool:
                     date_of_birth=datetime.combine(
                         payer_user.birthday,
                         datetime.min.time(),
-                    ).replace(tzinfo=UTC)
+                        tzinfo=UTC,
+                    )
                     if payer_user.birthday
                     else None,
                 )
@@ -193,7 +194,7 @@ class CheckoutTool:
                     secret=secret,
                     hyperion_checkout_id=str(checkout_model_id),
                 ).model_dump(),
-            )  # ty:ignore[missing-argument]
+            )  # ty:ignore[missing-argument] # See https://github.com/astral-sh/ty/issues/1438
 
             response: HelloAssoApiV5ModelsCartsInitCheckoutResponse
             with ApiClient(configuration) as api_client:
@@ -211,25 +212,27 @@ class CheckoutTool:
                         hyperion_error_logger.exception(
                             f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name} (no payer info provided).",
                         )
-                    else:
-                        payer_user_name = f"{payer_user.firstname} {payer_user.name}"
-                        hyperion_error_logger.warning(
-                            f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}. Retrying without payer infos for {payer_user_name}",
+                        raise
+
+                    payer_user_name = f"{payer_user.firstname} {payer_user.name}"
+                    hyperion_error_logger.warning(
+                        f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}. Retrying without payer infos for {payer_user_name}",
+                    )
+
+                    init_checkout_body.payer = None
+                    try:
+                        response = checkout_api.organizations_organization_slug_checkout_intents_post(
+                            self._helloasso_slug,
+                            init_checkout_body,
                         )
+                    except UnauthorizedException:
+                        # HelloAsso returned a 401 unauthorized again
+                        hyperion_error_logger.exception(
+                            f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}, with and without payer {payer_user_name} infos",
+                        )
+                        raise
 
-                        init_checkout_body.payer = None
-                        try:
-                            response = checkout_api.organizations_organization_slug_checkout_intents_post(
-                                self._helloasso_slug,
-                                init_checkout_body,
-                            )
-                        except UnauthorizedException:
-                            # HelloAsso returned a 401 unauthorized again
-                            hyperion_error_logger.exception(
-                                f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}, with and without payer {payer_user_name} infos",
-                            )
-
-            if response and response.id:
+            if response and response.id and response.redirect_url:
                 checkout_model = models_checkout.Checkout(
                     id=checkout_model_id,
                     module=module,
@@ -246,7 +249,7 @@ class CheckoutTool:
                     payment_url=response.redirect_url or "",
                 )
             hyperion_error_logger.error(
-                f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}. No checkout id returned",
+                f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}. No checkout id or redirect URL returned",
             )
             raise MissingHelloAssoCheckoutIdError()  # noqa: TRY301
 
