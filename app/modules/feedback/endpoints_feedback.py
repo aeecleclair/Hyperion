@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -71,12 +72,19 @@ async def create_feedback(
     **The user must be authenticated to use this endpoint**
     """
 
-    await cruds_feedback.add_feedback(
-        feedback=feedback,
-        db=db,
+    feedback_complete = schemas_feedback.Feedback(
+        content=feedback.content,
         user_id=user.id,
         id=uuid.uuid4(),
+        creation=datetime.now(UTC),
     )
+
+    await cruds_feedback.add_feedback(
+        feedback=feedback_complete,
+        db=db,
+    )
+
+    return feedback_complete
 
 
 @module.router.delete(

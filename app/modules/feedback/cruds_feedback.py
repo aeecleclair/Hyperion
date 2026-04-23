@@ -21,15 +21,15 @@ async def get_feedbacks(db: AsyncSession) -> list[schemas_feedback.Feedback] | N
 
 
 async def add_feedback(
-    db: AsyncSession, feedback: schemas_feedback.FeedbackBase, user_id: str, id: str
-) -> None:
+    db: AsyncSession,
+    feedback: schemas_feedback.Feedback,
+) -> schemas_feedback.Feedback:
     feedback_db = models_feedback.Feedback(
-        id=id,
-        creation=datetime.now(UTC),
-        user_id=user_id,
-        **feedback.model_dump(),
+        id=feedback.id,
+        creation=feedback.creation,
+        user_id=feedback.user_id,
+        content=feedback.content,
     )
-
     db.add(feedback_db)
     await db.flush()
 
