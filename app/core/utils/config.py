@@ -1,3 +1,4 @@
+from datetime import date
 from functools import cached_property
 from pathlib import Path
 from re import Pattern
@@ -98,6 +99,8 @@ class UserDemoFactoryConfig(BaseModel):
     email: str
     password: str | None  # If None, the password will be generated randomly
     groups: list[str] = []  # Groups id to which the user will be added
+    phone: str | None = None
+    birthday: date | None = None
 
 
 class Settings(BaseSettings):
