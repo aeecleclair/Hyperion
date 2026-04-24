@@ -111,7 +111,7 @@ AUTH_CLIENTS:
 # Hyperion settings #
 #####################
 
-#SQLITE_DB: app.db # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (if possible PostgreSQL should be used instead)
+SQLITE_DB: app.db # If set, the application use a SQLite database instead of PostgreSQL, for testing or development purposes (if possible PostgreSQL should be used instead)
 DATABASE_DEBUG: False # If True, will print all SQL queries in the console
 LOG_DEBUG_MESSAGES: True
 ENABLE_RATE_LIMITER: False
@@ -200,3 +200,4 @@ TRUSTED_PAYMENT_REDIRECT_URLS:
 # This service will use a special token to access the data
 # If this token is not set, the service will not be able to access the data and no integrity check will be performed
 #MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN: ""
+REDIS_HOST: localhost
