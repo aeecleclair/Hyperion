@@ -1,1043 +1,969 @@
+"""End-to-end tests for the raid module endpoints.
+
+Covers the full participant registration flow with the new edition scoping +
+state machine, team lifecycle, volunteer registration flow, admin validation
+gates, and permission enforcement. Identity fields (name/firstname/email/
+birthday/phone) now live on `CoreUser`; tests set them via `update_user` so
+the participant/volunteer payloads stay small and mirror the real API shape.
+"""
+
+import asyncio
 import datetime
-import shutil
 import uuid
-from pathlib import Path
-from unittest.mock import Mock
 
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from pytest_mock import MockerFixture
+from sqlalchemy import update
 
 from app.core.groups import models_groups
-from app.core.users import models_users
-from app.modules.raid import coredata_raid, models_raid
+from app.core.users import cruds_users, models_users, schemas_users
+from app.modules.raid import coredata_raid, cruds_raid, models_raid
 from app.modules.raid.endpoints_raid import RaidPermissions
-from app.modules.raid.models_raid import (
-    RaidParticipant,
-    RaidTeam,
-    SecurityFile,
-)
 from app.modules.raid.raid_type import (
     Difficulty,
     DocumentType,
     DocumentValidation,
     MeetingPlace,
+    RaidRegistrationStatus,
+    Situation,
     Size,
 )
-from app.modules.raid.utils.utils_raid import calculate_raid_payment
+from app.core.groups.groups_type import AccountType
 from tests.commons import (
+    add_account_type_permission,
     add_coredata_to_db,
     add_object_to_db,
     create_api_access_token,
     create_groups_with_permissions,
     create_user_with_groups,
+    get_TestingSessionLocal,
 )
 
-participant: models_raid.RaidParticipant
+# ---------------------------------------------------------------------------
+# Globals populated by the module-scoped init fixture.
+# ---------------------------------------------------------------------------
+
 admin_group: models_groups.CoreGroup
 
-team: models_raid.RaidTeam
-validated_team: models_raid.RaidTeam
-
-validated_document: models_raid.Document
+active_edition: models_raid.RaidEdition
 
 raid_admin_user: models_users.CoreUser
-simple_user: models_users.CoreUser
-simple_user_without_participant: models_users.CoreUser
-simple_user_without_team: models_users.CoreUser
+user_captain: models_users.CoreUser
+user_second: models_users.CoreUser
+user_solo: models_users.CoreUser
+user_no_profile: models_users.CoreUser
+user_volunteer: models_users.CoreUser
+user_no_raid: models_users.CoreUser
 
-validated_team_captain: models_users.CoreUser
-validated_team_second: models_users.CoreUser
+token_admin: str
+token_captain: str
+token_second: str
+token_solo: str
+token_no_profile: str
+token_volunteer: str
+token_no_raid: str
 
-token_raid_admin: str
-token_simple: str
-token_simple_without_participant: str
-token_simple_without_team: str
+doc_accepted: models_raid.Document
+doc_pending: models_raid.Document
 
-token_validated_team_captain: str
+
+async def _set_user_identity(user_id: str, phone: str, birthday: datetime.date) -> None:
+    async with get_TestingSessionLocal()() as db:
+        await cruds_users.update_user(
+            db,
+            user_id,
+            schemas_users.CoreUserUpdateAdmin(phone=phone, birthday=birthday),
+        )
+        await db.commit()
+
+
+async def _ensure_tables_created() -> None:
+    """Work around the test harness's flaky `use_lock_for_workers` path.
+
+    In test mode the init_db startup hook may be skipped when the current
+    pytest process isn't selected as the "chosen worker" by psutil. Force
+    table creation so init_objects never races with it.
+    """
+    from app.types.sqlalchemy import Base
+
+    session_local = get_TestingSessionLocal()
+    async with session_local() as db:
+        engine = db.bind
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
-async def init_objects() -> None:
-    global admin_group
+async def init_objects(client) -> None:
+    await _ensure_tables_created()
+
+    # The init_db startup hook normally seeds each module's access permission
+    # against the default account types. When the fallback worker selection
+    # skips init_db we also need to seed them; when it runs we must not
+    # double-insert. Wrap in try/except to stay idempotent.
+    for account_type in AccountType:
+        try:
+            await add_account_type_permission(
+                RaidPermissions.access_raid,
+                account_type,
+            )
+        except Exception:  # noqa: BLE001, S110
+            pass
+
+    global admin_group, active_edition
     admin_group = await create_groups_with_permissions(
         [RaidPermissions.manage_raid],
         "raid_admin",
     )
-    global raid_admin_user, token_raid_admin
-    raid_admin_user = await create_user_with_groups([admin_group.id])
-    token_raid_admin = create_api_access_token(raid_admin_user)
 
-    global simple_user, token_simple
-    simple_user = await create_user_with_groups(
-        [],
+    edition = models_raid.RaidEdition(
+        id=uuid.uuid4(),
+        year=2026,
+        name="Raid 2026",
+        start_date=datetime.date(2026, 5, 1),
+        end_date=datetime.date(2026, 5, 3),
+        registering_end_date=datetime.date(2026, 4, 25),
+        active=True,
+        inscription_enabled=True,
     )
-    token_simple = create_api_access_token(simple_user)
-
-    global simple_user_without_participant, token_simple_without_participant
-    simple_user_without_participant = await create_user_with_groups(
-        [],
-    )
-    token_simple_without_participant = create_api_access_token(
-        simple_user_without_participant,
-    )
-
-    global simple_user_without_team, token_simple_without_team
-    simple_user_without_team = await create_user_with_groups(
-        [],
-    )
-    token_simple_without_team = create_api_access_token(simple_user_without_team)
-
-    global validated_team_captain, token_validated_team_captain
-    validated_team_captain = await create_user_with_groups([])
-    token_validated_team_captain = create_api_access_token(validated_team_captain)
-
-    global validated_team_second
-    validated_team_second = await create_user_with_groups([])
-
-    document = models_raid.Document(
-        id="some_document_id",
-        name="test.pdf",
-        uploaded_at=datetime.datetime.now(tz=datetime.UTC),
-        validation=DocumentValidation.pending,
-        type=DocumentType.idCard,
-    )
-    await add_object_to_db(document)
-
-    validated_document = models_raid.Document(
-        id="6e9736ab-5ceb-42a8-a252-e8c66696f7b1",
-        name="validated.pdf",
-        uploaded_at=datetime.datetime.now(tz=datetime.UTC),
-        validation=DocumentValidation.accepted,
-        type=DocumentType.idCard,
-    )
-
-    await add_object_to_db(validated_document)
-
-    global participant
-    participant = models_raid.RaidParticipant(
-        id=simple_user.id,
-        firstname="TestFirstname",
-        name="TestName",
-        birthday=datetime.date(2001, 1, 1),
-        phone="0606060606",
-        email="test@email.fr",
-        t_shirt_size=Size.M,
-        id_card_id=document.id,
-    )
-    await add_object_to_db(participant)
-
-    global team
-    team = models_raid.RaidTeam(
-        id=str(uuid.uuid4()),
-        name="TestTeam",
-        captain_id=simple_user.id,
-        difficulty=None,
-    )
-    await add_object_to_db(team)
-
-    no_team_participant = models_raid.RaidParticipant(
-        id=simple_user_without_team.id,
-        firstname="NoTeam",
-        name="NoTeam",
-        birthday=datetime.date(2001, 1, 1),
-        phone="0606060606",
-        email="test@no_team.fr",
-    )
-    await add_object_to_db(no_team_participant)
-
-    validated_team_participant_captain = models_raid.RaidParticipant(
-        id=validated_team_captain.id,
-        firstname="Validated",
-        name="Captain",
-        address="123 rue de la rue",
-        birthday=datetime.date(2001, 1, 1),
-        phone="0606060606",
-        email="test@validated.fr",
-        t_shirt_size=Size.M,
-        bike_size=Size.M,
-        attestation_on_honour=True,
-        situation="centrale",
-        payment=True,
-        id_card_id=validated_document.id,
-        medical_certificate_id=validated_document.id,
-        student_card_id=validated_document.id,
-        raid_rules_id=validated_document.id,
-        parent_authorization_id=validated_document.id,
-    )
-
-    await add_object_to_db(validated_team_participant_captain)
-
-    validated_team_participant_second = models_raid.RaidParticipant(
-        id=validated_team_second.id,
-        firstname="Validated",
-        name="Second",
-        address="123 rue de la rue",
-        birthday=datetime.date(2001, 1, 1),
-        phone="0606060606",
-        email="test2@validated.fr",
-        t_shirt_size=Size.M,
-        bike_size=Size.M,
-        attestation_on_honour=True,
-        situation="centrale",
-        payment=True,
-        id_card_id=validated_document.id,
-        medical_certificate_id=validated_document.id,
-        student_card_id=validated_document.id,
-        raid_rules_id=validated_document.id,
-        parent_authorization_id=validated_document.id,
-    )
-
-    await add_object_to_db(validated_team_participant_second)
-
-    global validated_team
-    validated_team = models_raid.RaidTeam(
-        id=str(uuid.uuid4()),
-        name="ValidatedTeam",
-        difficulty=Difficulty.sports,
-        meeting_place=MeetingPlace.centrale,
-        captain_id=validated_team_captain.id,
-        second_id=validated_team_second.id,
-        file_id=str(uuid.uuid4()),
-    )
-
-    await add_object_to_db(validated_team)
-
-    Path("data/raid/").mkdir(parents=True, exist_ok=True)
-    default_asset = "assets/pdf/default_PDF.pdf"
-    expected_files = [
-        "-1_ValidatedTeam_Captain_Validated.pdf",
-        "-1_New Team_NoTeam_NoTeam.pdf",
-    ]
-    for path in expected_files:
-        shutil.copyfile(
-            default_asset,
-            "data/raid/" + path,
-        )
+    await add_object_to_db(edition)
+    active_edition = edition
 
     await add_coredata_to_db(
         coredata_raid.RaidPrice(
             student_price=50,
             t_shirt_price=15,
+            partner_price=70,
             external_price=90,
         ),
     )
-
-
-def test_get_participant_by_id(client: TestClient):
-    response = client.get(
-        f"/raid/participants/{simple_user.id}",
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 200
-    assert response.json()["id"] == simple_user.id
-
-
-def test_create_participant(client: TestClient):
-    participant_data = {
-        "firstname": "New",
-        "name": "Participant",
-        "birthday": "2000-01-01",
-        "phone": "0123456789",
-        "email": "new@participant.com",
-    }
-    response = client.post(
-        "/raid/participants",
-        json=participant_data,
-        headers={"Authorization": f"Bearer {token_simple_without_participant}"},
-    )
-    assert response.status_code == 201
-    assert response.json()["firstname"] == "New"
-
-
-def test_confirm_payment(client: TestClient):
-    response = client.post(
-        f"/raid/participant/{simple_user.id}/payment",
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
-    )
-    assert response.status_code == 204
-
-
-# Failing in batch, passing alone
-def test_confirm_t_shirt_payment(client: TestClient):
-    response = client.post(
-        f"/raid/participant/{simple_user.id}/t_shirt_payment",
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
-    )
-    assert response.status_code == 204
-
-
-def test_update_participant_success(client: TestClient):
-    update_data = {
-        "firstname": "UpdatedFirst",
-        "name": "UpdatedLast",
-        "birthday": "1995-01-01",
-        "phone": "9876543210",
-        "email": "updated@example.com",
-        "t_shirt_size": "L",
-    }
-    response = client.patch(
-        f"/raid/participants/{simple_user.id}",
-        json=update_data,
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 204
-
-
-def test_update_participant_not_a_participant(client: TestClient):
-    update_data = {"firstname": "UpdatedFirst"}
-    response = client.patch(
-        f"/raid/participants/{simple_user_without_participant.id}",
-        json=update_data,
-        headers={"Authorization": f"Bearer {token_simple_without_participant}"},
-    )
-    assert response.status_code == 403
-    assert response.json()["detail"] == "You are not the participant."
-
-
-def test_update_participant_not_same_team(client: TestClient):
-    update_data = {"firstname": "UpdatedFirst"}
-    response = client.patch(
-        f"/raid/participants/{simple_user.id}",
-        json=update_data,
-        headers={"Authorization": f"Bearer {token_simple_without_team}"},
-    )
-    assert response.status_code == 403
-    assert response.json()["detail"] == "You are not the participant."
-
-
-def test_update_participant_change_tshirt_size_before_payment(client: TestClient):
-    update_data = {"t_shirt_size": "XL"}
-    response = client.patch(
-        f"/raid/participants/{simple_user.id}",
-        json=update_data,
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 204
-
-
-def test_update_participant_change_tshirt_size_after_payment(client: TestClient):
-    update_data = {"t_shirt_size": "S"}
-    response = client.patch(
-        f"/raid/participants/{simple_user.id}",
-        json=update_data,
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 204
-
-
-def test_update_participant_invalid_document_id(client: TestClient):
-    update_data = {"id_card_id": "invalid_id"}
-    response = client.patch(
-        f"/raid/participants/{simple_user.id}",
-        json=update_data,
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Document id_card not found."
-
-
-def test_update_participant_invalid_security_file_id(client: TestClient):
-    update_data = {"security_file_id": "invalid_id"}
-    response = client.patch(
-        f"/raid/participants/{simple_user.id}",
-        json=update_data,
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Security_file not found."
-
-
-def test_create_team(client: TestClient):
-    team_data = {"name": "New Team"}
-    response = client.post(
-        "/raid/teams",
-        json=team_data,
-        headers={"Authorization": f"Bearer {token_simple_without_team}"},
-    )
-    assert response.status_code == 201
-    assert response.json()["name"] == "New Team"
-
-
-def test_get_team_by_participant_id(client: TestClient):
-    response = client.get(
-        f"/raid/participants/{simple_user.id}/team",
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 200
-    assert "id" in response.json()
-
-
-def test_get_all_teams(client: TestClient):
-    response = client.get(
-        "/raid/teams",
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
-    )
-    assert response.status_code == 200
-    assert isinstance(response.json(), list)
-
-
-def test_get_team_by_id(client: TestClient):
-    response = client.get(
-        f"/raid/teams/{team.id}",
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
-    )
-    assert response.status_code == 200
-    assert response.json()["id"] == team.id
-
-
-def test_update_team(client: TestClient):
-    update_data = {"name": "Updated Team"}
-    response = client.patch(
-        f"/raid/teams/{team.id}",
-        json=update_data,
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 204
-
-
-def test_set_team_number(client: TestClient):
-    update_data = {"name": "Updated Validated Team"}
-    response = client.patch(
-        f"/raid/teams/{validated_team.id}",
-        json=update_data,
-        headers={"Authorization": f"Bearer {token_validated_team_captain}"},
-    )
-    assert response.status_code == 204
-
-
-def test_upload_document(client: TestClient):
-    file_content = b"test document content"
-    files = {"file": ("test.pdf", file_content, "application/pdf")}
-    response = client.post(
-        "/raid/document/idCard",
-        files=files,
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 201
-    assert "id" in response.json()
-
-
-def test_read_document_not_found(client: TestClient):
-    document_id = "non_existent_document_id"
-    response = client.get(
-        f"/raid/document/{document_id}",
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Document not found."
-
-
-def test_read_document_participant_not_found(client: TestClient):
-    # Create a test document without associating it with a participant
-    test_file_content = b"orphan document content"
-    files = {"file": ("orphan.pdf", test_file_content, "application/pdf")}
-    upload_response = client.post(
-        "/raid/document/idCard",
-        files=files,
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
-    )
-    assert upload_response.status_code == 201
-    document_id = upload_response.json()["id"]
-
-    # Manually remove the participant association (this would typically be done in the database)
-    # For the purpose of this test, we're simulating a scenario where the document exists but has no associated participant
-
-    # Now try to read the document as a regular user
-    response = client.get(
-        f"/raid/document/{document_id}",
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Participant owning the document not found."
-
-
-# requires a document to be added
-def test_validate_document(client: TestClient):
-    document_id = "some_document_id"
-    response = client.post(
-        f"/raid/document/{document_id}/validate?validation=accepted",
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
-    )
-    assert response.status_code == 204
-
-
-def test_set_security_file_success(client: TestClient):
-    security_file_data = {
-        "asthma": True,
-    }
-    response = client.post(
-        f"/raid/security_file/?participant_id={simple_user.id}",
-        json=security_file_data,
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 201
-    assert "id" in response.json()
-
-
-def test_set_security_file_not_in_same_team(client: TestClient):
-    security_file_data = {
-        "asthma": False,
-        "emergency_contact_name": "Another Contact",
-        "emergency_contact_phone": "1234567890",
-    }
-    response = client.post(
-        f"/raid/security_file/?participant_id={simple_user_without_team.id}",
-        json=security_file_data,
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 403
-    assert response.json()["detail"] == "You are not the participant."
-
-
-def test_set_security_file_participant_not_exist(client: TestClient):
-    security_file_data = {
-        "asthma": True,
-        "emergency_contact_name": "Non-existent Contact",
-        "emergency_contact_phone": "9876543210",
-    }
-    non_existent_id = "non_existent_id"
-    response = client.post(
-        f"/raid/security_file/?participant_id={non_existent_id}",
-        json=security_file_data,
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 403
-    assert response.json()["detail"] == "You are not the participant."
-
-
-def test_set_security_file_update_existing(client: TestClient):
-    # First, create an initial security file
-    initial_data = {
-        "asthma": False,
-        "emergency_contact_name": "Initial Contact",
-        "emergency_contact_phone": "1111111111",
-    }
-    initial_response = client.post(
-        f"/raid/security_file/?participant_id={simple_user.id}",
-        json=initial_data,
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert initial_response.status_code == 201
-
-    # Now, update the security file
-    updated_data = {
-        "asthma": True,
-        "emergency_contact_name": "Updated Contact",
-        "emergency_contact_phone": "2222222222",
-    }
-    update_response = client.post(
-        f"/raid/security_file/?participant_id={simple_user.id}",
-        json=updated_data,
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert update_response.status_code == 201
-    assert update_response.json()["id"] != initial_response.json()["id"]
-
-
-def test_validate_attestation_on_honour(client: TestClient):
-    response = client.post(
-        f"/raid/participant/{simple_user.id}/honour",
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 204
-
-
-# Failing in batch, passing alone
-def test_join_team(client: TestClient):
-    # Create an invite token first
-    create_token_response = client.post(
-        f"/raid/teams/{team.id}/invite",
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert create_token_response.status_code == 201
-    token = create_token_response.json()["token"]
-
-    # Now use the created token to join the team
-    response = client.post(
-        f"/raid/teams/join/{token}",
-        headers={"Authorization": f"Bearer {token_simple_without_team}"},
-    )
-    assert response.status_code == 204
-
-
-def test_kick_team_member(client: TestClient):
-    response = client.post(
-        f"/raid/teams/{team.id}/kick/{simple_user_without_team.id}",
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
-    )
-    assert response.status_code == 201
-
-
-# Failing in batch, passing alone
-def test_create_invite_token(client: TestClient):
-    response = client.post(
-        f"/raid/teams/{team.id}/invite",
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 201
-    assert "token" in response.json()
-
-
-# Fail due to pdf writing error
-def test_merge_teams(client: TestClient):
-    # Create two teams for testing
-    team1_id = team.id
-
-    team2_response = client.post(
-        "/raid/teams",
-        json={"name": "Team 2"},
-        headers={"Authorization": f"Bearer {token_simple_without_participant}"},
-    )
-    assert team2_response.status_code == 201
-    team2_id = team2_response.json()["id"]
-    response = client.post(
-        f"/raid/teams/merge?team1_id={team1_id}&team2_id={team2_id}",
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
-    )
-    assert response.status_code == 201
-
-
-def test_get_raid_information(client: TestClient):
-    response = client.get(
-        "/raid/information",
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 200
-
-
-def test_update_raid_information(client: TestClient):
-    raid_info = {
-        "raid_start_date": "2023-09-01",
-    }
-    response = client.patch(
-        "/raid/information",
-        json=raid_info,
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
-    )
-    assert response.status_code == 204
-
-
-def test_get_raid_price(client: TestClient):
-    response = client.get(
-        "/raid/price",
-        headers={"Authorization": f"Bearer {token_simple}"},
-    )
-    assert response.status_code == 200
-
-
-def test_update_raid_price(client: TestClient):
-    price_data = {"student_price": 50, "t_shirt_price": 15, "external_price": 90}
-    response = client.patch(
-        "/raid/price",
-        json=price_data,
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
-    )
-    assert response.status_code == 204
-
-
-def test_delete_team(client: TestClient):
-    response = client.delete(
-        f"/raid/teams/{team.id}",
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
-    )
-    assert response.status_code == 204
-
-
-## Test for pdf writer
-
-
-@pytest.fixture
-def mock_team():
-    return Mock(
-        spec=RaidTeam,
-        name="Test Team",
-        number=1,
-        captain=Mock(
-            spec=RaidParticipant,
-            name="Doe",
-            firstname="John",
-            birthday=datetime.datetime(1990, 1, 1, tzinfo=datetime.UTC),
-            phone="0606060606",
-            email="test@email.fr",
-            id=str(uuid.uuid4()),
-            bike_size=None,
-            t_shirt_size=None,
-            situation=None,
-            validation_progress=0.1,
-            payment=False,
-            t_shirt_payment=False,
-            number_of_document=1,
-            number_of_validated_document=0,
-            address=None,
-            other_school=None,
-            company=None,
-            diet=None,
-            id_card=None,
-            medical_certificate=None,
-            security_file=None,
-            student_card=None,
-            raid_rules=None,
-            parent_authorization=None,
-            attestation_on_honour=False,
-            is_minor=False,
-        ),
-        validation_progress=10,
-    )
-
-
-@pytest.fixture
-def mock_security_file():
-    return Mock(spec=SecurityFile, allergy="None", asthma=False)
-
-
-@pytest.fixture
-def mock_participant():
-    return Mock(
-        spec=RaidParticipant,
-        name="Doe",
-        firstname="John",
-        birthday=datetime.datetime(1990, 1, 1, tzinfo=datetime.UTC),
-        phone="0606060606",
-        email="test@email.fr",
+    await add_coredata_to_db(coredata_raid.RaidInformation())
+
+    global raid_admin_user, token_admin
+    raid_admin_user = await create_user_with_groups([admin_group.id])
+    await _set_user_identity(raid_admin_user.id, "+33600000000", datetime.date(1990, 1, 1))
+    token_admin = create_api_access_token(raid_admin_user)
+
+    global user_captain, token_captain
+    user_captain = await create_user_with_groups([])
+    await _set_user_identity(user_captain.id, "+33611111111", datetime.date(2000, 6, 1))
+    token_captain = create_api_access_token(user_captain)
+
+    global user_second, token_second
+    user_second = await create_user_with_groups([])
+    await _set_user_identity(user_second.id, "+33622222222", datetime.date(2001, 3, 15))
+    token_second = create_api_access_token(user_second)
+
+    global user_solo, token_solo
+    user_solo = await create_user_with_groups([])
+    await _set_user_identity(user_solo.id, "+33633333333", datetime.date(1999, 11, 11))
+    token_solo = create_api_access_token(user_solo)
+
+    global user_no_profile, token_no_profile
+    user_no_profile = await create_user_with_groups([])
+    await _set_user_identity(user_no_profile.id, "+33644444444", datetime.date(2002, 2, 2))
+    token_no_profile = create_api_access_token(user_no_profile)
+
+    global user_volunteer, token_volunteer
+    user_volunteer = await create_user_with_groups([])
+    await _set_user_identity(user_volunteer.id, "+33655555555", datetime.date(1998, 7, 7))
+    token_volunteer = create_api_access_token(user_volunteer)
+
+    global user_no_raid, token_no_raid
+    user_no_raid = await create_user_with_groups([])
+    # Intentionally no identity update — POST /participants must 400.
+    token_no_raid = create_api_access_token(user_no_raid)
+
+    global doc_accepted, doc_pending
+    doc_accepted = models_raid.Document(
         id=str(uuid.uuid4()),
-        bike_size=None,
-        t_shirt_size=None,
-        situation=None,
-        validation_progress=0.1,
+        edition_id=active_edition.id,
+        name="accepted.pdf",
+        uploaded_at=datetime.date.today(),
+        type=DocumentType.idCard,
+        validation=DocumentValidation.accepted,
+    )
+    await add_object_to_db(doc_accepted)
+
+    doc_pending = models_raid.Document(
+        id=str(uuid.uuid4()),
+        edition_id=active_edition.id,
+        name="pending.pdf",
+        uploaded_at=datetime.date.today(),
+        type=DocumentType.medicalCertificate,
+        validation=DocumentValidation.pending,
+    )
+    await add_object_to_db(doc_pending)
+
+    captain_participant = models_raid.RaidParticipant(
+        user_id=user_captain.id,
+        edition_id=active_edition.id,
+        status=RaidRegistrationStatus.draft,
+        address="1 rue de la Doua",
+        bike_size=Size.M,
+        t_shirt_size=Size.M,
+        situation=Situation.centrale,
+        attestation_on_honour=False,
         payment=False,
         t_shirt_payment=False,
-        number_of_document=1,
-        number_of_validated_document=0,
-        address=None,
-        other_school=None,
-        company=None,
-        diet=None,
-        id_card=None,
-        medical_certificate=None,
-        student_card=None,
-        raid_rules=None,
-        parent_authorization=None,
-        attestation_on_honour=False,
         is_minor=False,
-        security_file=Mock(spec=SecurityFile, allergy="None", asthma=False),
     )
+    await add_object_to_db(captain_participant)
 
+    second_participant = models_raid.RaidParticipant(
+        user_id=user_second.id,
+        edition_id=active_edition.id,
+        status=RaidRegistrationStatus.draft,
+        situation=Situation.centrale,
+        is_minor=False,
+    )
+    await add_object_to_db(second_participant)
 
-async def test_set_team_number_utility_empty_database(
-    mocker: MockerFixture,
-):
-    """Test the set_team_number utility with an empty database (no existing teams)"""
-    # Create mock objects
-    mock_db = mocker.AsyncMock()
-    mock_team = mocker.Mock(
-        spec=RaidTeam,
+    solo_participant = models_raid.RaidParticipant(
+        user_id=user_solo.id,
+        edition_id=active_edition.id,
+        status=RaidRegistrationStatus.draft,
+        situation=Situation.other,
+        is_minor=False,
+    )
+    await add_object_to_db(solo_participant)
+
+    main_team = models_raid.RaidTeam(
         id=str(uuid.uuid4()),
+        edition_id=active_edition.id,
+        name="MainTeam",
         difficulty=Difficulty.sports,
+        meeting_place=MeetingPlace.centrale,
+        captain_id=user_captain.id,
+        second_id=user_second.id,
     )
+    await add_object_to_db(main_team)
 
-    # Mock the get_number_of_team_by_difficulty function to return 0
-    mocker.patch(
-        "app.modules.raid.cruds_raid.get_number_of_team_by_difficulty",
-        return_value=0,
-    )
-
-    # Mock the update_team function
-    mock_update_team = mocker.patch("app.modules.raid.cruds_raid.update_team")
-
-    # Call the function
-    from app.modules.raid.utils.utils_raid import set_team_number
-
-    await set_team_number(mock_team, mock_db)
-
-    # Assert update_team was called with correct parameters
-    mock_update_team.assert_called_once()
-    args, _ = mock_update_team.call_args
-    assert args[0] == mock_team.id
-    assert args[1].number == 101  # 100 (sports separator) + 1
-
-
-async def test_set_team_number_utility_existing_teams(
-    mocker: MockerFixture,
-):
-    """Test the set_team_number utility with existing teams"""
-    # Create mock objects
-    mock_db = mocker.AsyncMock()
-    mock_team = mocker.Mock(
-        spec=RaidTeam,
+    solo_team = models_raid.RaidTeam(
         id=str(uuid.uuid4()),
-        difficulty=Difficulty.expert,
-    )
-
-    # Mock the get_number_of_team_by_difficulty function to return existing team numbers
-    mocker.patch(
-        "app.modules.raid.cruds_raid.get_number_of_team_by_difficulty",
-        return_value=220,
-    )
-
-    # Mock the update_team function
-    mock_update_team = mocker.patch("app.modules.raid.cruds_raid.update_team")
-
-    # Call the function
-    from app.modules.raid.utils.utils_raid import set_team_number
-
-    await set_team_number(mock_team, mock_db)
-
-    # Assert update_team was called with correct parameters
-    mock_update_team.assert_called_once()
-    args, _ = mock_update_team.call_args
-    assert args[0] == mock_team.id
-    assert args[1].number == 221  # 220 + 1
-
-
-async def test_set_team_number_utility_no_difficulty(
-    mocker: MockerFixture,
-):
-    """Test the set_team_number utility with a team without difficulty"""
-    # Create mock objects
-    mock_db = mocker.AsyncMock()
-    mock_team = mocker.Mock(
-        spec=RaidTeam,
-        id=str(uuid.uuid4()),
+        edition_id=active_edition.id,
+        name="SoloTeam",
         difficulty=None,
+        meeting_place=None,
+        captain_id=user_solo.id,
+        second_id=None,
     )
-
-    # Mock the update_team function
-    mock_update_team = mocker.patch("app.modules.raid.cruds_raid.update_team")
-
-    # Call the function
-    from app.modules.raid.utils.utils_raid import set_team_number
-
-    await set_team_number(mock_team, mock_db)
-
-    # Assert update_team was not called
-    mock_update_team.assert_not_called()
+    await add_object_to_db(solo_team)
 
 
-async def test_set_team_number_utility_discovery_difficulty(
-    mocker: MockerFixture,
-):
-    """Test the set_team_number utility with discovery difficulty"""
-    # Create mock objects
-    mock_db = mocker.AsyncMock()
-    mock_team = mocker.Mock(
-        spec=RaidTeam,
-        id=str(uuid.uuid4()),
-        difficulty=Difficulty.discovery,
+# ---------------------------------------------------------------------------
+# Edition endpoints
+# ---------------------------------------------------------------------------
+
+
+def test_get_active_edition(client: TestClient) -> None:
+    r = client.get(
+        "/raid/editions/active",
+        headers={"Authorization": f"Bearer {token_captain}"},
     )
+    assert r.status_code == 200
+    assert r.json()["id"] == str(active_edition.id)
 
-    # Mock the get_number_of_team_by_difficulty function
-    mocker.patch(
-        "app.modules.raid.cruds_raid.get_number_of_team_by_difficulty",
-        return_value=5,
+
+def test_list_editions_requires_admin(client: TestClient) -> None:
+    r = client.get(
+        "/raid/editions",
+        headers={"Authorization": f"Bearer {token_captain}"},
     )
-    # Mock the update_team function
-    mock_update_team = mocker.patch("app.modules.raid.cruds_raid.update_team")
-
-    # Call the function
-    from app.modules.raid.utils.utils_raid import set_team_number
-
-    await set_team_number(mock_team, mock_db)
-
-    # Assert update_team was called with correct parameters
-    mock_update_team.assert_called_once()
-    args, _ = mock_update_team.call_args
-    assert args[0] == mock_team.id
-    assert args[1].number == 6  # discovery (0) + 5 + 1
+    assert r.status_code == 403
 
 
-@pytest.mark.parametrize(
-    ("participant_kwargs", "expected_price"),
-    [
-        # Student price only
-        (
-            {
-                "payment": False,
-                "t_shirt_size": None,
-                "t_shirt_payment": False,
-                "situation": "centrale",
-                "student_card_id": str(uuid.uuid4()),
-            },
-            50,
-        ),
-        # Student price only
-        (
-            {
-                "payment": False,
-                "t_shirt_size": None,
-                "t_shirt_payment": False,
-                "situation": "otherschool : Some School",
-                "student_card_id": str(uuid.uuid4()),
-            },
-            50,
-        ),
-        # Student price only but without student card
-        (
-            {
-                "payment": False,
-                "t_shirt_size": None,
-                "t_shirt_payment": False,
-                "situation": "centrale",
-                "student_card_id": None,
-            },
-            90,
-        ),
-        # Student price only but without student card
-        (
-            {
-                "payment": False,
-                "t_shirt_size": None,
-                "t_shirt_payment": False,
-                "situation": "otherschool : Some School",
-                "student_card_id": None,
-            },
-            90,
-        ),
-        # External price only
-        (
-            {
-                "payment": False,
-                "t_shirt_size": None,
-                "t_shirt_payment": False,
-                "situation": "other",
-                "student_card_id": None,
-            },
-            90,
-        ),
-        # Student price + T-shirt
-        (
-            {
-                "payment": False,
-                "t_shirt_size": Size.L,
-                "t_shirt_payment": False,
-                "situation": "centrale",
-                "student_card_id": str(uuid.uuid4()),
-            },
-            65,
-        ),
-        # External price + T-shirt
-        (
-            {
-                "payment": False,
-                "t_shirt_size": Size.L,
-                "t_shirt_payment": False,
-                "situation": "other",
-                "student_card_id": None,
-            },
-            105,
-        ),
-        # Already paid, no T-shirt
-        (
-            {
-                "payment": True,
-                "t_shirt_size": None,
-                "t_shirt_payment": False,
-                "situation": "centrale",
-                "student_card_id": str(uuid.uuid4()),
-            },
-            0,
-        ),
-        # Already paid, T-shirt not paid
-        (
-            {
-                "payment": True,
-                "t_shirt_size": Size.L,
-                "t_shirt_payment": False,
-                "situation": "centrale",
-                "student_card_id": str(uuid.uuid4()),
-            },
-            15,
-        ),
-        # Already paid, T-shirt already paid
-        (
-            {
-                "payment": True,
-                "t_shirt_size": Size.L,
-                "t_shirt_payment": True,
-                "situation": "centrale",
-                "student_card_id": str(uuid.uuid4()),
-            },
-            0,
-        ),
-        # No student card, T-shirt already paid
-        (
-            {
-                "payment": True,
-                "t_shirt_size": Size.L,
-                "t_shirt_payment": True,
-                "situation": "otherschool : Some School",
-                "student_card_id": str(uuid.uuid4()),
-            },
-            0,
-        ),
-    ],
-)
-def test_calculate_raid_payment_price_only(participant_kwargs, expected_price):
-    raid_prices = coredata_raid.RaidPrice(
-        student_price=50,
-        t_shirt_price=15,
-        external_price=90,
+def test_list_editions_as_admin(client: TestClient) -> None:
+    r = client.get(
+        "/raid/editions",
+        headers={"Authorization": f"Bearer {token_admin}"},
     )
-    participant = RaidParticipant(
-        id=str(uuid.uuid4()),
-        name="Name",
-        firstname="Firstname",
-        birthday=datetime.date(2000, 1, 1),
-        phone="0123456789",
-        email="name@example.com",
-        payment=participant_kwargs["payment"],
-        t_shirt_size=participant_kwargs["t_shirt_size"],
-        t_shirt_payment=participant_kwargs["t_shirt_payment"],
-        situation=participant_kwargs["situation"],
-        student_card_id=participant_kwargs["student_card_id"],
+    assert r.status_code == 200
+    assert any(e["id"] == str(active_edition.id) for e in r.json())
+
+
+def test_create_and_delete_archive_edition(client: TestClient) -> None:
+    r = client.post(
+        "/raid/editions",
+        json={
+            "name": "Test Archive Edition",
+            "year": 2020,
+            "active": False,
+            "inscription_enabled": False,
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
     )
-    price, _ = calculate_raid_payment(participant, raid_prices)
-    assert price == expected_price
+    assert r.status_code == 201
+    new_id = r.json()["id"]
 
-
-def test_download_security_files_zip(client: TestClient):
-    response = client.get(
-        "/raid/security_files_zip",
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
+    d = client.delete(
+        f"/raid/editions/{new_id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
     )
-    assert response.status_code == 200
+    assert d.status_code == 204
 
 
-def test_download_team_files_zip(client: TestClient):
-    response = client.get(
-        "/raid/team_files_zip",
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
+def test_delete_edition_with_participants_rejected(client: TestClient) -> None:
+    r = client.delete(
+        f"/raid/editions/{active_edition.id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
     )
-    assert response.status_code == 200
+    assert r.status_code == 400
 
 
-def test_delete_all_teams(client: TestClient):
-    response = client.delete(
+# ---------------------------------------------------------------------------
+# Participants: state machine
+# ---------------------------------------------------------------------------
+
+
+def test_get_participant_self(client: TestClient) -> None:
+    r = client.get(
+        f"/raid/participants/{user_captain.id}",
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["user_id"] == user_captain.id
+    assert body["status"] == "draft"
+    # CoreUser is embedded on the full read schema.
+    assert body["user"]["name"] == user_captain.name
+
+
+def test_get_participant_other_forbidden(client: TestClient) -> None:
+    r = client.get(
+        f"/raid/participants/{user_captain.id}",
+        headers={"Authorization": f"Bearer {token_solo}"},
+    )
+    assert r.status_code == 403
+
+
+def test_get_participant_as_admin(client: TestClient) -> None:
+    r = client.get(
+        f"/raid/participants/{user_captain.id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 200
+
+
+def test_create_participant_missing_identity_400(client: TestClient) -> None:
+    r = client.post(
+        "/raid/participants",
+        headers={"Authorization": f"Bearer {token_no_raid}"},
+    )
+    assert r.status_code == 400
+    assert "birthday or phone" in r.json()["detail"]
+
+
+def test_create_participant_success(client: TestClient) -> None:
+    r = client.post(
+        "/raid/participants",
+        headers={"Authorization": f"Bearer {token_no_profile}"},
+    )
+    assert r.status_code == 201
+    body = r.json()
+    assert body["user_id"] == user_no_profile.id
+    assert body["status"] == "draft"
+    assert body["edition_id"] == str(active_edition.id)
+
+
+def test_create_participant_twice_rejected(client: TestClient) -> None:
+    r = client.post(
+        "/raid/participants",
+        headers={"Authorization": f"Bearer {token_no_profile}"},
+    )
+    assert r.status_code == 403
+
+
+def test_update_participant_in_draft(client: TestClient) -> None:
+    r = client.patch(
+        f"/raid/participants/{user_captain.id}",
+        json={"address": "42 rue Example", "bike_size": "L"},
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 204
+
+
+def test_update_participant_other_forbidden(client: TestClient) -> None:
+    r = client.patch(
+        f"/raid/participants/{user_captain.id}",
+        json={"address": "should fail"},
+        headers={"Authorization": f"Bearer {token_solo}"},
+    )
+    assert r.status_code == 403
+
+
+def test_update_participant_legacy_situation_string(client: TestClient) -> None:
+    # Grace-period coercion of `otherschool` -> Situation.otherSchool.
+    r = client.patch(
+        f"/raid/participants/{user_captain.id}",
+        json={"situation": "otherschool", "other_school": "ECP"},
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 204
+
+
+def test_update_participant_invalid_document(client: TestClient) -> None:
+    r = client.patch(
+        f"/raid/participants/{user_captain.id}",
+        json={"id_card_id": "does-not-exist"},
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 404
+
+
+def test_submit_without_attestation_400(client: TestClient) -> None:
+    r = client.post(
+        f"/raid/participants/{user_captain.id}/submit",
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 400
+    assert "Attestation" in r.json()["detail"]
+
+
+def test_submit_without_documents_400(client: TestClient) -> None:
+    client.post(
+        f"/raid/participant/{user_captain.id}/honour",
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    r = client.post(
+        f"/raid/participants/{user_captain.id}/submit",
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 400
+
+
+def test_admin_validate_fails_before_prerequisites(client: TestClient) -> None:
+    r = client.patch(
+        f"/raid/participants/{user_captain.id}/validate",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 400
+
+
+async def _prepare_full_validation_state() -> None:
+    """Promote captain + second to every prerequisite (except difficulty/meeting)."""
+    async with get_TestingSessionLocal()() as db:
+        docs = {}
+        for doc_type in (
+            DocumentType.idCard,
+            DocumentType.medicalCertificate,
+            DocumentType.raidRules,
+            DocumentType.studentCard,
+        ):
+            doc = models_raid.Document(
+                id=str(uuid.uuid4()),
+                edition_id=active_edition.id,
+                name=f"{doc_type.value}.pdf",
+                uploaded_at=datetime.date.today(),
+                type=doc_type,
+                validation=DocumentValidation.accepted,
+            )
+            db.add(doc)
+            docs[doc_type] = doc
+        await db.flush()
+
+        security = models_raid.SecurityFile(
+            id=str(uuid.uuid4()),
+            edition_id=active_edition.id,
+            allergy=None,
+            asthma=False,
+            intensive_care_unit=None,
+            intensive_care_unit_when=None,
+            ongoing_treatment=None,
+            sicknesses=None,
+            hospitalization=None,
+            surgical_operation=None,
+            trauma=None,
+            family=None,
+            emergency_person_firstname="Jane",
+            emergency_person_name="Doe",
+            emergency_person_phone="0600000000",
+            file_id=None,
+        )
+        db.add(security)
+        await db.flush()
+
+        for uid in (user_captain.id, user_second.id):
+            await db.execute(
+                update(models_raid.RaidParticipant)
+                .where(
+                    models_raid.RaidParticipant.user_id == uid,
+                    models_raid.RaidParticipant.edition_id == active_edition.id,
+                )
+                .values(
+                    id_card_id=docs[DocumentType.idCard].id,
+                    medical_certificate_id=docs[DocumentType.medicalCertificate].id,
+                    raid_rules_id=docs[DocumentType.raidRules].id,
+                    student_card_id=docs[DocumentType.studentCard].id,
+                    security_file_id=security.id,
+                    attestation_on_honour=True,
+                    payment=True,
+                    t_shirt_payment=True,
+                    situation=Situation.centrale,
+                ),
+            )
+        await db.commit()
+
+
+def test_admin_validate_full_happy_path(client: TestClient) -> None:
+    asyncio.get_event_loop().run_until_complete(_prepare_full_validation_state())
+
+    r = client.patch(
+        f"/raid/participants/{user_captain.id}/validate",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 204, r.json()
+
+    r = client.get(
+        f"/raid/participants/{user_captain.id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.json()["status"] == "validated"
+
+
+def test_non_admin_update_blocked_after_validation(client: TestClient) -> None:
+    r = client.patch(
+        f"/raid/participants/{user_captain.id}",
+        json={"address": "new addr"},
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 400
+
+
+def test_admin_update_still_allowed(client: TestClient) -> None:
+    r = client.patch(
+        f"/raid/participants/{user_captain.id}",
+        json={"diet": "veggie"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 204
+
+
+def test_self_reopen_validated_403(client: TestClient) -> None:
+    r = client.post(
+        f"/raid/participants/{user_captain.id}/reopen",
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 403
+
+
+def test_admin_reopen_to_draft(client: TestClient) -> None:
+    r = client.post(
+        f"/raid/participants/{user_captain.id}/reopen",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 204
+    r2 = client.get(
+        f"/raid/participants/{user_captain.id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r2.json()["status"] == "draft"
+
+
+def test_cancel_by_self(client: TestClient) -> None:
+    r = client.patch(
+        f"/raid/participants/{user_solo.id}/cancel",
+        headers={"Authorization": f"Bearer {token_solo}"},
+    )
+    assert r.status_code == 204
+    r2 = client.get(
+        f"/raid/participants/{user_solo.id}",
+        headers={"Authorization": f"Bearer {token_solo}"},
+    )
+    assert r2.json()["status"] == "cancelled"
+
+
+# ---------------------------------------------------------------------------
+# Teams
+# ---------------------------------------------------------------------------
+
+
+def test_list_teams_requires_admin(client: TestClient) -> None:
+    r = client.get(
         "/raid/teams",
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
+        headers={"Authorization": f"Bearer {token_captain}"},
     )
-    assert response.status_code == 204
+    assert r.status_code == 403
 
-    response = client.get(
+
+def test_list_teams_as_admin(client: TestClient) -> None:
+    r = client.get(
         "/raid/teams",
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
+        headers={"Authorization": f"Bearer {token_admin}"},
     )
-    assert response.status_code == 200
-    assert len(response.json()) == 0
+    assert r.status_code == 200
+    assert isinstance(r.json(), list)
+    assert len(r.json()) >= 2
 
 
-def test_download_security_files_zip_with_no_teams(client: TestClient):
-    response = client.get(
-        "/raid/security_files_zip",
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
+def test_get_team_by_participant(client: TestClient) -> None:
+    r = client.get(
+        f"/raid/participants/{user_captain.id}/team",
+        headers={"Authorization": f"Bearer {token_captain}"},
     )
-    assert response.status_code == 400
+    assert r.status_code == 200
+    assert r.json()["captain"]["user_id"] == user_captain.id
 
 
-def test_download_team_files_zip_with_no_teams(client: TestClient):
-    response = client.get(
-        "/raid/team_files_zip",
-        headers={"Authorization": f"Bearer {token_raid_admin}"},
+def test_update_team_by_captain(client: TestClient) -> None:
+    team = client.get(
+        f"/raid/participants/{user_captain.id}/team",
+        headers={"Authorization": f"Bearer {token_captain}"},
+    ).json()
+    r = client.patch(
+        f"/raid/teams/{team['id']}",
+        json={"name": "MainTeam-Renamed"},
+        headers={"Authorization": f"Bearer {token_captain}"},
     )
-    assert response.status_code == 400
+    assert r.status_code == 204
+
+
+# ---------------------------------------------------------------------------
+# Documents
+# ---------------------------------------------------------------------------
+
+
+def test_upload_document(client: TestClient) -> None:
+    r = client.post(
+        "/raid/document/idCard",
+        files={"file": ("idCard.pdf", b"blob", "application/pdf")},
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 201
+
+
+def test_validate_document_requires_admin(client: TestClient) -> None:
+    r = client.post(
+        f"/raid/document/{doc_pending.id}/validate?validation=accepted",
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 403
+
+
+def test_validate_document_as_admin(client: TestClient) -> None:
+    r = client.post(
+        f"/raid/document/{doc_pending.id}/validate?validation=accepted",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 204
+
+
+# ---------------------------------------------------------------------------
+# Payment
+# ---------------------------------------------------------------------------
+
+
+def test_payment_url_requires_participant(client: TestClient) -> None:
+    r = client.get(
+        "/raid/pay",
+        headers={"Authorization": f"Bearer {token_no_raid}"},
+    )
+    assert r.status_code == 403
+
+
+def test_confirm_payment_requires_admin(client: TestClient) -> None:
+    r = client.post(
+        f"/raid/participant/{user_second.id}/payment",
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 403
+
+
+def test_confirm_payment_as_admin(client: TestClient) -> None:
+    r = client.post(
+        f"/raid/participant/{user_second.id}/payment",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 204
+
+
+def test_confirm_tshirt_payment_requires_size(client: TestClient) -> None:
+    r = client.post(
+        f"/raid/participant/{user_no_profile.id}/t_shirt_payment",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    # user_no_profile has no t_shirt_size set.
+    assert r.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# Volunteers
+# ---------------------------------------------------------------------------
+
+
+def test_participant_cannot_register_as_volunteer(client: TestClient) -> None:
+    r = client.post(
+        "/raid/volunteers",
+        json={},
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 400
+
+
+def test_create_volunteer(client: TestClient) -> None:
+    r = client.post(
+        "/raid/volunteers",
+        json={
+            "diet": "veggie",
+            "has_car": True,
+            "car_seats": 4,
+            "is_parcours_helper": True,
+        },
+        headers={"Authorization": f"Bearer {token_volunteer}"},
+    )
+    assert r.status_code == 201
+    body = r.json()
+    assert body["validated"] is False
+    assert body["cancelled"] is False
+    assert body["has_car"] is True
+    assert body["car_seats"] == 4
+    assert body["is_parcours_helper"] is True
+
+
+def test_create_volunteer_twice_rejected(client: TestClient) -> None:
+    r = client.post(
+        "/raid/volunteers",
+        json={},
+        headers={"Authorization": f"Bearer {token_volunteer}"},
+    )
+    assert r.status_code == 403
+
+
+def test_volunteer_cannot_become_participant(client: TestClient) -> None:
+    r = client.post(
+        "/raid/participants",
+        headers={"Authorization": f"Bearer {token_volunteer}"},
+    )
+    assert r.status_code == 400
+
+
+def test_get_my_volunteer(client: TestClient) -> None:
+    r = client.get(
+        "/raid/volunteers/me",
+        headers={"Authorization": f"Bearer {token_volunteer}"},
+    )
+    assert r.status_code == 200
+    assert r.json()["user_id"] == user_volunteer.id
+
+
+def test_list_volunteers_admin_only(client: TestClient) -> None:
+    r = client.get(
+        "/raid/volunteers",
+        headers={"Authorization": f"Bearer {token_volunteer}"},
+    )
+    assert r.status_code == 403
+
+
+def test_list_volunteers_as_admin(client: TestClient) -> None:
+    r = client.get(
+        "/raid/volunteers",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 200
+    assert any(v["user_id"] == user_volunteer.id for v in r.json())
+
+
+def test_update_volunteer_self(client: TestClient) -> None:
+    r = client.patch(
+        f"/raid/volunteers/{user_volunteer.id}",
+        json={"diet": "noodles only"},
+        headers={"Authorization": f"Bearer {token_volunteer}"},
+    )
+    assert r.status_code == 204
+
+
+def test_validate_volunteer_fails_with_car_but_no_seats(
+    client: TestClient,
+) -> None:
+    async def _break_car():
+        async with get_TestingSessionLocal()() as db:
+            await db.execute(
+                update(models_raid.RaidVolunteer)
+                .where(
+                    models_raid.RaidVolunteer.user_id == user_volunteer.id,
+                    models_raid.RaidVolunteer.edition_id == active_edition.id,
+                )
+                .values(has_car=True, car_seats=None),
+            )
+            await db.commit()
+
+    asyncio.get_event_loop().run_until_complete(_break_car())
+
+    r = client.patch(
+        f"/raid/volunteers/{user_volunteer.id}/validate",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 400
+    assert "car_seats" in r.json()["detail"]
+
+
+def test_validate_volunteer_success(client: TestClient) -> None:
+    async def _restore():
+        async with get_TestingSessionLocal()() as db:
+            await db.execute(
+                update(models_raid.RaidVolunteer)
+                .where(
+                    models_raid.RaidVolunteer.user_id == user_volunteer.id,
+                    models_raid.RaidVolunteer.edition_id == active_edition.id,
+                )
+                .values(has_car=True, car_seats=4),
+            )
+            await db.commit()
+
+    asyncio.get_event_loop().run_until_complete(_restore())
+
+    r = client.patch(
+        f"/raid/volunteers/{user_volunteer.id}/validate",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 204
+
+
+def test_delete_validated_volunteer_self_forbidden(client: TestClient) -> None:
+    r = client.delete(
+        f"/raid/volunteers/{user_volunteer.id}",
+        headers={"Authorization": f"Bearer {token_volunteer}"},
+    )
+    assert r.status_code == 403
+
+
+def test_delete_validated_volunteer_as_admin(client: TestClient) -> None:
+    r = client.delete(
+        f"/raid/volunteers/{user_volunteer.id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 204
+
+
+def test_get_volunteer_me_after_delete(client: TestClient) -> None:
+    r = client.get(
+        "/raid/volunteers/me",
+        headers={"Authorization": f"Bearer {token_volunteer}"},
+    )
+    assert r.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Raw CRUD integration tests (edition-aware)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_active_edition_crud() -> None:
+    async with get_TestingSessionLocal()() as db:
+        edition = await cruds_raid.get_active_edition(db)
+        assert edition is not None
+        assert edition.id == active_edition.id
+
+
+@pytest.mark.asyncio
+async def test_get_all_participants_scoped_by_edition() -> None:
+    async with get_TestingSessionLocal()() as db:
+        all_here = await cruds_raid.get_all_participants(active_edition.id, db)
+        assert len(all_here) >= 3
+        drafts = await cruds_raid.get_all_participants(
+            active_edition.id,
+            db,
+            status=RaidRegistrationStatus.draft,
+        )
+        assert all(p.status == RaidRegistrationStatus.draft for p in drafts)
+
+
+@pytest.mark.asyncio
+async def test_is_user_a_participant_true_and_false() -> None:
+    async with get_TestingSessionLocal()() as db:
+        assert await cruds_raid.is_user_a_participant(
+            user_second.id, active_edition.id, db,
+        )
+        assert not await cruds_raid.is_user_a_participant(
+            user_no_raid.id, active_edition.id, db,
+        )
+
+
+@pytest.mark.asyncio
+async def test_get_team_by_participant_id_finds_both_roles() -> None:
+    async with get_TestingSessionLocal()() as db:
+        captain_team = await cruds_raid.get_team_by_participant_id(
+            user_captain.id, active_edition.id, db,
+        )
+        second_team = await cruds_raid.get_team_by_participant_id(
+            user_second.id, active_edition.id, db,
+        )
+        assert captain_team is not None
+        assert second_team is not None
+        assert captain_team.id == second_team.id
+
+
+@pytest.mark.asyncio
+async def test_get_number_of_teams_counts() -> None:
+    async with get_TestingSessionLocal()() as db:
+        n = await cruds_raid.get_number_of_teams(active_edition.id, db)
+        assert n >= 2
+
+
+@pytest.mark.asyncio
+async def test_volunteer_crud_roundtrip() -> None:
+    user = await create_user_with_groups([])
+    await _set_user_identity(user.id, "+33600000001", datetime.date(1998, 1, 1))
+
+    async with get_TestingSessionLocal()() as db:
+        v = models_raid.RaidVolunteer(
+            user_id=user.id,
+            edition_id=active_edition.id,
+            created_at=datetime.datetime.now(tz=datetime.UTC),
+            validated=False,
+            cancelled=False,
+        )
+        await cruds_raid.create_volunteer(v, db)
+        await db.commit()
+    async with get_TestingSessionLocal()() as db:
+        got = await cruds_raid.get_volunteer_by_user_id(
+            user.id, active_edition.id, db,
+        )
+        assert got is not None
+        assert got.validated is False
+
+        all_v = await cruds_raid.get_all_volunteers_by_edition(
+            active_edition.id, db,
+        )
+        assert any(x.user_id == user.id for x in all_v)
+
+        validated = await cruds_raid.get_all_volunteers_by_edition(
+            active_edition.id, db, validated=True,
+        )
+        assert not any(x.user_id == user.id for x in validated)
+
+        await cruds_raid.update_volunteer_validation(
+            user.id, active_edition.id, True, db,
+        )
+        await db.commit()
+
+    async with get_TestingSessionLocal()() as db:
+        re_read = await cruds_raid.get_volunteer_by_user_id(
+            user.id, active_edition.id, db,
+        )
+        assert re_read is not None
+        assert re_read.validated is True
+
+
+@pytest.mark.asyncio
+async def test_edition_crud_create_read_delete() -> None:
+    async with get_TestingSessionLocal()() as db:
+        new_edition = models_raid.RaidEdition(
+            id=uuid.uuid4(),
+            year=2019,
+            name="Legacy",
+            start_date=None,
+            end_date=None,
+            registering_end_date=None,
+            active=False,
+            inscription_enabled=False,
+        )
+        await cruds_raid.create_edition(new_edition, db)
+        await db.commit()
+    async with get_TestingSessionLocal()() as db:
+        all_editions = await cruds_raid.get_all_editions(db)
+        assert any(e.id == new_edition.id for e in all_editions)
+        await cruds_raid.delete_edition(new_edition.id, db)
+        await db.commit()
