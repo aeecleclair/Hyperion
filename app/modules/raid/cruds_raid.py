@@ -1,12 +1,17 @@
 from collections.abc import Sequence
 from datetime import UTC, datetime
+from uuid import UUID
 
-from sqlalchemy import delete, or_, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.modules.raid import models_raid, schemas_raid
-from app.modules.raid.raid_type import Difficulty, DocumentValidation
+from app.modules.raid.raid_type import (
+    Difficulty,
+    DocumentValidation,
+    RaidRegistrationStatus,
+)
 
 
 async def create_participant(
@@ -19,105 +24,147 @@ async def create_participant(
 
 
 async def get_all_participants(
+    edition_id: UUID,
     db: AsyncSession,
+    status: RaidRegistrationStatus | None = None,
 ) -> Sequence[models_raid.RaidParticipant]:
-    participants = await db.execute(
-        select(models_raid.RaidParticipant).options(
-            # Since there is nested classes in the RaidParticipant model, we need to load all the related data
-            selectinload("*"),
-        ),
+    stmt = (
+        select(models_raid.RaidParticipant)
+        .where(models_raid.RaidParticipant.edition_id == edition_id)
+        .options(selectinload("*"))
     )
+    if status is not None:
+        stmt = stmt.where(models_raid.RaidParticipant.status == status)
+    participants = await db.execute(stmt)
     return participants.scalars().all()
 
 
 async def update_participant(
-    participant_id: str,
-    participant: schemas_raid.RaidParticipantUpdate,
-    is_minor: bool | None,
+    user_id: str,
+    edition_id: UUID,
+    values: dict,
     db: AsyncSession,
 ) -> None:
-    query = (
+    if not values:
+        return
+    await db.execute(
         update(models_raid.RaidParticipant)
-        .where(models_raid.RaidParticipant.id == participant_id)
-        .values(**participant.model_dump(exclude_none=True))
+        .where(
+            models_raid.RaidParticipant.user_id == user_id,
+            models_raid.RaidParticipant.edition_id == edition_id,
+        )
+        .values(**values),
     )
-
-    if is_minor:
-        query = query.values(is_minor=is_minor)
-    await db.execute(query)
     await db.flush()
 
 
 async def update_participant_minority(
-    participant_id: str,
+    user_id: str,
+    edition_id: UUID,
     is_minor: bool,
     db: AsyncSession,
 ) -> None:
     await db.execute(
         update(models_raid.RaidParticipant)
-        .where(models_raid.RaidParticipant.id == participant_id)
+        .where(
+            models_raid.RaidParticipant.user_id == user_id,
+            models_raid.RaidParticipant.edition_id == edition_id,
+        )
         .values(is_minor=is_minor),
+    )
+    await db.flush()
+
+
+async def update_participant_status(
+    user_id: str,
+    edition_id: UUID,
+    status: RaidRegistrationStatus,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_raid.RaidParticipant)
+        .where(
+            models_raid.RaidParticipant.user_id == user_id,
+            models_raid.RaidParticipant.edition_id == edition_id,
+        )
+        .values(status=status),
     )
     await db.flush()
 
 
 async def is_user_a_participant(
     user_id: str,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> bool:
-    participant = await db.execute(
-        select(models_raid.RaidParticipant).where(
-            models_raid.RaidParticipant.id == user_id,
+    result = await db.execute(
+        select(models_raid.RaidParticipant.user_id).where(
+            models_raid.RaidParticipant.user_id == user_id,
+            models_raid.RaidParticipant.edition_id == edition_id,
         ),
     )
-    return bool(participant.scalars().first())
+    return result.first() is not None
 
 
 async def get_team_by_participant_id(
-    participant_id: str,
+    user_id: str,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> models_raid.RaidTeam | None:
     team = await db.execute(
         select(models_raid.RaidTeam)
         .where(
+            models_raid.RaidTeam.edition_id == edition_id,
             or_(
-                models_raid.RaidTeam.captain_id == participant_id,
-                models_raid.RaidTeam.second_id == participant_id,
+                models_raid.RaidTeam.captain_id == user_id,
+                models_raid.RaidTeam.second_id == user_id,
             ),
         )
-        .options(
-            # Since there is nested classes in the RaidTeam model, we need to load all the related data
-            selectinload("*"),
-        ),
+        .options(selectinload("*")),
     )
     return team.scalars().first()
 
 
 async def get_all_teams(
+    edition_id: UUID,
     db: AsyncSession,
 ) -> Sequence[models_raid.RaidTeam]:
     teams = await db.execute(
-        select(models_raid.RaidTeam).options(
-            # Since there is nested classes in the RaidTeam model, we need to load all the related data
-            selectinload("*"),
-        ),
+        select(models_raid.RaidTeam)
+        .where(models_raid.RaidTeam.edition_id == edition_id)
+        .options(selectinload("*")),
     )
     return teams.scalars().all()
 
 
 async def get_all_validated_teams(
+    edition_id: UUID,
     db: AsyncSession,
 ) -> Sequence[models_raid.RaidTeam]:
-    teams = await db.execute(
-        select(models_raid.RaidTeam).options(
-            # Since there is nested classes in the RaidTeam model, we need to load all the related data
-            selectinload("*"),
-        ),
+    """Validated = captain AND second both have status=validated."""
+    Captain = models_raid.RaidParticipant.__table__.alias("captain_p")  # noqa: N806
+    Second = models_raid.RaidParticipant.__table__.alias("second_p")  # noqa: N806
+    stmt = (
+        select(models_raid.RaidTeam)
+        .where(models_raid.RaidTeam.edition_id == edition_id)
+        .join(
+            Captain,
+            (Captain.c.user_id == models_raid.RaidTeam.captain_id)
+            & (Captain.c.edition_id == models_raid.RaidTeam.edition_id),
+        )
+        .join(
+            Second,
+            (Second.c.user_id == models_raid.RaidTeam.second_id)
+            & (Second.c.edition_id == models_raid.RaidTeam.edition_id),
+        )
+        .where(
+            Captain.c.status == RaidRegistrationStatus.validated,
+            Second.c.status == RaidRegistrationStatus.validated,
+        )
+        .options(selectinload("*"))
     )
-    teams_found = teams.scalars().all()
-    # We can not use a where clause because the validation_progress is a Python property
-    # and is not usable in a SQL query
-    return list(filter(lambda team: team.validation_progress == 100, teams_found))
+    teams = await db.execute(stmt)
+    return teams.scalars().all()
 
 
 async def get_team_by_id(
@@ -127,10 +174,7 @@ async def get_team_by_id(
     team = await db.execute(
         select(models_raid.RaidTeam)
         .where(models_raid.RaidTeam.id == team_id)
-        .options(
-            # Since there is nested classes in the RaidTeam model, we need to load all the related data
-            selectinload("*"),
-        ),
+        .options(selectinload("*")),
     )
     return team.scalars().first()
 
@@ -148,10 +192,13 @@ async def update_team(
     team: schemas_raid.RaidTeamUpdate,
     db: AsyncSession,
 ) -> None:
+    values = team.model_dump(exclude_none=True)
+    if not values:
+        return
     await db.execute(
         update(models_raid.RaidTeam)
         .where(models_raid.RaidTeam.id == team_id)
-        .values(**team.model_dump(exclude_none=True)),
+        .values(**values),
     )
     await db.flush()
 
@@ -183,21 +230,28 @@ async def update_team_second_id(
 
 
 async def delete_participant(
-    participant_id: str,
+    user_id: str,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> None:
     await db.execute(
         delete(models_raid.RaidParticipant).where(
-            models_raid.RaidParticipant.id == participant_id,
+            models_raid.RaidParticipant.user_id == user_id,
+            models_raid.RaidParticipant.edition_id == edition_id,
         ),
     )
     await db.flush()
 
 
 async def delete_all_participant(
+    edition_id: UUID,
     db: AsyncSession,
 ) -> None:
-    await db.execute(delete(models_raid.RaidParticipant))
+    await db.execute(
+        delete(models_raid.RaidParticipant).where(
+            models_raid.RaidParticipant.edition_id == edition_id,
+        ),
+    )
     await db.flush()
 
 
@@ -214,9 +268,14 @@ async def delete_team_invite_tokens(
 
 
 async def delete_all_invite_tokens(
+    edition_id: UUID,
     db: AsyncSession,
 ) -> None:
-    await db.execute(delete(models_raid.InviteToken))
+    await db.execute(
+        delete(models_raid.InviteToken).where(
+            models_raid.InviteToken.edition_id == edition_id,
+        ),
+    )
     await db.flush()
 
 
@@ -231,9 +290,14 @@ async def delete_team(
 
 
 async def delete_all_teams(
+    edition_id: UUID,
     db: AsyncSession,
 ) -> None:
-    await db.execute(delete(models_raid.RaidTeam))
+    await db.execute(
+        delete(models_raid.RaidTeam).where(
+            models_raid.RaidTeam.edition_id == edition_id,
+        ),
+    )
     await db.flush()
 
 
@@ -285,13 +349,17 @@ async def update_security_file_id(
 
 
 async def assign_security_file(
-    participant_id: str,
+    user_id: str,
+    edition_id: UUID,
     security_file_id: str,
     db: AsyncSession,
 ) -> None:
     await db.execute(
         update(models_raid.RaidParticipant)
-        .where(models_raid.RaidParticipant.id == participant_id)
+        .where(
+            models_raid.RaidParticipant.user_id == user_id,
+            models_raid.RaidParticipant.edition_id == edition_id,
+        )
         .values(security_file_id=security_file_id),
     )
     await db.flush()
@@ -307,14 +375,18 @@ async def create_document(
 
 
 async def assign_document(
-    participant_id: str,
+    user_id: str,
+    edition_id: UUID,
     document_id: str | None,
     document_key: str,
     db: AsyncSession,
 ) -> None:
     await db.execute(
         update(models_raid.RaidParticipant)
-        .where(models_raid.RaidParticipant.id == participant_id)
+        .where(
+            models_raid.RaidParticipant.user_id == user_id,
+            models_raid.RaidParticipant.edition_id == edition_id,
+        )
         .values({document_key: document_id}),
     )
     await db.flush()
@@ -354,6 +426,7 @@ async def get_user_by_document_id(
                 models_raid.RaidParticipant.medical_certificate_id == document_id,
                 models_raid.RaidParticipant.student_card_id == document_id,
                 models_raid.RaidParticipant.raid_rules_id == document_id,
+                models_raid.RaidParticipant.parent_authorization_id == document_id,
             ),
         ),
     )
@@ -391,65 +464,83 @@ async def mark_document_as_newly_updated(
         .where(models_raid.Document.id == document_id)
         .values(uploaded_at=datetime.now(tz=UTC).date(), validation="pending"),
     )
-
     await db.flush()
 
 
 async def confirm_payment(
-    participant_id: str,
+    user_id: str,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> None:
     await db.execute(
         update(models_raid.RaidParticipant)
-        .where(models_raid.RaidParticipant.id == participant_id)
+        .where(
+            models_raid.RaidParticipant.user_id == user_id,
+            models_raid.RaidParticipant.edition_id == edition_id,
+        )
         .values(payment=True),
     )
     await db.flush()
 
 
 async def confirm_t_shirt_payment(
-    participant_id: str,
+    user_id: str,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> None:
     await db.execute(
         update(models_raid.RaidParticipant)
-        .where(models_raid.RaidParticipant.id == participant_id)
+        .where(
+            models_raid.RaidParticipant.user_id == user_id,
+            models_raid.RaidParticipant.edition_id == edition_id,
+        )
         .values(t_shirt_payment=True),
     )
     await db.flush()
 
 
 async def validate_attestation_on_honour(
-    participant_id: str,
+    user_id: str,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> None:
     await db.execute(
         update(models_raid.RaidParticipant)
-        .where(models_raid.RaidParticipant.id == participant_id)
+        .where(
+            models_raid.RaidParticipant.user_id == user_id,
+            models_raid.RaidParticipant.edition_id == edition_id,
+        )
         .values(attestation_on_honour=True),
     )
     await db.flush()
 
 
-async def get_participant_by_id(
-    participant_id: str,
+async def get_participant_by_user_id(
+    user_id: str,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> models_raid.RaidParticipant | None:
     participant = await db.execute(
         select(models_raid.RaidParticipant)
-        .where(models_raid.RaidParticipant.id == participant_id)
-        .options(
-            selectinload("*"),
-        ),
+        .where(
+            models_raid.RaidParticipant.user_id == user_id,
+            models_raid.RaidParticipant.edition_id == edition_id,
+        )
+        .options(selectinload("*")),
     )
     return participant.scalars().first()
 
 
 async def get_number_of_teams(
+    edition_id: UUID,
     db: AsyncSession,
 ) -> int:
-    result = await db.execute(select(models_raid.RaidTeam))
-    return len(result.scalars().all())
+    result = await db.execute(
+        select(func.count())
+        .select_from(models_raid.RaidTeam)
+        .where(models_raid.RaidTeam.edition_id == edition_id),
+    )
+    return result.scalar() or 0
 
 
 async def get_security_file_by_security_id(
@@ -470,7 +561,6 @@ async def create_invite_token(
 ) -> models_raid.InviteToken:
     db.add(invite)
     await db.flush()
-
     return invite
 
 
@@ -506,35 +596,6 @@ async def delete_invite_token(
     await db.flush()
 
 
-async def are_user_in_the_same_team(
-    participant_id_1: str,
-    participant_id_2: str,
-    db: AsyncSession,
-) -> bool:
-    return (
-        await get_team_if_users_in_the_same_team(
-            participant_id_1=participant_id_1,
-            participant_id_2=participant_id_2,
-            db=db,
-        )
-        is not None
-    )
-
-
-async def get_team_if_users_in_the_same_team(
-    participant_id_1: str,
-    participant_id_2: str,
-    db: AsyncSession,
-) -> models_raid.RaidTeam | None:
-    team_1 = await get_team_by_participant_id(participant_id_1, db)
-    team_2 = await get_team_by_participant_id(participant_id_2, db)
-    if team_1 is None or team_2 is None:
-        return None
-    if team_1.id != team_2.id:
-        return None
-    return team_1
-
-
 async def update_team_file_id(
     team_id: str,
     file_id: str,
@@ -548,28 +609,40 @@ async def update_team_file_id(
     await db.flush()
 
 
-async def get_number_of_team_by_difficulty(
+async def get_max_team_number_by_difficulty(
     difficulty: Difficulty,
+    edition_id: UUID,
     db: AsyncSession,
 ) -> int:
-    result = await db.execute(
-        select(models_raid.RaidTeam).where(
+    """Returns the highest team number among validated teams for a difficulty.
+
+    Validated = both captain and second have status=validated.
+    """
+    Captain = models_raid.RaidParticipant.__table__.alias("captain_p")  # noqa: N806
+    Second = models_raid.RaidParticipant.__table__.alias("second_p")  # noqa: N806
+    stmt = (
+        select(func.max(models_raid.RaidTeam.number))
+        .where(
+            models_raid.RaidTeam.edition_id == edition_id,
             models_raid.RaidTeam.difficulty == difficulty,
-        ),
-    )
-    teams_found = result.scalars().all()
-    # We can not use a where clause because the validation_progress is a Python property
-    # and is not usable in a SQL query
-    team_numbers = [
-        team.number if team.number is not None and team.number >= 0 else 0
-        for team in filter(
-            lambda team: team.validation_progress == 100
-            and team.number is not None
-            and team.number >= 0,
-            teams_found,
         )
-    ]
-    return max(team_numbers) if team_numbers else 0
+        .join(
+            Captain,
+            (Captain.c.user_id == models_raid.RaidTeam.captain_id)
+            & (Captain.c.edition_id == models_raid.RaidTeam.edition_id),
+        )
+        .join(
+            Second,
+            (Second.c.user_id == models_raid.RaidTeam.second_id)
+            & (Second.c.edition_id == models_raid.RaidTeam.edition_id),
+        )
+        .where(
+            Captain.c.status == RaidRegistrationStatus.validated,
+            Second.c.status == RaidRegistrationStatus.validated,
+        )
+    )
+    result = await db.execute(stmt)
+    return result.scalar() or 0
 
 
 async def create_participant_checkout(
@@ -582,7 +655,6 @@ async def create_participant_checkout(
 
 
 async def get_participant_checkout_by_checkout_id(
-    # TODO: use UUID
     checkout_id: str,
     db: AsyncSession,
 ) -> models_raid.RaidParticipantCheckout | None:
@@ -592,3 +664,189 @@ async def get_participant_checkout_by_checkout_id(
         ),
     )
     return checkout.scalars().first()
+
+
+# --- Edition CRUDs ------------------------------------------------------
+
+
+async def get_all_editions(
+    db: AsyncSession,
+) -> Sequence[models_raid.RaidEdition]:
+    result = await db.execute(select(models_raid.RaidEdition))
+    return result.scalars().all()
+
+
+async def get_edition_by_id(
+    edition_id: UUID,
+    db: AsyncSession,
+) -> models_raid.RaidEdition | None:
+    result = await db.execute(
+        select(models_raid.RaidEdition).where(
+            models_raid.RaidEdition.id == edition_id,
+        ),
+    )
+    return result.scalars().first()
+
+
+async def get_active_edition(
+    db: AsyncSession,
+) -> models_raid.RaidEdition | None:
+    result = await db.execute(
+        select(models_raid.RaidEdition).where(
+            models_raid.RaidEdition.active == True,  # noqa: E712
+        ),
+    )
+    return result.scalars().first()
+
+
+async def create_edition(
+    edition: models_raid.RaidEdition,
+    db: AsyncSession,
+) -> models_raid.RaidEdition:
+    db.add(edition)
+    await db.flush()
+    return edition
+
+
+async def update_edition(
+    edition_id: UUID,
+    edit: schemas_raid.RaidEditionEdit,
+    db: AsyncSession,
+) -> None:
+    values = edit.model_dump(exclude_none=True)
+    if not values:
+        return
+    await db.execute(
+        update(models_raid.RaidEdition)
+        .where(models_raid.RaidEdition.id == edition_id)
+        .values(**values),
+    )
+    await db.flush()
+
+
+async def delete_edition(
+    edition_id: UUID,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        delete(models_raid.RaidEdition).where(
+            models_raid.RaidEdition.id == edition_id,
+        ),
+    )
+    await db.flush()
+
+
+async def deactivate_all_editions(
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_raid.RaidEdition).values(active=False),
+    )
+    await db.flush()
+
+
+# --- Volunteer CRUDs ---------------------------------------------------
+
+
+async def create_volunteer(
+    volunteer: models_raid.RaidVolunteer,
+    db: AsyncSession,
+) -> models_raid.RaidVolunteer:
+    db.add(volunteer)
+    await db.flush()
+    return volunteer
+
+
+async def get_volunteer_by_user_id(
+    user_id: str,
+    edition_id: UUID,
+    db: AsyncSession,
+) -> models_raid.RaidVolunteer | None:
+    result = await db.execute(
+        select(models_raid.RaidVolunteer).where(
+            models_raid.RaidVolunteer.user_id == user_id,
+            models_raid.RaidVolunteer.edition_id == edition_id,
+        ),
+    )
+    return result.scalars().first()
+
+
+async def get_all_volunteers_by_edition(
+    edition_id: UUID,
+    db: AsyncSession,
+    validated: bool | None = None,
+) -> Sequence[models_raid.RaidVolunteer]:
+    stmt = select(models_raid.RaidVolunteer).where(
+        models_raid.RaidVolunteer.edition_id == edition_id,
+    )
+    if validated is not None:
+        stmt = stmt.where(models_raid.RaidVolunteer.validated == validated)
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+async def update_volunteer(
+    user_id: str,
+    edition_id: UUID,
+    values: dict,
+    db: AsyncSession,
+) -> None:
+    if not values:
+        return
+    await db.execute(
+        update(models_raid.RaidVolunteer)
+        .where(
+            models_raid.RaidVolunteer.user_id == user_id,
+            models_raid.RaidVolunteer.edition_id == edition_id,
+        )
+        .values(**values),
+    )
+    await db.flush()
+
+
+async def update_volunteer_validation(
+    user_id: str,
+    edition_id: UUID,
+    validated: bool,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_raid.RaidVolunteer)
+        .where(
+            models_raid.RaidVolunteer.user_id == user_id,
+            models_raid.RaidVolunteer.edition_id == edition_id,
+        )
+        .values(validated=validated),
+    )
+    await db.flush()
+
+
+async def update_volunteer_cancellation(
+    user_id: str,
+    edition_id: UUID,
+    cancelled: bool,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_raid.RaidVolunteer)
+        .where(
+            models_raid.RaidVolunteer.user_id == user_id,
+            models_raid.RaidVolunteer.edition_id == edition_id,
+        )
+        .values(cancelled=cancelled),
+    )
+    await db.flush()
+
+
+async def delete_volunteer(
+    user_id: str,
+    edition_id: UUID,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        delete(models_raid.RaidVolunteer).where(
+            models_raid.RaidVolunteer.user_id == user_id,
+            models_raid.RaidVolunteer.edition_id == edition_id,
+        ),
+    )
+    await db.flush()
