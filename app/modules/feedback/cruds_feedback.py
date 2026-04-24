@@ -35,7 +35,7 @@ async def add_feedback(
 
 
 async def delete_feedback(db: AsyncSession, feedback_id: UUID):
-    db.execute(
+    await db.execute(
         delete(models_feedback.Feedback).where(
             models_feedback.Feedback.id == feedback_id,
         ),
