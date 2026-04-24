@@ -1,12 +1,22 @@
-from datetime import date
+from datetime import date, datetime
+from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
+from app.core.users.schemas_users import CoreUser
 from app.modules.raid.raid_type import (
     Difficulty,
     DocumentType,
     DocumentValidation,
     MeetingPlace,
+    RaidRegistrationStatus,
+    Situation,
     Size,
 )
 
@@ -54,50 +64,75 @@ class SecurityFile(SecurityFileBase):
 
 
 class RaidParticipantBase(BaseModel):
-    name: str
-    firstname: str
-    birthday: date
-    phone: str
-    email: str
+    """Shape used when the user first self-enrols.
+
+    Identity fields (name, firstname, email, birthday, phone) are not here:
+    they live on CoreUser and are read via the `user` relationship on the
+    read schemas below.
+    """
 
 
 class RaidParticipantPreview(RaidParticipantBase):
-    id: str
-    bike_size: Size | None
-    t_shirt_size: Size | None
-    situation: str | None
-    validation_progress: float
+    user_id: str
+    edition_id: UUID
+    status: RaidRegistrationStatus
+    bike_size: Size | None = None
+    t_shirt_size: Size | None = None
+    situation: Situation | None = None
     payment: bool
     t_shirt_payment: bool
-    number_of_document: int
-    number_of_validated_document: int
+    user: CoreUser
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RaidParticipant(RaidParticipantPreview):
-    address: str | None
+    address: str | None = None
     other_school: str | None = None
     company: str | None = None
     diet: str | None = None
-    id_card: Document | None
-    medical_certificate: Document | None
-    security_file: SecurityFile | None
+    id_card: Document | None = None
+    medical_certificate: Document | None = None
+    security_file: SecurityFile | None = None
     student_card: Document | None = None
     raid_rules: Document | None = None
     parent_authorization: Document | None = None
     attestation_on_honour: bool
     is_minor: bool
 
+    @computed_field
+    @property
+    def validation_progress(self) -> float:
+        from app.modules.raid.utils.validation_checker import (
+            compute_participant_progress,
+        )
+
+        return compute_participant_progress(self)
+
+    @computed_field
+    @property
+    def number_of_document(self) -> int:
+        from app.modules.raid.utils.validation_checker import (
+            count_total_required_documents,
+        )
+
+        return count_total_required_documents(self)
+
+    @computed_field
+    @property
+    def number_of_validated_document(self) -> int:
+        from app.modules.raid.utils.validation_checker import (
+            count_accepted_documents,
+        )
+
+        return count_accepted_documents(self)
+
 
 class RaidParticipantUpdate(BaseModel):
-    name: str | None = None
-    firstname: str | None = None
-    birthday: date | None = None
     address: str | None = None
-    phone: str | None = None
-    email: str | None = None
     bike_size: Size | None = None
     t_shirt_size: Size | None = None
-    situation: str | None = None
+    situation: Situation | None = None
     other_school: str | None = None
     company: str | None = None
     diet: str | None = None
@@ -109,6 +144,32 @@ class RaidParticipantUpdate(BaseModel):
     raid_rules_id: str | None = None
     parent_authorization_id: str | None = None
 
+    @field_validator("situation", mode="before")
+    @classmethod
+    def _coerce_legacy_situation(cls, value):
+        """Accept the legacy lowercase `otherschool` during the grace period."""
+        if isinstance(value, str):
+            if value.startswith("otherschool"):
+                return Situation.otherSchool
+            if value == "otherSchool":
+                return Situation.otherSchool
+            if value == "centrale":
+                return Situation.centrale
+            if value == "corporatePartner":
+                return Situation.corporatePartner
+            if value == "other":
+                return Situation.other
+        return value
+
+    @model_validator(mode="after")
+    def _check_situation_consistency(self):
+        if self.situation == Situation.otherSchool and self.other_school is None:
+            msg = "situation=otherSchool requires other_school to be set"
+            raise ValueError(msg)
+        if self.situation == Situation.centrale and self.other_school:
+            self.other_school = None
+        return self
+
 
 class RaidTeamBase(BaseModel):
     name: str
@@ -116,23 +177,53 @@ class RaidTeamBase(BaseModel):
 
 class RaidTeamPreview(RaidTeamBase):
     id: str
-    number: int | None
+    edition_id: UUID
+    number: int | None = None
     captain: RaidParticipantPreview
-    second: RaidParticipantPreview | None
-    difficulty: Difficulty | None
-    meeting_place: MeetingPlace | None
-    validation_progress: float
+    second: RaidParticipantPreview | None = None
+    difficulty: Difficulty | None = None
+    meeting_place: MeetingPlace | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @computed_field
+    @property
+    def validation_progress(self) -> float:
+        from app.modules.raid.utils.validation_checker import compute_team_progress
+
+        captain_progress = (
+            self.captain.validation_progress
+            if isinstance(self.captain, RaidParticipant)
+            else 0
+        )
+        second_progress = (
+            self.second.validation_progress
+            if isinstance(self.second, RaidParticipant)
+            else 0
+        )
+        filled = int(self.difficulty is not None) + int(self.meeting_place is not None)
+        return (filled / 2) * 10 + (captain_progress + second_progress) * 0.45
 
 
 class RaidTeam(RaidTeamBase):
     id: str
-    number: int | None
+    edition_id: UUID
+    number: int | None = None
     captain: RaidParticipant
-    second: RaidParticipant | None
-    difficulty: Difficulty | None
-    meeting_place: MeetingPlace | None
-    validation_progress: float
-    file_id: str | None
+    second: RaidParticipant | None = None
+    difficulty: Difficulty | None = None
+    meeting_place: MeetingPlace | None = None
+    file_id: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @computed_field
+    @property
+    def validation_progress(self) -> float:
+        captain_progress = self.captain.validation_progress
+        second_progress = self.second.validation_progress if self.second else 0
+        filled = int(self.difficulty is not None) + int(self.meeting_place is not None)
+        return (filled / 2) * 10 + (captain_progress + second_progress) * 0.45
 
 
 class RaidTeamUpdate(BaseModel):
@@ -162,5 +253,81 @@ class PaymentUrl(BaseModel):
 
 
 class RaidParticipantCheckout(BaseModel):
-    participant_id: str
+    participant_user_id: str
+    edition_id: UUID
     checkout_id: str
+
+
+class RaidEditionBase(BaseModel):
+    name: str
+    year: int
+    start_date: date | None = None
+    end_date: date | None = None
+    registering_end_date: date | None = None
+    active: bool = False
+    inscription_enabled: bool = False
+
+
+class RaidEdition(RaidEditionBase):
+    id: UUID
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RaidEditionEdit(BaseModel):
+    name: str | None = None
+    year: int | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+    registering_end_date: date | None = None
+    active: bool | None = None
+    inscription_enabled: bool | None = None
+
+
+class RaidVolunteerBase(BaseModel):
+    diet: str | None = None
+    allergy: str | None = None
+    has_car: bool = False
+    car_seats: int | None = None
+    is_special_driver: bool = False
+    is_utility_vehicle_driver: bool = False
+    is_parcours_helper: bool = False
+
+    @model_validator(mode="after")
+    def _check_car_seats_consistency(self):
+        if self.has_car and (self.car_seats is None or self.car_seats <= 0):
+            msg = "has_car=True requires car_seats > 0"
+            raise ValueError(msg)
+        if not self.has_car:
+            self.car_seats = None
+        return self
+
+
+class RaidVolunteer(RaidVolunteerBase):
+    user_id: str
+    edition_id: UUID
+    created_at: datetime
+    validated: bool
+    cancelled: bool
+    user: CoreUser
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RaidVolunteerEdit(BaseModel):
+    diet: str | None = None
+    allergy: str | None = None
+    has_car: bool | None = None
+    car_seats: int | None = None
+    is_special_driver: bool | None = None
+    is_utility_vehicle_driver: bool | None = None
+    is_parcours_helper: bool | None = None
+
+    @model_validator(mode="after")
+    def _check_car_seats_consistency(self):
+        if self.has_car is True and (self.car_seats is None or self.car_seats <= 0):
+            msg = "has_car=True requires car_seats > 0"
+            raise ValueError(msg)
+        if self.has_car is False:
+            self.car_seats = None
+        return self
