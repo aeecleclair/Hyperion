@@ -193,9 +193,9 @@ async def init_objects():
         id=uuid4(),
         event_id=event1.id,
         name="Category 1",
-        quota=2,
+        quota=5,
         user_quota=1,
-        used_quota=1,
+        used_quota=2,
         disabled=False,
         required_mebership=None,
         price=100,
@@ -740,6 +740,7 @@ async def test_create_category(client: TestClient):
         json=new_category_data,
         headers={"Authorization": f"Bearer {admin_user_token}"},
     )
+    print(response.json())
     assert response.status_code == 201
     created_category = response.json()
     assert created_category["name"] == new_category_data["name"]
@@ -777,7 +778,7 @@ async def test_create_category_with_incorrect_event_id(client: TestClient):
         json=new_category_data,
         headers={"Authorization": f"Bearer {admin_user_token}"},
     )
-    assert response.status_code == 400
+    assert response.status_code == 404
 
 
 # test create category with incorrect sessions ids, should fail
@@ -795,7 +796,7 @@ async def test_create_category_with_incorrect_sessions_ids(client: TestClient):
         json=new_category_data,
         headers={"Authorization": f"Bearer {admin_user_token}"},
     )
-    assert response.status_code == 400
+    assert response.status_code == 404
 
 
 async def test_create_category_with_sessions_from_different_event(client: TestClient):
@@ -825,24 +826,7 @@ async def test_create_category_with_sessions_from_different_event(client: TestCl
         json=new_category_data,
         headers={"Authorization": f"Bearer {admin_user_token}"},
     )
-    assert response.status_code == 400
-
-
-# test create category with quota less than used_quota, should fail
-async def test_create_category_with_quota_less_than_used_quota(client: TestClient):
-    new_category_data = {
-        "name": "New Category",
-        "quota": 0,  # category1 has used_quota=1
-        "user_quota": 1,
-        "event_id": str(event1.id),
-        "price": 50,
-    }
-    response = client.post(
-        "/ticketing/categories",
-        json=new_category_data,
-        headers={"Authorization": f"Bearer {admin_user_token}"},
-    )
-    assert response.status_code == 400
+    assert response.status_code == 404
 
 
 # test create category with negative price, should fail
@@ -860,3 +844,136 @@ async def test_create_category_with_negative_price(client: TestClient):
         headers={"Authorization": f"Bearer {admin_user_token}"},
     )
     assert response.status_code == 422
+
+
+# test update category as admin
+async def test_update_category_as_admin(client: TestClient):
+    update_data = {
+        "name": "Updated Category Name",
+        "price": 200,
+    }
+    response = client.patch(
+        f"/ticketing/categories/{category1.id}",
+        json=update_data,
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 204
+
+
+# test update category as lambda, should fail
+async def test_update_category_as_lambda(client: TestClient):
+    update_data = {
+        "name": "Updated Category Name",
+        "price": 200,
+    }
+    response = client.patch(
+        f"/ticketing/categories/{category1.id}",
+        json=update_data,
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 403
+
+
+# test update category with invalid id, should fail
+async def test_update_category_with_invalid_id(client: TestClient):
+    update_data = {
+        "name": "Updated Category Name",
+        "price": 200,
+    }
+    response = client.patch(
+        f"/ticketing/categories/{uuid4()}",
+        json=update_data,
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 404
+
+
+# test update category with negative price, should fail
+async def test_update_category_with_negative_price(client: TestClient):
+    update_data = {
+        "price": -50,  # Negative price
+    }
+    response = client.patch(
+        f"/ticketing/categories/{category1.id}",
+        json=update_data,
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 422
+
+
+# test update category with quota less than used_quota, should fail
+async def test_update_category_with_quota_less_than_used_quota(client: TestClient):
+    update_data = {
+        "quota": 1,  # category1 has used_quota=1
+    }
+    response = client.patch(
+        f"/ticketing/categories/{category1.id}",
+        json=update_data,
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 400
+
+
+# test delete category as lambda, should fail
+async def test_delete_category_as_lambda(client: TestClient):
+    response = client.delete(
+        f"/ticketing/categories/{category1.id}",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 403
+
+
+# test delete category as admin, should succeed
+async def test_delete_category_as_admin(client: TestClient):
+    # First create a new category to delete
+    to_delete_category = models_ticketing.TicketingCategory(
+        id=uuid4(),
+        event_id=event1.id,
+        name="To Delete Category",
+        quota=2,
+        user_quota=1,
+        used_quota=0,
+        disabled=False,
+        required_mebership=None,
+        price=50,
+    )
+    await add_object_to_db(to_delete_category)
+    response = client.delete(
+        f"/ticketing/categories/{to_delete_category.id}",
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 204
+
+
+# test delete category as admin with tickets, should fail
+async def test_delete_category_as_admin_with_tickets(client: TestClient):
+    # Create a ticket for the category
+    ticket = models_ticketing.TicketingTicket(
+        id=uuid4(),
+        event_id=event1.id,
+        session_id=session1.id,
+        category_id=category1.id,
+        user_id=student_user.id,
+        status="active",
+        nb_scan=0,
+        total=1,
+        created_at=datetime.now(UTC),
+    )
+    await add_object_to_db(ticket)
+    # Try to delete the category with existing tickets
+    response = client.delete(
+        f"/ticketing/categories/{category1.id}",
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 400
+
+
+# test delete category with invalid id, should fail
+async def test_delete_category_with_invalid_id(client: TestClient):
+    response = client.delete(
+        f"/ticketing/categories/{uuid4()}",
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 404
+
+

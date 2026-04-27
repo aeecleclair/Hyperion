@@ -383,57 +383,78 @@ async def get_category_by_id(
 @module.router.get(
     "/ticketing/events/{event_id}/categories/",
     summary="Get all categories for an event",
-    response_model=list[schemas_ticketing.CategoryComplete],
+    response_model=list[schemas_ticketing.CategorySimple],
     status_code=200,
 )
 async def get_categories_by_event(
     event_id: UUID,
     db: AsyncSession = Depends(get_db),
-) -> list[schemas_ticketing.CategoryComplete]:
+) -> list[schemas_ticketing.CategorySimple]:
     """Get all categories for an event."""
     return await cruds_ticketing.get_categories_by_event_id(
-        event_id=event_id, db=db,
+        event_id=event_id,
+        db=db,
     )
 
 
 @module.router.get(
     "/ticketing/sessions/{session_id}/categories/",
     summary="Get all categories for a session",
-    response_model=list[schemas_ticketing.CategoryComplete],
+    response_model=list[schemas_ticketing.CategorySimple],
     status_code=200,
 )
 async def get_categories_by_session(
     session_id: UUID,
     db: AsyncSession = Depends(get_db),
-) -> list[schemas_ticketing.CategoryComplete]:
+) -> list[schemas_ticketing.CategorySimple]:
     """Get all categories for a session."""
     return await cruds_ticketing.get_categories_by_session_id(
-        session_id=session_id, db=db,
+        session_id=session_id,
+        db=db,
     )
 
 
 @module.router.post(
     "/ticketing/categories/",
     summary="Create a new category",
-    response_model=schemas_ticketing.CategoryComplete,
+    response_model=schemas_ticketing.CategorySimple,
     status_code=201,
 )
 async def create_category(
-    category: schemas_ticketing.CategoryBase,
+    category: schemas_ticketing.CategoryCreate,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([TicketingPermissions.manage_events]),
     ),
-) -> schemas_ticketing.CategoryComplete:
+) -> schemas_ticketing.CategorySimple:
     """Create a new category."""
-    category_complete = schemas_ticketing.CategoryComplete(
+    # Verify that the event exists before creating the category.
+    event = await cruds_ticketing.get_event_by_id(
+        event_id=category.event_id,
+        db=db,
+    )
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+    # Verify that the sessions exist before creating the category.
+    if category.sessions is not None:
+        sessions = await cruds_ticketing.get_sessions_by_event_id(
+            db=db,
+            event_id=category.event_id,
+        )
+        sessions_ids = [session.id for session in sessions]
+        if sessions is None or any(session_id not in sessions_ids for session_id in category.sessions):
+            raise HTTPException(
+                status_code=404,
+                detail="One or more sessions not found",
+            )
+    category_simple = schemas_ticketing.CategorySimple(
         **category.model_dump(),
         id=uuid4(),
         used_quota=0,
         disabled=False,
     )
-    await cruds_ticketing.create_category(category=category_complete, db=db)
-    return category_complete
+    await cruds_ticketing.create_category(category=category_simple, db=db)
+    return category_simple
 
 
 @module.router.patch(
@@ -454,6 +475,11 @@ async def update_category(
     stored = await cruds_ticketing.get_category_by_id(category_id=category_id, db=db)
     if stored is None:
         raise HTTPException(status_code=404, detail="Category not found")
+    if category_update.quota is not None and stored.used_quota > category_update.quota:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot set quota less than used quota",
+        )
     await cruds_ticketing.update_category(
         category_id=category_id,
         category_update=category_update,

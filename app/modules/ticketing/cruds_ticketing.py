@@ -344,6 +344,35 @@ async def get_session_by_id(
     )
 
 
+async def get_sessions_by_ids(
+    session_ids: list[UUID],
+    db: AsyncSession,
+) -> list[schemas_ticketing.SessionSimple]:
+    """Get sessions by their IDs."""
+
+    return [
+        schemas_ticketing.SessionSimple(
+            id=session.id,
+            name=session.name,
+            date=session.date,
+            quota=session.quota,
+            user_quota=session.user_quota,
+            used_quota=session.used_quota,
+            disabled=session.disabled,
+            event_id=session.event_id,
+        )
+        for session in (
+            await db.execute(
+                select(models_ticketing.TicketingSession).where(
+                    models_ticketing.TicketingSession.id.in_(session_ids),
+                ),
+            )
+        )
+        .scalars()
+        .all()
+    ]
+
+
 async def create_session(
     db: AsyncSession,
     session: schemas_ticketing.SessionSimple,
@@ -427,9 +456,20 @@ async def get_category_by_id(
         schemas_ticketing.CategoryComplete(
             id=category.id,
             event_id=category.event_id,
-            event=category.event,
             name=category.name,
-            sessions=category.sessions,
+            event=schemas_ticketing.EventSimple(
+                id=category.event.id,
+                organiser_id=category.event.organiser_id,
+                creator_id=category.event.creator_id,
+                name=category.event.name,
+                open_date=category.event.open_date,
+                close_date=category.event.close_date,
+                quota=category.event.quota,
+                user_quota=category.event.user_quota,
+                used_quota=category.event.used_quota,
+                disabled=category.event.disabled,
+            ),
+            sessions=[session.id for session in category.sessions],
             required_mebership=category.required_mebership,
             quota=category.quota,
             user_quota=category.user_quota,
@@ -445,16 +485,14 @@ async def get_category_by_id(
 async def get_categories_by_session_id(
     session_id: UUID,
     db: AsyncSession,
-) -> list[schemas_ticketing.CategoryComplete]:
+) -> list[schemas_ticketing.CategorySimple]:
     """Get all categories for a specific session."""
 
     return [
-        schemas_ticketing.CategoryComplete(
+        schemas_ticketing.CategorySimple(
             id=category.id,
             event_id=category.event_id,
-            event=category.event,
             name=category.name,
-            sessions=category.sessions,
             required_mebership=category.required_mebership,
             quota=category.quota,
             user_quota=category.user_quota,
@@ -480,16 +518,14 @@ async def get_categories_by_session_id(
 async def get_categories_by_event_id(
     event_id: UUID,
     db: AsyncSession,
-) -> list[schemas_ticketing.CategoryComplete]:
+) -> list[schemas_ticketing.CategorySimple]:
     """Get all categories for a specific event."""
 
     return [
-        schemas_ticketing.CategoryComplete(
+        schemas_ticketing.CategorySimple(
             id=category.id,
             event_id=category.event_id,
-            event=category.event,
             name=category.name,
-            sessions=category.sessions,
             required_mebership=category.required_mebership,
             quota=category.quota,
             user_quota=category.user_quota,
@@ -586,9 +622,11 @@ async def get_tickets(
             created_at=ticket.created_at,
             event=ticket.event,
             category=ticket.category,
-            session=ticket.session,
-            status=ticket.status,
-            nb_scan=ticket.nb_scan,
+            session=schemas_ticketing.SessionComplete(
+                id=ticket.session.id,
+                status=ticket.session.status,
+                nb_scan=ticket.session.nb_scan,
+            ),
         )
         for ticket in tickets.scalars().all()
     ]
@@ -597,7 +635,7 @@ async def get_tickets(
 async def get_tickets_by_session_id(
     session_id: UUID,
     db: AsyncSession,
-) -> list[schemas_ticketing.TicketComplete]:
+) -> list[schemas_ticketing.TicketSimple]:
     """Get all tickets for a specific session."""
 
     tickets = await db.execute(
@@ -606,7 +644,7 @@ async def get_tickets_by_session_id(
         ),
     )
     return [
-        schemas_ticketing.TicketComplete(
+        schemas_ticketing.TicketSimple(
             id=ticket.id,
             user_id=ticket.user_id,
             event_id=ticket.event_id,
@@ -615,8 +653,6 @@ async def get_tickets_by_session_id(
             total=ticket.total,
             created_at=ticket.created_at,
             event=ticket.event,
-            category=ticket.category,
-            session=ticket.session,
             status=ticket.status,
             nb_scan=ticket.nb_scan,
         )
@@ -627,7 +663,7 @@ async def get_tickets_by_session_id(
 async def get_tickets_by_user_id(
     user_id: str,
     db: AsyncSession,
-) -> list[schemas_ticketing.TicketComplete]:
+) -> list[schemas_ticketing.TicketSimple]:
     """Get all tickets for a specific user."""
 
     tickets = await db.execute(
@@ -636,7 +672,7 @@ async def get_tickets_by_user_id(
         ),
     )
     return [
-        schemas_ticketing.TicketComplete(
+        schemas_ticketing.TicketSimple(
             id=ticket.id,
             user_id=ticket.user_id,
             event_id=ticket.event_id,
@@ -644,9 +680,6 @@ async def get_tickets_by_user_id(
             session_id=ticket.session_id,
             total=ticket.total,
             created_at=ticket.created_at,
-            event=ticket.event,
-            category=ticket.category,
-            session=ticket.session,
             status=ticket.status,
             nb_scan=ticket.nb_scan,
         )
@@ -681,9 +714,39 @@ async def get_ticket_by_id(
             session_id=ticket.session_id,
             total=ticket.total,
             created_at=ticket.created_at,
-            event=ticket.event,
-            category=ticket.category,
-            session=ticket.session,
+            event=schemas_ticketing.EventSimple(
+                id=ticket.event.id,
+                organiser_id=ticket.event.organiser_id,
+                creator_id=ticket.event.creator_id,
+                name=ticket.event.name,
+                open_date=ticket.event.open_date,
+                close_date=ticket.event.close_date,
+                quota=ticket.event.quota,
+                user_quota=ticket.event.user_quota,
+                used_quota=ticket.event.used_quota,
+                disabled=ticket.event.disabled,
+            ),
+            session=schemas_ticketing.SessionSimple(
+                event_id=ticket.session.event_id,
+                id=ticket.session.id,
+                date=ticket.session.date,
+                name=ticket.session.name,
+                quota=ticket.session.quota,
+                user_quota=ticket.session.user_quota,
+                used_quota=ticket.session.used_quota,
+                disabled=ticket.session.disabled,
+            ),
+            category=schemas_ticketing.CategorySimple(
+                id=ticket.category.id,
+                event_id=ticket.category.event_id,
+                name=ticket.category.name,
+                required_mebership=ticket.category.required_mebership,
+                quota=ticket.category.quota,
+                user_quota=ticket.category.user_quota,
+                used_quota=ticket.category.used_quota,
+                price=ticket.category.price,
+                disabled=ticket.category.disabled,
+            ),
             status=ticket.status,
             nb_scan=ticket.nb_scan,
         )

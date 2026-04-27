@@ -91,7 +91,11 @@ class CategoryBase(BaseModel):
     required_mebership: UUID | None = None
     quota: Annotated[int, Field(gt=0)] | None = None
     user_quota: Annotated[int, Field(gt=0)] | None = None
-    price: int
+    price: Annotated[int, Field(gt=0)]
+
+
+class CategoryCreate(CategoryBase):
+    sessions: list[UUID] | None = None
 
 
 class CategorySimple(CategoryBase):
@@ -137,8 +141,8 @@ class TicketSimple(TicketBase):
 
 
 class TicketComplete(TicketSimple):
-    event: EventComplete
-    category: CategoryComplete
-    session: SessionComplete
+    event: EventSimple
+    category: CategorySimple
+    session: SessionSimple
 
     model_config = ConfigDict(from_attributes=True)
