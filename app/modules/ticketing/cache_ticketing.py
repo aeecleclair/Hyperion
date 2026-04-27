@@ -8,7 +8,6 @@ from uuid import UUID
 from pydantic import BaseModel
 from redis import Redis
 
-
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 SchemaT = TypeVar("SchemaT", bound=BaseModel)
