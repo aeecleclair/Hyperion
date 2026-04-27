@@ -143,6 +143,6 @@ class TicketSimple(TicketBase):
 class TicketComplete(TicketSimple):
     event: EventSimple
     category: CategorySimple
-    session: SessionSimple
+    session: SessionSimple | None
 
     model_config = ConfigDict(from_attributes=True)

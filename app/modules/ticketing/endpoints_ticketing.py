@@ -50,7 +50,7 @@ async def get_organisers(
     status_code=200,
 )
 async def get_organiser(
-    organiser_id: str,
+    organiser_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([TicketingPermissions.access_ticketing]),
@@ -59,7 +59,10 @@ async def get_organiser(
     """
     Get an Organiser by its id.
     """
-    return await cruds_ticketing.get_organiser_by_id(db=db, organiser_id=organiser_id)
+    organiser = await cruds_ticketing.get_organiser_by_id(db=db, organiser_id=organiser_id)
+    if organiser is None:
+        raise HTTPException(status_code=404, detail="Organiser not found")
+    return organiser
 
 
 # @module.router.post(
@@ -534,12 +537,12 @@ async def get_ticket_by_id(
 @module.router.get(
     "/ticketing/tickets/",
     summary="Get all tickets",
-    response_model=list[schemas_ticketing.TicketComplete],
+    response_model=list[schemas_ticketing.TicketSimple],
     status_code=200,
 )
 async def get_all_tickets(
     db: AsyncSession = Depends(get_db),
-) -> list[schemas_ticketing.TicketComplete]:
+) -> list[schemas_ticketing.TicketSimple]:
     """Get all tickets."""
     return await cruds_ticketing.get_tickets(db=db)
 
@@ -547,13 +550,13 @@ async def get_all_tickets(
 @module.router.get(
     "/ticketing/users/{user_id}/tickets/",
     summary="Get all tickets for a user",
-    response_model=list[schemas_ticketing.TicketComplete],
+    response_model=list[schemas_ticketing.TicketSimple],
     status_code=200,
 )
 async def get_tickets_by_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-) -> list[schemas_ticketing.TicketComplete]:
+) -> list[schemas_ticketing.TicketSimple]:
     """Get all tickets for a user."""
     return await cruds_ticketing.get_tickets_by_user_id(user_id=user_id, db=db)
 
@@ -561,13 +564,13 @@ async def get_tickets_by_user(
 @module.router.get(
     "/ticketing/users/me/tickets/",
     summary="Get all tickets for a user",
-    response_model=list[schemas_ticketing.TicketComplete],
+    response_model=list[schemas_ticketing.TicketSimple],
     status_code=200,
 )
 async def get_my_tickets(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
-) -> list[schemas_ticketing.TicketComplete]:
+) -> list[schemas_ticketing.TicketSimple]:
     """Get all tickets for a user."""
     return await cruds_ticketing.get_tickets_by_user_id(user_id=user.id, db=db)
 
@@ -575,7 +578,7 @@ async def get_my_tickets(
 @module.router.post(
     "/ticketing/tickets/",
     summary="Create a new ticket",
-    response_model=schemas_ticketing.TicketComplete,
+    response_model=schemas_ticketing.TicketSimple,
     status_code=201,
 )
 async def create_ticket(
@@ -583,7 +586,7 @@ async def create_ticket(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
     redis_client: Redis | None = Depends(get_redis_client),
-) -> schemas_ticketing.TicketComplete:
+) -> schemas_ticketing.TicketSimple:
     """Create a new ticket."""
     ticket_simple = schemas_ticketing.TicketSimple(
         **ticket.model_dump(),
@@ -628,22 +631,12 @@ async def create_ticket(
     await cruds_ticketing.create_ticket(ticket=ticket_simple, db=db)
 
     # TODO: Add redis cache update for event quota
-    if isinstance(redis_client, Redis):
-        cache_ticketing.increment_quota_event(
-            redis=redis_client,
-            event_id=ticket_simple.event_id,
-            amount=1,
-        )
-        cache_ticketing.increment_quota_category(
-            redis=redis_client,
-            category_id=ticket_simple.category_id,
-            amount=1,
-        )
-        cache_ticketing.increment_quota_session(
-            redis=redis_client,
-            session_id=ticket_simple.session_id,
-            amount=1,
-        )
+    cache_ticketing.update_cache_for_new_ticket(
+        redis=redis_client,
+        event_id=ticket_simple.event_id,
+        category_id=ticket_simple.category_id,
+        session_id=ticket_simple.session_id,
+    )
 
     await cruds_ticketing.increment_used_quota_event(
         event_id=ticket_simple.event_id,
