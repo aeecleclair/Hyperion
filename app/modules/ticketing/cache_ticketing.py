@@ -1,7 +1,8 @@
 # Redis Cache for Ticketing Module
 
 import logging
-from typing import Callable, ParamSpec, TypeVar
+from collections.abc import Awaitable, Callable
+from typing import ParamSpec, TypeVar
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -30,18 +31,19 @@ class RedisKeysList:
         return f"ticketing:session:{session_id}:quota"
 
 
-def use_or_set_cache_with_crud(
+async def use_or_set_cache_with_crud(
     redis: Redis | None,
     key: str,
-    crud_func: Callable[CrudFuncT, SchemaT],
+    crud_func: Callable[CrudFuncT, Awaitable[SchemaT]],
     schema_class: type[SchemaT],
+    expire: int | None = 300,
     *args: CrudFuncT.args,
     **kwargs: CrudFuncT.kwargs,
 ) -> SchemaT:
     """Use cache if available, otherwise call the database function."""
     # If redis is not available, call the crud directly
     if redis is None or not isinstance(redis, Redis):
-        return crud_func(*args, **kwargs)
+        return await crud_func(*args, **kwargs)
     cached_value: str | bytes | None = redis.get(key)
     if cached_value is not None:
         try:
@@ -55,8 +57,8 @@ def use_or_set_cache_with_crud(
             )
             redis.delete(key)
 
-    value = crud_func(*args, **kwargs)
-    redis.set(key, value.model_dump_json())
+    value = await crud_func(*args, **kwargs)
+    redis.set(key, value.model_dump_json(), ex=expire)
     return value
 
 
@@ -90,4 +92,3 @@ def update_cache_for_new_ticket(
         invalidate_key_cache(redis, RedisKeysList.category_quota(category_id))
         if session_id is not None:
             invalidate_key_cache(redis, RedisKeysList.session_quota(session_id))
-        
