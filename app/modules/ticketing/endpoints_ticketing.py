@@ -60,7 +60,8 @@ async def get_organiser(
     Get an Organiser by its id.
     """
     organiser = await cruds_ticketing.get_organiser_by_id(
-        db=db, organiser_id=organiser_id,
+        db=db,
+        organiser_id=organiser_id,
     )
     if organiser is None:
         raise HTTPException(status_code=404, detail="Organiser not found")
