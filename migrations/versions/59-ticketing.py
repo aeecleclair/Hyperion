@@ -60,7 +60,8 @@ def upgrade() -> None:
         sa.Column("disabled", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(["event_id"], ["ticketing_event.id"]),
         sa.ForeignKeyConstraint(
-            ["required_mebership"], ["core_association_membership.id"],
+            ["required_mebership"],
+            ["core_association_membership.id"],
         ),
         sa.PrimaryKeyConstraint("id"),
     )

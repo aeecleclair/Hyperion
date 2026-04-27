@@ -686,6 +686,7 @@ async def test_delete_session_with_categories(client: TestClient):
 
 # -------------------------- Test category basic cruds -------------------------- #
 
+
 # Get categories by session id
 async def test_get_categories_list_by_session(client: TestClient):
     response = client.get(
@@ -819,7 +820,10 @@ async def test_create_category_with_sessions_from_different_event(client: TestCl
         "user_quota": 1,
         "event_id": str(event1.id),
         "price": 50,
-        "sessions": [str(session1.id), str(session_event2.id)],  # session_event2 belongs to event2
+        "sessions": [
+            str(session1.id),
+            str(session_event2.id),
+        ],  # session_event2 belongs to event2
     }
     response = client.post(
         "/ticketing/categories",
@@ -975,5 +979,3 @@ async def test_delete_category_with_invalid_id(client: TestClient):
         headers={"Authorization": f"Bearer {admin_user_token}"},
     )
     assert response.status_code == 404
-
-
