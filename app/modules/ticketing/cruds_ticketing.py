@@ -729,7 +729,9 @@ async def get_ticket_by_id(
                 user_quota=ticket.session.user_quota,
                 used_quota=ticket.session.used_quota,
                 disabled=ticket.session.disabled,
-            ) if ticket.session else None,
+            )
+            if ticket.session
+            else None,
             category=schemas_ticketing.CategorySimple(
                 id=ticket.category.id,
                 event_id=ticket.category.event_id,
