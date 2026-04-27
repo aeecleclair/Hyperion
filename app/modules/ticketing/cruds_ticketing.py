@@ -607,12 +607,12 @@ async def increment_used_quota_category(
 
 async def get_tickets(
     db: AsyncSession,
-) -> list[schemas_ticketing.TicketComplete]:
+) -> list[schemas_ticketing.TicketSimple]:
     """Get all tickets."""
 
     tickets = await db.execute(select(models_ticketing.TicketingTicket))
     return [
-        schemas_ticketing.TicketComplete(
+        schemas_ticketing.TicketSimple(
             id=ticket.id,
             user_id=ticket.user_id,
             event_id=ticket.event_id,
@@ -620,13 +620,8 @@ async def get_tickets(
             session_id=ticket.session_id,
             total=ticket.total,
             created_at=ticket.created_at,
-            event=ticket.event,
-            category=ticket.category,
-            session=schemas_ticketing.SessionComplete(
-                id=ticket.session.id,
-                status=ticket.session.status,
-                nb_scan=ticket.session.nb_scan,
-            ),
+            status=ticket.status,
+            nb_scan=ticket.nb_scan,
         )
         for ticket in tickets.scalars().all()
     ]
@@ -652,7 +647,6 @@ async def get_tickets_by_session_id(
             session_id=ticket.session_id,
             total=ticket.total,
             created_at=ticket.created_at,
-            event=ticket.event,
             status=ticket.status,
             nb_scan=ticket.nb_scan,
         )
@@ -735,7 +729,7 @@ async def get_ticket_by_id(
                 user_quota=ticket.session.user_quota,
                 used_quota=ticket.session.used_quota,
                 disabled=ticket.session.disabled,
-            ),
+            ) if ticket.session else None,
             category=schemas_ticketing.CategorySimple(
                 id=ticket.category.id,
                 event_id=ticket.category.event_id,
