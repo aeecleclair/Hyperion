@@ -1,7 +1,7 @@
 # Redis Cache for Ticketing Module
 
 import logging
-from typing import TypeVar
+from typing import Callable, ParamSpec, TypeVar
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -11,6 +11,7 @@ from redis import Redis
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 SchemaT = TypeVar("SchemaT", bound=BaseModel)
+CrudFuncT = ParamSpec("CrudFuncT")
 
 
 class RedisKeysList:
@@ -30,25 +31,27 @@ class RedisKeysList:
 
 
 def use_or_set_cache_with_crud(
-    redis: Redis,
+    redis: Redis | None,
     key: str,
-    crud_func,
+    crud_func: Callable[CrudFuncT, SchemaT],
     schema_class: type[SchemaT],
-    *args,
-    **kwargs,
+    *args: CrudFuncT.args,
+    **kwargs: CrudFuncT.kwargs,
 ) -> SchemaT:
     """Use cache if available, otherwise call the database function."""
     # If redis is not available, call the crud directly
-    if redis is None and not isinstance(redis, Redis):
+    if redis is None or not isinstance(redis, Redis):
         return crud_func(*args, **kwargs)
-    cached_value = redis.get(key)
+    cached_value: str | bytes | None = redis.get(key)
     if cached_value is not None:
         try:
             return schema_class.model_validate_json(cached_value)
         except Exception:
             # If cache is corrupted, delete it and call the crud function
             hyperion_error_logger.exception(
-                f"Error parsing cache for key {key}, deleting it. Value: {cached_value}"
+                "Error parsing cache for key %s, deleting it. Value: %r",
+                key,
+                cached_value,
             )
             redis.delete(key)
 
@@ -57,7 +60,34 @@ def use_or_set_cache_with_crud(
     return value
 
 
-def increment_key(redis: Redis, key: str, amount: int = 1):
+def increment_key_cache(redis: Redis, key: str, amount: int = 1):
     """Increment a Redis key by a given amount."""
     if redis is not None and isinstance(redis, Redis):
         redis.incrby(key, amount)
+
+
+def invalidate_key_cache(redis: Redis | None, key: str):
+    """Invalidate a Redis cache key."""
+    if redis is not None and isinstance(redis, Redis):
+        redis.delete(key)
+
+
+def update_cache_for_new_ticket(
+    redis: Redis | None,
+    event_id: UUID,
+    category_id: UUID,
+    session_id: UUID | None,
+):
+    """Update the cache for a new ticket."""
+    if redis is not None and isinstance(redis, Redis):
+        # Increment the used quota for the event, category, and session
+        increment_key_cache(redis, RedisKeysList.event_quota(event_id))
+        increment_key_cache(redis, RedisKeysList.category_quota(category_id))
+        if session_id is not None:
+            increment_key_cache(redis, RedisKeysList.session_quota(session_id))
+        # Invalidate the cache for the event, category, and session to ensure consistency
+        invalidate_key_cache(redis, RedisKeysList.event_quota(event_id))
+        invalidate_key_cache(redis, RedisKeysList.category_quota(category_id))
+        if session_id is not None:
+            invalidate_key_cache(redis, RedisKeysList.session_quota(session_id))
+        
