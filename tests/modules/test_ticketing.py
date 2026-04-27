@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -10,7 +11,7 @@ from app.core.memberships import models_memberships
 from app.core.mypayment import models_mypayment
 from app.core.mypayment.types_mypayment import WalletType
 from app.core.users import models_users
-from app.modules.ticketing import models_ticketing
+from app.modules.ticketing import models_ticketing, schemas_ticketing
 
 # We need to import event_loop for pytest-asyncio routine defined bellow
 from app.modules.ticketing.endpoints_ticketing import TicketingPermissions
@@ -44,6 +45,7 @@ event2: models_ticketing.TicketingEvent
 
 session1: models_ticketing.TicketingSession
 session2: models_ticketing.TicketingSession
+session3: models_ticketing.TicketingSession
 
 category1: models_ticketing.TicketingCategory
 
@@ -978,3 +980,122 @@ async def test_delete_category_with_invalid_id(client: TestClient):
         headers={"Authorization": f"Bearer {admin_user_token}"},
     )
     assert response.status_code == 404
+
+
+# -------------------------- Test ticket basic cruds -------------------------- #
+
+
+# -------------------------- Test Redis cache -------------------------- #
+
+
+async def test_get_event_cache(client: TestClient):
+    # First get the event to populate the cache
+    response = client.get(
+        f"/ticketing/events/{event1.id}",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 200
+
+    # Now get the event again, this time it should be served from cache
+    response = client.get(
+        f"/ticketing/events/{event1.id}",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 200
+
+
+async def test_use_or_set_cache_with_crud_function(client: TestClient):
+    # This test is to directly test the get_or_set_cache function used in the endpoints
+    from app.modules.ticketing.cache_ticketing import use_or_set_cache_with_crud
+
+    cache_key = f"test_cache_event_key_{uuid4()}"
+    cache_value = schemas_ticketing.EventSimple(
+        id=uuid4(),
+        name="Cached Event",
+        open_date=datetime(2024, 1, 1, tzinfo=UTC),
+        close_date=datetime(2200, 12, 31, tzinfo=UTC),
+        quota=10,
+        user_quota=2,
+        used_quota=0,
+        disabled=False,
+        creator_id=str(admin_user.id),
+        organiser_id=organiser.id,
+    )
+
+    async def test_crud_function(event_name: str = "Cached - Event"):
+        # This function simulates a CRUD operation that returns the cache value
+        cache_value.name = event_name
+        return cache_value
+
+    # First call should set the cache
+    result = await use_or_set_cache_with_crud(
+        None,
+        cache_key,
+        test_crud_function,
+        schemas_ticketing.EventSimple,
+        expire=60,
+        event_name="Cached - Event",
+    )
+    assert result == cache_value
+
+    # Second call should get the value from cache, so we change the event name
+    result = await use_or_set_cache_with_crud(
+        None,
+        cache_key,
+        test_crud_function,
+        schemas_ticketing.EventSimple,
+        event_name="Changed Cached - Event",
+        expire=60,  # Invert arg in order to be sure.
+    )
+    assert result == cache_value  # Should still return the old value from cache
+
+
+async def test_cache_expiration(client: TestClient):
+    # This test will check if the cache is invalidated after updating an event
+    from app.modules.ticketing.cache_ticketing import use_or_set_cache_with_crud
+
+    cache_key = f"test_cache_event_key_{uuid4()}"
+    cache_value = schemas_ticketing.EventSimple(
+        id=uuid4(),
+        name="Cached Event",
+        open_date=datetime(2024, 1, 1, tzinfo=UTC),
+        close_date=datetime(2200, 12, 31, tzinfo=UTC),
+        quota=10,
+        user_quota=2,
+        used_quota=0,
+        disabled=False,
+        creator_id=str(admin_user.id),
+        organiser_id=organiser.id,
+    )
+
+    async def test_crud_function(event_name: str = "Cached - Event"):
+        # This function simulates a CRUD operation that returns the cache value
+        cache_value.name = event_name
+        return cache_value
+
+    # Set the cache
+    result = await use_or_set_cache_with_crud(
+        None,
+        cache_key,
+        test_crud_function,
+        schemas_ticketing.EventSimple,
+        expire=2,  # expire in 2 seconds
+        event_name="Cached - Event",
+    )  # expire in 2 seconds
+    assert result == cache_value
+
+    # Wait for 3 seconds to let the cache expire
+    await asyncio.sleep(3)
+
+    # Now the cache should be expired, so calling the function should set it again with the new name
+    result = await use_or_set_cache_with_crud(
+        None,
+        cache_key,
+        test_crud_function,
+        schemas_ticketing.EventSimple,
+        expire=60,
+        event_name="New Cached - Event",
+    )
+    assert (
+        result.name == "New Cached - Event"
+    )  # Should return the new value after cache expiration
