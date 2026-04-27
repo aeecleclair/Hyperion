@@ -442,7 +442,9 @@ async def create_category(
             event_id=category.event_id,
         )
         sessions_ids = [session.id for session in sessions]
-        if sessions is None or any(session_id not in sessions_ids for session_id in category.sessions):
+        if sessions is None or any(
+            session_id not in sessions_ids for session_id in category.sessions
+        ):
             raise HTTPException(
                 status_code=404,
                 detail="One or more sessions not found",
