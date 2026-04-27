@@ -741,7 +741,6 @@ async def test_create_category(client: TestClient):
         json=new_category_data,
         headers={"Authorization": f"Bearer {admin_user_token}"},
     )
-    print(response.json())
     assert response.status_code == 201
     created_category = response.json()
     assert created_category["name"] == new_category_data["name"]
