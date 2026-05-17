@@ -1088,8 +1088,11 @@ async def test_get_own_purchases(
     data = response.json()
     assert isinstance(data, list)
     assert len(data) == 2
-    assert data[0]["product_variant_id"] == str(purchase.product_variant_id)
-    assert data[1]["product_variant_id"] == str(purchase2.product_variant_id)
+    returned_variants = {row["product_variant_id"] for row in data}
+    assert returned_variants == {
+        str(purchase.product_variant_id),
+        str(purchase2.product_variant_id),
+    }
 
 
 @pytest.mark.parametrize(

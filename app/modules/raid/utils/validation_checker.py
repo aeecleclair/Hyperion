@@ -161,6 +161,11 @@ async def check_volunteer_validation_consistency(
             status_code=400,
             detail="Volunteer phone is not set on the user profile",
         )
+    if not (volunteer.emergency_person_name and volunteer.emergency_person_phone):
+        raise HTTPException(
+            status_code=400,
+            detail="Volunteer emergency contact is incomplete",
+        )
     if volunteer.has_car and (
         volunteer.car_seats is None or volunteer.car_seats <= 0
     ):

@@ -17,6 +17,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import update
 
 from app.core.groups import models_groups
+from app.core.groups.groups_type import AccountType
 from app.core.users import cruds_users, models_users, schemas_users
 from app.modules.raid import coredata_raid, cruds_raid, models_raid
 from app.modules.raid.endpoints_raid import RaidPermissions
@@ -29,7 +30,6 @@ from app.modules.raid.raid_type import (
     Situation,
     Size,
 )
-from app.core.groups.groups_type import AccountType
 from tests.commons import (
     add_account_type_permission,
     add_coredata_to_db,
@@ -108,7 +108,7 @@ async def init_objects(client) -> None:
                 RaidPermissions.access_raid,
                 account_type,
             )
-        except Exception:  # noqa: BLE001, S110
+        except Exception:  # noqa: S110
             pass
 
     global admin_group, active_edition
@@ -180,7 +180,7 @@ async def init_objects(client) -> None:
         id=str(uuid.uuid4()),
         edition_id=active_edition.id,
         name="accepted.pdf",
-        uploaded_at=datetime.date.today(),
+        uploaded_at=datetime.datetime.now(tz=datetime.UTC).date(),
         type=DocumentType.idCard,
         validation=DocumentValidation.accepted,
     )
@@ -190,7 +190,7 @@ async def init_objects(client) -> None:
         id=str(uuid.uuid4()),
         edition_id=active_edition.id,
         name="pending.pdf",
-        uploaded_at=datetime.date.today(),
+        uploaded_at=datetime.datetime.now(tz=datetime.UTC).date(),
         type=DocumentType.medicalCertificate,
         validation=DocumentValidation.pending,
     )
@@ -455,7 +455,7 @@ async def _prepare_full_validation_state() -> None:
                 id=str(uuid.uuid4()),
                 edition_id=active_edition.id,
                 name=f"{doc_type.value}.pdf",
-                uploaded_at=datetime.date.today(),
+                uploaded_at=datetime.datetime.now(tz=datetime.UTC).date(),
                 type=doc_type,
                 validation=DocumentValidation.accepted,
             )
@@ -706,6 +706,8 @@ def test_create_volunteer(client: TestClient) -> None:
         "/raid/volunteers",
         json={
             "diet": "veggie",
+            "emergency_person_name": "Jane Doe",
+            "emergency_person_phone": "+33611111111",
             "has_car": True,
             "car_seats": 4,
             "is_parcours_helper": True,

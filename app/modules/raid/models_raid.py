@@ -261,6 +261,9 @@ class RaidVolunteer(Base):
     cancelled: Mapped[bool]
     diet: Mapped[str | None] = mapped_column(default=None)
     allergy: Mapped[str | None] = mapped_column(default=None)
+    t_shirt_size: Mapped[Size | None] = mapped_column(default=None)
+    emergency_person_name: Mapped[str | None] = mapped_column(default=None)
+    emergency_person_phone: Mapped[str | None] = mapped_column(default=None)
     has_car: Mapped[bool] = mapped_column(default=False)
     car_seats: Mapped[int | None] = mapped_column(default=None)
     is_special_driver: Mapped[bool] = mapped_column(default=False)
