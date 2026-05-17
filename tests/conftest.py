@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 import psycopg
 import pytest
+import redis
 from fastapi.testclient import TestClient
 
 from app.app import get_application
@@ -89,6 +90,20 @@ def client(request, worker_id: str) -> Generator[TestClient]:
         USE_FACTORIES=use_factory,
         **_worker_db_kwargs(worker_id),
     )
+
+    # init_db is wrapped in a Redis-backed lock (TTL 120s). If the previous
+    # test module set the lock, this module's `drop_db=True` would be skipped
+    # and stale data would leak between modules. Flush Redis before each module
+    # so init_db (and the drop_db it gates) actually runs.
+    if commons.SETTINGS.REDIS_HOST:
+        try:
+            redis.Redis(
+                host=commons.SETTINGS.REDIS_HOST,
+                port=commons.SETTINGS.REDIS_PORT,
+                password=commons.SETTINGS.REDIS_PASSWORD or None,
+            ).flushdb()
+        except redis.RedisError:
+            pass
 
     test_app = get_application(
         settings=commons.SETTINGS,

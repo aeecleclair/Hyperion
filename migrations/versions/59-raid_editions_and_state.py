@@ -3,6 +3,7 @@
 Create Date: 2026-04-21 00:00:00.000000
 """
 
+import contextlib
 import uuid
 from collections.abc import Sequence
 from enum import Enum
@@ -30,8 +31,8 @@ class RaidRegistrationStatus(Enum):
 
 class SituationEnum(Enum):
     centrale = "centrale"
-    otherSchool = "otherSchool"  # noqa: N815
-    corporatePartner = "corporatePartner"  # noqa: N815
+    otherSchool = "otherSchool"
+    corporatePartner = "corporatePartner"
     other = "other"
 
 
@@ -111,12 +112,18 @@ def upgrade() -> None:
         ("raid_team_second_id_fkey", "raid_team"),
         ("raid_participant_checkout_participant_id_fkey", "raid_participant_checkout"),
     ):
-        try:
+        with contextlib.suppress(Exception):
             op.drop_constraint(fk_name, table, type_="foreignkey")
-        except Exception:  # noqa: BLE001 - legacy FK names vary
-            pass
 
     op.alter_column("raid_participant", "id", new_column_name="user_id")
+    with contextlib.suppress(Exception):
+        op.drop_index("ix_raid_participant_id", table_name="raid_participant")
+    op.create_index(
+        op.f("ix_raid_participant_user_id"),
+        "raid_participant",
+        ["user_id"],
+        unique=False,
+    )
     op.add_column(
         "raid_participant",
         sa.Column("edition_id", sa.Uuid(), nullable=True),
@@ -223,10 +230,8 @@ def upgrade() -> None:
     op.drop_column("raid_participant", "phone")
 
     # Promote PK to composite + add FKs.
-    try:
+    with contextlib.suppress(Exception):
         op.drop_constraint("raid_participant_pkey", "raid_participant", type_="primary")
-    except Exception:  # noqa: BLE001
-        pass
     op.create_primary_key(
         "raid_participant_pkey",
         "raid_participant",
@@ -312,7 +317,7 @@ def upgrade() -> None:
         )
         conn.execute(
             sa.text(
-                f"UPDATE {table} SET edition_id = :eid WHERE edition_id IS NULL",  # noqa: S608
+                f"UPDATE {table} SET edition_id = :eid WHERE edition_id IS NULL",
             ).bindparams(eid=DEFAULT_EDITION_ID),
         )
         op.alter_column(table, "edition_id", nullable=False)
@@ -343,13 +348,8 @@ def downgrade() -> None:
         "participant_user_id",
         new_column_name="participant_id",
     )
-    op.create_foreign_key(
-        "raid_participant_checkout_participant_id_fkey",
-        "raid_participant_checkout",
-        "raid_participant",
-        ["participant_id"],
-        ["user_id"],
-    )
+    # The single-column FK is recreated at the end, once raid_participant.id
+    # has been restored as a unique primary key.
 
     op.drop_constraint("fk_raid_team_captain", "raid_team", type_="foreignkey")
     op.drop_constraint("fk_raid_team_second", "raid_team", type_="foreignkey")
@@ -417,7 +417,13 @@ def downgrade() -> None:
 
     op.drop_column("raid_participant", "status")
     op.drop_column("raid_participant", "edition_id")
+    with contextlib.suppress(Exception):
+        op.drop_index(
+            op.f("ix_raid_participant_user_id"),
+            table_name="raid_participant",
+        )
     op.alter_column("raid_participant", "user_id", new_column_name="id")
+    op.create_index("ix_raid_participant_id", "raid_participant", ["id"], unique=False)
     op.create_foreign_key(
         "raid_team_captain_id_fkey",
         "raid_team",
@@ -430,6 +436,13 @@ def downgrade() -> None:
         "raid_team",
         "raid_participant",
         ["second_id"],
+        ["id"],
+    )
+    op.create_foreign_key(
+        "raid_participant_checkout_participant_id_fkey",
+        "raid_participant_checkout",
+        "raid_participant",
+        ["participant_id"],
         ["id"],
     )
 

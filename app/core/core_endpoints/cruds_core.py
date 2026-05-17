@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
-from sqlalchemy import delete, func, select, text
+from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.core_endpoints import models_core
@@ -58,8 +58,6 @@ async def start_isolation_mode(
     until it is committed or rolled back.
     Thus, all subsequent queries in this transaction will see the same data as at the time of the transaction start.
     """
-    await db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"))
-    now = (await db.execute(select(func.now()))).scalar()
-    if now is None:
-        raise ValueError
-    return now
+    if db.bind is not None and db.bind.dialect.name == "postgresql":
+        await db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"))
+    return datetime.now(tz=UTC)

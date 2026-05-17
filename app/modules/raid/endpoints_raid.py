@@ -18,7 +18,6 @@ from app.dependencies import (
     is_user_allowed_to,
 )
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
-from app.modules.raid.factory_raid import RaidFactory
 from app.modules.raid.dependencies_raid import (
     ensure_user_is_not_participant_in_edition,
     ensure_user_is_not_volunteer_in_edition,
@@ -26,6 +25,7 @@ from app.modules.raid.dependencies_raid import (
     get_participant_or_404,
     get_volunteer_or_404,
 )
+from app.modules.raid.factory_raid import RaidFactory
 from app.modules.raid.raid_type import (
     DocumentType,
     DocumentValidation,
@@ -747,11 +747,10 @@ async def set_security_file(
             security_file=security_file,
             db=db,
         )
-        existing = await cruds_raid.get_security_file_by_security_id(
+        return await cruds_raid.get_security_file_by_security_id(
             participant.security_file_id,
             db,
         )
-        return existing
 
     model_security_file = models_raid.SecurityFile(
         id=str(uuid.uuid4()),
@@ -1224,8 +1223,11 @@ async def create_volunteer(
         created_at=datetime.now(UTC),
         validated=False,
         cancelled=False,
+        t_shirt_size=volunteer.t_shirt_size,
         diet=volunteer.diet,
         allergy=volunteer.allergy,
+        emergency_person_name=volunteer.emergency_person_name,
+        emergency_person_phone=volunteer.emergency_person_phone,
         has_car=volunteer.has_car,
         car_seats=volunteer.car_seats,
         is_special_driver=volunteer.is_special_driver,

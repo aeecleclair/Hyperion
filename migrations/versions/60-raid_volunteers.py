@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 from app.types.sqlalchemy import TZDateTime
 
@@ -22,6 +23,16 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    # The size enum was created in migration 19-raid_registering; reuse it.
+    size = postgresql.ENUM(
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL",
+        name="size",
+        create_type=False,
+    )
     op.create_table(
         "raid_volunteer",
         sa.Column("user_id", sa.String(), nullable=False),
@@ -29,8 +40,11 @@ def upgrade() -> None:
         sa.Column("created_at", TZDateTime(), nullable=False),
         sa.Column("validated", sa.Boolean(), nullable=False),
         sa.Column("cancelled", sa.Boolean(), nullable=False),
+        sa.Column("t_shirt_size", size, nullable=True),
         sa.Column("diet", sa.String(), nullable=True),
         sa.Column("allergy", sa.String(), nullable=True),
+        sa.Column("emergency_person_name", sa.String(), nullable=True),
+        sa.Column("emergency_person_phone", sa.String(), nullable=True),
         sa.Column(
             "has_car",
             sa.Boolean(),

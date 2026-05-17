@@ -26,7 +26,6 @@ from app.modules.raid.utils.utils_raid import (
     will_birthday_be_minor_on,
 )
 
-
 # -- will_birthday_be_minor_on ---------------------------------------------
 
 

@@ -189,7 +189,6 @@ class RaidTeamPreview(RaidTeamBase):
     @computed_field
     @property
     def validation_progress(self) -> float:
-        from app.modules.raid.utils.validation_checker import compute_team_progress
 
         captain_progress = (
             self.captain.validation_progress
@@ -285,8 +284,11 @@ class RaidEditionEdit(BaseModel):
 
 
 class RaidVolunteerBase(BaseModel):
+    t_shirt_size: Size | None = None
     diet: str | None = None
     allergy: str | None = None
+    emergency_person_name: str | None = None
+    emergency_person_phone: str | None = None
     has_car: bool = False
     car_seats: int | None = None
     is_special_driver: bool = False
@@ -315,8 +317,11 @@ class RaidVolunteer(RaidVolunteerBase):
 
 
 class RaidVolunteerEdit(BaseModel):
+    t_shirt_size: Size | None = None
     diet: str | None = None
     allergy: str | None = None
+    emergency_person_name: str | None = None
+    emergency_person_phone: str | None = None
     has_car: bool | None = None
     car_seats: int | None = None
     is_special_driver: bool | None = None
