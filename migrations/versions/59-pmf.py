@@ -25,7 +25,7 @@ def upgrade() -> None:
         "pmf_tags",
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("tag", sa.String(), nullable=False),
-        sa.Column("created_at", sa.Date(), nullable=False),
+        sa.Column("created_on", sa.Date(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
@@ -48,7 +48,7 @@ def upgrade() -> None:
         ),
         sa.Column("start_date", sa.Date(), nullable=False),
         sa.Column("duration", sa.Integer(), nullable=False),
-        sa.Column("created_at", sa.Date(), nullable=False),
+        sa.Column("created_on", sa.Date(), nullable=False),
         sa.ForeignKeyConstraint(["author_id"], ["core_user.id"]),
         sa.PrimaryKeyConstraint("id"),
     )

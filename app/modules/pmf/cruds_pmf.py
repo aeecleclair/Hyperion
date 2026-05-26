@@ -22,7 +22,7 @@ async def create_offer(offer: schemas_pmf.OfferSimple, db: AsyncSession) -> None
             location_type=offer.location_type,
             start_date=offer.start_date,
             duration=offer.duration,
-            created_at=datetime.now(UTC).date(),
+            created_on=datetime.now(UTC).date(),
             hidden=True,
             tags=[],
         ),
@@ -68,6 +68,7 @@ async def get_offers(
     included_location_types: list[types_pmf.LocationType] | None = None,
     limit: int | None = None,
     offset: int | None = None,
+    show_hidden: bool | None = False,
 ) -> list[schemas_pmf.OfferComplete]:
     where_clause = (
         (
@@ -85,6 +86,7 @@ async def get_offers(
             if included_location_types
             else true()
         )
+        & (not models_pmf.PmfOffer.hidden if not show_hidden else true())
     )
 
     offers = await db.execute(
@@ -101,6 +103,7 @@ async def get_offers(
             location=offer.location,
             location_type=offer.location_type,
             start_date=offer.start_date,
+            created_on=offer.created_on,
             duration=offer.duration,
             hidden=offer.hidden,
             author=schemas_users.CoreUserSimple.model_validate(offer.author),
@@ -108,7 +111,7 @@ async def get_offers(
                 schemas_pmf.TagComplete(
                     id=tag.id,
                     tag=tag.tag,
-                    created_at=tag.created_at,
+                    created_on=tag.created_on,
                 )
                 for tag in offer.tags
             ],
@@ -125,6 +128,7 @@ async def get_offers_by_author_id(
     included_location_types: list[types_pmf.LocationType] | None = None,
     limit: int | None = None,
     offset: int | None = None,
+    show_hidden: bool | None = False,
 ) -> list[schemas_pmf.OfferComplete]:
     where_clause = (
         (
@@ -143,7 +147,7 @@ async def get_offers_by_author_id(
             else true()
         )
         & (models_pmf.PmfOffer.author_id == author_id)
-        & (not models_pmf.PmfOffer.hidden)
+        & (not models_pmf.PmfOffer.hidden if not show_hidden else true())
     )
 
     offers = await db.execute(
@@ -160,13 +164,15 @@ async def get_offers_by_author_id(
             location=offer.location,
             location_type=offer.location_type,
             start_date=offer.start_date,
+            created_on=offer.created_on,
             duration=offer.duration,
+            hidden=offer.hidden,
             author=schemas_users.CoreUserSimple.model_validate(offer.author),
             tags=[
                 schemas_pmf.TagComplete(
                     id=tag.id,
                     tag=tag.tag,
-                    created_at=tag.created_at,
+                    created_on=tag.created_on,
                 )
                 for tag in offer.tags
             ],
@@ -217,6 +223,7 @@ async def get_me_offers(
             location=offer.location,
             location_type=offer.location_type,
             start_date=offer.start_date,
+            created_on=offer.created_on,
             duration=offer.duration,
             hidden=offer.hidden,
             author=schemas_users.CoreUserSimple.model_validate(offer.author),
@@ -224,7 +231,7 @@ async def get_me_offers(
                 schemas_pmf.TagComplete(
                     id=tag.id,
                     tag=tag.tag,
-                    created_at=tag.created_at,
+                    created_on=tag.created_on,
                 )
                 for tag in offer.tags
             ],
@@ -241,7 +248,7 @@ async def get_all_tags(db: AsyncSession) -> list[schemas_pmf.TagComplete]:
         schemas_pmf.TagComplete(
             id=tag.id,
             tag=tag.tag,
-            created_at=tag.created_at,
+            created_on=tag.created_on,
         )
         for tag in tags.scalars().all()
     ]
@@ -274,7 +281,7 @@ async def create_tag(
     tag_db = models_pmf.Tags(
         id=tag.id,
         tag=tag.tag,
-        created_at=tag.created_at,
+        created_on=tag.created_on,
     )
     db.add(tag_db)
 

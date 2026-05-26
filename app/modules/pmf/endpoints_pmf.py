@@ -6,15 +6,20 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import AccountType, GroupType
+from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users
 from app.core.users.models_users import CoreUser
-from app.dependencies import get_db, is_user, is_user_allowed_to, is_user_in
+from app.dependencies import get_db, is_user, is_user_in
 from app.modules.pmf import cruds_pmf, factory_pmf, schemas_pmf, types_pmf
 from app.types.module import Module
-from app.utils.auth.providers import AuthPermissions
 from app.utils.tools import is_user_member_of_any_group
 
 router = APIRouter(tags=["pmf"])
+
+
+class PmfPermissions(ModulePermissions):
+    access_pmf = "access_pmf"
+
 
 module = Module(
     root="pmf",
@@ -26,6 +31,7 @@ module = Module(
         AccountType.former_student,
     ],
     factory=factory_pmf.PmfFactory,
+    permissions=PmfPermissions,
 )
 
 
@@ -64,7 +70,16 @@ async def get_offers_by_author_id(
     includedLocationTypes: list[types_pmf.LocationType] = Query(default=[]),
     limit: int | None = Query(default=50, gt=0, le=50),
     offset: int | None = Query(default=0, ge=0),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
+    show_hidden = True
+    if author_id != user.id and not is_user_member_of_any_group(
+        user,
+        [
+            GroupType.admin,
+        ],
+    ):
+        show_hidden = False
     return await cruds_pmf.get_offers_by_author_id(
         author_id=author_id,
         db=db,
@@ -73,6 +88,7 @@ async def get_offers_by_author_id(
         included_location_types=includedLocationTypes,
         limit=limit,
         offset=offset,
+        show_hidden=show_hidden,
     )
 
 
@@ -98,6 +114,7 @@ async def get_me_offers(
         included_location_types=includedLocationTypes,
         limit=limit,
         offset=offset,
+        show_hidden=True,
     )
 
 
@@ -114,8 +131,17 @@ async def get_offers(
     limit: int | None = Query(default=50, gt=0, le=50),
     offset: int | None = Query(default=0, ge=0),
     # Allow only former students to access this endpoint
-    # user: CoreUser = Depends(is_user(included_account_types=[AccountType.former_student])),
+    user: CoreUser = Depends(is_user()),
 ):
+    show_hidden = True
+    if not is_user_member_of_any_group(
+        user,
+        [
+            GroupType.admin,
+        ],
+    ):
+        show_hidden = False
+
     return await cruds_pmf.get_offers(
         db=db,
         included_offer_types=includedOfferTypes,
@@ -123,6 +149,7 @@ async def get_offers(
         included_location_types=includedLocationTypes,
         limit=limit,
         offset=offset,
+        show_hidden=show_hidden,
     )
 
 
@@ -154,6 +181,7 @@ async def create_offer(
     offer_db = schemas_pmf.OfferSimple(
         **offer.model_dump(),
         id=uuid.uuid4(),
+        hidden=True,
     )
     await cruds_pmf.create_offer(db=db, offer=offer_db)
     await db.flush()
@@ -255,7 +283,7 @@ async def get_tag(
     return schemas_pmf.TagComplete(
         tag=tag.tag,
         id=tag.id,
-        created_at=tag.created_at,
+        created_on=tag.created_on,
     )
 
 
@@ -279,7 +307,7 @@ async def create_tag(
     tag_db = schemas_pmf.TagComplete(
         **tag.model_dump(),
         id=uuid.uuid4(),
-        created_at=datetime.now(UTC).date(),
+        created_on=datetime.now(UTC).date(),
     )
     await cruds_pmf.create_tag(tag=tag_db, db=db)
     return tag_db

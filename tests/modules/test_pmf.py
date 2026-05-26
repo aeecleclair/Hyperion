@@ -71,12 +71,12 @@ async def init_objects():
     tag1 = models_pmf.Tags(
         tag="Aeronautics",
         id=tag1_id,
-        created_at=date(2023, 5, 1),
+        created_on=date(2023, 5, 1),
     )
     tag2 = models_pmf.Tags(
         tag="Artificial Intelligence",
         id=tag2_id,
-        created_at=date(2023, 5, 1),
+        created_on=date(2023, 5, 1),
     )
     await add_object_to_db(tag1)
     await add_object_to_db(tag2)
@@ -92,7 +92,7 @@ async def init_objects():
         location="Toulouse, France",
         location_type=LocationType.On_site,
         start_date=date(2023, 6, 1),
-        created_at=date(2023, 5, 1),
+        created_on=date(2023, 5, 1),
         duration=92,
         hidden=True,
     )
@@ -110,7 +110,7 @@ async def init_objects():
         location="Remote",
         location_type=LocationType.Remote,
         start_date=date(2023, 7, 1),
-        created_at=date(2023, 6, 1),
+        created_on=date(2023, 6, 1),
         duration=92,
         hidden=False,
     )
@@ -129,7 +129,7 @@ async def init_objects():
         location="Hybrid - Paris, France / Remote",
         location_type=LocationType.Hybrid,
         start_date=date(2023, 8, 1),
-        created_at=date(2023, 7, 1),
+        created_on=date(2023, 7, 1),
         duration=92,
         hidden=True,
     )
@@ -396,7 +396,7 @@ def test_create_tag_success(client: TestClient):
     created_tag = response.json()
     assert created_tag["tag"] == "Machine Learning"
     assert "id" in created_tag
-    assert "created_at" in created_tag
+    assert "created_on" in created_tag
 
 
 def test_create_tag_forbidden(client: TestClient):

@@ -13,7 +13,7 @@ class TagBase(BaseModel):
 
 class TagComplete(TagBase):
     id: UUID
-    created_at: date
+    created_on: date
 
 
 class OfferBase(BaseModel):
@@ -50,4 +50,5 @@ class OfferUpdate(BaseModel):
 
 class OfferComplete(OfferSimple):
     author: schemas_users.CoreUserSimple
+    created_on: date
     tags: list[TagComplete]
