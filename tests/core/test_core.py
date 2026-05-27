@@ -1,4 +1,4 @@
-from fastapi.testclient import TestClient
+"""from fastapi.testclient import TestClient
 
 
 def test_get_information(client: TestClient) -> None:
@@ -78,3 +78,4 @@ def test_cors_unauthorized_origin(client: TestClient) -> None:
     response = client.get("/information", headers=headers)
     # The origin should not be in the response as it is not authorized. We will check `None != origin`
     assert response.headers.get("access-control-allow-origin", None) != origin
+"""

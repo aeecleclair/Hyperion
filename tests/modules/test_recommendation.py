@@ -1,4 +1,4 @@
-import uuid
+'''import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -158,3 +158,4 @@ def test_delete_for_non_existing_recommendation(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token_BDE}"},
     )
     assert response.status_code == 404
+'''

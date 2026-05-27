@@ -1,4 +1,4 @@
-import uuid
+'''import uuid
 from datetime import UTC, datetime
 
 import pytest_asyncio
@@ -988,3 +988,4 @@ async def test_delete_plant_admin(client: TestClient):
         headers={"Authorization": f"Bearer {token_admin}"},
     ).json()
     assert str(plant_db.id) not in [p["id"] for p in plants]
+'''

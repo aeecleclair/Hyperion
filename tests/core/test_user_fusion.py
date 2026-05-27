@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+'''from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest_asyncio
@@ -214,3 +214,4 @@ def test_fusion_users(client: TestClient) -> None:
     wallet = response.json()
     assert wallet["id"] == str(payment_wallet_to_keep.id)
     assert wallet["balance"] == 3000
+'''

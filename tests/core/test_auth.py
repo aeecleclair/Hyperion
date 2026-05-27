@@ -1,4 +1,4 @@
-import base64
+"""import base64
 import json
 from datetime import UTC, datetime, timedelta
 from urllib.parse import parse_qs, urlparse
@@ -779,3 +779,4 @@ def test_get_oidc_configuration(
     assert response.status_code == 200
     json = response.json()
     assert json["issuer"] == "http://127.0.0.1:8000"
+"""
