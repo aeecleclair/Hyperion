@@ -18,6 +18,7 @@ def competition_user_model_to_schema(
         is_pompom=user.is_pompom,
         is_fanfare=user.is_fanfare,
         is_volunteer=user.is_volunteer,
+        allow_pictures=user.allow_pictures,
         validated=user.validated,
         created_at=user.created_at,
         sport_category=user.sport_category,
@@ -115,6 +116,7 @@ def match_model_to_schema(
         score_team1=match.score_team1,
         score_team2=match.score_team2,
         winner_id=match.winner_id,
+        ended=match.ended,
         team1=schemas_sport_competition.Team(
             name=match.team1.name,
             school_id=match.team1.school_id,
@@ -166,5 +168,50 @@ def purchase_model_to_schema(
             unique=purchase.product_variant.unique,
             school_type=purchase.product_variant.school_type,
             public_type=purchase.product_variant.public_type,
+        ),
+    )
+
+
+def volunteer_shift_model_to_schema(
+    shift: models_sport_competition.VolunteerShift,
+) -> schemas_sport_competition.VolunteerShiftCompleteWithVolunteers:
+    return schemas_sport_competition.VolunteerShiftCompleteWithVolunteers(
+        id=shift.id,
+        edition_id=shift.edition_id,
+        name=shift.name,
+        manager_id=shift.manager_id,
+        description=shift.description,
+        value=shift.value,
+        start_time=shift.start_time,
+        end_time=shift.end_time,
+        max_volunteers=shift.max_volunteers,
+        location=shift.location,
+        registrations=[
+            schemas_sport_competition.VolunteerRegistrationWithUser(
+                user_id=registration.user_id,
+                shift_id=registration.shift_id,
+                edition_id=registration.edition_id,
+                validated=registration.validated,
+                registered_at=registration.registered_at,
+                user=schemas_users.CoreUser(
+                    email=registration.user.email,
+                    name=registration.user.name,
+                    school_id=registration.user.school_id,
+                    firstname=registration.user.firstname,
+                    nickname=registration.user.nickname,
+                    account_type=registration.user.account_type,
+                    id=registration.user.id,
+                ),
+            )
+            for registration in shift.registrations
+        ],
+        manager=schemas_users.CoreUser(
+            email=shift.manager.email,
+            name=shift.manager.name,
+            school_id=shift.manager.school_id,
+            firstname=shift.manager.firstname,
+            nickname=shift.manager.nickname,
+            account_type=shift.manager.account_type,
+            id=shift.manager.id,
         ),
     )

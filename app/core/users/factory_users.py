@@ -4,6 +4,7 @@ import uuid
 from datetime import UTC, datetime
 from random import randint
 
+import unidecode
 from faker import Faker
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,7 +16,6 @@ from app.core.users.models_users import CoreUser
 from app.core.utils import security
 from app.core.utils.config import Settings, UserDemoFactoryConfig
 from app.types.factory import Factory
-from app.types.floors_type import FloorsType
 
 NB_USERS = 100
 
@@ -66,7 +66,10 @@ class CoreUsersFactory(Factory):
             randint(datetime.now(tz=UTC).year - 5, datetime.now(tz=UTC).year)  # noqa: S311
             for _ in range(NB_USERS)
         ]
-        floors = [random.choice(list(FloorsType)) for _ in range(NB_USERS)]  # noqa: S311
+        floors = [
+            random.choice(["V3", "V45", "T21", "X3", "Adoma", "X2"])  # noqa: S311
+            for _ in range(NB_USERS)
+        ]
         for i in range(NB_USERS):
             hyperion_error_logger.debug(
                 "Creating user %s/%s",
@@ -86,7 +89,7 @@ class CoreUsersFactory(Factory):
                 school_id = SchoolType.centrale_lyon.value
                 account_type = groups_type.AccountType.former_student
             else:
-                email = faker.email()
+                email = faker.email()  # unrelated to the firstname and name
                 school_id = SchoolType.no_school.value
                 account_type = groups_type.AccountType.external
 
@@ -96,7 +99,7 @@ class CoreUsersFactory(Factory):
                 firstname=firstname[i],
                 nickname=nickname[i],
                 name=name[i],
-                email=email,
+                email=unidecode.unidecode(email),
                 floor=floors[i],
                 phone=phone[i],
                 promo=promos[i],
@@ -105,7 +108,12 @@ class CoreUsersFactory(Factory):
                 birthday=None,
                 created_on=datetime.now(tz=UTC),
             )
-            await cruds_users.create_user(db=db, user=user)
+            try:
+                await cruds_users.create_user(db=db, user=user)
+            except Exception:
+                hyperion_error_logger.exception(
+                    f"CoreUsersFactory: possible collision on user n°{i} for {email}, skipping user creation.",
+                )
 
         for i, user_info in enumerate(cls.demo_users):
             user = CoreUser(

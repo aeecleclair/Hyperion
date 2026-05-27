@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import GroupType
+from app.core.groups.factory_groups import CoreGroupsFactory
 from app.core.users.factory_users import CoreUsersFactory
 from app.core.utils.config import Settings
 from app.modules.booking import (
@@ -16,7 +16,7 @@ from app.types.factory import Factory
 
 
 class BookingFactory(Factory):
-    depends_on = [CoreUsersFactory]
+    depends_on = [CoreUsersFactory, CoreGroupsFactory]
 
     @classmethod
     async def run(cls, db: AsyncSession, settings: Settings) -> None:
@@ -27,7 +27,7 @@ class BookingFactory(Factory):
             manager=models_booking.Manager(
                 id=booking_manager_id,
                 name="BDE",
-                group_id=GroupType.BDE,
+                group_id=CoreGroupsFactory.groups_ids[0],
                 rooms=[],
             ),
         )

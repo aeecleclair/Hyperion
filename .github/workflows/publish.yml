@@ -1,4 +1,4 @@
-name: Build and Publish Hyperion Docker Images
+name: Build and Publish Hyperion Prod Image
 on:
   workflow_dispatch:
   push:
@@ -6,17 +6,17 @@ on:
       - "v*.*.*"
 
 jobs:
-  docker:
+  build-and-deploy-prod:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
       - name: Check out the code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Docker metadata
         id: meta
-        uses: docker/metadata-action@v5.8.0
+        uses: docker/metadata-action@v5.10.0
         with:
           images: ${{ secrets.DOCKER_REGISTRY_IDENTIFER }}/hyperion
           tags: |

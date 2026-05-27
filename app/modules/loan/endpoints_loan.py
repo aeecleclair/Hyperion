@@ -6,15 +6,15 @@ from typing import TYPE_CHECKING
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import AccountType, GroupType
+from app.core.groups.groups_type import AccountType
 from app.core.notification.schemas_notification import Message
+from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users
 from app.dependencies import (
     get_db,
     get_notification_tool,
     get_scheduler,
-    is_user_a_member,
-    is_user_in,
+    is_user_allowed_to,
 )
 from app.modules.loan import cruds_loan, models_loan, schemas_loan
 from app.modules.loan.factory_loan import LoanFactory
@@ -31,11 +31,17 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 
+class LoanPermissions(ModulePermissions):
+    access_loan = "access_loan"
+    manage_loaners = "manage_loaners"
+
+
 module = Module(
     root="loan",
     tag="Loans",
     default_allowed_account_types=[AccountType.student, AccountType.staff],
     factory=LoanFactory(),
+    permissions=LoanPermissions,
 )
 
 
@@ -49,7 +55,9 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def read_loaners(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([LoanPermissions.manage_loaners]),
+    ),
 ):
     """
     Get existing loaners.
@@ -68,7 +76,9 @@ async def read_loaners(
 async def create_loaner(
     loaner: schemas_loan.LoanerBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([LoanPermissions.manage_loaners]),
+    ),
 ):
     """
     Create a new loaner.
@@ -104,7 +114,9 @@ async def create_loaner(
 async def delete_loaner(
     loaner_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([LoanPermissions.manage_loaners]),
+    ),
 ):
     """
     Delete a loaner. All items and loans associated with the loaner will also be deleted from the database.
@@ -140,7 +152,9 @@ async def update_loaner(
     loaner_id: str,
     loaner_update: schemas_loan.LoanerUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([LoanPermissions.manage_loaners]),
+    ),
 ):
     """
     Update a loaner, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value.
@@ -164,7 +178,9 @@ async def get_loans_by_loaner(
     loaner_id: str,
     returned: bool | None = None,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([LoanPermissions.access_loan]),
+    ),
 ):
     """
     Return all loans from a given group.
@@ -214,7 +230,13 @@ async def get_loans_by_loaner(
                 for itemret in itemsret
             ]
 
-            loans.append(schemas_loan.Loan(items_qty=items_qty_ret, **loan.__dict__))
+            loans.append(
+                schemas_loan.Loan(
+                    items_qty=items_qty_ret,
+                    loaner=loaner,
+                    **loan.__dict__,
+                ),
+            )
 
     return loans
 
@@ -227,7 +249,9 @@ async def get_loans_by_loaner(
 async def get_items_by_loaner(
     loaner_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([LoanPermissions.access_loan]),
+    ),
 ):
     """
     Return all items of a loaner.
@@ -271,7 +295,9 @@ async def create_items_for_loaner(
     loaner_id: str,
     item: schemas_loan.ItemBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([LoanPermissions.access_loan]),
+    ),
 ):
     """
     Create a new item for a loaner. A given loaner can not have more than one item with the same `name`.
@@ -335,7 +361,9 @@ async def update_items_for_loaner(
     item_id: str,
     item_update: schemas_loan.ItemUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([LoanPermissions.access_loan]),
+    ),
 ):
     """
     Update a loaner's item.
@@ -385,7 +413,9 @@ async def delete_loaner_item(
     loaner_id: str,
     item_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([LoanPermissions.access_loan]),
+    ),
 ):
     """
     Delete a loaner's item.
@@ -408,8 +438,17 @@ async def delete_loaner_item(
             status_code=400,
             detail=f"Item {item_id} does not belong to {loaner_id} loaner",
         )
+    loaner = await cruds_loan.get_loaner_by_id(
+        loaner_id=loaner_id,
+        db=db,
+    )
+    if loaner is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid loaner_id",
+        )
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_any_group(user, [item.loaner.group_manager_id]):
+    if not is_user_member_of_any_group(user, [loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loaner_id} loaner",
@@ -427,7 +466,9 @@ async def delete_loaner_item(
 async def get_current_user_loans(
     returned: bool | None = None,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([LoanPermissions.access_loan]),
+    ),
 ):
     """
     Return all loans from the current user.
@@ -471,7 +512,9 @@ async def get_current_user_loans(
 )
 async def get_current_user_loaners(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([LoanPermissions.access_loan]),
+    ),
 ):
     """
     Return all loaners the current user can manage.
@@ -501,7 +544,9 @@ async def get_current_user_loaners(
 async def create_loan(
     loan_creation: schemas_loan.LoanCreation,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([LoanPermissions.access_loan]),
+    ),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     scheduler: Scheduler = Depends(get_scheduler),
 ):
@@ -585,7 +630,6 @@ async def create_loan(
         notes=loan_creation.notes,
         caution=loan_creation.caution,
         returned=False,  # A newly created loan is still not returned
-        items=[],
     )
 
     try:
@@ -655,7 +699,9 @@ async def update_loan(
     loan_id: str,
     loan_update: schemas_loan.LoanUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([LoanPermissions.access_loan]),
+    ),
 ):
     """
     Update a loan and its items.
@@ -751,11 +797,9 @@ async def update_loan(
             items.append((item, quantity))
 
     try:
-        # We need to remove the item_ids list from the schema before calling the update_loan crud function
-        loan_in_db_update = schemas_loan.LoanInDBUpdate(**loan_update.model_dump())
         await cruds_loan.update_loan(
             loan_id=loan_id,
-            loan_update=loan_in_db_update,
+            loan_update=loan_update,
             db=db,
         )
     except ValueError as error:
@@ -778,7 +822,9 @@ async def update_loan(
 async def delete_loan(
     loan_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([LoanPermissions.access_loan]),
+    ),
 ):
     """
     Delete a loan
@@ -828,7 +874,9 @@ async def delete_loan(
 async def return_loan(
     loan_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([LoanPermissions.access_loan]),
+    ),
     scheduler: Scheduler = Depends(get_scheduler),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
@@ -889,7 +937,9 @@ async def extend_loan(
     loan_id: str,
     loan_extend: schemas_loan.LoanExtend,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_a_member),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([LoanPermissions.access_loan]),
+    ),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     scheduler: Scheduler = Depends(get_scheduler),
 ):

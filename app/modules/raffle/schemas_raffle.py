@@ -25,7 +25,7 @@ class RaffleComplete(RaffleBase):
 
 class RaffleStats(BaseModel):
     tickets_sold: int
-    amount_raised: float
+    amount_raised: int
 
 
 class PrizeBase(BaseModel):
@@ -55,7 +55,7 @@ class PrizeComplete(PrizeBase):
 
 
 class PackTicketBase(BaseModel):
-    price: float
+    price: int
     pack_size: int
     raffle_id: str
     model_config = ConfigDict(from_attributes=True)
@@ -63,7 +63,7 @@ class PackTicketBase(BaseModel):
 
 class PackTicketEdit(BaseModel):
     raffle_id: str | None = None
-    price: float | None = None
+    price: int | None = None
     pack_size: int | None = None
     model_config = ConfigDict(from_attributes=True)
 
@@ -97,7 +97,7 @@ class TicketComplete(TicketSimple):
 
 
 class CashBase(BaseModel):
-    balance: float
+    balance: int
     user_id: str
     model_config = ConfigDict(from_attributes=True)
 
@@ -111,4 +111,4 @@ class CashDB(CashBase):
 
 
 class CashEdit(BaseModel):
-    balance: float
+    balance: int

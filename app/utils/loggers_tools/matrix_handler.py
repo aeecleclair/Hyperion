@@ -1,7 +1,6 @@
 import logging
 from logging import StreamHandler
-
-from typing_extensions import override
+from typing import override
 
 from app.utils.communication.matrix import Matrix
 
@@ -42,7 +41,6 @@ class MatrixHandler(StreamHandler):
     def emit(self, record):
         if self.enabled:
             msg = self.format(record)
-
             try:
                 self.matrix.send_message(self.room_id, msg)
             # We should catch and log any error, as Python may discarded them in production

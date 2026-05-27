@@ -1,4 +1,4 @@
-FROM ghcr.io/astral-sh/uv:python3.12-trixie-slim
+FROM ghcr.io/astral-sh/uv:0.9.27-python3.14-trixie-slim
 
 # Default number of workers; can be overridden at runtime
 ENV WORKERS=1
@@ -14,16 +14,17 @@ ENV PYTHONUNBUFFERED=1
 ENV UV_COMPILE_BYTECODE=1
 
 # Create non-root user early for better security
-RUN groupadd --gid 1000 hyperion && \
-    useradd --uid 1000 --gid hyperion --shell /bin/bash --create-home hyperion
+# Choose an id that is not likely to be a default one
+RUN groupadd --gid 10101 hyperion && \
+    useradd --uid 10101 --gid hyperion --shell /bin/bash --create-home hyperion
 
 WORKDIR /hyperion
 
 # First copy only the requirements to leverage Docker cache
-COPY requirements-common.txt .
+COPY requirements.txt .
 
 # Install dependencies using uv (way faster than pip)
-RUN uv pip install --system --no-cache -r requirements-common.txt
+RUN uv pip install --system --no-cache -r requirements.txt
 
 # Then copy the rest of the application code
 COPY alembic.ini .
@@ -43,4 +44,4 @@ EXPOSE 8000
 
 # Use fastapi cli as the entrypoint
 # Use sh -c to allow environment variable expansion
-ENTRYPOINT ["sh", "-c", "fastapi run app/main.py --workers $WORKERS --host 0.0.0.0 --port 8000"]
+ENTRYPOINT ["sh", "-c", "fastapi run --workers $WORKERS --host 0.0.0.0 --port 8000"]

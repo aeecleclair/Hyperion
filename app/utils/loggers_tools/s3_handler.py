@@ -1,8 +1,7 @@
 import string
 from datetime import UTC, datetime
 from logging import StreamHandler
-
-from typing_extensions import override
+from typing import override
 
 from app.types.s3_access import S3Access
 from app.utils.tools import get_random_string

@@ -1,4 +1,4 @@
-name: Publish Alpha
+name: Build and Publish Alpha
 
 on:
   workflow_dispatch:
@@ -12,13 +12,13 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: "main"
 
       - name: Docker metadata
         id: meta
-        uses: docker/metadata-action@v5.8.0
+        uses: docker/metadata-action@v5.10.0
         with:
           images: ${{ secrets.DOCKER_REGISTRY_IDENTIFER }}/hyperion
           tags: |
@@ -34,7 +34,7 @@ jobs:
           username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
           password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
-      - name: Build and push preprod image
+      - name: Build and push alpha image
         uses: docker/build-push-action@v6.18.0
         with:
           context: .

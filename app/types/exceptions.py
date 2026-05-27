@@ -6,13 +6,6 @@ from fastapi import HTTPException
 from app.core.payment.types_payment import HelloAssoConfigName
 
 
-class MultipleWorkersWithoutRedisInitializationError(Exception):
-    def __init__(self):
-        super().__init__(
-            "Initialization steps could not be run with multiple workers as no Redis client were configured",
-        )
-
-
 class InvalidAppStateTypeError(Exception):
     def __init__(self):
         super().__init__(

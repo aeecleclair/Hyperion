@@ -59,7 +59,7 @@ def get_token_data(
     return token_data
 
 
-async def get_user_id_from_token_with_scopes(
+def get_user_id_from_token_with_scopes(
     scopes: list[list[ScopeType]],
     token_data: schemas_auth.TokenData,
 ) -> str:

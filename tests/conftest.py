@@ -17,7 +17,7 @@ from tests.commons import (
 
 
 @pytest.fixture(scope="module", autouse=True)
-def client(request) -> Generator[TestClient, None, None]:
+def client(request) -> Generator[TestClient]:
     """
     TestClient fixture.
 

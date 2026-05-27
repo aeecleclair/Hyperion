@@ -9,17 +9,28 @@ from fastapi import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import GroupType
 from app.core.payment import schemas_payment
+from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users
 from app.dependencies import (
     hyperion_access_logger,
 )
 from app.modules.cdr import coredata_cdr, cruds_cdr, models_cdr
-from app.modules.cdr.types_cdr import CdrLogActionType, PaymentType
-from app.utils.tools import get_core_data, is_user_member_of_any_group
+from app.modules.cdr.types_cdr import (
+    CdrLogActionType,
+    PaymentType,
+)
+from app.utils.tools import (
+    get_core_data,
+    has_user_permission,
+    is_user_member_of_any_group,
+)
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
+
+
+class CdrPermissions(ModulePermissions):
+    manage_cdr = "manage_cdr"
 
 
 async def validate_payment(
@@ -80,7 +91,11 @@ async def is_user_in_a_seller_group(
 
     if is_user_member_of_any_group(
         user=user,
-        allowed_groups=[str(seller.group_id), GroupType.admin_cdr],
+        allowed_groups=[str(seller.group_id)],
+    ) or await has_user_permission(
+        user,
+        CdrPermissions.manage_cdr,
+        db,
     ):
         return user
 

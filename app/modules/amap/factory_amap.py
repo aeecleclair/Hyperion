@@ -16,14 +16,14 @@ class AmapFactory(Factory):
     @classmethod
     async def create_products(cls, db: AsyncSession):
         # Generates sample products
-        products: dict[str, tuple[float, str]] = {
-            "banane": (5.0, "Fruits"),
-            "pomme": (6.0, "Fruits"),
-            "poire": (4.0, "Fruits"),
-            "kiwi": (3.0, "Fruits"),
-            "orange": (2.0, "Fruits"),
-            "carotte": (1.0, "Légumes"),
-            "tomate": (2.0, "Légumes"),
+        products: dict[str, tuple[int, str]] = {
+            "banane": (500, "Fruits"),
+            "pomme": (600, "Fruits"),
+            "poire": (400, "Fruits"),
+            "kiwi": (300, "Fruits"),
+            "orange": (200, "Fruits"),
+            "carotte": (100, "Légumes"),
+            "tomate": (200, "Légumes"),
         }
 
         for product_name, product_data in products.items():
@@ -45,6 +45,7 @@ class AmapFactory(Factory):
             db=db,
             delivery=schemas_amap.DeliveryComplete(
                 id=str(uuid.uuid4()),
+                name="Première livraison",
                 status=DeliveryStatusType.orderable,
                 delivery_date=(datetime.now(UTC) + timedelta(days=8)).date(),
                 products_ids=[product.id for product in products],
@@ -55,6 +56,7 @@ class AmapFactory(Factory):
             db=db,
             delivery=schemas_amap.DeliveryComplete(
                 id=str(uuid.uuid4()),
+                name="Deuxième livraison",
                 status=DeliveryStatusType.orderable,
                 delivery_date=(datetime.now(UTC) + timedelta(days=1)).date(),
                 products_ids=[product.id for product in products],
@@ -67,7 +69,8 @@ class AmapFactory(Factory):
             db=db,
             cash=models_amap.Cash(
                 user_id=CoreUsersFactory.demo_users_id[0],
-                balance=100,
+                balance=10000,
+                last_order_date=datetime.now(UTC),
             ),
         )
 

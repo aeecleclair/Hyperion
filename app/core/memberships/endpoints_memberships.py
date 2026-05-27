@@ -1,11 +1,11 @@
 import logging
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups import cruds_groups
+from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import (
     cruds_memberships,
@@ -84,7 +84,6 @@ async def read_association_membership(
         [
             db_association_membership.manager_group_id,
             GroupType.admin,
-            GroupType.admin_cdr,
         ],
     ):
         raise HTTPException(
@@ -239,7 +238,7 @@ async def read_user_memberships(
     # filter the query to get the managed memberships from user's groups.
     if user_id != user.id and not is_user_member_of_any_group(
         user,
-        [GroupType.admin, GroupType.admin_cdr],
+        [GroupType.admin],
     ):
         return await cruds_memberships.get_user_memberships_by_user_id(
             db,
@@ -278,7 +277,7 @@ async def read_user_association_membership_history(
 
     if not is_user_member_of_any_group(
         user,
-        [GroupType.admin, GroupType.admin_cdr, db_membership.manager_group_id],
+        [GroupType.admin, db_membership.manager_group_id],
     ):
         raise HTTPException(status_code=403, detail="Unauthorized")
 
@@ -321,7 +320,6 @@ async def create_user_membership(
         user,
         [
             GroupType.admin,
-            GroupType.admin_cdr,
             db_association_membership.manager_group_id,
         ],
     ):
@@ -394,7 +392,6 @@ async def add_batch_membership(
         user,
         [
             GroupType.admin,
-            GroupType.admin_cdr,
             db_association_membership.manager_group_id,
         ],
     ):
@@ -462,7 +459,7 @@ async def update_user_membership(
 
     if not is_user_member_of_any_group(
         user,
-        [GroupType.admin, GroupType.admin_cdr, db_membership.manager_group_id],
+        [GroupType.admin, db_membership.manager_group_id],
     ):
         raise HTTPException(status_code=403, detail="Unauthorized")
 
@@ -515,7 +512,7 @@ async def delete_user_membership(
 
     if not is_user_member_of_any_group(
         user,
-        [GroupType.admin, GroupType.admin_cdr, db_membership.manager_group_id],
+        [GroupType.admin, db_membership.manager_group_id],
     ):
         raise HTTPException(status_code=403, detail="Unauthorized")
 
@@ -523,3 +520,56 @@ async def delete_user_membership(
         db=db,
         user_membership_id=membership_id,
     )
+
+
+@router.post(
+    "/memberships/{membership_id}/group/{group_id}/synchronize",
+    status_code=201,
+)
+async def synchronize_membership_with_group(
+    membership_id: uuid.UUID,
+    group_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+):
+    """
+    Synchronize a membership with a group.
+
+    **This endpoint is only usable by administrators**
+    """
+
+    db_association_membership = (
+        await cruds_memberships.get_association_membership_by_id(
+            db=db,
+            membership_id=membership_id,
+        )
+    )
+    if db_association_membership is None:
+        raise HTTPException(status_code=404, detail="Association Membership not found")
+
+    db_group = await cruds_groups.get_group_by_id(db=db, group_id=group_id)
+    if db_group is None:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    membership_members = (
+        await cruds_memberships.get_user_memberships_by_association_membership_id(
+            db=db,
+            association_membership_id=membership_id,
+            maximal_start_date=datetime.now(UTC).date(),
+            minimal_end_date=datetime.now(UTC).date(),
+        )
+    )
+    await cruds_groups.delete_membership_by_group_id(
+        group_id=group_id,
+        db=db,
+    )
+    for member in membership_members:
+        membership = models_groups.CoreMembership(
+            user_id=member.user_id,
+            group_id=group_id,
+            description=None,
+        )
+        await cruds_groups.create_membership(
+            membership=membership,
+            db=db,
+        )

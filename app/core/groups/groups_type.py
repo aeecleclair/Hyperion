@@ -3,41 +3,21 @@ from enum import Enum
 
 class GroupType(str, Enum):
     """
-    In Hyperion, each user may have multiple groups. Belonging to a group gives access to a set of specific endpoints.
-    Usually, one or a few groups are associated to some rights over their corresponding module. For example a member of amap group is allowed to administrate the amap module
+    In Hyperion, each user may have multiple groups. Belonging to a group gives access to a set of specific permissions.
 
-    A group may also allow using Hyperion OAuth/Openid connect capabilities to sign in to a specific external platform.
+    The only hardcoded group is the admin group.
+    Being member of admin gives rights over all endpoints except identity based enpoints (i.e an admin won't be able to act in place of an association or a person)
 
-    Being member of admin only gives rights over admin specific endpoints. For example, an admin won't be able to administrate amap module
+    Other groups are created by the admin and can be associated with a set of permissions.
     """
 
-    # Core groups
     admin = "0a25cb76-4b63-4fd3-b939-da6d9feabf28"
-    AE = "45649735-866a-49df-b04b-a13c74fd5886"
-
-    # Module related groups
-    amap = "70db65ee-d533-4f6b-9ffa-a4d70a17b7ef"
-    BDE = "53a669d6-84b1-4352-8d7c-421c1fbd9c6a"
-    CAA = "6c6d7e88-fdb8-4e42-b2b5-3d3cfd12e7d6"
-    cinema = "ce5f36e6-5377-489f-9696-de70e2477300"
-    raid_admin = "e9e6e3d3-9f5f-4e9b-8e5f-9f5f4e9b8e5f"
-    ph = "4ec5ae77-f955-4309-96a5-19cc3c8be71c"
-    admin_cdr = "c1275229-46b2-4e53-a7c4-305513bb1a2a"
-    eclair = "1f841bd9-00be-41a7-96e1-860a18a46105"
-    BDS = "61af3e52-7ef9-4608-823a-39d51e83d1db"
-    seed_library = "09153d2a-14f4-49a4-be57-5d0f265261b9"
-    competition_admin = "2b1fc736-1288-4043-b293-14bc23adae68"
-
-    # Auth related groups
-
-    def __str__(self):
-        return f"{self.name}<{self.value}>"
 
 
 class AccountType(str, Enum):
     """
     Various account types that can be created in Hyperion.
-    These values should match GroupType's. They are the lower level groups in Hyperion
+    Each account type is associated with a set of permissions.
     """
 
     student = "student"

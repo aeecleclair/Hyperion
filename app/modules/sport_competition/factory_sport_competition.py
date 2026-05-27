@@ -46,7 +46,6 @@ class SportCompetitionFactory(Factory):
             schemas_sport_competition.SchoolExtensionBase(
                 school_id=CoreSchoolsFactory.school_id,
                 from_lyon=True,
-                ffsu_id=None,
                 active=True,
                 inscription_enabled=True,
             ),
@@ -95,7 +94,6 @@ class SportCompetitionFactory(Factory):
                     is_cameraman=extra == "cameraman",
                     is_fanfare=extra == "fanfare",
                     is_pompom=extra == "pompom",
-                    is_volunteer=False,
                     created_at=datetime.now(UTC),
                 ),
                 db,

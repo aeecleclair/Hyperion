@@ -4,10 +4,10 @@ Create Date: 2024-08-22 09:02:59.887161
 """
 
 from collections.abc import Sequence
+from enum import Enum
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
-from app.core.groups.groups_type import GroupType
 from app.core.schools.schools_type import SchoolType
 
 if TYPE_CHECKING:
@@ -21,6 +21,24 @@ revision: str = "c73c7f521728"
 down_revision: str | None = "c778706af06f"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
+
+
+class GroupType(str, Enum):
+    # Core groups
+    admin = "0a25cb76-4b63-4fd3-b939-da6d9feabf28"
+    AE = "45649735-866a-49df-b04b-a13c74fd5886"
+
+    # Module related groups
+    amap = "70db65ee-d533-4f6b-9ffa-a4d70a17b7ef"
+    BDE = "53a669d6-84b1-4352-8d7c-421c1fbd9c6a"
+    CAA = "6c6d7e88-fdb8-4e42-b2b5-3d3cfd12e7d6"
+    cinema = "ce5f36e6-5377-489f-9696-de70e2477300"
+    raid_admin = "e9e6e3d3-9f5f-4e9b-8e5f-9f5f4e9b8e5f"
+    ph = "4ec5ae77-f955-4309-96a5-19cc3c8be71c"
+    admin_cdr = "c1275229-46b2-4e53-a7c4-305513bb1a2a"
+    eclair = "1f841bd9-00be-41a7-96e1-860a18a46105"
+    BDS = "61af3e52-7ef9-4608-823a-39d51e83d1db"
+    seed_library = "09153d2a-14f4-49a4-be57-5d0f265261b9"
 
 
 def upgrade() -> None:

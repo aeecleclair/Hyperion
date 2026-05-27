@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import GroupType
+from app.core.groups.factory_groups import CoreGroupsFactory
 from app.core.memberships import cruds_memberships
 from app.core.memberships.schemas_memberships import (
     MembershipSimple,
@@ -25,11 +25,11 @@ class CoreMembershipsFactory(Factory):
         "USEECL",
     ]
     memberships_manager_group_id = [
-        GroupType.BDE.value,
-        GroupType.BDS.value,
+        CoreGroupsFactory.groups_ids[0],
+        CoreGroupsFactory.groups_ids[1],
     ]
 
-    depends_on = [CoreUsersFactory]
+    depends_on = [CoreUsersFactory, CoreGroupsFactory]
 
     @classmethod
     async def run(cls, db: AsyncSession, settings: Settings) -> None:
@@ -72,20 +72,22 @@ class CoreMembershipsFactory(Factory):
 
     @classmethod
     async def should_run(cls, db: AsyncSession):
-        result = (
-            len(
-                await cruds_memberships.get_association_memberships(
-                    db=db,
-                ),
-            )
-            == 0
+        registered_memberships = await cruds_memberships.get_association_memberships(
+            db=db,
         )
-        if not result:
-            registered_memberships = (
-                await cruds_memberships.get_association_memberships(
-                    db=db,
-                )
-            )
+        registered_names = {membership.name for membership in registered_memberships}
+
+        required_names = set(cls.memberships_names)
+        missing_memberships = required_names - registered_names
+
+        if not missing_memberships:
+            # All required memberships exist, update IDs
+            name_to_membership = {
+                membership.name: membership for membership in registered_memberships
+            }
             cls.memberships_ids = [
-                membership.id for membership in registered_memberships
+                name_to_membership[name].id for name in cls.memberships_names
             ]
+            return False
+
+        return True

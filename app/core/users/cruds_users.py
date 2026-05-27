@@ -10,6 +10,7 @@ from sqlalchemy_utils import get_referencing_foreign_keys
 
 from app.core.groups import models_groups
 from app.core.groups.groups_type import AccountType
+from app.core.mypayment.utils_mypayment import fuse_mypayment_users_utils
 from app.core.schools.schools_type import SchoolType
 from app.core.users import models_users, schemas_users
 
@@ -325,6 +326,8 @@ async def fusion_users(
             a. If it doesn't, we update the row
             b. If it does, we delete the row
     """
+    await fuse_mypayment_users_utils(db, user_kept_id, user_deleted_id)
+
     foreign_keys: set[ForeignKey] = get_referencing_foreign_keys(
         models_users.CoreUser.__table__,
     )

@@ -7,13 +7,17 @@ from fastapi import Body, Depends, File, HTTPException, Query, Response, UploadF
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import GroupType, get_account_types_except_externals
+from app.core.groups.groups_type import AccountType, get_account_types_except_externals
 from app.core.payment.payment_tool import PaymentTool
 from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.schools import cruds_schools
 from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users, models_users, schemas_users
-from app.dependencies import get_db, get_payment_tool, is_user, is_user_in
+from app.dependencies import (
+    get_db,
+    get_payment_tool,
+    is_user_allowed_to,
+)
 from app.modules.sport_competition import (
     cruds_sport_competition,
     schemas_sport_competition,
@@ -23,13 +27,33 @@ from app.modules.sport_competition.dependencies_sport_competition import (
     has_user_competition_access,
     is_competition_user,
 )
+from app.modules.sport_competition.permissions_sport_competition import (
+    SportCompetitionPermissions,
+)
 from app.modules.sport_competition.types_sport_competition import (
     CompetitionGroupType,
     ExcelExportParams,
+    PaiementMethodType,
     ProductSchoolType,
+    SportCategory,
 )
-from app.modules.sport_competition.utils.data_exporter import (
+from app.modules.sport_competition.utils.data_exporter.captain_exporter import (
+    construct_captains_excel,
+)
+from app.modules.sport_competition.utils.data_exporter.global_exporter import (
     construct_users_excel_with_parameters,
+)
+from app.modules.sport_competition.utils.data_exporter.school_participants_exporter import (
+    construct_school_users_excel_with_parameters,
+)
+from app.modules.sport_competition.utils.data_exporter.school_quotas_exporter import (
+    construct_school_quotas_excel,
+)
+from app.modules.sport_competition.utils.data_exporter.sport_participants_exporter import (
+    construct_sport_users_excel,
+)
+from app.modules.sport_competition.utils.data_exporter.sport_quotas_exporter import (
+    construct_sport_quotas_excel,
 )
 from app.modules.sport_competition.utils.validation_checker import (
     check_validation_consistency,
@@ -39,17 +63,19 @@ from app.modules.sport_competition.utils_sport_competition import (
     get_public_type_from_user,
     validate_payment,
     validate_product_variant_purchase,
+    validate_purchases,
 )
 from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.tools import (
     delete_file_from_data,
     get_file_from_data,
-    is_user_member_of_any_group,
+    has_user_permission,
     save_file_as_data,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
+
 
 module = Module(
     root="sport_competition",
@@ -57,6 +83,7 @@ module = Module(
     default_allowed_account_types=get_account_types_except_externals(),
     payment_callback=validate_payment,
     factory=None,
+    permissions=SportCompetitionPermissions,
 )
 
 # region: Sport
@@ -68,7 +95,9 @@ module = Module(
 )
 async def get_sports(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
 ) -> list[schemas_sport_competition.Sport]:
     return await cruds_sport_competition.load_all_sports(db)
 
@@ -81,8 +110,8 @@ async def get_sports(
 async def create_sport(
     sport: schemas_sport_competition.SportBase,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
 ) -> schemas_sport_competition.Sport:
     stored = await cruds_sport_competition.load_sport_by_name(sport.name, db)
@@ -91,7 +120,7 @@ async def create_sport(
             status_code=400,
             detail="A sport with this name already exists",
         )
-    sport = schemas_sport_competition.Sport(**sport.model_dump(), id=str(uuid4()))
+    sport = schemas_sport_competition.Sport(**sport.model_dump(), id=uuid4())
     await cruds_sport_competition.add_sport(sport, db)
     return sport
 
@@ -104,8 +133,8 @@ async def edit_sport(
     sport_id: UUID,
     sport: schemas_sport_competition.SportEdit,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
 ) -> None:
     stored = await cruds_sport_competition.load_sport_by_id(sport_id, db)
@@ -135,8 +164,8 @@ async def edit_sport(
 async def delete_sport(
     sport_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
 ) -> None:
     stored = await cruds_sport_competition.load_sport_by_id(sport_id, db)
@@ -163,7 +192,9 @@ async def delete_sport(
 )
 async def get_editions(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
 ) -> list[schemas_sport_competition.CompetitionEdition]:
     return await cruds_sport_competition.load_all_editions(db)
 
@@ -174,13 +205,50 @@ async def get_editions(
 )
 async def get_active_edition(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
 ) -> schemas_sport_competition.CompetitionEdition | None:
     """
     Get the currently active competition edition.
     Returns None if no edition is active.
     """
     return await cruds_sport_competition.load_active_edition(db)
+
+
+@module.router.get(
+    "/competition/editions/{edition_id}/stats",
+    response_model=schemas_sport_competition.CompetitionEditionStats,
+)
+async def get_edition_stats(
+    edition_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+) -> schemas_sport_competition.CompetitionEditionStats:
+    """
+    Get the stats of a competition edition.
+    """
+    revenues_stats = await cruds_sport_competition.load_revenues_stats_by_edition_id(
+        edition_id,
+        db,
+    )
+    users_stats = (
+        await cruds_sport_competition.load_competition_users_stats_by_edition_id(
+            edition_id,
+            db,
+        )
+    )
+    sports_stats = await cruds_sport_competition.load_sports_stats_by_edition_id(
+        edition_id,
+        db,
+    )
+    return schemas_sport_competition.CompetitionEditionStats(
+        revenues_stats=revenues_stats,
+        users_stats=users_stats,
+        sports_stats=sports_stats,
+    )
 
 
 @module.router.post(
@@ -191,8 +259,8 @@ async def get_active_edition(
 async def create_edition(
     edition: schemas_sport_competition.CompetitionEditionBase,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
 ) -> schemas_sport_competition.CompetitionEdition:
     stored = await cruds_sport_competition.load_edition_by_name(edition.name, db)
@@ -216,8 +284,8 @@ async def create_edition(
 async def activate_edition(
     edition_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
 ) -> None:
     """
@@ -240,8 +308,8 @@ async def activate_edition(
 async def enable_inscription(
     edition_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     enable: bool = Body(),
 ) -> None:
@@ -271,8 +339,8 @@ async def edit_edition(
     edition_id: UUID,
     edition_edit: schemas_sport_competition.CompetitionEditionEdit,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
 ) -> None:
     stored = await cruds_sport_competition.load_edition_by_id(edition_id, db)
@@ -297,7 +365,9 @@ async def get_competition_users(
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
 ) -> list[schemas_sport_competition.CompetitionUser]:
     """
     Get all competition users for the current edition.
@@ -315,7 +385,9 @@ async def get_competition_users_by_school(
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
 ) -> list[schemas_sport_competition.CompetitionUser]:
     """
     Get all competition users for the current edition by school.
@@ -336,7 +408,9 @@ async def get_current_user_competition(
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
 ) -> schemas_sport_competition.CompetitionUser:
     """
     Get the competition user for the current edition.
@@ -353,77 +427,6 @@ async def get_current_user_competition(
 
 
 @module.router.get(
-    "/competition/users/data-export",
-    response_class=FileResponse,
-    status_code=200,
-)
-async def export_competition_users_data(
-    included_fields: list[ExcelExportParams] = Query(default=[]),
-    exclude_non_validated: bool = False,
-    db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
-    ),
-    edition: schemas_sport_competition.CompetitionEdition = Depends(
-        get_current_edition,
-    ),
-):
-    """
-    Export competition users data for the current edition as a CSV file.
-    """
-    users = await cruds_sport_competition.load_all_competition_users(
-        edition.id,
-        db,
-        exclude_non_validated=exclude_non_validated,
-    )
-    products = await cruds_sport_competition.load_products(
-        edition.id,
-        db,
-    )
-    sports = await cruds_sport_competition.load_all_sports(db)
-    schools = await cruds_sport_competition.load_all_schools(edition.id, db)
-
-    participants = None
-    if ExcelExportParams.participants in included_fields:
-        all_participants = await cruds_sport_competition.load_all_participants(
-            edition.id,
-            db,
-        )
-        participants = {p.user_id: p for p in all_participants}
-    payments = None
-    if ExcelExportParams.payments in included_fields:
-        payments = await cruds_sport_competition.load_all_payments(edition.id, db)
-    purchases = await cruds_sport_competition.load_all_purchases(edition.id, db)
-
-    excel_io = BytesIO()
-
-    construct_users_excel_with_parameters(
-        parameters=included_fields,
-        sports=sports,
-        schools=schools,
-        users=users,
-        products=products,
-        users_participant=participants,
-        users_payments=payments,
-        users_purchases=purchases,
-        export_io=excel_io,
-    )
-
-    res = excel_io.getvalue()
-
-    excel_io.close()
-
-    headers = {
-        "Content-Disposition": f'attachment; filename="competition_users_{edition.name}.xlsx"',
-    }
-    return Response(
-        res,
-        headers=headers,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
-
-
-@module.router.get(
     "/competition/users/{user_id}",
     response_model=schemas_sport_competition.CompetitionUser,
 )
@@ -434,7 +437,7 @@ async def get_competition_user(
         get_current_edition,
     ),
     user: models_users.CoreUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
 ) -> schemas_sport_competition.CompetitionUser:
     """
@@ -461,20 +464,14 @@ async def create_competition_user(
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
 ) -> schemas_sport_competition.CompetitionUserSimple:
     """
     Create a competition user for the current edition.
     The user must exist in the core users database.
     """
-    if (
-        competition_user.is_volunteer
-        and user.school_id != SchoolType.centrale_lyon.value
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="Only Centrale Lyon students can register as volunteers",
-        )
     if not edition.inscription_enabled:
         raise HTTPException(
             status_code=400,
@@ -513,7 +510,6 @@ async def create_competition_user(
         is_cameraman=competition_user.is_cameraman,
         is_pompom=competition_user.is_pompom,
         is_fanfare=competition_user.is_fanfare,
-        is_volunteer=competition_user.is_volunteer,
         sport_category=competition_user.sport_category,
         created_at=datetime.now(UTC),
         validated=False,
@@ -532,12 +528,16 @@ async def edit_current_user_competition(
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
-    user: schemas_users.CoreUser = Depends(is_user()),
+    user: schemas_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
 ) -> None:
     """
     Edit the current user's competition user for the current edition.
     The user must exist in the core users database.
     """
+    if user_edit.validated:
+        user_edit.validated = False
     stored = await cruds_sport_competition.load_competition_user_by_id(
         db=db,
         user_id=user.id,
@@ -547,11 +547,6 @@ async def edit_current_user_competition(
         raise HTTPException(
             status_code=404,
             detail="Competition user not found",
-        )
-    if user_edit.is_volunteer and user.school_id != SchoolType.centrale_lyon.value:
-        raise HTTPException(
-            status_code=403,
-            detail="Only Centrale Lyon students can register as volunteers",
         )
     if stored.validated:
         user_edit.validated = False
@@ -568,11 +563,6 @@ async def edit_current_user_competition(
     )
     user_edit.is_fanfare = (
         user_edit.is_fanfare if user_edit.is_fanfare is not None else stored.is_fanfare
-    )
-    user_edit.is_volunteer = (
-        user_edit.is_volunteer
-        if user_edit.is_volunteer is not None
-        else stored.is_volunteer
     )
     if (
         sum(
@@ -594,12 +584,11 @@ async def edit_current_user_competition(
             user_edit.is_fanfare,
             user_edit.is_cameraman,
             user_edit.is_athlete,
-            user_edit.is_volunteer,
         ],
     ):
         raise HTTPException(
             status_code=400,
-            detail="A user must be at least in one of the following categories: pompoms, fanfares, cameramen, athletes, volunteers",
+            detail="A user must be at least in one of the following categories: pompoms, fanfares, cameramen, athletes",
         )
     await cruds_sport_competition.update_competition_user(
         user.id,
@@ -615,13 +604,13 @@ async def edit_current_user_competition(
 )
 async def edit_competition_user(
     user_id: str,
-    user: schemas_sport_competition.CompetitionUserEdit,
+    user_edit: schemas_sport_competition.CompetitionUserEdit,
     db: AsyncSession = Depends(get_db),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
-    current_user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    current_user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
 ) -> None:
     """
@@ -639,26 +628,27 @@ async def edit_competition_user(
             detail="Competition user not found",
         )
     if stored.validated:
-        user.validated = False
-    user.is_athlete = (
-        user.is_athlete if user.is_athlete is not None else stored.is_athlete
+        user_edit.validated = False
+    user_edit.is_athlete = (
+        user_edit.is_athlete if user_edit.is_athlete is not None else stored.is_athlete
     )
-    user.is_cameraman = (
-        user.is_cameraman if user.is_cameraman is not None else stored.is_cameraman
+    user_edit.is_cameraman = (
+        user_edit.is_cameraman
+        if user_edit.is_cameraman is not None
+        else stored.is_cameraman
     )
-    user.is_pompom = user.is_pompom if user.is_pompom is not None else stored.is_pompom
-    user.is_fanfare = (
-        user.is_fanfare if user.is_fanfare is not None else stored.is_fanfare
+    user_edit.is_pompom = (
+        user_edit.is_pompom if user_edit.is_pompom is not None else stored.is_pompom
     )
-    user.is_volunteer = (
-        user.is_volunteer if user.is_volunteer is not None else stored.is_volunteer
+    user_edit.is_fanfare = (
+        user_edit.is_fanfare if user_edit.is_fanfare is not None else stored.is_fanfare
     )
     if (
         sum(
             [
-                user.is_pompom,
-                user.is_fanfare,
-                user.is_cameraman,
+                user_edit.is_pompom,
+                user_edit.is_fanfare,
+                user_edit.is_cameraman,
             ],
         )
         > 1
@@ -669,18 +659,62 @@ async def edit_competition_user(
         )
     if not any(
         [
-            user.is_pompom,
-            user.is_fanfare,
-            user.is_cameraman,
-            user.is_athlete,
-            user.is_volunteer,
+            user_edit.is_pompom,
+            user_edit.is_fanfare,
+            user_edit.is_cameraman,
+            user_edit.is_athlete,
         ],
     ):
         raise HTTPException(
             status_code=400,
-            detail="A user must be at least in one of the following categories: pompoms, fanfares, cameramen, athletes, volunteers",
+            detail="A user must be at least in one of the following categories: pompoms, fanfares, cameramen, athletes",
         )
-    await cruds_sport_competition.update_competition_user(user_id, edition.id, user, db)
+    await cruds_sport_competition.update_competition_user(
+        user_id,
+        edition.id,
+        user_edit,
+        db,
+    )
+
+
+@module.router.patch(
+    "/competition/users/{user_id}/schools",
+    status_code=204,
+)
+async def edit_user_school(
+    user_id: str,
+    school_id: UUID = Body(),
+    db: AsyncSession = Depends(get_db),
+    current_user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+) -> None:
+    user = await cruds_users.get_user_by_id(db, user_id)
+    if user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found in the database",
+        )
+    if user.school_id != SchoolType.no_school.value:
+        raise HTTPException(
+            status_code=400,
+            detail="User already has a school, cannot change it",
+        )
+    if school_id == SchoolType.no_school.value:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot set the school to no_school",
+        )
+    await cruds_users.update_user(
+        db,
+        user_id,
+        schemas_users.CoreUserUpdateAdmin(
+            school_id=school_id,
+            account_type=AccountType.student
+            if school_id == SchoolType.centrale_lyon.value
+            else AccountType.other_school_student,
+        ),
+    )
 
 
 @module.router.patch(
@@ -690,8 +724,8 @@ async def edit_competition_user(
 async def validate_competition_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_competition_user(
+    user: models_users.CoreUser = Depends(
+        has_user_competition_access(
             competition_group=CompetitionGroupType.schools_bds,
         ),
     ),
@@ -716,9 +750,14 @@ async def validate_competition_user(
         )
 
     if (
-        GroupType.competition_admin.value
-        not in [group.id for group in user.user.groups]
-        and user.user.school_id != user_to_validate.user.school_id
+        not (
+            await has_user_permission(
+                user,
+                SportCompetitionPermissions.manage_sport_competition,
+                db,
+            )
+        )
+        and user.school_id != user_to_validate.user.school_id
     ):
         raise HTTPException(
             status_code=403,
@@ -749,6 +788,102 @@ async def validate_competition_user(
         edition.id,
         db,
     )
+    purchases = await cruds_sport_competition.load_purchases_by_user_id(
+        user_id,
+        edition.id,
+        db,
+    )
+    for purchase in purchases:
+        if purchase.product_variant.price == 0:
+            await cruds_sport_competition.mark_purchase_as_validated(
+                user.id,
+                purchase.product_variant_id,
+                True,
+                db,
+            )
+
+
+@module.router.patch(
+    "/competition/users/{user_id}/cancel",
+    status_code=204,
+)
+async def cancel_competition_user(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> None:
+    user_to_cancel = await cruds_sport_competition.load_competition_user_by_id(
+        user_id,
+        edition.id,
+        db,
+    )
+    if user_to_cancel is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found in the database",
+        )
+    payments = await cruds_sport_competition.load_user_payments(
+        user_id,
+        edition.id,
+        db,
+    )
+    if len(payments) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="User has no payment, consider deleting the user instead of cancelling",
+        )
+    await cruds_sport_competition.delete_purchases_by_user_id(
+        user_id,
+        edition.id,
+        db,
+    )
+    participant = await cruds_sport_competition.load_participant_by_user_id(
+        user_id,
+        edition.id,
+        db,
+    )
+    if participant is not None:
+        team = await cruds_sport_competition.load_team_by_id(
+            participant.team_id,
+            db,
+        )
+        delete_team = False
+        if team is not None:
+            if team.captain_id == user_id:
+                next_user = next(
+                    (user for user in team.participants if user.user_id != user_id),
+                    None,
+                )
+                if next_user is not None:
+                    await cruds_sport_competition.update_team(
+                        team.id,
+                        schemas_sport_competition.TeamEdit(
+                            captain_id=next_user.user_id,
+                        ),
+                        db,
+                    )
+                else:
+                    delete_team = True
+        await cruds_sport_competition.delete_participant_by_user_id(
+            user_id,
+            edition.id,
+            db,
+        )
+        if delete_team and team is not None:
+            await cruds_sport_competition.delete_team_by_id(
+                team.id,
+                db,
+            )
+    await cruds_sport_competition.cancel_competition_user(
+        user_id,
+        edition.id,
+        db,
+    )
 
 
 @module.router.patch(
@@ -758,8 +893,8 @@ async def validate_competition_user(
 async def invalidate_competition_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_competition_user(
+    user: models_users.CoreUser = Depends(
+        has_user_competition_access(
             competition_group=CompetitionGroupType.schools_bds,
         ),
     ),
@@ -783,9 +918,14 @@ async def invalidate_competition_user(
             detail="User is not validated",
         )
     if (
-        GroupType.competition_admin.value
-        not in [group.id for group in user.user.groups]
-        and user.user.school_id != user_to_invalidate.user.school_id
+        not (
+            await has_user_permission(
+                user,
+                SportCompetitionPermissions.manage_sport_competition,
+                db,
+            )
+        )
+        and user.school_id != user_to_invalidate.user.school_id
     ):
         raise HTTPException(
             status_code=403,
@@ -808,6 +948,70 @@ async def invalidate_competition_user(
     )
 
 
+@module.router.delete(
+    "/competition/users/{user_id}",
+    status_code=204,
+)
+async def delete_competition_user(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+    user: schemas_sport_competition.CompetitionUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+) -> None:
+    stored = await cruds_sport_competition.load_competition_user_by_id(
+        db=db,
+        user_id=user_id,
+        edition_id=edition.id,
+    )
+    if stored is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Competition user not found",
+        )
+    if stored.validated:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete a validated competition user",
+        )
+    captain_team = await cruds_sport_competition.load_team_by_captain_id(
+        user_id,
+        edition.id,
+        db,
+    )
+    if captain_team is not None:
+        next_user = next(
+            (user for user in captain_team.participants if user.user_id != user_id),
+            None,
+        )
+        if next_user is None:
+            await cruds_sport_competition.delete_team_by_id(
+                captain_team.id,
+                db,
+            )
+        else:
+            await cruds_sport_competition.update_team(
+                captain_team.id,
+                schemas_sport_competition.TeamEdit(captain_id=next_user.user_id),
+                db,
+            )
+
+    await cruds_sport_competition.delete_participant_by_user_id(
+        user_id,
+        edition.id,
+        db,
+    )
+    await cruds_sport_competition.delete_purchases_by_user_id(
+        user_id,
+        edition.id,
+        db,
+    )
+    await cruds_sport_competition.delete_competition_user_by_id(user_id, edition.id, db)
+
+
 # endregion: Competition User
 # region: Competition Groups
 
@@ -819,8 +1023,8 @@ async def invalidate_competition_user(
 async def get_group_members(
     group: CompetitionGroupType,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -843,7 +1047,7 @@ async def get_group_members(
 async def get_current_user_groups(
     db: AsyncSession = Depends(get_db),
     user: schemas_users.CoreUser = Depends(
-        is_user(),
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -868,7 +1072,7 @@ async def get_user_groups(
     user_id: str,
     db: AsyncSession = Depends(get_db),
     user: schemas_users.CoreUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -899,8 +1103,8 @@ async def add_user_to_group(
     group: CompetitionGroupType,
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -938,8 +1142,8 @@ async def remove_user_from_group(
     group: CompetitionGroupType,
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -976,7 +1180,9 @@ async def get_schools(
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
 ) -> list[schemas_sport_competition.SchoolExtension]:
     return await cruds_sport_competition.load_all_schools(edition.id, db)
 
@@ -991,7 +1197,9 @@ async def get_school(
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
 ) -> schemas_sport_competition.SchoolExtension:
     school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
@@ -1010,8 +1218,8 @@ async def get_school(
 async def create_school_extension(
     school: schemas_sport_competition.SchoolExtensionBase,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
 ) -> schemas_sport_competition.SchoolExtensionBase:
     core_school = await cruds_schools.get_school_by_id(db, school.school_id)
@@ -1038,8 +1246,8 @@ async def edit_school_extension(
     school_id: UUID,
     school: schemas_sport_competition.SchoolExtensionEdit,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -1061,8 +1269,8 @@ async def edit_school_extension(
 async def delete_school_extension(
     school_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -1094,7 +1302,7 @@ async def get_school_general_quota(
     school_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_competition_user(
+        has_user_competition_access(
             competition_group=CompetitionGroupType.schools_bds,
         ),
     ),
@@ -1130,8 +1338,8 @@ async def create_school_general_quota(
     school_id: UUID,
     quota_info: schemas_sport_competition.SchoolGeneralQuotaBase,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -1179,8 +1387,8 @@ async def edit_school_general_quota(
     school_id: UUID,
     quota_info: schemas_sport_competition.SchoolGeneralQuotaBase,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -1221,8 +1429,8 @@ async def edit_school_general_quota(
 async def get_quotas_for_sport(
     sport_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -1251,7 +1459,9 @@ async def get_quotas_for_school(
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
 ) -> list[schemas_sport_competition.SchoolSportQuota]:
     school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
@@ -1275,8 +1485,8 @@ async def create_sport_quota(
     sport_id: UUID,
     quota_info: schemas_sport_competition.SportQuotaInfo,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -1321,8 +1531,8 @@ async def edit_sport_quota(
     sport_id: UUID,
     quota_info: schemas_sport_competition.SchoolSportQuotaEdit,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -1356,8 +1566,8 @@ async def delete_sport_quota(
     school_id: UUID,
     sport_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -1396,7 +1606,9 @@ async def get_product_quotas_for_school(
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
 ) -> list[schemas_sport_competition.SchoolProductQuota]:
     school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
@@ -1418,8 +1630,8 @@ async def get_product_quotas_for_school(
 async def get_product_quotas_for_product(
     product_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -1446,8 +1658,8 @@ async def create_product_quota(
     school_id: UUID,
     quota_info: schemas_sport_competition.SchoolProductQuotaBase,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -1494,8 +1706,8 @@ async def edit_product_quota(
     product_id: UUID,
     quota_info: schemas_sport_competition.SchoolProductQuotaEdit,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -1527,8 +1739,8 @@ async def delete_product_quota(
     school_id: UUID,
     product_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -1561,7 +1773,9 @@ async def delete_product_quota(
 )
 async def get_teams(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -1575,7 +1789,9 @@ async def get_teams(
 )
 async def get_current_user_team_as_captain(
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user()),
+    user: schemas_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -1601,7 +1817,7 @@ async def get_teams_for_sport(
     sport_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user(),
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -1630,7 +1846,9 @@ async def get_teams_for_school(
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
 ) -> list[schemas_sport_competition.TeamComplete]:
     school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
@@ -1656,7 +1874,9 @@ async def get_sport_teams_for_school_and_sport(
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
 ) -> list[schemas_sport_competition.TeamComplete]:
     school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
@@ -1689,7 +1909,9 @@ async def create_team(
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
-    user: schemas_users.CoreUser = Depends(is_user()),
+    user: schemas_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
 ) -> schemas_sport_competition.Team:
     if not edition.inscription_enabled:
         raise HTTPException(
@@ -1697,9 +1919,13 @@ async def create_team(
             detail="Inscriptions are not enabled for the current edition",
         )
 
-    if GroupType.competition_admin.value not in [
-        group.id for group in user.groups
-    ] and (user.id != team_info.captain_id or user.school_id != team_info.school_id):
+    if not (
+        await has_user_permission(
+            user,
+            SportCompetitionPermissions.manage_sport_competition,
+            db,
+        )
+    ) and (user.id != team_info.captain_id or user.school_id != team_info.school_id):
         raise HTTPException(
             status_code=403,
             detail="Unauthorized action",
@@ -1775,7 +2001,9 @@ async def edit_team(
     team_id: UUID,
     team_info: schemas_sport_competition.TeamEdit,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user()),
+    user: schemas_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
 ) -> None:
     stored = await cruds_sport_competition.load_team_by_id(team_id, db)
     if stored is None:
@@ -1792,7 +2020,13 @@ async def edit_team(
     )
     if (
         user.id != stored.captain_id
-        and GroupType.competition_admin.value not in [group.id for group in user.groups]
+        and not (
+            await has_user_permission(
+                user,
+                SportCompetitionPermissions.manage_sport_competition,
+                db,
+            )
+        )
         and (
             CompetitionGroupType.schools_bds
             not in [group.group for group in user_competition_groups]
@@ -1848,7 +2082,9 @@ async def edit_team(
 async def delete_team(
     team_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user()),
+    user: schemas_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -1868,7 +2104,13 @@ async def delete_team(
     )
     if (
         user.id != stored.captain_id
-        and GroupType.competition_admin.value not in [group.id for group in user.groups]
+        and not (
+            await has_user_permission(
+                user,
+                SportCompetitionPermissions.manage_sport_competition,
+                db,
+            )
+        )
         and (
             CompetitionGroupType.schools_bds
             not in [group.group for group in user_competition_groups]
@@ -1889,7 +2131,9 @@ async def delete_team(
 )
 async def get_current_user_participant(
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user()),
+    user: schemas_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -1914,7 +2158,9 @@ async def get_current_user_participant(
 async def get_participants_for_sport(
     sport_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user()),
+    user: schemas_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -1939,13 +2185,21 @@ async def get_participants_for_sport(
 async def get_participants_for_school(
     school_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user()),
+    user: schemas_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
 ) -> list[schemas_sport_competition.ParticipantComplete]:
     if (
-        GroupType.competition_admin.value not in [group.id for group in user.groups]
+        not (
+            await has_user_permission(
+                user,
+                SportCompetitionPermissions.manage_sport_competition,
+                db,
+            )
+        )
         and user.school_id != school_id
     ):
         raise HTTPException(
@@ -1966,13 +2220,21 @@ async def get_participants_for_school(
 async def download_participant_certificate(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
 ) -> FileResponse:
     if (
-        GroupType.competition_admin.value not in [group.id for group in user.groups]
+        not (
+            await has_user_permission(
+                user,
+                SportCompetitionPermissions.manage_sport_competition,
+                db,
+            )
+        )
         and user.id != user_id
     ):
         raise HTTPException(
@@ -2128,7 +2390,7 @@ async def join_sport(
             sport_id=sport_id,
             captain_id=user.user_id,
             created_at=datetime.now(UTC),
-            name=f"{user.user.firstname} {user.user.name} - {school.school.name}",
+            name=f"{user.user.firstname} {user.user.name}",
         )
         await cruds_sport_competition.add_team(new_team, db)
 
@@ -2141,7 +2403,6 @@ async def join_sport(
         substitute=participant_info.substitute,
         is_license_valid=False,
         team_id=participant_info.team_id or new_team.id,
-        created_at=datetime.now(UTC),
     )
     await cruds_sport_competition.add_participant(
         participant,
@@ -2158,7 +2419,9 @@ async def upload_participant_certificate(
     sport_id: UUID,
     certificate: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -2198,6 +2461,137 @@ async def upload_participant_certificate(
 
 
 @module.router.patch(
+    "/competition/participants/sports/{sport_id}/users/{user_id}",
+    status_code=201,
+    response_model=schemas_sport_competition.Participant,
+)
+async def edit_participant(
+    sport_id: UUID,
+    user_id: str,
+    participant_edit: schemas_sport_competition.ParticipantEdit,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> schemas_sport_competition.Participant:
+    participant = await cruds_sport_competition.load_participant_by_ids(
+        user_id,
+        sport_id,
+        edition.id,
+        db,
+    )
+    if participant is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Participant not found in the database",
+        )
+    delete_old_team = False
+    if (
+        participant_edit.sport_id is not None
+        and participant_edit.sport_id != participant.sport_id
+    ):
+        new_sport = await cruds_sport_competition.load_sport_by_id(
+            participant_edit.sport_id,
+            db,
+        )
+        if new_sport is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Sport not found in the database",
+            )
+        if new_sport.team_size > 1:
+            if participant_edit.team_id is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Sport needs to be played in a team, participant is currently not in a team",
+                )
+            new_team_db = await cruds_sport_competition.load_team_by_id(
+                participant_edit.team_id,
+                db,
+            )
+            if new_team_db is None or new_team_db.sport_id != participant_edit.sport_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Participant team is not compatible with the new sport",
+                )
+        if new_sport.team_size == 1:
+            if participant_edit.team_id is not None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Sport needs to be played individually, participant is currently in a team",
+                )
+            new_team = schemas_sport_competition.Team(
+                id=uuid4(),
+                edition_id=edition.id,
+                school_id=participant.school_id,
+                sport_id=participant_edit.sport_id,
+                captain_id=participant.user_id,
+                created_at=datetime.now(UTC),
+                name=f"{participant.user.user.firstname} {participant.user.user.name}",
+            )
+            await cruds_sport_competition.add_team(new_team, db)
+            participant_edit.team_id = new_team.id
+            delete_old_team = True
+    if (
+        participant_edit.team_id is not None
+        and participant_edit.team_id != participant.team_id
+    ):
+        new_team_db = await cruds_sport_competition.load_team_by_id(
+            participant_edit.team_id,
+            db,
+        )
+        if new_team_db is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Team not found in the database",
+            )
+        old_team = await cruds_sport_competition.load_team_by_id(
+            participant.team_id,
+            db,
+        )
+        if old_team is None:
+            raise HTTPException(
+                status_code=500,
+                detail="Old team not found in the database",
+            )
+        if len(old_team.participants) == 1:
+            delete_old_team = True
+        else:
+            new_captain = next(
+                (
+                    user
+                    for user in old_team.participants
+                    if user.user_id != participant.user_id
+                ),
+                None,
+            )
+            if new_captain is None:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Cannot change team for the participant because there is no other participant in the current team to assign as captain",
+                )
+            await cruds_sport_competition.update_team(
+                old_team.id,
+                schemas_sport_competition.TeamEdit(captain_id=new_captain.user_id),
+                db,
+            )
+
+    await cruds_sport_competition.update_participant(
+        user_id=user_id,
+        sport_id=sport_id,
+        edition_id=edition.id,
+        participant_edit=participant_edit,
+        db=db,
+    )
+    if delete_old_team:
+        await cruds_sport_competition.delete_team_by_id(participant.team_id, db)
+    return participant
+
+
+@module.router.patch(
     "/competition/participants/sports/{sport_id}/users/{user_id}/license",
     status_code=204,
 )
@@ -2206,8 +2600,8 @@ async def mark_participant_license_as_valid(
     user_id: str,
     is_license_valid: bool,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -2279,6 +2673,12 @@ async def withdraw_from_sport(
             directory="sport_competition/certificates",
             filename=str(participant.certificate_file_id),
         )
+    team = await cruds_sport_competition.load_team_by_id(
+        participant.team_id,
+        db,
+    )
+    if team is not None and len(team.participants) == 0:
+        await cruds_sport_competition.delete_team_by_id(team.id, db)
 
 
 @module.router.delete(
@@ -2289,8 +2689,8 @@ async def delete_participant(
     user_id: str,
     sport_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_competition_user(
+    user: models_users.CoreUser = Depends(
+        has_user_competition_access(
             competition_group=CompetitionGroupType.schools_bds,
         ),
     ),
@@ -2299,8 +2699,13 @@ async def delete_participant(
     ),
 ) -> None:
     if (
-        GroupType.competition_admin.value
-        not in [group.id for group in user.user.groups]
+        not (
+            await has_user_permission(
+                user,
+                SportCompetitionPermissions.manage_sport_competition,
+                db,
+            )
+        )
         and not edition.inscription_enabled
     ):
         raise HTTPException(
@@ -2324,9 +2729,14 @@ async def delete_participant(
             detail="Cannot delete a validated participant",
         )
     if (
-        GroupType.competition_admin.value
-        not in [group.id for group in user.user.groups]
-        and user.user.school_id != participant.school_id
+        not (
+            await has_user_permission(
+                user,
+                SportCompetitionPermissions.manage_sport_competition,
+                db,
+            )
+        )
+        and user.school_id != participant.school_id
     ):
         raise HTTPException(
             status_code=403,
@@ -2343,6 +2753,12 @@ async def delete_participant(
             directory="sport_competition/certificates",
             filename=str(participant.certificate_file_id),
         )
+    team = await cruds_sport_competition.load_team_by_id(
+        participant.team_id,
+        db,
+    )
+    if team is not None and len(team.participants) == 0:
+        await cruds_sport_competition.delete_team_by_id(team.id, db)
 
 
 @module.router.delete(
@@ -2352,7 +2768,9 @@ async def delete_participant(
 async def delete_participant_certificate_file(
     sport_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user()),
+    user: schemas_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -2392,7 +2810,9 @@ async def delete_participant_certificate_file(
 )
 async def get_all_locations(
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user()),
+    user: schemas_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -2410,7 +2830,9 @@ async def get_all_locations(
 async def get_location_by_id(
     location_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user()),
+    user: schemas_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -2450,7 +2872,7 @@ async def create_location(
     location_info: schemas_sport_competition.LocationBase,
     db: AsyncSession = Depends(get_db),
     user: schemas_users.CoreUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -2487,7 +2909,7 @@ async def edit_location(
     location_info: schemas_sport_competition.LocationEdit,
     db: AsyncSession = Depends(get_db),
     user: schemas_users.CoreUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -2526,7 +2948,7 @@ async def delete_location(
     location_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: schemas_users.CoreUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -2567,7 +2989,9 @@ async def get_all_matches_for_edition(
         get_current_edition,
     ),
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
 ) -> list[schemas_sport_competition.MatchComplete]:
     return await cruds_sport_competition.load_all_matches_by_edition_id(
         edition.id,
@@ -2585,7 +3009,9 @@ async def get_matches_for_sport_and_edition(
         get_current_edition,
     ),
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
 ) -> list[schemas_sport_competition.MatchComplete]:
     sport = await cruds_sport_competition.load_sport_by_id(sport_id, db)
     if sport is None:
@@ -2610,7 +3036,9 @@ async def get_matches_for_school_sport_and_edition(
         get_current_edition,
     ),
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
 ) -> list[schemas_sport_competition.MatchComplete]:
     school = await cruds_sport_competition.load_school_by_id(school_id, db)
     if school is None:
@@ -2669,7 +3097,7 @@ async def create_match(
     sport_id: UUID,
     match_info: schemas_sport_competition.MatchBase,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
+    user: models_users.CoreUser = Depends(
         has_user_competition_access(
             competition_group=CompetitionGroupType.sport_manager,
         ),
@@ -2720,6 +3148,7 @@ async def create_match(
         winner_id=None,
         score_team1=None,
         score_team2=None,
+        ended=False,
     )
     await cruds_sport_competition.add_match(match, db)
     return match
@@ -2797,7 +3226,9 @@ async def delete_match(
 )
 async def get_global_podiums(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -2816,7 +3247,9 @@ async def get_global_podiums(
 async def get_sport_podiums(
     sport_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -2834,6 +3267,26 @@ async def get_sport_podiums(
 
 
 @module.router.get(
+    "/competition/podiums/pompoms",
+    response_model=list[schemas_sport_competition.SchoolResult],
+    status_code=200,
+)
+async def get_pompom_podiums(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> list[schemas_sport_competition.SchoolResult]:
+    """
+    Get the pompoms podiums in the current edition.
+    """
+    return await cruds_sport_competition.load_pompom_podiums(edition.id, db)
+
+
+@module.router.get(
     "/competition/podiums/schools/{school_id}",
     response_model=list[schemas_sport_competition.TeamSportResultComplete],
     status_code=200,
@@ -2841,7 +3294,9 @@ async def get_sport_podiums(
 async def get_school_podiums(
     school_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -2899,13 +3354,51 @@ async def create_sport_podium(
             rank=i + 1,
             points=team.points,
         )
-        for i, team in enumerate(rankings.rankings)
+        for i, team in enumerate(
+            sorted(
+                rankings.rankings,
+                key=lambda x: x.points,
+                reverse=True,
+            ),
+        )
     ]
     await cruds_sport_competition.add_sport_ranking(
         ranking_complete,
         db,
     )
     return ranking_complete
+
+
+@module.router.post(
+    "/competition/podiums/pompoms",
+    response_model=list[schemas_sport_competition.SchoolResult],
+    status_code=201,
+)
+async def create_pompom_podium(
+    rankings: list[schemas_sport_competition.SchoolResult],
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        has_user_competition_access(
+            competition_group=CompetitionGroupType.sport_manager,
+        ),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> list[schemas_sport_competition.SchoolResult]:
+    """
+    Create or update the pompoms podium in the current edition.
+    """
+    await cruds_sport_competition.delete_pompom_ranking(
+        edition.id,
+        db,
+    )
+    await cruds_sport_competition.add_pompom_ranking(
+        rankings,
+        edition.id,
+        db,
+    )
+    return rankings
 
 
 @module.router.delete(
@@ -2940,6 +3433,30 @@ async def delete_sport_podium(
     )
 
 
+@module.router.delete(
+    "/competition/podiums/pompoms",
+    status_code=204,
+)
+async def delete_pompom_podium(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        has_user_competition_access(
+            competition_group=CompetitionGroupType.sport_manager,
+        ),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+) -> None:
+    """
+    Delete the pompoms podium in the current edition.
+    """
+    await cruds_sport_competition.delete_pompom_ranking(
+        edition.id,
+        db,
+    )
+
+
 # endregion: Podiums
 # region: Products
 
@@ -2951,7 +3468,9 @@ async def delete_sport_podium(
 )
 async def get_all_products(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -2971,7 +3490,7 @@ async def create_product(
     product: schemas_sport_competition.ProductBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -3003,7 +3522,7 @@ async def update_product(
     product: schemas_sport_competition.ProductEdit,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -3039,7 +3558,7 @@ async def delete_product(
     product_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -3129,7 +3648,7 @@ async def create_product_variant(
     product_variant: schemas_sport_competition.ProductVariantBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -3179,7 +3698,7 @@ async def update_product_variant(
     product_variant: schemas_sport_competition.ProductVariantEdit,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -3225,7 +3744,7 @@ async def delete_product_variant(
     variant_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -3273,8 +3792,8 @@ async def delete_product_variant(
 async def get_purchases_by_school_id(
     school_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_competition_user(competition_group=CompetitionGroupType.schools_bds),
+    user: models_users.CoreUser = Depends(
+        has_user_competition_access(competition_group=CompetitionGroupType.schools_bds),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -3316,7 +3835,9 @@ async def get_purchases_by_school_id(
 async def get_purchases_by_user_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.competition_admin)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -3340,7 +3861,9 @@ async def get_purchases_by_user_id(
 )
 async def get_my_purchases(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -3356,7 +3879,9 @@ async def get_my_purchases(
 async def create_purchase(
     purchase: schemas_sport_competition.PurchaseBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -3437,7 +3962,6 @@ async def create_purchase(
                 quantity=purchase.quantity,
             ),
         )
-        await db.flush()
         return db_purchase
 
     await cruds_sport_competition.add_purchase(
@@ -3447,6 +3971,131 @@ async def create_purchase(
     return db_purchase
 
 
+@module.router.post(
+    "/competition/purchases/users/{user_id}",
+    response_model=schemas_sport_competition.Purchase,
+    status_code=201,
+)
+async def create_user_purchase(
+    user_id: str,
+    purchase: schemas_sport_competition.PurchaseBase,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Create a user's purchase.
+
+    **User must be competition admin to use this endpoint**
+    """
+    competition_user = await cruds_sport_competition.load_competition_user_by_id(
+        user_id,
+        edition.id,
+        db,
+    )
+    if not competition_user:
+        raise HTTPException(
+            status_code=403,
+            detail="You must be registered for the competition to make a purchase",
+        )
+    school_extension = await cruds_sport_competition.load_school_by_id(
+        competition_user.user.school_id,
+        db,
+    )
+    if not school_extension:
+        raise HTTPException(
+            status_code=403,
+            detail="Your school is not registered for the competition",
+        )
+    product_variant = await cruds_sport_competition.load_product_variant_by_id(
+        purchase.product_variant_id,
+        db,
+    )
+    if not product_variant:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid product_variant_id",
+        )
+    validate_product_variant_purchase(
+        purchase,
+        product_variant,
+        competition_user,
+        school_extension,
+        edition,
+    )
+    existing_db_purchase = await cruds_sport_competition.load_purchase_by_ids(
+        user_id,
+        purchase.product_variant_id,
+        db,
+    )
+    if existing_db_purchase:
+        raise HTTPException(
+            status_code=403,
+            detail="This user already has a purchase for this product variant",
+        )
+
+    db_purchase = schemas_sport_competition.Purchase(
+        user_id=user_id,
+        product_variant_id=purchase.product_variant_id,
+        edition_id=edition.id,
+        validated=(product_variant.price == 0 and competition_user.validated),
+        quantity=purchase.quantity,
+        purchased_on=datetime.now(UTC),
+    )
+
+    await cruds_sport_competition.add_purchase(
+        db_purchase,
+        db,
+    )
+    return db_purchase
+
+
+@module.router.patch(
+    "/competition/purchases/users/{user_id}/variants/{variant_id}",
+    status_code=204,
+)
+async def update_user_purchase(
+    user_id: str,
+    variant_id: UUID,
+    purchase: schemas_sport_competition.PurchaseEdit,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Edit a user's purchase.
+
+    **User must be competition admin to use this endpoint**
+    """
+    db_purchase = await cruds_sport_competition.load_purchase_by_ids(
+        user_id,
+        variant_id,
+        db,
+    )
+    if not db_purchase or db_purchase.edition_id != edition.id:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid purchase_id",
+        )
+    if db_purchase.validated and purchase.validated is None:
+        purchase.validated = False
+
+    await cruds_sport_competition.update_purchase(
+        db=db,
+        user_id=user_id,
+        product_variant_id=variant_id,
+        purchase=purchase,
+    )
+
+
 @module.router.delete(
     "/competition/purchases/{product_variant_id}",
     status_code=204,
@@ -3454,7 +4103,9 @@ async def create_purchase(
 async def delete_purchase(
     product_variant_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -3504,6 +4155,44 @@ async def delete_purchase(
     )
 
 
+@module.router.delete(
+    "/competition/users/{user_id}/purchases/{product_variant_id}",
+    status_code=204,
+)
+async def delete_user_purchase(
+    user_id: str,
+    product_variant_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Delete a user's purchase.
+
+    **User must be competition admin to use this endpoint**
+    """
+    db_purchase = await cruds_sport_competition.load_purchase_by_ids(
+        user_id,
+        product_variant_id,
+        db,
+    )
+    if not db_purchase or db_purchase.edition_id != edition.id:
+        raise HTTPException(
+            status_code=404,
+            detail="Invalid purchase_id",
+        )
+
+    await cruds_sport_competition.delete_purchase(
+        user_id,
+        product_variant_id,
+        db,
+    )
+
+
 # endregion: Purchases
 # region: Payments
 
@@ -3516,8 +4205,8 @@ async def delete_purchase(
 async def get_users_payments_by_school_id(
     school_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_sport_competition.CompetitionUser = Depends(
-        is_competition_user(competition_group=CompetitionGroupType.schools_bds),
+    user: models_users.CoreUser = Depends(
+        has_user_competition_access(competition_group=CompetitionGroupType.schools_bds),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -3534,9 +4223,13 @@ async def get_users_payments_by_school_id(
             status_code=404,
             detail="The school does not exist.",
         )
-    if user.user.school_id != school_id and GroupType.competition_admin.value not in [
-        group.id for group in user.user.groups
-    ]:
+    if user.school_id != school_id and not (
+        await has_user_permission(
+            user,
+            SportCompetitionPermissions.manage_sport_competition,
+            db,
+        )
+    ):
         raise HTTPException(
             status_code=403,
             detail="You're not allowed to see other schools payments.",
@@ -3566,7 +4259,9 @@ async def get_users_payments_by_school_id(
 async def get_payments_by_user_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -3592,7 +4287,13 @@ async def get_payments_by_user_id(
 
     if not (
         user_id == user.id
-        or is_user_member_of_any_group(user, [GroupType.competition_admin])
+        or not (
+            await has_user_permission(
+                user,
+                SportCompetitionPermissions.manage_sport_competition,
+                db,
+            )
+        )
         or (
             CompetitionGroupType.schools_bds
             in [competition_group.group for competition_group in competition_groups]
@@ -3619,7 +4320,9 @@ async def create_payment(
     user_id: str,
     payment: schemas_sport_competition.PaymentBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.competition_admin)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -3650,6 +4353,7 @@ async def create_payment(
         user_id=user_id,
         total=payment.total,
         edition_id=edition.id,
+        method=PaiementMethodType.manual,
     )
 
     purchases = await cruds_sport_competition.load_purchases_by_user_id(
@@ -3663,36 +4367,7 @@ async def create_payment(
         db,
     )
 
-    purchases_total = sum(
-        purchase.product_variant.price * purchase.quantity for purchase in purchases
-    )
-    payments_total = sum(payment.total for payment in payments)
-    total_paid = payments_total + db_payment.total
-
-    if total_paid == purchases_total:
-        for purchase in purchases:
-            await cruds_sport_competition.mark_purchase_as_validated(
-                purchase.user_id,
-                purchase.product_variant_id,
-                True,
-                db,
-            )
-    else:
-        purchases.sort(key=lambda x: x.purchased_on)
-        for purchase in purchases:
-            if total_paid <= 0:
-                break
-            if purchase.validated:
-                total_paid -= purchase.product_variant.price * purchase.quantity
-                continue
-            if purchase.product_variant.price * purchase.quantity <= total_paid:
-                await cruds_sport_competition.mark_purchase_as_validated(
-                    purchase.user_id,
-                    purchase.product_variant_id,
-                    True,
-                    db,
-                )
-                total_paid -= purchase.product_variant.price * purchase.quantity
+    await validate_purchases(purchases, [*payments, db_payment], db)
     await cruds_sport_competition.add_payment(db_payment, db)
     return db_payment
 
@@ -3705,7 +4380,9 @@ async def delete_payment(
     user_id: str,
     payment_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.competition_admin)),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -3763,7 +4440,9 @@ async def delete_payment(
 )
 async def get_payment_url(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
+    ),
     payment_tool: PaymentTool = Depends(
         get_payment_tool(HelloAssoConfigName.CHALLENGER),
     ),
@@ -3841,12 +4520,19 @@ async def get_payment_url(
 
 @module.router.get(
     "/competition/volunteers/shifts",
-    response_model=list[schemas_sport_competition.VolunteerShiftComplete],
+    response_model=list[schemas_sport_competition.VolunteerShiftCompleteWithVolunteers],
     status_code=200,
 )
 async def get_all_volunteer_shifts(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to(
+            [
+                SportCompetitionPermissions.volunteer_sport_competition,
+                SportCompetitionPermissions.manage_sport_competition,
+            ],
+        ),
+    ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
     ),
@@ -3869,7 +4555,7 @@ async def create_volunteer_shift(
     shift: schemas_sport_competition.VolunteerShiftBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -3878,10 +4564,17 @@ async def create_volunteer_shift(
     """
     Create a volunteer shift.
     """
+    manager = await cruds_users.get_user_by_id(db, shift.manager_id)
+    if manager is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Manager user not found.",
+        )
     db_shift = schemas_sport_competition.VolunteerShift(
         id=uuid4(),
         edition_id=edition.id,
         name=shift.name,
+        manager_id=shift.manager_id,
         description=shift.description,
         value=shift.value,
         start_time=shift.start_time,
@@ -3905,7 +4598,7 @@ async def update_volunteer_shift(
     shift_edit: schemas_sport_competition.VolunteerShiftEdit,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -3941,7 +4634,7 @@ async def delete_volunteer_shift(
     shift_id: UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_in(group_id=GroupType.competition_admin),
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -3980,8 +4673,13 @@ async def delete_volunteer_shift(
 )
 async def get_my_volunteer_registrations(
     db: AsyncSession = Depends(get_db),
-    competition_user: schemas_sport_competition.CompetitionUser = Depends(
-        is_competition_user(),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to(
+            [
+                SportCompetitionPermissions.volunteer_sport_competition,
+                SportCompetitionPermissions.manage_sport_competition,
+            ],
+        ),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -3991,7 +4689,7 @@ async def get_my_volunteer_registrations(
     Get my volunteer registrations.
     """
     return await cruds_sport_competition.load_volunteer_registrations_by_user_id(
-        competition_user.user.id,
+        user.id,
         edition.id,
         db,
     )
@@ -4004,8 +4702,13 @@ async def get_my_volunteer_registrations(
 async def register_to_volunteer_shift(
     shift_id: UUID,
     db: AsyncSession = Depends(get_db),
-    competition_user: schemas_sport_competition.CompetitionUser = Depends(
-        is_competition_user(),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to(
+            [
+                SportCompetitionPermissions.volunteer_sport_competition,
+                SportCompetitionPermissions.manage_sport_competition,
+            ],
+        ),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,
@@ -4014,10 +4717,10 @@ async def register_to_volunteer_shift(
     """
     Register to a volunteer shift.
     """
-    if not competition_user.is_volunteer:
+    if not user.school_id == SchoolType.centrale_lyon.value:
         raise HTTPException(
             status_code=403,
-            detail="You must be registered for the competition as a volunteer to register for a volunteer shift",
+            detail="You must be a Centrale Lyon student to register to a volunteer shift.",
         )
     db_shift = await cruds_sport_competition.load_volunteer_shift_by_id(
         shift_id,
@@ -4028,10 +4731,7 @@ async def register_to_volunteer_shift(
             status_code=404,
             detail="Volunteer shift not found.",
         )
-    if any(
-        registration.user_id == competition_user.user.id
-        for registration in db_shift.registrations
-    ):
+    if any(registration.user_id == user.id for registration in db_shift.registrations):
         raise HTTPException(
             status_code=400,
             detail="You are already registered to this volunteer shift.",
@@ -4042,8 +4742,32 @@ async def register_to_volunteer_shift(
             detail="This volunteer shift is full.",
         )
 
+    # Create or update the CompetitionUser with is_volunteer=True
+    competition_user = await cruds_sport_competition.load_competition_user_by_id(
+        user.id,
+        edition.id,
+        db,
+    )
+    if competition_user is None:
+        new_user = schemas_sport_competition.CompetitionUserSimple(
+            user_id=user.id,
+            edition_id=edition.id,
+            sport_category=SportCategory.masculine,
+            is_volunteer=True,
+            validated=False,
+            created_at=datetime.now(UTC),
+        )
+        await cruds_sport_competition.add_competition_user(new_user, db)
+    elif not competition_user.is_volunteer:
+        await cruds_sport_competition.update_competition_user(
+            user.id,
+            edition.id,
+            schemas_sport_competition.CompetitionUserEdit(is_volunteer=True),
+            db,
+        )
+
     db_registration = schemas_sport_competition.VolunteerRegistration(
-        user_id=competition_user.user.id,
+        user_id=user.id,
         shift_id=shift_id,
         edition_id=edition.id,
         validated=False,
@@ -4053,4 +4777,475 @@ async def register_to_volunteer_shift(
     await cruds_sport_competition.add_volunteer_registration(
         db_registration,
         db,
+    )
+
+
+@module.router.patch(
+    "/competition/volunteers/shifts/{shift_id}/users/{user_id}/validation",
+    status_code=204,
+)
+async def validate_volunteer_registration(
+    shift_id: UUID,
+    user_id: str,
+    validated: bool = Body(..., embed=True),
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+):
+    """
+    Validate a volunteer registration.
+
+    **User must be a competition admin to use this endpoint**
+    """
+    db_registration = await cruds_sport_competition.load_volunteer_registration_by_ids(
+        user_id,
+        shift_id,
+        db,
+    )
+    if db_registration is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Volunteer registration not found.",
+        )
+
+    await cruds_sport_competition.update_volunteer_registration_validation(
+        user_id,
+        shift_id,
+        validated,
+        db,
+    )
+
+
+@module.router.delete(
+    "/competition/volunteers/shifts/{shift_id}/unregister",
+    status_code=204,
+)
+async def unregister_from_volunteer_shift(
+    shift_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to(
+            [
+                SportCompetitionPermissions.volunteer_sport_competition,
+                SportCompetitionPermissions.manage_sport_competition,
+            ],
+        ),
+    ),
+):
+    """
+    Unregister from a volunteer shift.
+    """
+    db_registration = await cruds_sport_competition.load_volunteer_registration_by_ids(
+        user.id,
+        shift_id,
+        db,
+    )
+    if db_registration is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Volunteer registration not found.",
+        )
+    if db_registration.validated:
+        raise HTTPException(
+            status_code=403,
+            detail="You can't unregister from a validated volunteer shift.",
+        )
+
+    await cruds_sport_competition.delete_volunteer_registration(
+        user.id,
+        shift_id,
+        db,
+    )
+
+
+# endregion: Volunteers
+# region: Data Exporters
+
+
+@module.router.get(
+    "/competition/data-export/users",
+    response_class=FileResponse,
+    status_code=200,
+)
+async def export_competition_users_data(
+    included_fields: list[ExcelExportParams] = Query(default=[]),
+    exclude_non_validated: bool = False,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Export competition users data for the current edition as a CSV file.
+    """
+    users = await cruds_sport_competition.load_all_competition_users(
+        edition.id,
+        db,
+        exclude_non_validated=exclude_non_validated,
+        exclude_cancelled=False,
+    )
+    products = await cruds_sport_competition.load_products(
+        edition.id,
+        db,
+    )
+    sports = await cruds_sport_competition.load_all_sports(db)
+    schools = await cruds_sport_competition.load_all_schools(edition.id, db)
+
+    participants = None
+    if ExcelExportParams.participants in included_fields:
+        all_participants = await cruds_sport_competition.load_all_participants(
+            edition.id,
+            db,
+        )
+        participants = {p.user_id: p for p in all_participants}
+    payments = None
+    if ExcelExportParams.payments in included_fields:
+        payments = await cruds_sport_competition.load_all_payments(edition.id, db)
+    purchases = await cruds_sport_competition.load_all_purchases(edition.id, db)
+
+    excel_io = BytesIO()
+
+    construct_users_excel_with_parameters(
+        parameters=included_fields,
+        sports=sports,
+        schools=schools,
+        users=users,
+        products=products,
+        users_participant=participants,
+        users_payments=payments,
+        users_purchases=purchases,
+        export_io=excel_io,
+    )
+
+    res = excel_io.getvalue()
+
+    excel_io.close()
+
+    headers = {
+        "Content-Disposition": f'attachment; filename="competition_users_{edition.name}.xlsx"',
+    }
+    return Response(
+        res,
+        headers=headers,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+@module.router.get(
+    "/competition/data-export/schools/{school_id}/users",
+    response_class=FileResponse,
+    status_code=200,
+)
+async def export_school_competition_users_data(
+    school_id: UUID,
+    included_fields: list[ExcelExportParams] = Query(default=[]),
+    exclude_non_validated: bool = False,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Export competition users data for the current edition as a CSV file.
+    """
+    users = await cruds_sport_competition.load_all_competition_users_by_school(
+        school_id,
+        edition.id,
+        db,
+        exclude_non_validated=exclude_non_validated,
+    )
+    products = await cruds_sport_competition.load_products(
+        edition.id,
+        db,
+    )
+    sports = await cruds_sport_competition.load_all_sports(db)
+
+    participants = None
+    if ExcelExportParams.participants in included_fields:
+        all_participants = await cruds_sport_competition.load_participants_by_school_id(
+            school_id,
+            edition.id,
+            db,
+        )
+        participants = {p.user_id: p for p in all_participants}
+    payments = None
+    if ExcelExportParams.payments in included_fields:
+        payments = await cruds_sport_competition.load_school_payments(
+            school_id,
+            edition.id,
+            db,
+        )
+    purchases = await cruds_sport_competition.load_school_purchases(
+        school_id,
+        edition.id,
+        db,
+    )
+
+    excel_io = BytesIO()
+
+    construct_school_users_excel_with_parameters(
+        parameters=included_fields,
+        sports=sports,
+        users=users,
+        products=products,
+        users_participant=participants,
+        users_payments=payments,
+        users_purchases=purchases,
+        export_io=excel_io,
+    )
+
+    res = excel_io.getvalue()
+
+    excel_io.close()
+
+    headers = {
+        "Content-Disposition": f'attachment; filename="competition_users_{edition.name}.xlsx"',
+    }
+    return Response(
+        res,
+        headers=headers,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+@module.router.get(
+    "/competition/data-export/participants/captains",
+    response_class=FileResponse,
+    status_code=200,
+)
+async def export_participants_captains_data(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Export participants captains data for the current edition as an Excel file.
+    """
+    teams = await cruds_sport_competition.load_all_teams(
+        edition.id,
+        db,
+    )
+    captains = [
+        next(
+            (
+                participant
+                for participant in team.participants
+                if participant.user_id == team.captain_id
+            ),
+            None,
+        )
+        for team in teams
+    ]
+    true_captains = [captain for captain in captains if captain is not None]
+    sports = await cruds_sport_competition.load_all_sports(db)
+
+    excel_io = BytesIO()
+
+    construct_captains_excel(
+        sports=sports,
+        captains=true_captains,
+        export_io=excel_io,
+    )
+
+    res = excel_io.getvalue()
+
+    excel_io.close()
+
+    headers = {
+        "Content-Disposition": f'attachment; filename="participants_captains_{edition.name}.xlsx"',
+    }
+    return Response(
+        res,
+        headers=headers,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+@module.router.get(
+    "/competition/data-export/schools/{school_id}/quotas",
+    response_class=FileResponse,
+    status_code=200,
+)
+async def export_school_quotas_data(
+    school_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Export school quotas data for the current edition as an Excel file.
+    """
+    sports = await cruds_sport_competition.load_all_sports(db)
+    products = await cruds_sport_competition.load_products(
+        edition.id,
+        db,
+    )
+    school_sports_quotas = (
+        await cruds_sport_competition.load_all_sport_quotas_by_school_id(
+            school_id,
+            edition.id,
+            db,
+        )
+    )
+    school_general_quotas = await cruds_sport_competition.load_school_general_quota(
+        school_id,
+        edition.id,
+        db,
+    )
+    school_product_quotas = (
+        await cruds_sport_competition.load_all_school_product_quotas(
+            school_id,
+            edition.id,
+            db,
+        )
+    )
+
+    excel_io = BytesIO()
+
+    construct_school_quotas_excel(
+        sports=sports,
+        products=products,
+        school_sports_quotas=school_sports_quotas,
+        school_general_quotas=school_general_quotas,
+        school_product_quotas=school_product_quotas,
+        export_io=excel_io,
+    )
+
+    res = excel_io.getvalue()
+
+    excel_io.close()
+
+    headers = {
+        "Content-Disposition": f'attachment; filename="school_quotas_{school_id}_{edition.name}.xlsx"',
+    }
+    return Response(
+        res,
+        headers=headers,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+@module.router.get(
+    "/competition/data-export/sports/{sport_id}/quotas",
+    response_class=FileResponse,
+    status_code=200,
+)
+async def export_sport_quotas_data(
+    sport_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Export sport quotas data for the current edition as an Excel file.
+    """
+    sport = await cruds_sport_competition.load_sport_by_id(sport_id, db)
+    if not sport:
+        raise HTTPException(
+            status_code=404,
+            detail="The sport does not exist.",
+        )
+
+    sport_schools_quotas = (
+        await cruds_sport_competition.load_all_sport_quotas_by_sport_id(
+            sport_id,
+            edition.id,
+            db,
+        )
+    )
+    schools = await cruds_sport_competition.load_all_schools(edition.id, db)
+
+    excel_io = BytesIO()
+
+    construct_sport_quotas_excel(
+        schools=schools,
+        school_sports_quotas=sport_schools_quotas,
+        export_io=excel_io,
+    )
+
+    res = excel_io.getvalue()
+
+    excel_io.close()
+
+    headers = {
+        "Content-Disposition": f'attachment; filename="sport_quotas_{sport.name}_{edition.name}.xlsx"',
+    }
+    return Response(
+        res,
+        headers=headers,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+@module.router.get(
+    "/competition/data-export/sports/{sport_id}/participants",
+    response_class=FileResponse,
+    status_code=200,
+)
+async def export_sport_participants_data(
+    sport_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
+    ),
+    edition: schemas_sport_competition.CompetitionEdition = Depends(
+        get_current_edition,
+    ),
+):
+    """
+    Export sport quotas data for the current edition as an Excel file.
+    """
+    sport = await cruds_sport_competition.load_sport_by_id(sport_id, db)
+    if not sport:
+        raise HTTPException(
+            status_code=404,
+            detail="The sport does not exist.",
+        )
+    participants = await cruds_sport_competition.load_participants_by_sport_id(
+        sport_id,
+        edition.id,
+        db,
+    )
+    schools = await cruds_sport_competition.load_all_schools(edition.id, db)
+    users_purchases = await cruds_sport_competition.load_all_purchases(edition.id, db)
+
+    excel_io = BytesIO()
+
+    construct_sport_users_excel(
+        schools=schools,
+        participants=participants,
+        users_purchases=users_purchases,
+        export_io=excel_io,
+    )
+
+    res = excel_io.getvalue()
+
+    excel_io.close()
+
+    headers = {
+        "Content-Disposition": f'attachment; filename="sport_quotas_{sport.name}_{edition.name}.xlsx"',
+    }
+    return Response(
+        res,
+        headers=headers,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )

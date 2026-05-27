@@ -1,6 +1,5 @@
 import logging
 import uuid
-from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from helloasso_python.models.hello_asso_api_v5_models_api_notifications_api_notification_type import (
@@ -41,11 +40,12 @@ async def webhook(
         # We validate the body of the request ourself
         # to prevent FastAPI from returning a 422 error to HelloAsso
         # without logging the error
-        type_adapter = TypeAdapter(NotificationResultContent)
-        validated_content = type_adapter.validate_python(
+        type_adapter: TypeAdapter[NotificationResultContent] = TypeAdapter(
+            NotificationResultContent,
+        )
+        content = type_adapter.validate_python(
             await request.json(),
         )
-        content = cast("NotificationResultContent", validated_content)
         if content.metadata:
             checkout_metadata = (
                 schemas_payment.HelloAssoCheckoutMetadata.model_validate(
@@ -120,6 +120,7 @@ async def webhook(
             id=uuid.uuid4(),
             checkout_id=checkout.id,
             paid_amount=content.data.amount,
+            tip_amount=content.data.amountTip,
             hello_asso_payment_id=content.data.id,
         )
         await cruds_payment.create_checkout_payment(

@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.users.factory_users import CoreUsersFactory
 from app.core.utils.config import Settings
 from app.modules.calendar import cruds_calendar, models_calendar
-from app.modules.calendar.types_calendar import CalendarEventType
+from app.modules.calendar.types_calendar import CalendarEventType, Decision
 from app.types.factory import Factory
 
 
@@ -26,7 +26,7 @@ class CalendarFactory(Factory):
             location="Test location",
             type=CalendarEventType.eventAE,
             description="Test description",
-            decision="Approved",
+            decision=Decision.approved,
             recurrence_rule=None,
         )
         await cruds_calendar.add_event(db, event)

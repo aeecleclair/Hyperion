@@ -73,9 +73,13 @@ async def check_validation_consistency(
             status_code=400,
             detail="User is an athlete but is not registered as a participant",
         )
+    is_participant = (
+        user.is_athlete or user.is_cameraman or user.is_pompom or user.is_fanfare
+    )
     required_product_ids = {product.id for product in required_products}
     if (
-        not any(
+        is_participant
+        and not any(
             purchase.product_variant.product_id in required_product_ids
             for purchase in purchases
         )
@@ -315,8 +319,8 @@ async def check_product_quotas(
         )
         if product_quota and product_quota.quota is not None:
             nb_purchased = await cruds_sport_competition.count_validated_purchases_by_product_id_and_school_id(
-                user.user.school_id,
                 product_id,
+                user.user.school_id,
                 db,
             )
             if nb_purchased >= product_quota.quota:

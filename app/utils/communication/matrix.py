@@ -1,6 +1,6 @@
 from typing import Any
 
-import requests
+import httpx
 
 from app.types.exceptions import MatrixRequestError, MatrixSendMessageError
 
@@ -43,10 +43,15 @@ class Matrix:
         if "Authorization" not in headers:
             headers["Authorization"] = "Bearer " + self.access_token
 
-        response = requests.post(url, json=json, headers=headers, timeout=10)
         try:
+            response = httpx.post(
+                url,
+                json=json,
+                headers=headers,
+                timeout=10,
+            )
             response.raise_for_status()
-        except requests.exceptions.HTTPError as err:
+        except httpx.RequestError as err:
             raise MatrixRequestError() from err
 
         return response.json()
