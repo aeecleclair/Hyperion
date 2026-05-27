@@ -1,4 +1,4 @@
-'''import datetime
+import datetime
 import uuid
 
 import pytest_asyncio
@@ -309,4 +309,3 @@ def test_delete_room(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 204
-'''

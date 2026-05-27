@@ -1,4 +1,4 @@
-'''import uuid
+import uuid
 
 import pytest_asyncio
 from fastapi.testclient import TestClient
@@ -281,4 +281,3 @@ def test_send_test_future_notification_topic(client: TestClient) -> None:
         },
     )
     assert response.status_code == 204
-'''

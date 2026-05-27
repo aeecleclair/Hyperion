@@ -1,4 +1,4 @@
-'''import datetime
+import datetime
 import uuid
 from pathlib import Path
 
@@ -202,4 +202,3 @@ def test_delete_advertiser(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 204
-'''

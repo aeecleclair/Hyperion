@@ -1,4 +1,4 @@
-'''import uuid
+import uuid
 from datetime import UTC, date, datetime, timedelta
 
 import pytest_asyncio
@@ -2780,4 +2780,3 @@ async def test_customdata_deletion_on_purchase_deletion(client: TestClient):
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 404
-'''

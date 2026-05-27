@@ -1,4 +1,4 @@
-'''import datetime
+import datetime
 import uuid
 
 import pytest_asyncio
@@ -183,4 +183,3 @@ def test_approve_event(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 204
-'''

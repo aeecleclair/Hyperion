@@ -1,4 +1,4 @@
-"""import uuid
+import uuid
 from datetime import UTC, date, datetime, timedelta
 
 import pytest_asyncio
@@ -738,4 +738,3 @@ async def test_post_batch_user_memberships_admin(client: TestClient):
         None,
     )
     assert membership is not None
-"""

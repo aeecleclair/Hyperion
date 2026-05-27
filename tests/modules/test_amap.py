@@ -1,4 +1,4 @@
-'''import uuid
+import uuid
 from datetime import UTC, datetime
 
 import pytest_asyncio
@@ -422,4 +422,3 @@ def test_get_orders_of_user(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
-'''

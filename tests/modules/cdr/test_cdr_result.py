@@ -1,4 +1,4 @@
-'''import uuid
+import uuid
 from datetime import UTC, datetime
 from io import BytesIO
 
@@ -361,4 +361,3 @@ def test_construct_dataframe_from_users_purchases():
         users_answers=users_answers,
         export_io=excel_io,
     )
-'''

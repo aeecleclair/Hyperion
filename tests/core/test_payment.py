@@ -1,4 +1,4 @@
-'''import uuid
+import uuid
 from typing import TYPE_CHECKING
 
 import pytest
@@ -596,4 +596,3 @@ async def test_payment_tool_init_checkout_fail(
             )
 
     mocked_hyperion_security_logger.assert_called()
-'''

@@ -1,4 +1,4 @@
-"""import pytest_asyncio
+import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.core.groups import models_groups
@@ -107,4 +107,3 @@ def test_delete_membership(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
-"""

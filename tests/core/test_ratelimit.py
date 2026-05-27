@@ -1,4 +1,4 @@
-'''from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient
 
 from tests import commons
 
@@ -17,4 +17,3 @@ def test_limiter(client: TestClient) -> None:
             assert response.status_code == 429
     finally:
         commons.SETTINGS.ENABLE_RATE_LIMITER = initial_ENABLE_RATE_LIMITER
-'''

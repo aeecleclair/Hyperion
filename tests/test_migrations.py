@@ -1,4 +1,4 @@
-'''import importlib
+import importlib
 import logging
 from collections.abc import Callable, Generator
 from pathlib import Path
@@ -172,4 +172,3 @@ def test_migrations(
             run_test_upgrade(revision, alembic_runner, alembic_connection)
         except Exception as error:
             raise FailedToRunTestUpgrade(revision) from error
-'''

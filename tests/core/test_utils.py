@@ -1,4 +1,4 @@
-'''import shutil
+import shutil
 import uuid
 from pathlib import Path
 
@@ -289,4 +289,3 @@ async def test_replace_core_data() -> None:
         )
         assert new_core_data.name == "ECLAIR"
         assert new_core_data.age == 42
-'''

@@ -1,4 +1,4 @@
-'''import uuid
+import uuid
 
 import pytest_asyncio
 from fastapi.testclient import TestClient
@@ -1461,4 +1461,3 @@ def test_delete_association_admin_with_deactivation(client: TestClient):
 #         headers={"Authorization": f"Bearer {token_simple}"},
 #     )
 #     assert response.status_code == 200
-'''

@@ -1,4 +1,4 @@
-'''from uuid import UUID
+from uuid import UUID
 
 import pytest_asyncio
 from fastapi.testclient import TestClient
@@ -250,4 +250,3 @@ def test_delete_school(client: TestClient) -> None:
     )
     assert response.status_code == 200
     assert response.json()["school_id"] == str(SchoolType.no_school.value)
-'''
