@@ -547,6 +547,11 @@ async def recover_user(
     """
 
     db_user = await cruds_users.get_user_by_email(db=db, email=email)
+    last_created = await cruds_users.get_recover_request_by_email(
+        db=db,
+        email = email,
+    ).created_on
+    
     if db_user is None:
         if settings.SMTP_ACTIVE:
             calypsso_register_url = (
@@ -570,16 +575,16 @@ async def recover_user(
                 f"Reset password failed for {email}, user does not exist",
             )
 
-    else:
+    elif last_created + timedelta(minutes=settings.PASWORD_RECOVERY_NEW_TOKEN_MINUTE) > datetime.now(UTC):
         # The user exists, we can send a password reset invitation
         reset_token = security.generate_token()
 
         recover_request = models_users.CoreUserRecoverRequest(
-            email=email,
-            user_id=db_user.id,
-            reset_token=reset_token,
-            created_on=datetime.now(UTC),
-            expire_on=datetime.now(UTC)
+            email = email,
+            user_id = db_user.id,
+            reset_token = reset_token,
+            created_on = datetime.now(UTC),
+            expire_on = datetime.now(UTC)
             + timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRE_HOURS),
         )
 

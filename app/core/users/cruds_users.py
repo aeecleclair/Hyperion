@@ -137,7 +137,17 @@ async def get_user_by_email(
     )
     return result.scalars().first()
 
-
+async def get_recover_request_by_email(
+    db: AsyncSession,
+    email: str,
+) -> models_users.CoreUserRecoverRequest | None:
+    result = await db.execute(
+        select(models_users.CoreUserRecoverRequest).where(
+            models_users.CoreUserRecoverRequest.email == email,
+        ),
+    )
+    return result.scalars().first()
+    
 async def update_user(
     db: AsyncSession,
     user_id: str,
@@ -148,7 +158,6 @@ async def update_user(
         .where(models_users.CoreUser.id == user_id)
         .values(**user_update.model_dump(exclude_none=True)),
     )
-
 
 async def create_unconfirmed_user(
     db: AsyncSession,

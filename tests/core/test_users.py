@@ -331,6 +331,23 @@ def test_recover_and_reset_password(mocker: MockerFixture, client: TestClient) -
 
     assert response.status_code == 201
 
+def test_recover_overflow(mocker: MockerFixture, client: TestClient) -> None:
+    # NOTE: we don't want to mock app.core.security.generate_token but
+    # app.core.users.endpoints_users.security.generate_token which is the imported version of the function
+    mocker.patch(
+        "app.core.users.endpoints_users.security.generate_token",
+        return_value=UNIQUE_TOKEN,
+    )
+
+    response = client.post(
+        "/users/recover",
+        json={"email": FABRISTPP_EMAIL_1},
+    )
+
+    assert response.status_code == 201
+
+    
+
 
 def test_recover_with_non_existing_account(
     mocker: MockerFixture,
