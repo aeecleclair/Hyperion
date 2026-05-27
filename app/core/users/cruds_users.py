@@ -1,7 +1,9 @@
+
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
 from collections.abc import Sequence
 from uuid import UUID
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import ForeignKey, and_, delete, not_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +15,9 @@ from app.core.groups.groups_type import AccountType
 from app.core.mypayment.utils_mypayment import fuse_mypayment_users_utils
 from app.core.schools.schools_type import SchoolType
 from app.core.users import models_users, schemas_users
+#from app.core.utils.config import Settings
+#from app.dependencies import get_settings
+#from fastapi import Depends  
 
 
 async def count_users(db: AsyncSession) -> int:
@@ -137,7 +142,19 @@ async def get_user_by_email(
     )
     return result.scalars().first()
 
-
+async def get_recover_request_by_email(
+    db: AsyncSession,   
+    email: str,
+    settings,
+) -> models_users.CoreUserRecoverRequest | None:
+    result = await db.execute(
+        select(models_users.CoreUserRecoverRequest).where(
+            models_users.CoreUserRecoverRequest.email == email and
+            datetime.now(UTC) - models_users.CoreUserRecoverRequest.created_on < timedelta(minutes=settings.PASWORD_RECOVERY_NEW_TOKEN_MINUTE),
+        ),
+    )
+    return result.scalars().first()
+    
 async def update_user(
     db: AsyncSession,
     user_id: str,
@@ -148,7 +165,6 @@ async def update_user(
         .where(models_users.CoreUser.id == user_id)
         .values(**user_update.model_dump(exclude_none=True)),
     )
-
 
 async def create_unconfirmed_user(
     db: AsyncSession,
