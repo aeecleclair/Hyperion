@@ -547,10 +547,10 @@ async def recover_user(
     """
 
     db_user = await cruds_users.get_user_by_email(db=db, email=email)
-    last_created = await cruds_users.get_recover_request_by_email(
+    last_created = (await cruds_users.get_recover_request_by_email(
         db=db,
         email = email,
-    ).created_on
+    )).created_on
     
     if db_user is None:
         if settings.SMTP_ACTIVE:
@@ -612,6 +612,11 @@ async def recover_user(
             hyperion_security_logger.info(
                 f"Reset password for {email}: {calypsso_reset_url}",
             )
+    else:
+        raise HTTPException(
+            status_code = 429,
+            detail="Too Many error",
+        )
 
     return standard_responses.Result()
 

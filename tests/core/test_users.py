@@ -341,10 +341,17 @@ def test_recover_overflow(mocker: MockerFixture, client: TestClient) -> None:
 
     response = client.post(
         "/users/recover",
-        json={"email": FABRISTPP_EMAIL_1},
+        json={"email": FABRISTPP_EMAIL_2},
     )
 
     assert response.status_code == 201
+
+    response = client.post(
+        "/users/recover",
+        json={"email": FABRISTPP_EMAIL_2},
+    )
+
+    assert response.status_code == 429
 
     
 

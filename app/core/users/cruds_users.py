@@ -138,7 +138,7 @@ async def get_user_by_email(
     return result.scalars().first()
 
 async def get_recover_request_by_email(
-    db: AsyncSession,
+    db: AsyncSession,   
     email: str,
 ) -> models_users.CoreUserRecoverRequest | None:
     result = await db.execute(
