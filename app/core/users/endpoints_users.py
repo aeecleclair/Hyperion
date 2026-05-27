@@ -547,10 +547,11 @@ async def recover_user(
     """
 
     db_user = await cruds_users.get_user_by_email(db=db, email=email)
-    last_created = (await cruds_users.get_recover_request_by_email(
+    last_created = await cruds_users.get_recover_request_by_email(
         db=db,
         email = email,
-    )).created_on
+        settings = settings,
+    )
     
     if db_user is None:
         if settings.SMTP_ACTIVE:
@@ -575,7 +576,7 @@ async def recover_user(
                 f"Reset password failed for {email}, user does not exist",
             )
 
-    elif last_created + timedelta(minutes=settings.PASWORD_RECOVERY_NEW_TOKEN_MINUTE) > datetime.now(UTC):
+    elif last_created is None:
         # The user exists, we can send a password reset invitation
         reset_token = security.generate_token()
 
@@ -635,8 +636,8 @@ async def reset_password(
     Reset the user password, using a **reset_token** provided by `/users/recover` endpoint.
     """
     recover_request = await cruds_users.get_recover_request_by_reset_token(
-        db=db,
-        reset_token=reset_password_request.reset_token,
+        db = db,
+        reset_token = reset_password_request.reset_token
     )
     if recover_request is None:
         raise HTTPException(status_code=404, detail="Invalid reset token")
