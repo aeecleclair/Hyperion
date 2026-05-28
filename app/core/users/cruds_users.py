@@ -141,7 +141,7 @@ async def get_user_by_email(
 async def get_recovery_request_within_delay(
     db: AsyncSession,
     email: str,
-    minimumDelayMinutes: float,
+    minimumDelayMinutes: int,
 ) -> models_users.CoreUserRecoverRequest | None:
     result = await db.execute(
         select(models_users.CoreUserRecoverRequest).where(

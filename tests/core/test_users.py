@@ -351,14 +351,14 @@ def test_recover_overflow(mocker: MockerFixture, client: TestClient) -> None:
 
     response = client.post(
         "/users/recover",
-        json={"email": 'doesntexist@ecl21.ec-lyon.fr'},
+        json={"email": "doesntexist@ecl21.ec-lyon.fr"},
     )
 
     assert response.status_code == 201
 
     response = client.post(
         "/users/recover",
-        json={"email": 'doesntexist@ecl21.ec-lyon.fr'},
+        json={"email": "doesntexist@ecl21.ec-lyon.fr"},
     )
 
     assert response.status_code == 429
