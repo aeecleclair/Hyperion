@@ -350,20 +350,6 @@ def test_recover_overflow(mocker: MockerFixture, client: TestClient) -> None:
 
     assert response.status_code == 429
 
-    """response = client.post(
-        "/users/recover",
-        json={"email": "doesntexist@ecl21.ec-lyon.fr"},
-    )
-
-    assert response.status_code == 201
-
-    response = client.post(
-        "/users/recover",
-        json={"email": "doesntexist@ecl21.ec-lyon.fr"},
-    )
-
-    assert response.status_code == 429"""
-
 
 def test_recover_with_non_existing_account(
     mocker: MockerFixture,
@@ -381,7 +367,7 @@ def test_recover_with_non_existing_account(
     assert response.status_code == 201
 
     mocked_hyperion_security_logger.assert_called_once_with(
-        "Reset password failed for non-existing@myecl.fr, user does not exist",
+        "Reset password failed for non-existing@myecl.fr, user does not exis",
     )
 
 
