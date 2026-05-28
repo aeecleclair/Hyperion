@@ -139,7 +139,7 @@ async def get_user_by_email(
     )
     return result.scalars().first()
 
-async def get_recover_request_by_email(
+async def get_last_recovory_demand_last_time(
     db: AsyncSession,   
     email: str,
     time: datetime,
