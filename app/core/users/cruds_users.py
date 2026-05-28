@@ -1,8 +1,8 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
 from collections.abc import Sequence
-from uuid import UUID
 from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
 from sqlalchemy import ForeignKey, and_, delete, not_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -138,20 +138,20 @@ async def get_user_by_email(
     )
     return result.scalars().first()
 
-async def get_last_recovory_demand_last_time(
-    db: AsyncSession,   
+async def get_recovery_request_within_delay(
+    db: AsyncSession,
     email: str,
-    time: datetime,
+    minimumDelayMinutes: float,
 ) -> models_users.CoreUserRecoverRequest | None:
     result = await db.execute(
         select(models_users.CoreUserRecoverRequest).where(
-            models_users.CoreUserRecoverRequest.email == email and
-            datetime.now(UTC) - models_users.CoreUserRecoverRequest.created_on 
-            < timedelta(minutes=time),
+            models_users.CoreUserRecoverRequest.email == email,
+            datetime.now(UTC) - models_users.CoreUserRecoverRequest.created_on
+            < timedelta(minutes = minimumDelayMinutes),
         ),
     )
     return result.scalars().first()
-    
+
 async def update_user(
     db: AsyncSession,
     user_id: str,
