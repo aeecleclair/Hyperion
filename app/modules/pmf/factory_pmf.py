@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.users.factory_users import CoreUsersFactory
 from app.core.utils.config import Settings
-from app.modules.pmf import cruds_pmf, models_pmf, types_pmf
+from app.modules.pmf import cruds_pmf, models_pmf, types_pmf, schemas_pmf
 from app.types.factory import Factory
 
 
@@ -15,7 +15,7 @@ class PmfFactory(Factory):
     @classmethod
     async def create_offers(cls, db: AsyncSession):
         await cruds_pmf.create_offer(
-            offer=models_pmf.PmfOffer(
+            offer=schemas_pmf.OfferSimple(
                 id=uuid.uuid4(),
                 author_id=CoreUsersFactory.demo_users_id[0],
                 company_name="Une entreprise quelconque",
@@ -26,14 +26,14 @@ class PmfFactory(Factory):
                 location="Lyon",
                 location_type=types_pmf.LocationType.On_site,
                 offer_type=types_pmf.OfferType.TFE,
-                created_on=date.today,
                 hidden=True,
             ),
             db=db,
         )
+        temp_id=uuid.uuid4()
         await cruds_pmf.create_offer(
-            offer=models_pmf.PmfOffer(
-                id=uuid.uuid4(),
+            offer=schemas_pmf.OfferSimple(
+                id=temp_id,
                 author_id=CoreUsersFactory.demo_users_id[1],
                 company_name="EDF",
                 start_date=date(2026, 12, 12),
@@ -43,7 +43,6 @@ class PmfFactory(Factory):
                 location="Ecully",
                 location_type=types_pmf.LocationType.On_site,
                 offer_type=types_pmf.OfferType.APP,
-                created_on=date.today,
                 hidden=False,
             ),
             db=db,
@@ -55,5 +54,5 @@ class PmfFactory(Factory):
 
     @classmethod
     async def should_run(cls, db: AsyncSession):
-        assos = await cruds_pmf.get_offers(db=db)
-        return len(assos) == 0
+        offres = await cruds_pmf.get_offers(db=db)
+        return len(offres) == 0

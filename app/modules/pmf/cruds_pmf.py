@@ -23,7 +23,7 @@ async def create_offer(offer: schemas_pmf.OfferSimple, db: AsyncSession) -> None
             start_date=offer.start_date,
             duration=offer.duration,
             created_on=datetime.now(UTC).date(),
-            hidden=True,
+            hidden=offer.hidden,
             tags=[],
         ),
     )
