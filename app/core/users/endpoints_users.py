@@ -602,7 +602,7 @@ async def recover_user(
     )
 
     calypsso_reset_url = settings.CLIENT_URL + calypsso.get_reset_password_relative_url(
-        reset_token=reset_token
+        reset_token=reset_token,
     )
 
     if settings.SMTP_ACTIVE:
