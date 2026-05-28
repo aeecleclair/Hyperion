@@ -1,4 +1,3 @@
-
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
 from collections.abc import Sequence
@@ -15,9 +14,6 @@ from app.core.groups.groups_type import AccountType
 from app.core.mypayment.utils_mypayment import fuse_mypayment_users_utils
 from app.core.schools.schools_type import SchoolType
 from app.core.users import models_users, schemas_users
-#from app.core.utils.config import Settings
-#from app.dependencies import get_settings
-#from fastapi import Depends  
 
 
 async def count_users(db: AsyncSession) -> int:
@@ -142,15 +138,16 @@ async def get_user_by_email(
     )
     return result.scalars().first()
 
-async def get_recover_request_by_email(
+async def get_last_recovory_demand_last_time(
     db: AsyncSession,   
     email: str,
-    settings,
+    time: datetime,
 ) -> models_users.CoreUserRecoverRequest | None:
     result = await db.execute(
         select(models_users.CoreUserRecoverRequest).where(
             models_users.CoreUserRecoverRequest.email == email and
-            datetime.now(UTC) - models_users.CoreUserRecoverRequest.created_on < timedelta(minutes=settings.PASWORD_RECOVERY_NEW_TOKEN_MINUTE),
+            datetime.now(UTC) - models_users.CoreUserRecoverRequest.created_on 
+            < timedelta(minutes=time),
         ),
     )
     return result.scalars().first()
