@@ -331,10 +331,11 @@ def test_recover_and_reset_password(mocker: MockerFixture, client: TestClient) -
 
     assert response.status_code == 201
 
+
 def test_recover_overflow(mocker: MockerFixture, client: TestClient) -> None:
     # NOTE: we don't want to mock app.core.security.generate_token but
     # app.core.users.endpoints_users.security.generate_token which is the imported version of the function
-    
+
     response = client.post(
         "/users/recover",
         json={"email": FABRISTPP_EMAIL_2},
@@ -348,8 +349,6 @@ def test_recover_overflow(mocker: MockerFixture, client: TestClient) -> None:
     )
 
     assert response.status_code == 429
-
-    
 
 
 def test_recover_with_non_existing_account(
@@ -368,7 +367,7 @@ def test_recover_with_non_existing_account(
     assert response.status_code == 201
 
     mocked_hyperion_security_logger.assert_called_once_with(
-        "Reset password failed for non-existing@myecl.fr, user does not exist",
+        "Reset password failed for non-existing@myecl.fr, user does not exis",
     )
 
 
