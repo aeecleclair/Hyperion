@@ -549,8 +549,8 @@ async def recover_user(
     db_user = await cruds_users.get_user_by_email(db=db, email=email)
     last_created = await cruds_users.get_last_recovory_demand_last_time(
         db=db,
-        email = email,
-        minimumDelayMinutes = settings.PASWORD_RECOVERY_NEW_TOKEN_EXPIRE_MINUTES,
+        email=email,
+        minimumDelayMinutes=settings.PASWORD_RECOVERY_NEW_TOKEN_EXPIRE_MINUTES,
     )
 
     if db_user is None:
@@ -580,7 +580,7 @@ async def recover_user(
 
     if last_created is not None:
         raise HTTPException(
-            status_code = 429,
+            status_code=429,
             detail="Too Many Requests",
         )
 
@@ -588,11 +588,11 @@ async def recover_user(
     reset_token = security.generate_token()
 
     recover_request = models_users.CoreUserRecoverRequest(
-        email = email,
-        user_id = db_user.id,
-        reset_token = reset_token,
-        created_on = datetime.now(UTC),
-        expire_on = datetime.now(UTC)
+        email=email,
+        user_id=db_user.id,
+        reset_token=reset_token,
+        created_on=datetime.now(UTC),
+        expire_on=datetime.now(UTC)
         + timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRE_HOURS),
     )
 
@@ -601,9 +601,8 @@ async def recover_user(
         recover_request=recover_request,
     )
 
-    calypsso_reset_url = (
-        settings.CLIENT_URL
-        + calypsso.get_reset_password_relative_url(reset_token=reset_token)
+    calypsso_reset_url = settings.CLIENT_URL + calypsso.get_reset_password_relative_url(
+        reset_token=reset_token
     )
 
     if settings.SMTP_ACTIVE:
@@ -638,8 +637,8 @@ async def reset_password(
     Reset the user password, using a **reset_token** provided by `/users/recover` endpoint.
     """
     recover_request = await cruds_users.get_recover_request_by_reset_token(
-        db = db,
-        reset_token = reset_password_request.reset_token,
+        db=db,
+        reset_token=reset_password_request.reset_token,
     )
     if recover_request is None:
         raise HTTPException(status_code=404, detail="Invalid reset token")

@@ -138,6 +138,7 @@ async def get_user_by_email(
     )
     return result.scalars().first()
 
+
 async def get_recovery_request_within_delay(
     db: AsyncSession,
     email: str,
@@ -147,10 +148,11 @@ async def get_recovery_request_within_delay(
         select(models_users.CoreUserRecoverRequest).where(
             models_users.CoreUserRecoverRequest.email == email,
             datetime.now(UTC) - models_users.CoreUserRecoverRequest.created_on
-            < timedelta(minutes = minimumDelayMinutes),
+            < timedelta(minutes=minimumDelayMinutes),
         ),
     )
     return result.scalars().first()
+
 
 async def update_user(
     db: AsyncSession,
@@ -162,6 +164,7 @@ async def update_user(
         .where(models_users.CoreUser.id == user_id)
         .values(**user_update.model_dump(exclude_none=True)),
     )
+
 
 async def create_unconfirmed_user(
     db: AsyncSession,
