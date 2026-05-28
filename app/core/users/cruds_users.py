@@ -1,4 +1,3 @@
-
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
 from collections.abc import Sequence
