@@ -550,7 +550,7 @@ async def recover_user(
     last_created = await cruds_users.get_recover_request_by_email(
         db=db,
         email = email,
-        settings = settings,
+        time = settings.PASWORD_RECOVERY_NEW_TOKEN_MINUTES,
     )
     
     if db_user is None:
