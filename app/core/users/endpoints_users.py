@@ -547,7 +547,7 @@ async def recover_user(
     """
 
     db_user = await cruds_users.get_user_by_email(db=db, email=email)
-    last_created = await cruds_users.get_last_recovory_demand_last_time(
+    last_created = await cruds_users.get_recovery_request_within_delay(
         db=db,
         email=email,
         minimumDelayMinutes=settings.PASWORD_RECOVERY_NEW_TOKEN_EXPIRE_MINUTES,
