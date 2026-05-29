@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -337,10 +337,8 @@ def test_recover_overflow(mocker: MockerFixture, client: TestClient) -> None:
     # NOTE: we don't want to mock app.core.security.generate_token but
     # app.core.users.endpoints_users.security.generate_token which is the imported version of the function
 
-    mocker.patch(
-        "app.core.users.endpoints_users.datetime.now",
-        return_value=datetime(2005, 10, 24, 0, 0, 0, tzinfo=UTC),
-    )
+    mock_datetime = mocker.patch("app.core.users.endpoints_users.datetime")
+    mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 0, 0, tzinfo=timezone.utc)
 
     response = client.post(
         "/users/recover",
@@ -349,10 +347,7 @@ def test_recover_overflow(mocker: MockerFixture, client: TestClient) -> None:
 
     assert response.status_code == 201
 
-    mocker.patch(
-        "app.core.users.endpoints_users.datetime.now",
-        return_value=datetime(2005, 10, 24, 0, 2, 0, tzinfo=UTC),
-    )
+    mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 2, 0, tzinfo=timezone.utc)
 
     response = client.post(
         "/users/recover",
@@ -361,10 +356,7 @@ def test_recover_overflow(mocker: MockerFixture, client: TestClient) -> None:
 
     assert response.status_code == 429
 
-    mocker.patch(
-        "app.core.users.endpoints_users.datetime.now",
-        return_value=datetime(2005, 10, 24, 0, 6, 0, tzinfo=UTC),
-    )
+    mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 6, 0, tzinfo=timezone.utc)
 
     response = client.post(
         "/users/recover",
@@ -378,10 +370,9 @@ def test_recover_with_non_existing_account(
     mocker: MockerFixture,
     client: TestClient,
 ) -> None:
-    mocker.patch(
-        "app.core.users.endpoints_users.datetime.now",
-        return_value=datetime(2005, 10, 24, 0, 0, 0, tzinfo=UTC),
-    )
+    
+    mock_datetime = mocker.patch("app.core.users.endpoints_users.datetime")
+    mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 0, 0, tzinfo=timezone.utc)
 
     response = client.post(
         "/users/recover",
@@ -390,10 +381,7 @@ def test_recover_with_non_existing_account(
 
     assert response.status_code == 201
 
-    mocker.patch(
-        "app.core.users.endpoints_users.datetime.now",
-        return_value=datetime(2005, 10, 24, 0, 2, 0, tzinfo=UTC),
-    )
+    mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 2, 0, tzinfo=timezone.utc)
 
     response = client.post(
         "/users/recover",
@@ -402,10 +390,7 @@ def test_recover_with_non_existing_account(
 
     assert response.status_code == 429
 
-    mocker.patch(
-        "app.core.users.endpoints_users.datetime.now",
-        return_value=datetime(2005, 10, 24, 0, 6, 0, tzinfo=UTC),
-    )
+    mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 6, 0, tzinfo=timezone.utc)
 
     response = client.post(
         "/users/recover",
