@@ -44,7 +44,7 @@ from app.types.exceptions import UserWithEmailAlreadyExistError
 from app.types.module import CoreModule
 from app.types.s3_access import S3Access
 from app.utils.communication.notifications import NotificationManager
-from app.utils.mail.mailworker import send_email
+from app.utils.mail.mailworker import send_email,send_email_fake
 from app.utils.tools import (
     create_and_send_email_migration,
     get_file_from_data,
@@ -571,7 +571,7 @@ async def recover_user(
             mail = mail_templates.get_mail_reset_password_account_does_not_exist(
                 register_url=calypsso_register_url,
             )
-            send_email(
+            send_email_fake(
                 recipient=email,
                 subject="MyECL - reset your password",
                 content=mail,
