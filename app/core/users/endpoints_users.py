@@ -2,6 +2,7 @@ import logging
 import string
 import uuid
 from datetime import UTC, datetime, timedelta
+import random
 
 import aiofiles
 import calypsso
@@ -560,28 +561,16 @@ async def recover_user(
         )
 
     if db_user is None:
-        if settings.SMTP_ACTIVE:
-            calypsso_register_url = (
-                settings.CLIENT_URL
-                + calypsso.get_register_relative_url(
-                    external=True,
-                )
-            )
-
-            mail = mail_templates.get_mail_reset_password_account_does_not_exist(
-                register_url=calypsso_register_url,
-            )
-            send_email_fake(
-                recipient=email,
-                subject="MyECL - reset your password",
-                content=mail,
-                settings=settings,
-            )
-        else:
+        #In Work new things to make
+        if random.randint(0, 1) : 
             hyperion_security_logger.info(
                 f"Reset password failed for {email}, user does not exist",
             )
 
+            raise HTTPException(
+                status_code=404,
+                detail="Not Found",
+            )
         return standard_responses.Result()
 
     # The user exists, we can send a password reset invitation
