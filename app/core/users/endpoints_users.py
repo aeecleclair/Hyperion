@@ -553,6 +553,12 @@ async def recover_user(
         minimumDelayMinutes=settings.PASWORD_RECOVERY_NEW_TOKEN_EXPIRE_MINUTES,
     )
 
+    if last_created is not None:
+        raise HTTPException(
+            status_code=429,
+            detail="Too Many Requests",
+        )
+
     if db_user is None:
         if settings.SMTP_ACTIVE:
             calypsso_register_url = (
@@ -576,13 +582,7 @@ async def recover_user(
                 f"Reset password failed for {email}, user does not exist",
             )
 
-        #return standard_responses.Result()
-
-    if last_created is not None:
-        raise HTTPException(
-            status_code=429,
-            detail="Too Many Requests",
-        )
+        return standard_responses.Result()
 
     # The user exists, we can send a password reset invitation
     reset_token = security.generate_token()
