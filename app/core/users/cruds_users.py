@@ -146,9 +146,10 @@ async def get_user_by_email_unregistred(
     """Return user with id from database as a dictionary"""
 
     result = await db.execute(
-        select(models_users.CoreUnregistredUserRecoverRequest)
-        .where(models_users.CoreUnregistredUserRecoverRequest.email == email),
-        )
+        select(models_users.CoreUnregistredUserRecoverRequest).where(
+            models_users.CoreUnregistredUserRecoverRequest.email == email,
+        ),
+    )
 
     return result.scalars().first()
 
