@@ -1,6 +1,5 @@
 from datetime import UTC, datetime
 from pathlib import Path
-from unittest import mock
 
 import pytest
 import pytest_asyncio
@@ -338,73 +337,67 @@ def test_recover_overflow(mocker: MockerFixture, client: TestClient) -> None:
     # NOTE: we don't want to mock app.core.security.generate_token but
     # app.core.users.endpoints_users.security.generate_token which is the imported version of the function
 
-    mock_datetime = mocker.patch("app.core.users")
+    mock_datetime = mocker.patch("app.core.users.endpoints_users.recover_user")
     mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 0, 0, tzinfo=UTC)
 
-    with mock.patch("datetime.datetime") as dt_mock:
-        dt_mock.utcnow.return_value.strftime.return_value = "2005-10-24 00:00:00"
+    response = client.post(
+        "/users/recover",
+        json={"email": FABRISTPP_EMAIL_2},
+    )
 
-        response = client.post(
-            "/users/recover",
-            json={"email": FABRISTPP_EMAIL_2},
-        )
+    assert response.status_code == 201
 
-        assert response.status_code == 201
+    mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 2, 0, tzinfo=UTC)
 
-    with mock.patch("datetime.datetime") as dt_mock:
-        dt_mock.utcnow.return_value.strftime.return_value = "2005-10-24 00:02:00"
+    response = client.post(
+        "/users/recover",
+        json={"email": FABRISTPP_EMAIL_2},
+    )
 
-        response = client.post(
-            "/users/recover",
-            json={"email": FABRISTPP_EMAIL_2},
-        )
+    assert response.status_code == 429
 
-        assert response.status_code == 429
+    mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 6, 0, tzinfo=UTC)
 
-    with mock.patch("datetime.datetime") as dt_mock:
-        dt_mock.utcnow.return_value.strftime.return_value = "2005-10-24 00:06:00"
+    response = client.post(
+        "/users/recover",
+        json={"email": FABRISTPP_EMAIL_2},
+    )
 
-        response = client.post(
-            "/users/recover",
-            json={"email": FABRISTPP_EMAIL_2},
-        )
-
-        assert response.status_code == 201
+    assert response.status_code == 201
 
 
 def test_recover_with_non_existing_account(
     mocker: MockerFixture,
     client: TestClient,
 ) -> None:
-    with mock.patch("datetime.datetime") as dt_mock:
-        dt_mock.utcnow.return_value.strftime.return_value = "2005-10-24 00:00:00"
 
-        response = client.post(
-            "/users/recover",
-            json={"email": "non-existing@myecl.fr"},
-        )
+    mock_datetime = mocker.patch("app.core.users.endpoints_users.recover_user")
+    mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 0, 0, tzinfo=UTC)
 
-        assert response.status_code == 201
+    response = client.post(
+        "/users/recover",
+        json={"email": "non-existing@myecl.fr"},
+    )
 
-    with mock.patch("datetime.datetime") as dt_mock:
-        dt_mock.utcnow.return_value.strftime.return_value = "2005-10-24 00:02:00"
+    assert response.status_code == 201
 
-        response = client.post(
-            "/users/recover",
-            json={"email": "non-existing@myecl.fr"},
-        )
+    mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 2, 0, tzinfo=UTC)
 
-        assert response.status_code == 429
+    response = client.post(
+        "/users/recover",
+        json={"email": "non-existing@myecl.fr"},
+    )
 
-    with mock.patch("datetime.datetime") as dt_mock:
-        dt_mock.utcnow.return_value.strftime.return_value = "2005-10-24 00:06:00"
+    assert response.status_code == 429
 
-        response = client.post(
-            "/users/recover",
-            json={"email": "non-existing@myecl.fr"},
-        )
+    mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 6, 0, tzinfo=UTC)
 
-        assert response.status_code == 201
+    response = client.post(
+        "/users/recover",
+        json={"email": "non-existing@myecl.fr"},
+    )
+
+    assert response.status_code == 201
 
 
 def test_update_user(client: TestClient) -> None:
