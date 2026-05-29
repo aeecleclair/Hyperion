@@ -3,7 +3,6 @@
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
-from typing import Union
 
 from sqlalchemy import ForeignKey, and_, delete, not_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -257,12 +256,8 @@ async def delete_user(db: AsyncSession, user_id: str):
 
 async def create_user_recover_request(
     db: AsyncSession,
-    recover_request: Union[
-        models_users.CoreUserRecoverRequest, models_users.CoreUnregistredRecoverRequest
-    ],
-) -> Union[
-    models_users.CoreUserRecoverRequest, models_users.CoreUnregistredRecoverRequest
-]:
+    recover_request: models_users.CoreUserRecoverRequest,
+) -> models_users.CoreUserRecoverRequest:
     db.add(recover_request)
     await db.flush()
     return recover_request
@@ -480,8 +475,8 @@ async def fusion_users(
 
 async def create_unregistred_user_recover_request(
     db: AsyncSession,
-    recover_request: models_users.CoreUnregistredUser,
-) -> models_users.CoreUnregistredUser:
+    recover_request: models_users.CoreUnregistredUserRecoverRequest,
+) -> models_users.CoreUnregistredUserRecoverRequest:
     db.add(recover_request)
     await db.flush()
     return recover_request

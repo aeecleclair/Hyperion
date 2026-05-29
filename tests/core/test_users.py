@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -338,7 +338,8 @@ def test_recover_overflow(mocker: MockerFixture, client: TestClient) -> None:
     # app.core.users.endpoints_users.security.generate_token which is the imported version of the function
 
     mocker.patch(
-        "module_name.datetime.now", return_value=datetime(2005, 10, 24, 0, 0, 0)
+        "app.core.users.endpoints_users.datetime.now",
+        return_value=datetime(2005, 10, 24, 0, 0, 0, tzinfo=UTC),
     )
 
     response = client.post(
@@ -349,7 +350,8 @@ def test_recover_overflow(mocker: MockerFixture, client: TestClient) -> None:
     assert response.status_code == 201
 
     mocker.patch(
-        "module_name.datetime.now", return_value=datetime(2005, 10, 24, 0, 2, 0)
+        "app.core.users.endpoints_users.datetime.now",
+        return_value=datetime(2005, 10, 24, 0, 2, 0, tzinfo=UTC),
     )
 
     response = client.post(
@@ -360,7 +362,8 @@ def test_recover_overflow(mocker: MockerFixture, client: TestClient) -> None:
     assert response.status_code == 429
 
     mocker.patch(
-        "module_name.datetime.now", return_value=datetime(2005, 10, 24, 0, 6, 0)
+        "app.core.users.endpoints_users.datetime.now",
+        return_value=datetime(2005, 10, 24, 0, 6, 0, tzinfo=UTC),
     )
 
     response = client.post(
@@ -376,7 +379,8 @@ def test_recover_with_non_existing_account(
     client: TestClient,
 ) -> None:
     mocker.patch(
-        "module_name.datetime.now", return_value=datetime(2005, 10, 24, 0, 0, 0)
+        "app.core.users.endpoints_users.datetime.now",
+        return_value=datetime(2005, 10, 24, 0, 0, 0, tzinfo=UTC),
     )
 
     response = client.post(
@@ -387,7 +391,8 @@ def test_recover_with_non_existing_account(
     assert response.status_code == 201
 
     mocker.patch(
-        "module_name.datetime.now", return_value=datetime(2005, 10, 24, 0, 2, 0)
+        "app.core.users.endpoints_users.datetime.now",
+        return_value=datetime(2005, 10, 24, 0, 2, 0, tzinfo=UTC),
     )
 
     response = client.post(
@@ -398,7 +403,8 @@ def test_recover_with_non_existing_account(
     assert response.status_code == 429
 
     mocker.patch(
-        "module_name.datetime.now", return_value=datetime(2005, 10, 24, 0, 6, 0)
+        "app.core.users.endpoints_users.datetime.now",
+        return_value=datetime(2005, 10, 24, 0, 6, 0, tzinfo=UTC),
     )
 
     response = client.post(
