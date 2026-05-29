@@ -576,7 +576,7 @@ async def recover_user(
                 f"Reset password failed for {email}, user does not exist",
             )
 
-        return standard_responses.Result()
+        #return standard_responses.Result()
 
     if last_created is not None:
         raise HTTPException(
