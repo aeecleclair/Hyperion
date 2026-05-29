@@ -1,7 +1,7 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
 from collections.abc import Sequence
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import ForeignKey, and_, delete, not_, or_, select, update
@@ -139,15 +139,47 @@ async def get_user_by_email(
     return result.scalars().first()
 
 
-async def get_recovery_request_within_delay(
+async def get_user_by_email_unregistred(
+    db: AsyncSession,
+    email: str,
+) -> models_users.CoreUnregistredUserRecoverRequest | None:
+    """Return user with id from database as a dictionary"""
+
+    result = await db.execute(
+        select(models_users.CoreUnregistredUserRecoverRequest).where(
+            models_users.CoreUnregistredUserRecoverRequest.email == email,
+        ),
+    )
+
+    return result.scalars().first()
+
+
+async def get_recovery_request_within_delay_registred_user(
     db: AsyncSession,
     email: str,
     minimumDelayMinutes: int,
+    date: datetime,
 ) -> models_users.CoreUserRecoverRequest | None:
     result = await db.execute(
         select(models_users.CoreUserRecoverRequest).where(
             models_users.CoreUserRecoverRequest.email == email,
-            datetime.now(UTC) - models_users.CoreUserRecoverRequest.created_on
+            date - models_users.CoreUserRecoverRequest.created_on
+            < timedelta(minutes=minimumDelayMinutes),
+        ),
+    )
+    return result.scalars().first()
+
+
+async def get_recovery_request_within_delay_unregistred_user(
+    db: AsyncSession,
+    email: str,
+    minimumDelayMinutes: int,
+    date: datetime,
+) -> models_users.CoreUnregistredUserRecoverRequest | None:
+    result = await db.execute(
+        select(models_users.CoreUnregistredUserRecoverRequest).where(
+            models_users.CoreUnregistredUserRecoverRequest.email == email,
+            date - models_users.CoreUnregistredUserRecoverRequest.created_on
             < timedelta(minutes=minimumDelayMinutes),
         ),
     )
@@ -437,3 +469,12 @@ async def fusion_users(
 
     # Delete the user_deleted
     await delete_user(db, user_deleted_id)
+
+
+async def create_unregistred_user_recover_request(
+    db: AsyncSession,
+    recover_request: models_users.CoreUnregistredUserRecoverRequest,
+) -> models_users.CoreUnregistredUserRecoverRequest:
+    db.add(recover_request)
+    await db.flush()
+    return recover_request
