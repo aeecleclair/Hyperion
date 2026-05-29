@@ -47,6 +47,7 @@ def send_email(
                 f'Bad email adress: "{", ".join(recipient)}" for mail with subject "{subject}".',
             )
 
+
 def send_email_fake(
     recipient: str | list[str],
     subject: str,
