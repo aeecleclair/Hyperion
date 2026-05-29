@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -47,6 +47,22 @@ class PmfFactory(Factory):
             ),
             db=db,
         )
+        await cruds_pmf.create_tag(
+            tag=schemas_pmf.TagComplete(
+                id=uuid.uuid4(),
+                tag="Informatique",
+                created_on=datetime.now(UTC).date()
+            ),
+            db=db,
+        )
+        await cruds_pmf.create_tag(
+            tag=schemas_pmf.TagComplete(
+                id=uuid.uuid4(),
+                tag="Management",
+                created_on=datetime.now(UTC).date()
+            ),
+            db=db,
+        )
 
     @classmethod
     async def run(cls, db: AsyncSession, settings: Settings) -> None:
@@ -54,5 +70,5 @@ class PmfFactory(Factory):
 
     @classmethod
     async def should_run(cls, db: AsyncSession):
-        offres = await cruds_pmf.get_offers(db=db)
-        return len(offres) == 0
+        tags = await cruds_pmf.get_tags(db=db)
+        return len(tags) == 0

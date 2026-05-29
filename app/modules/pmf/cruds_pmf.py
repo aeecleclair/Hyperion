@@ -240,7 +240,7 @@ async def get_me_offers(
     ]
 
 
-async def get_all_tags(db: AsyncSession) -> list[schemas_pmf.TagComplete]:
+async def get_tags(db: AsyncSession) -> list[schemas_pmf.TagComplete]:
     tags = await db.execute(
         select(models_pmf.Tags).distinct(models_pmf.Tags.tag),
     )

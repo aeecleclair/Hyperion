@@ -262,14 +262,14 @@ async def delete_offer(
     response_model=list[schemas_pmf.TagComplete],
     status_code=200,
 )
-async def get_all_tags(
+async def get_tags(
     db: AsyncSession = Depends(get_db),
 ) -> list[schemas_pmf.TagComplete]:
-    return await cruds_pmf.get_all_tags(db=db)
+    return await cruds_pmf.get_tags(db=db)
 
 
 @router.get(
-    "/pmf/tag/{tag_id}",
+    "/pmf/tags/{tag_id}",
     response_model=schemas_pmf.TagComplete | None,
     status_code=200,
 )
@@ -288,7 +288,7 @@ async def get_tag(
 
 
 @router.post(
-    "/pmf/tag/",
+    "/pmf/tags/",
     response_model=schemas_pmf.TagComplete,
     status_code=201,
 )
@@ -314,7 +314,7 @@ async def create_tag(
 
 
 @router.put(
-    "/pmf/tag/{tag_id}",
+    "/pmf/tags/{tag_id}",
     response_model=None,
     status_code=204,
 )
@@ -335,7 +335,7 @@ async def update_tag(
 
 
 @router.delete(
-    "/pmf/tag/{tag_id}",
+    "/pmf/tags/{tag_id}",
     response_model=None,
     status_code=204,
 )
