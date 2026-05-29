@@ -195,3 +195,8 @@ class MailMigrationRequest(BaseModel):
 from app.core.groups.schemas_groups import CoreGroupSimple  # noqa: E402, TC001
 
 CoreUserSimple.model_rebuild()
+
+class UnregistredUserBase(BaseModel):
+    """Schema for user's model similar to core_user table in database"""
+
+    email: str

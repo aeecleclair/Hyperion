@@ -108,3 +108,15 @@ class CoreUserEmailMigrationCode(Base):
 
     # If the user should become an external or a member user after the email change
     make_user_external: Mapped[bool] = mapped_column(default=False)
+
+
+class CoreUnregistredUserRecoverRequest(Base):
+    __tablename__ = "core_unregistred_user_recover_request"
+
+    # The email column should not be unique.
+    # Someone can indeed create more than one password reset request,
+    email: Mapped[str]
+    user_id: Mapped[str]
+    reset_token: Mapped[str] = mapped_column(primary_key=True)
+    created_on: Mapped[datetime]
+    expire_on: Mapped[datetime]

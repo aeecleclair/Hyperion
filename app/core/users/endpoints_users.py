@@ -1,8 +1,8 @@
 import logging
+import random
 import string
 import uuid
 from datetime import UTC, datetime, timedelta
-import random
 
 import aiofiles
 import calypsso
@@ -45,7 +45,7 @@ from app.types.exceptions import UserWithEmailAlreadyExistError
 from app.types.module import CoreModule
 from app.types.s3_access import S3Access
 from app.utils.communication.notifications import NotificationManager
-from app.utils.mail.mailworker import send_email, send_email_fake
+from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
     create_and_send_email_migration,
     get_file_from_data,
@@ -548,7 +548,7 @@ async def recover_user(
     """
 
     db_user = await cruds_users.get_user_by_email(db=db, email=email)
-    last_created = await cruds_users.get_recovery_request_within_delay(
+    last_created = await cruds_users.get_recovery_request_within_delay_registred_user(
         db=db,
         email=email,
         minimumDelayMinutes=settings.PASWORD_RECOVERY_NEW_TOKEN_EXPIRE_MINUTES,
@@ -560,55 +560,88 @@ async def recover_user(
             detail="Too Many Requests",
         )
 
-    if db_user is None:
-        #In Work new things to make
-        if random.randint(0, 1) : 
-            hyperion_security_logger.info(
-                f"Reset password failed for {email}, user does not exist",
-            )
+    if db_user is not None:
+        # The user exists, we can send a password reset invitation
+        reset_token = security.generate_token()
 
-            raise HTTPException(
-                status_code=404,
-                detail="Not Found",
+        recover_request = models_users.CoreUserRecoverRequest(
+            email=email,
+            user_id=db_user.id,
+            reset_token=reset_token,
+            created_on=datetime.now(UTC),
+            expire_on=datetime.now(UTC)
+            + timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRE_HOURS),
+        )
+
+        await cruds_users.create_user_recover_request(
+            db=db,
+            recover_request=recover_request,
+        )
+
+        calypsso_reset_url = settings.CLIENT_URL + calypsso.get_reset_password_relative_url(
+            reset_token=reset_token
+        )
+
+        if settings.SMTP_ACTIVE:
+            mail = mail_templates.get_mail_reset_password(
+                confirmation_url=calypsso_reset_url,
             )
+            send_email(
+                recipient=db_user.email,
+                subject="MyECL - reset your password",
+                content=mail,
+                settings=settings,
+            )
+        
         return standard_responses.Result()
 
-    # The user exists, we can send a password reset invitation
-    reset_token = security.generate_token()
-
-    recover_request = models_users.CoreUserRecoverRequest(
-        email=email,
-        user_id=db_user.id,
-        reset_token=reset_token,
-        created_on=datetime.now(UTC),
-        expire_on=datetime.now(UTC)
-        + timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRE_HOURS),
+    #We check now if this unregistred mail exist in the database
+    
+    db_user = await cruds_users.get_user_by_email_unregistred(db=db, email=email)
+    last_created = await cruds_users.get_recovery_request_within_delay_unregistred_user(
+    db=db,
+    email=email,
+    minimumDelayMinutes=settings.PASWORD_RECOVERY_NEW_TOKEN_EXPIRE_MINUTES,
     )
 
-    await cruds_users.create_user_recover_request(
-        db=db,
-        recover_request=recover_request,
+    if last_created is not None:
+        raise HTTPException(
+            status_code=429,
+            detail="Too Many Requests",
+        )
+    
+    if db_user is None:
+        recover_request = models_users.CoreUnregistredUserRecoverRequest(
+            email=email,
+            user_id=db_user.id,
+            reset_token=reset_token,
+            created_on=datetime.now(UTC),
+            expire_on=datetime.now(UTC)
+            + timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRE_HOURS),
+        )
+        await cruds_users.create_unregistred_user_recover_request(
+                db=db,
+                recover_request=recover_request,
+            )
+        
+    calypsso_register_url = (
+            settings.CLIENT_URL
+            + calypsso.get_register_relative_url(
+                external=True,
+            )
+        )
+    
+    mail = mail_templates.get_mail_reset_password_account_does_not_exist(
+            register_url=calypsso_register_url,
+        )
+    
+    send_email(
+        recipient=email,
+        subject="MyECL - reset your password",
+        content=mail,
+        settings=settings,
     )
-
-    calypsso_reset_url = settings.CLIENT_URL + calypsso.get_reset_password_relative_url(
-        reset_token=reset_token,
-    )
-
-    if settings.SMTP_ACTIVE:
-        mail = mail_templates.get_mail_reset_password(
-            confirmation_url=calypsso_reset_url,
-        )
-        send_email(
-            recipient=db_user.email,
-            subject="MyECL - reset your password",
-            content=mail,
-            settings=settings,
-        )
-    else:
-        hyperion_security_logger.info(
-            f"Reset password for {email}: {calypsso_reset_url}",
-        )
-
+    
     return standard_responses.Result()
 
 
