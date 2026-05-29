@@ -139,6 +139,7 @@ async def get_user_by_email(
     )
     return result.scalars().first()
 
+
 async def get_user_by_email_unregistred(
     db: AsyncSession,
     email: str,
@@ -171,6 +172,7 @@ async def get_recovery_request_within_delay_registred_user(
     )
     return result.scalars().first()
 
+
 async def get_recovery_request_within_delay_unregistred_user(
     db: AsyncSession,
     email: str,
@@ -179,11 +181,13 @@ async def get_recovery_request_within_delay_unregistred_user(
     result = await db.execute(
         select(models_users.CoreUnregistredUserRecoverRequest).where(
             models_users.CoreUnregistredUserRecoverRequest.email == email,
-            datetime.now(UTC) - models_users.CoreUnregistredUserRecoverRequest.created_on
+            datetime.now(UTC)
+            - models_users.CoreUnregistredUserRecoverRequest.created_on
             < timedelta(minutes=minimumDelayMinutes),
         ),
     )
     return result.scalars().first()
+
 
 async def update_user(
     db: AsyncSession,
@@ -253,8 +257,12 @@ async def delete_user(db: AsyncSession, user_id: str):
 
 async def create_user_recover_request(
     db: AsyncSession,
-    recover_request: Union[models_users.CoreUserRecoverRequest,models_users.CoreUnregistredRecoverRequest],
-) -> Union[models_users.CoreUserRecoverRequest,models_users.CoreUnregistredRecoverRequest]:
+    recover_request: Union[
+        models_users.CoreUserRecoverRequest, models_users.CoreUnregistredRecoverRequest
+    ],
+) -> Union[
+    models_users.CoreUserRecoverRequest, models_users.CoreUnregistredRecoverRequest
+]:
     db.add(recover_request)
     await db.flush()
     return recover_request
@@ -468,6 +476,7 @@ async def fusion_users(
 
     # Delete the user_deleted
     await delete_user(db, user_deleted_id)
+
 
 async def create_unregistred_user_recover_request(
     db: AsyncSession,

@@ -337,8 +337,9 @@ def test_recover_overflow(mocker: MockerFixture, client: TestClient) -> None:
     # NOTE: we don't want to mock app.core.security.generate_token but
     # app.core.users.endpoints_users.security.generate_token which is the imported version of the function
 
-    mock_datetime = mocker.patch("module_name.datetime")
-    mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 0, 0)
+    mocker.patch(
+        "module_name.datetime.now", return_value=datetime(2005, 10, 24, 0, 0, 0)
+    )
 
     response = client.post(
         "/users/recover",
@@ -347,7 +348,9 @@ def test_recover_overflow(mocker: MockerFixture, client: TestClient) -> None:
 
     assert response.status_code == 201
 
-    mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 2, 0)
+    mocker.patch(
+        "module_name.datetime.now", return_value=datetime(2005, 10, 24, 0, 2, 0)
+    )
 
     response = client.post(
         "/users/recover",
@@ -356,7 +359,9 @@ def test_recover_overflow(mocker: MockerFixture, client: TestClient) -> None:
 
     assert response.status_code == 429
 
-    mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 6, 0)
+    mocker.patch(
+        "module_name.datetime.now", return_value=datetime(2005, 10, 24, 0, 6, 0)
+    )
 
     response = client.post(
         "/users/recover",
@@ -370,8 +375,9 @@ def test_recover_with_non_existing_account(
     mocker: MockerFixture,
     client: TestClient,
 ) -> None:
-
-    mocker.patch("module_name.datetime.now",return_value=datetime(2005, 10, 24, 0, 0, 0))
+    mocker.patch(
+        "module_name.datetime.now", return_value=datetime(2005, 10, 24, 0, 0, 0)
+    )
 
     response = client.post(
         "/users/recover",
@@ -380,7 +386,9 @@ def test_recover_with_non_existing_account(
 
     assert response.status_code == 201
 
-    mocker.patch("module_name.datetime.now",return_value=datetime(2005, 10, 24, 0, 2, 0))
+    mocker.patch(
+        "module_name.datetime.now", return_value=datetime(2005, 10, 24, 0, 2, 0)
+    )
 
     response = client.post(
         "/users/recover",
@@ -389,7 +397,9 @@ def test_recover_with_non_existing_account(
 
     assert response.status_code == 429
 
-    mocker.patch("module_name.datetime.now",return_value=datetime(2005, 10, 24, 0, 6, 0))
+    mocker.patch(
+        "module_name.datetime.now", return_value=datetime(2005, 10, 24, 0, 6, 0)
+    )
 
     response = client.post(
         "/users/recover",
@@ -397,7 +407,6 @@ def test_recover_with_non_existing_account(
     )
 
     assert response.status_code == 201
-    
 
 
 def test_update_user(client: TestClient) -> None:

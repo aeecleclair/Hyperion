@@ -578,8 +578,9 @@ async def recover_user(
             recover_request=recover_request,
         )
 
-        calypsso_reset_url = settings.CLIENT_URL + calypsso.get_reset_password_relative_url(
-            reset_token=reset_token
+        calypsso_reset_url = (
+            settings.CLIENT_URL
+            + calypsso.get_reset_password_relative_url(reset_token=reset_token)
         )
 
         if settings.SMTP_ACTIVE:
@@ -592,16 +593,16 @@ async def recover_user(
                 content=mail,
                 settings=settings,
             )
-        
+
         return standard_responses.Result()
 
-    #We check now if this unregistred mail exist in the database
-    
+    # We check now if this unregistred mail exist in the database
+
     db_user = await cruds_users.get_user_by_email_unregistred(db=db, email=email)
     last_created = await cruds_users.get_recovery_request_within_delay_unregistred_user(
-    db=db,
-    email=email,
-    minimumDelayMinutes=settings.PASWORD_RECOVERY_NEW_TOKEN_EXPIRE_MINUTES,
+        db=db,
+        email=email,
+        minimumDelayMinutes=settings.PASWORD_RECOVERY_NEW_TOKEN_EXPIRE_MINUTES,
     )
 
     if last_created is not None:
@@ -609,7 +610,7 @@ async def recover_user(
             status_code=429,
             detail="Too Many Requests",
         )
-    
+
     if db_user is None:
         recover_request = models_users.CoreUnregistredUserRecoverRequest(
             email=email,
@@ -620,28 +621,25 @@ async def recover_user(
             + timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRE_HOURS),
         )
         await cruds_users.create_unregistred_user_recover_request(
-                db=db,
-                recover_request=recover_request,
-            )
-        
-    calypsso_register_url = (
-            settings.CLIENT_URL
-            + calypsso.get_register_relative_url(
-                external=True,
-            )
+            db=db,
+            recover_request=recover_request,
         )
-    
+
+    calypsso_register_url = settings.CLIENT_URL + calypsso.get_register_relative_url(
+        external=True,
+    )
+
     mail = mail_templates.get_mail_reset_password_account_does_not_exist(
-            register_url=calypsso_register_url,
-        )
-    
+        register_url=calypsso_register_url,
+    )
+
     send_email(
         recipient=email,
         subject="MyECL - reset your password",
         content=mail,
         settings=settings,
     )
-    
+
     return standard_responses.Result()
 
 
