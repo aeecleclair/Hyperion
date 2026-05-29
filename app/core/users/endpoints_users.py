@@ -552,7 +552,7 @@ async def recover_user(
         email=email,
         minimumDelayMinutes=settings.PASWORD_RECOVERY_NEW_TOKEN_EXPIRE_MINUTES,
     )
-
+    
     if last_created is not None:
         raise HTTPException(
             status_code=429,

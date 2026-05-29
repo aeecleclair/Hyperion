@@ -147,13 +147,9 @@ async def get_user_by_email_unregistred(
 
     result = await db.execute(
         select(models_users.CoreUnregistredUserRecoverRequest)
-        .where(models_users.CoreUnregistredUserRecoverRequest.email == email)
-        .options(
-            # The group relationship need to be loaded to be able
-            # to check if the user is a member of a specific group
-            selectinload(models_users.CoreUnregistredUserRecoverRequest.groups),
-        ),
-    )
+        .where(models_users.CoreUnregistredUserRecoverRequest.email == email),
+        )
+
     return result.scalars().first()
 
 

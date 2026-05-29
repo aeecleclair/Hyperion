@@ -337,7 +337,7 @@ def test_recover_overflow(mocker: MockerFixture, client: TestClient) -> None:
     # NOTE: we don't want to mock app.core.security.generate_token but
     # app.core.users.endpoints_users.security.generate_token which is the imported version of the function
 
-    mock_datetime = mocker.patch("app.core.users.endpoints_users.datetime")
+    mock_datetime = mocker.patch("app.core.users")
     mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 0, 0, tzinfo=timezone.utc)
 
     response = client.post(
@@ -371,7 +371,7 @@ def test_recover_with_non_existing_account(
     client: TestClient,
 ) -> None:
     
-    mock_datetime = mocker.patch("app.core.users.endpoints_users.datetime")
+    mock_datetime = mocker.patch("app.core.users")
     mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 0, 0, tzinfo=timezone.utc)
 
     response = client.post(
