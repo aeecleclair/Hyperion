@@ -553,16 +553,10 @@ async def recover_user(
         minimumDelayMinutes=settings.PASWORD_RECOVERY_NEW_TOKEN_EXPIRE_MINUTES,
         date=datetime.now(UTC),
     )
-
+    reset_token = security.generate_token()
     hyperion_security_logger.info(
         f"Datetime {datetime.now(UTC)}",
     )
-    try:
-        hyperion_security_logger.info(
-            f"{last_created.created_on}",
-        )
-    except:
-        pass
 
     if last_created is not None:
         hyperion_security_logger.info(
@@ -578,7 +572,6 @@ async def recover_user(
             "The user exist",
         )
         # The user exists, we can send a password reset invitation
-        reset_token = security.generate_token()
 
         recover_request = models_users.CoreUserRecoverRequest(
             email=email,
