@@ -605,34 +605,49 @@ async def recover_user(
 
     # We check now if this unregistred mail exist in the database
 
-    # return
-    db_user = await cruds_users.get_user_by_email_unregistred(db=db, email=email)
-    hyperion_error_logger.info("On est dans la partie unregistred")
-    last_created = await cruds_users.get_recovery_request_within_delay_unregistred_user(
+    db_user_unregistred = await cruds_users.get_user_by_email_unregistred(
         db=db,
         email=email,
-        minimumDelayMinutes=settings.PASWORD_RECOVERY_NEW_TOKEN_EXPIRE_MINUTES,
-        date=datetime.now(UTC),
     )
 
-    if last_created is not None:
+    last_created_unregistred = (
+        await cruds_users.get_recovery_request_within_delay_unregistred_user(
+            db=db,
+            email=email,
+            minimumDelayMinutes=settings.PASWORD_RECOVERY_NEW_TOKEN_EXPIRE_MINUTES,
+            date=datetime.now(UTC),
+        )
+    )
+
+    if last_created_unregistred is not None:
         raise HTTPException(
             status_code=429,
             detail="Too Many Requests",
         )
 
-    if db_user is None:
-        recover_request = models_users.CoreUnregistredUserRecoverRequest(
+    if db_user_unregistred is None:
+        new_user = models_users.CoreUnregistredUser(
+            id=str(uuid.uuid4()),
             email=email,
-            reset_token=reset_token,
             created_on=datetime.now(UTC),
-            expire_on=datetime.now(UTC)
-            + timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRE_HOURS),
         )
-        await cruds_users.create_unregistred_user_recover_request(
+
+        await cruds_users.create_unregistred_user(
             db=db,
-            recover_request=recover_request,
+            user=new_user,
         )
+
+    recover_request_unregistred = models_users.CoreUnregistredUserRecoverRequest(
+        email=email,
+        reset_token=reset_token,
+        created_on=datetime.now(UTC),
+        expire_on=datetime.now(UTC)
+        + timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRE_HOURS),
+    )
+    await cruds_users.create_unregistred_user_recover_request(
+        db=db,
+        recover_request=recover_request_unregistred,
+    )
 
     if settings.SMTP_ACTIVE:
         calypsso_register_url = (

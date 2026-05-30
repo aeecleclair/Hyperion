@@ -168,16 +168,6 @@ class CoreUserRecoverRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class CoreUnregistredUserBase(BaseModel):
-    email: str
-    reset_token: str
-    created_on: datetime
-    expire_on: datetime
-
-    _normalize_email = field_validator("email")(validators.email_normalizer)
-    model_config = ConfigDict(from_attributes=True)
-
-
 class ChangePasswordRequest(BaseModel):
     email: str
     old_password: str

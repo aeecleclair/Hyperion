@@ -125,7 +125,7 @@ async def get_user_by_email(
     db: AsyncSession,
     email: str,
 ) -> models_users.CoreUser | None:
-    """Return user with id from database as a dictionary"""
+    """Return user with email from database as a dictionary"""
 
     result = await db.execute(
         select(models_users.CoreUser)
@@ -142,10 +142,12 @@ async def get_user_by_email(
 async def get_user_by_email_unregistred(
     db: AsyncSession,
     email: str,
-) -> models_users.CoreUnregistredUserRecoverRequest | None:
+) -> models_users.CoreUnregistredUser | None:
+    """Return an unregistred user with email from database as a dictionary"""
+
     result = await db.execute(
-        select(models_users.CoreUnregistredUserRecoverRequest).where(
-            models_users.CoreUnregistredUserRecoverRequest.email == email,
+        select(models_users.CoreUnregistredUser).where(
+            models_users.CoreUnregistredUser.email == email,
         ),
     )
 
@@ -236,6 +238,15 @@ async def create_user(
     db: AsyncSession,
     user: models_users.CoreUser,
 ) -> models_users.CoreUser:
+    db.add(user)
+    await db.flush()
+    return user
+
+
+async def create_unregistred_user(
+    db: AsyncSession,
+    user: models_users.CoreUnregistredUser,
+) -> models_users.CoreUnregistredUser:
     db.add(user)
     await db.flush()
     return user
