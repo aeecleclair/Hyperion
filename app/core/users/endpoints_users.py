@@ -551,16 +551,20 @@ async def recover_user(
         db=db,
         email=email,
         minimumDelayMinutes=settings.PASWORD_RECOVERY_NEW_TOKEN_EXPIRE_MINUTES,
+        date=datetime.now(UTC),
     )
-    
+
     hyperion_security_logger.info(
-                f"Datetime {datetime.now(UTC)}", last_created.created_on
-            )
+        f"Datetime {datetime.now(UTC)}",
+    )
+    hyperion_security_logger.info(
+        f"{last_created.created_on}",
+    )
 
     if last_created is not None:
         hyperion_security_logger.info(
-                f"We are in cooldown",
-            )
+            "We are in cooldown",
+        )
         raise HTTPException(
             status_code=429,
             detail="Too Many Requests",
@@ -568,8 +572,8 @@ async def recover_user(
 
     if db_user is not None:
         hyperion_security_logger.info(
-                f"The user exist",last_created.created_on
-            )
+            "The user exist",
+        )
         # The user exists, we can send a password reset invitation
         reset_token = security.generate_token()
 
@@ -612,6 +616,7 @@ async def recover_user(
         db=db,
         email=email,
         minimumDelayMinutes=settings.PASWORD_RECOVERY_NEW_TOKEN_EXPIRE_MINUTES,
+        date=datetime.now(UTC),
     )
 
     if last_created is not None:

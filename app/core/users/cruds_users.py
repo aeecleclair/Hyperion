@@ -1,7 +1,7 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
 from collections.abc import Sequence
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import ForeignKey, and_, delete, not_, or_, select, update
@@ -158,11 +158,12 @@ async def get_recovery_request_within_delay_registred_user(
     db: AsyncSession,
     email: str,
     minimumDelayMinutes: int,
+    date: datetime,
 ) -> models_users.CoreUserRecoverRequest | None:
     result = await db.execute(
         select(models_users.CoreUserRecoverRequest).where(
             models_users.CoreUserRecoverRequest.email == email,
-            datetime.now(UTC) - models_users.CoreUserRecoverRequest.created_on
+            date - models_users.CoreUserRecoverRequest.created_on
             < timedelta(minutes=minimumDelayMinutes),
         ),
     )
@@ -173,12 +174,12 @@ async def get_recovery_request_within_delay_unregistred_user(
     db: AsyncSession,
     email: str,
     minimumDelayMinutes: int,
+    date: datetime,
 ) -> models_users.CoreUnregistredUserRecoverRequest | None:
     result = await db.execute(
         select(models_users.CoreUnregistredUserRecoverRequest).where(
             models_users.CoreUnregistredUserRecoverRequest.email == email,
-            datetime.now(UTC)
-            - models_users.CoreUnregistredUserRecoverRequest.created_on
+            date - models_users.CoreUnregistredUserRecoverRequest.created_on
             < timedelta(minutes=minimumDelayMinutes),
         ),
     )

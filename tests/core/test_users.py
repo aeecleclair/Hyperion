@@ -370,7 +370,6 @@ def test_recover_with_non_existing_account(
     mocker: MockerFixture,
     client: TestClient,
 ) -> None:
-
     mock_datetime = mocker.patch("app.core.users.endpoints_users.datetime")
     mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 0, 0, tzinfo=UTC)
 
