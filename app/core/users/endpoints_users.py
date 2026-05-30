@@ -554,9 +554,6 @@ async def recover_user(
         date=datetime.now(UTC),
     )
     reset_token = security.generate_token()
-    hyperion_security_logger.info(
-        f"Datetime {datetime.now(UTC)}",
-    )
 
     if last_created is not None:
         hyperion_security_logger.info(
@@ -568,9 +565,6 @@ async def recover_user(
         )
 
     if db_user is not None:
-        hyperion_security_logger.info(
-            "The user exist",
-        )
         # The user exists, we can send a password reset invitation
 
         recover_request = models_users.CoreUserRecoverRequest(
@@ -608,6 +602,7 @@ async def recover_user(
     # We check now if this unregistred mail exist in the database
 
     db_user = await cruds_users.get_user_by_email_unregistred(db=db, email=email)
+    hyperion_error_logger.info("On est dans la partie unregistred")
     last_created = await cruds_users.get_recovery_request_within_delay_unregistred_user(
         db=db,
         email=email,
