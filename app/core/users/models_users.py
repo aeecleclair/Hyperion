@@ -116,7 +116,6 @@ class CoreUnregistredUserRecoverRequest(Base):
     # The email column should not be unique.
     # Someone can indeed create more than one password reset request,
     email: Mapped[str]
-    user_id: Mapped[str]
     reset_token: Mapped[str] = mapped_column(primary_key=True)
     created_on: Mapped[datetime]
     expire_on: Mapped[datetime]
