@@ -596,6 +596,10 @@ async def recover_user(
                 content=mail,
                 settings=settings,
             )
+        else:
+            hyperion_security_logger.info(
+            f"Reset password failed for {email} due to not active function",
+        )
 
         return standard_responses.Result()
 
@@ -629,20 +633,27 @@ async def recover_user(
             recover_request=recover_request,
         )
 
-    calypsso_register_url = settings.CLIENT_URL + calypsso.get_register_relative_url(
-        external=True,
-    )
+    if settings.SMTP_ACTIVE:
+        calypsso_register_url = (
+            settings.CLIENT_URL
+            + calypsso.get_register_relative_url(
+                external=True,
+            )
+        )
 
-    mail = mail_templates.get_mail_reset_password_account_does_not_exist(
-        register_url=calypsso_register_url,
-    )
-
-    send_email(
-        recipient=email,
-        subject="MyECL - reset your password",
-        content=mail,
-        settings=settings,
-    )
+        mail = mail_templates.get_mail_reset_password_account_does_not_exist(
+            register_url=calypsso_register_url,
+        )
+        send_email(
+            recipient=email,
+            subject="MyECL - reset your password",
+            content=mail,
+            settings=settings,
+        )
+    else:
+        hyperion_security_logger.info(
+            f"Reset password failed for {email} due to not active function",
+        )
 
     return standard_responses.Result()
 
