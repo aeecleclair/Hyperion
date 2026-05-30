@@ -557,9 +557,12 @@ async def recover_user(
     hyperion_security_logger.info(
         f"Datetime {datetime.now(UTC)}",
     )
-    hyperion_security_logger.info(
-        f"{last_created.created_on}",
-    )
+    try:
+        hyperion_security_logger.info(
+            f"{last_created.created_on}",
+        )
+    except:
+        pass
 
     if last_created is not None:
         hyperion_security_logger.info(
