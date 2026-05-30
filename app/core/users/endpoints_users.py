@@ -552,6 +552,10 @@ async def recover_user(
         email=email,
         minimumDelayMinutes=settings.PASWORD_RECOVERY_NEW_TOKEN_EXPIRE_MINUTES,
     )
+    
+    hyperion_security_logger.info(
+                f"Datetime {datetime.now(UTC)}",
+            )
 
     if last_created is not None:
         raise HTTPException(
