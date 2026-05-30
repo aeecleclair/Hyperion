@@ -168,7 +168,7 @@ class CoreUserRecoverRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class UnregistredUserBase(BaseModel):
+class CoreUnregistredUserBase(BaseModel):
     email: str
     reset_token: str
     created_on: datetime

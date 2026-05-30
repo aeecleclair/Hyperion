@@ -605,6 +605,7 @@ async def recover_user(
 
     # We check now if this unregistred mail exist in the database
 
+    # return
     db_user = await cruds_users.get_user_by_email_unregistred(db=db, email=email)
     hyperion_error_logger.info("On est dans la partie unregistred")
     last_created = await cruds_users.get_recovery_request_within_delay_unregistred_user(
