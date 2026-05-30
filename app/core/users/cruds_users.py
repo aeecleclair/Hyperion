@@ -142,7 +142,7 @@ async def get_user_by_email(
 async def get_user_by_email_unregistred(
     db: AsyncSession,
     email: str,
-) -> models_users.CoreUnregistredUserRecoverRequest:
+) -> models_users.CoreUnregistredUserRecoverRequest | None:
     """Return user with id from database as a dictionary"""
 
     result = await db.execute(
