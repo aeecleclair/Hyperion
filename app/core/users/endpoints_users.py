@@ -598,8 +598,8 @@ async def recover_user(
             )
         else:
             hyperion_security_logger.info(
-            f"Reset password failed for {email} due to not active function",
-        )
+                f"Reset password failed for {email} due to not active function",
+            )
 
         return standard_responses.Result()
 
