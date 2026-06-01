@@ -49,6 +49,9 @@ session3: models_ticketing.TicketingSession
 
 category1: models_ticketing.TicketingCategory
 
+ticket1: models_ticketing.TicketingTicket
+ticket2: models_ticketing.TicketingTicket
+
 
 student_token: str
 admin_token: str
@@ -223,8 +226,68 @@ async def init_objects():
     )
     student_token = create_api_access_token(student_user)
 
+    global ticket1, ticket2
+    ticket1 = models_ticketing.TicketingTicket(
+        id=uuid4(),
+        event_id=event1.id,
+        session_id=session1.id,
+        category_id=category1.id,
+        user_id=student_user.id,
+        status="active",
+        nb_scan=0,
+        total=1,
+        created_at=datetime.now(UTC),
+    )
+    await add_object_to_db(ticket1)
+
+    ticket2 = models_ticketing.TicketingTicket(
+        id=uuid4(),
+        event_id=event1.id,
+        session_id=session2.id,
+        category_id=category1.id,
+        user_id=student_user.id,
+        status="active",
+        nb_scan=0,
+        total=1,
+        created_at=datetime.now(UTC),
+    )
+    await add_object_to_db(ticket2)
+
 
 # Units tests for basic CRUD operations on events, sessions and categories.
+
+# -------------------------- Test organiser endpoints -------------------------- #
+
+
+async def test_get_organisers_list(client: TestClient):
+    response = client.get(
+        "/ticketing/organisers",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 200
+    organisers = response.json()
+    assert isinstance(organisers, list)
+    assert len(organisers) >= 1
+    assert any(
+        organiser_item["id"] == str(organiser.id) for organiser_item in organisers
+    )
+
+
+async def test_get_organiser(client: TestClient):
+    response = client.get(
+        f"/ticketing/organisers/{organiser.id}",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 200
+    organiser_response = response.json()
+    assert organiser_response["id"] == str(organiser.id)
+
+    response = client.get(
+        f"/ticketing/organisers/{uuid4()}",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 404
+
 
 # -------------------------- Test event basic cruds -------------------------- #
 
@@ -983,6 +1046,454 @@ async def test_delete_category_with_invalid_id(client: TestClient):
 
 
 # -------------------------- Test ticket basic cruds -------------------------- #
+
+
+async def test_get_all_tickets(client: TestClient):
+    response = client.get(
+        "/ticketing/tickets",
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 200
+    tickets = response.json()
+    assert isinstance(tickets, list)
+    assert len(tickets) >= 2  # We created 2 tickets for the student
+
+
+async def test_get_tickets_by_event(client: TestClient):
+    response = client.get(
+        f"/ticketing/events/{event1.id}/tickets",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 200
+    tickets = response.json()
+    assert isinstance(tickets, list)
+    assert len(tickets) >= 2  # We created 2 tickets for event1
+
+    response_fake_event = client.get(
+        f"/ticketing/events/{uuid4()}/tickets",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response_fake_event.status_code == 200
+    assert (
+        response_fake_event.json() == []
+    )  # No tickets for fake event, should return empty list
+
+
+async def test_get_tickets_by_session(client: TestClient):
+    response = client.get(
+        f"/ticketing/sessions/{session1.id}/tickets",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 200
+    tickets = response.json()
+    assert isinstance(tickets, list)
+    assert len(tickets) >= 2  # We created 2 tickets for session1
+
+    response_fake_session = client.get(
+        f"/ticketing/sessions/{uuid4()}/tickets",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response_fake_session.status_code == 200
+    assert (
+        response_fake_session.json() == []
+    )  # No tickets for fake session, should return empty list
+
+
+async def test_get_tickets_by_category(client: TestClient):
+    response = client.get(
+        f"/ticketing/categories/{category1.id}/tickets",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 200
+    tickets = response.json()
+    assert isinstance(tickets, list)
+    assert len(tickets) >= 2  # We created 2 tickets for category1
+
+    response_fake_category = client.get(
+        f"/ticketing/categories/{uuid4()}/tickets",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response_fake_category.status_code == 200
+    assert (
+        response_fake_category.json() == []
+    )  # No tickets for fake category, should return empty list
+
+
+async def test_get_tickets_by_user(client: TestClient):
+    response = client.get(
+        f"/ticketing/users/{student_user.id}/tickets",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 200
+    tickets = response.json()
+    assert isinstance(tickets, list)
+    assert len(tickets) >= 2  # We created 2 tickets for the student
+
+    response_fake_user = client.get(
+        f"/ticketing/users/{uuid4()}/tickets",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response_fake_user.status_code == 200
+    assert (
+        response_fake_user.json() == []
+    )  # No tickets for fake user, should return empty list
+
+
+async def test_get_my_tickets(client: TestClient):
+    response = client.get(
+        "/ticketing/users/me/tickets",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 200
+    tickets = response.json()
+    assert isinstance(tickets, list)
+    assert all(ticket["user_id"] == str(student_user.id) for ticket in tickets)
+
+
+async def test_get_ticket(client: TestClient):
+    # Test with ticket1 (should succeed)
+    response = client.get(
+        f"/ticketing/tickets/{ticket1.id}",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 200
+
+    # Test with ticket_fake (not in DB, should return 404)
+    response = client.get(
+        f"/ticketing/tickets/{uuid4()}",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 404
+
+
+async def test_get_ticket_without_perms(client: TestClient):
+    # Create a ticket for another user
+    other_user = await create_user_with_groups(
+        groups=[],
+        account_type=AccountType.student,
+    )
+    other_ticket = models_ticketing.TicketingTicket(
+        id=uuid4(),
+        event_id=event1.id,
+        session_id=session1.id,
+        category_id=category1.id,
+        user_id=other_user.id,
+        status="active",
+        nb_scan=0,
+        total=1,
+        created_at=datetime.now(UTC),
+    )
+    await add_object_to_db(other_ticket)
+
+    # Try to get the other user's ticket, should return 404 since the student doesn't have permission to see it
+    response = client.get(
+        f"/ticketing/tickets/{other_ticket.id}",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 404
+
+
+async def test_get_ticket_as_admin(client: TestClient):
+    # Create a ticket for another user
+    other_user = await create_user_with_groups(
+        groups=[],
+        account_type=AccountType.student,
+    )
+    other_ticket = models_ticketing.TicketingTicket(
+        id=uuid4(),
+        event_id=event1.id,
+        session_id=session1.id,
+        category_id=category1.id,
+        user_id=other_user.id,
+        status="active",
+        nb_scan=0,
+        total=1,
+        created_at=datetime.now(UTC),
+    )
+    await add_object_to_db(other_ticket)
+
+    # Try to get the other user's ticket as admin, should succeed
+    response = client.get(
+        f"/ticketing/tickets/{other_ticket.id}",
+        headers={"Authorization": f"Bearer {admin_user_token}"},
+    )
+    assert response.status_code == 200
+
+
+async def test_create_ticket_as_student(client: TestClient):
+    new_ticket_data = {
+        "user_id": str(student_user.id),
+        "event_id": str(event1.id),
+        "session_id": str(session1.id),
+        "category_id": str(category1.id),
+        "total": 1,
+    }
+    response = client.post(
+        "/ticketing/tickets",
+        json=new_ticket_data,
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 201
+    created_ticket = response.json()
+    assert created_ticket["event_id"] == new_ticket_data["event_id"]
+    assert created_ticket["session_id"] == new_ticket_data["session_id"]
+    assert created_ticket["category_id"] == new_ticket_data["category_id"]
+    assert created_ticket["total"] == new_ticket_data["total"]
+
+
+async def test_create_ticket_as_student_with_invalid_data(client: TestClient):
+    # Try to create a ticket with invalid session_id (not linked to the category), should fail
+    new_ticket_data = {
+        "user_id": str(student_user.id),
+        "event_id": str(event1.id),
+        "session_id": str(session3.id),  # session3 is not linked to category1
+        "category_id": str(category1.id),
+        "total": 1,
+    }
+    response = client.post(
+        "/ticketing/tickets",
+        json=new_ticket_data,
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 400
+
+
+async def test_create_ticket_as_student_with_quota_exceeded(client: TestClient):
+    # Try to create a ticket with total exceeding the category quota, should fail
+    new_ticket_data = {
+        "user_id": str(student_user.id),
+        "event_id": str(event1.id),
+        "session_id": str(session1.id),
+        "category_id": str(category1.id),
+        "total": 10,  # category1 has quota=5 and used_quota=2, so only 3 tickets left
+    }
+    response = client.post(
+        "/ticketing/tickets",
+        json=new_ticket_data,
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 400
+
+
+async def test_create_ticket_as_student_with_user_quota_exceeded(client: TestClient):
+    # Try to create a ticket with total exceeding the user quota, should fail
+    new_event = models_ticketing.TicketingEvent(
+        id=uuid4(),
+        name="User Quota Event",
+        open_date=datetime(2024, 1, 1, tzinfo=UTC),
+        close_date=datetime(2200, 12, 31, tzinfo=UTC),
+        quota=10,
+        user_quota=1,  # user_quota=1, so the student can only have 1 ticket for this event
+        used_quota=0,
+        disabled=False,
+        creator_id=str(admin_user.id),
+        organiser_id=organiser.id,
+    )
+    await add_object_to_db(new_event)
+
+    new_category = models_ticketing.TicketingCategory(
+        id=uuid4(),
+        event_id=new_event.id,
+        name="User Quota Category",
+        quota=10,
+        user_quota=1,
+        used_quota=0,
+        disabled=False,
+        required_mebership=None,
+        price=50,
+    )
+    await add_object_to_db(new_category)
+
+    new_session = models_ticketing.TicketingSession(
+        id=uuid4(),
+        event_id=new_event.id,
+        name="User Quota Session",
+        quota=10,
+        user_quota=1,
+        used_quota=0,
+        disabled=False,
+        date=datetime(2024, 1, 2, tzinfo=UTC),
+    )
+    await add_object_to_db(new_session)
+
+    # Create the first ticket, should succeed
+    first_ticket_data = {
+        "user_id": str(student_user.id),
+        "event_id": str(new_event.id),
+        "session_id": str(new_session.id),
+        "category_id": str(new_category.id),
+        "total": 1,
+    }
+
+    response = client.post(
+        "/ticketing/tickets",
+        json=first_ticket_data,
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 201
+
+    # Create the second ticket, should fail due to user quota exceeded
+    second_ticket_data = {
+        "user_id": str(student_user.id),
+        "event_id": str(new_event.id),
+        "session_id": str(new_session.id),
+        "category_id": str(new_category.id),
+        "total": 1,
+    }
+    response = client.post(
+        "/ticketing/tickets",
+        json=second_ticket_data,
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 400
+
+
+async def test_create_ticket_with_category_from_different_event_or_session(
+    client: TestClient,
+):
+    other_category = models_ticketing.TicketingCategory(
+        id=uuid4(),
+        event_id=event2.id,
+        name="Other Event Category",
+        quota=10,
+        user_quota=1,
+        used_quota=0,
+        disabled=False,
+        required_mebership=None,
+        price=30,
+    )
+    await add_object_to_db(other_category)
+
+    new_ticket_data = {
+        "user_id": str(student_user.id),
+        "event_id": str(event1.id),
+        "session_id": str(session1.id),
+        "category_id": str(other_category.id),
+        "total": 1,
+    }
+    response = client.post(
+        "/ticketing/tickets",
+        json=new_ticket_data,
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 400
+
+
+async def test_create_ticket_with_session_from_different_event(client: TestClient):
+    other_session = models_ticketing.TicketingSession(
+        id=uuid4(),
+        event_id=event2.id,
+        name="Other Event Session",
+        quota=2,
+        user_quota=1,
+        used_quota=0,
+        disabled=False,
+        date=datetime(2024, 1, 4, tzinfo=UTC),
+    )
+    await add_object_to_db(other_session)
+
+    new_ticket_data = {
+        "user_id": str(student_user.id),
+        "event_id": str(event1.id),
+        "session_id": str(other_session.id),
+        "category_id": str(category1.id),
+        "total": 1,
+    }
+    response = client.post(
+        "/ticketing/tickets",
+        json=new_ticket_data,
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 400
+
+
+async def test_update_ticket(client: TestClient):
+    to_update_ticket = models_ticketing.TicketingTicket(
+        id=uuid4(),
+        event_id=event1.id,
+        session_id=session1.id,
+        category_id=category1.id,
+        user_id=student_user.id,
+        status="active",
+        nb_scan=0,
+        total=1,
+        created_at=datetime.now(UTC),
+    )
+    await add_object_to_db(to_update_ticket)
+
+    update_data = {
+        "user_id": str(student_user.id),
+        "event_id": str(event1.id),
+        "session_id": str(session1.id),
+        "category_id": str(category1.id),
+        "total": 2,
+    }
+    response = client.patch(
+        f"/ticketing/tickets/{to_update_ticket.id}",
+        json=update_data,
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 204
+
+    response = client.get(
+        f"/ticketing/tickets/{to_update_ticket.id}",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 200
+    assert response.json()["total"] == update_data["total"]
+
+
+async def test_update_ticket_with_invalid_id(client: TestClient):
+    update_data = {
+        "user_id": str(student_user.id),
+        "event_id": str(event1.id),
+        "session_id": str(session1.id),
+        "category_id": str(category1.id),
+        "total": 2,
+    }
+    response = client.patch(
+        f"/ticketing/tickets/{uuid4()}",
+        json=update_data,
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 404
+
+
+async def test_delete_ticket(client: TestClient):
+    to_delete_ticket = models_ticketing.TicketingTicket(
+        id=uuid4(),
+        event_id=event1.id,
+        session_id=session1.id,
+        category_id=category1.id,
+        user_id=student_user.id,
+        status="active",
+        nb_scan=0,
+        total=1,
+        created_at=datetime.now(UTC),
+    )
+    await add_object_to_db(to_delete_ticket)
+    response = client.delete(
+        f"/ticketing/tickets/{to_delete_ticket.id}",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 204
+
+    response = client.get(
+        f"/ticketing/tickets/{to_delete_ticket.id}",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 404
+
+
+async def test_delete_ticket_with_invalid_id(client: TestClient):
+    response = client.delete(
+        f"/ticketing/tickets/{uuid4()}",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 404
+
+
+# -------------------------- Test number of places -------------------------- #
 
 
 # -------------------------- Test Redis cache -------------------------- #
