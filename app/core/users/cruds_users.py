@@ -139,35 +139,36 @@ async def get_user_by_email(
     return result.scalars().first()
 
 
-async def get_user_by_email_unregistred(
-    db: AsyncSession,
-    email: str,
-) -> models_users.CoreUnregistredUser | None:
-    """Return an unregistred user with email from database as a dictionary"""
-
-    result = await db.execute(
-        select(models_users.CoreUnregistredUser).where(
-            models_users.CoreUnregistredUser.email == email,
-        ),
-    )
-
-    return result.scalars().first()
-
-
 async def get_recovery_request_within_delay_registred_user(
     db: AsyncSession,
     email: str,
     minimumDelayMinutes: int,
     date: datetime,
-) -> models_users.CoreUserRecoverRequest | None:
-    result = await db.execute(
-        select(models_users.CoreUserRecoverRequest).where(
-            models_users.CoreUserRecoverRequest.email == email,
-            date - models_users.CoreUserRecoverRequest.created_on
-            < timedelta(minutes=minimumDelayMinutes),
-        ),
+) -> schemas_users.CoreUserRecoverRequest | None:
+    result = (
+        (
+            await db.execute(
+                select(models_users.CoreUserRecoverRequest).where(
+                    models_users.CoreUserRecoverRequest.email == email,
+                    date - models_users.CoreUserRecoverRequest.created_on
+                    < timedelta(minutes=minimumDelayMinutes),
+                ),
+            )
+        )
+        .scalars()
+        .first()
     )
-    return result.scalars().first()
+    return (
+        schemas_users.CoreUserRecoverRequest(
+            email=result.email,
+            user_id=result.user_id,
+            reset_token=result.reset_token,
+            created_on=result.created_on,
+            expire_on=result.expire_on,
+        )
+        if result
+        else None
+    )
 
 
 async def get_recovery_request_within_delay_unregistred_user(
@@ -175,15 +176,29 @@ async def get_recovery_request_within_delay_unregistred_user(
     email: str,
     minimumDelayMinutes: int,
     date: datetime,
-) -> models_users.CoreUnregistredUserRecoverRequest | None:
-    result = await db.execute(
-        select(models_users.CoreUnregistredUserRecoverRequest).where(
-            models_users.CoreUnregistredUserRecoverRequest.email == email,
-            date - models_users.CoreUnregistredUserRecoverRequest.created_on
-            < timedelta(minutes=minimumDelayMinutes),
-        ),
+) -> schemas_users.CoreUnregistredUserRecoverRequest | None:
+    result = (
+        (
+            await db.execute(
+                select(models_users.CoreUnregistredUserRecoverRequest).where(
+                    models_users.CoreUnregistredUserRecoverRequest.email == email,
+                    date - models_users.CoreUnregistredUserRecoverRequest.created_on
+                    < timedelta(minutes=minimumDelayMinutes),
+                ),
+            )
+        )
+        .scalars()
+        .first()
     )
-    return result.scalars().first()
+    return (
+        schemas_users.CoreUnregistredUserRecoverRequest(
+            id=result.id,
+            email=result.email,
+            created_on=result.created_on,
+        )
+        if result
+        else None
+    )
 
 
 async def update_user(
@@ -243,15 +258,6 @@ async def create_user(
     return user
 
 
-async def create_unregistred_user(
-    db: AsyncSession,
-    user: models_users.CoreUnregistredUser,
-) -> models_users.CoreUnregistredUser:
-    db.add(user)
-    await db.flush()
-    return user
-
-
 async def delete_user(db: AsyncSession, user_id: str):
     """Delete a user from database by id"""
 
@@ -264,10 +270,15 @@ async def delete_user(db: AsyncSession, user_id: str):
 async def create_user_recover_request(
     db: AsyncSession,
     recover_request: models_users.CoreUserRecoverRequest,
-) -> models_users.CoreUserRecoverRequest:
+) -> None:
     db.add(recover_request)
-    await db.flush()
-    return recover_request
+
+
+async def create_unregistred_user_recover_request(
+    db: AsyncSession,
+    recover_request: models_users.CoreUnregistredUserRecoverRequest,
+) -> None:
+    db.add(recover_request)
 
 
 async def get_recover_request_by_reset_token(
@@ -478,12 +489,3 @@ async def fusion_users(
 
     # Delete the user_deleted
     await delete_user(db, user_deleted_id)
-
-
-async def create_unregistred_user_recover_request(
-    db: AsyncSession,
-    recover_request: models_users.CoreUnregistredUserRecoverRequest,
-) -> models_users.CoreUnregistredUserRecoverRequest:
-    db.add(recover_request)
-    await db.flush()
-    return recover_request

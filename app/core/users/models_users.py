@@ -2,7 +2,7 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.groups.groups_type import AccountType
@@ -110,20 +110,16 @@ class CoreUserEmailMigrationCode(Base):
     make_user_external: Mapped[bool] = mapped_column(default=False)
 
 
-class CoreUnregistredUser(Base):
-    __tablename__ = "core_unregistred_user"
-
-    id: Mapped[str] = mapped_column(primary_key=True)
-    email: Mapped[str]
-    created_on: Mapped[datetime]
-
-
 class CoreUnregistredUserRecoverRequest(Base):
     __tablename__ = "core_unregistred_user_recover_request"
 
     # The email column should not be unique.
     # Someone can indeed create more than one password reset request,
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        init=False,
+    )
     email: Mapped[str]
-    reset_token: Mapped[str] = mapped_column(primary_key=True)
     created_on: Mapped[datetime]
-    expire_on: Mapped[datetime]

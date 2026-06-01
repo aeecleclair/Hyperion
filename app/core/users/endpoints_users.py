@@ -554,12 +554,10 @@ async def recover_user(
         minimumDelayMinutes=settings.PASWORD_RECOVERY_NEW_TOKEN_EXPIRE_MINUTES,
         date=date,
     )
-    
-    reset_token = security.generate_token()
 
     if last_created is not None:
         hyperion_security_logger.info(
-            "We are in cooldown",
+            f"Reset password failed: user {email} is in cooldown",
         )
         raise HTTPException(
             status_code=429,
@@ -568,6 +566,7 @@ async def recover_user(
 
     if db_user is not None:
         # The user exists, we can send a password reset invitation
+        reset_token = security.generate_token()
 
         recover_request = models_users.CoreUserRecoverRequest(
             email=email,
@@ -600,17 +599,13 @@ async def recover_user(
             )
         else:
             hyperion_security_logger.info(
-                f"Reset password failed for {email} due to not active function",
+                f"Reset password for {email}: {calypsso_reset_url}",
             )
 
         return standard_responses.Result()
 
-    # We check now if this unregistred mail exist in the database
-
-    db_user_unregistred = await cruds_users.get_user_by_email_unregistred(
-        db=db,
-        email=email,
-    )
+    # We check now if this unregistred mail is under cooldown
+    # We check now if this unregistred mail is under cooldown
 
     last_created_unregistred = (
         await cruds_users.get_recovery_request_within_delay_unregistred_user(
@@ -622,30 +617,19 @@ async def recover_user(
     )
 
     if last_created_unregistred is not None:
+        hyperion_security_logger.info(
+            f"Reset password failed: user {email} is in cooldown and the user is unregistred.",
+        )
         raise HTTPException(
             status_code=429,
             detail="Too Many Requests",
         )
 
-    if db_user_unregistred is None:
-        new_user = models_users.CoreUnregistredUser(
-            id=str(uuid.uuid4()),
-            email=email,
-            created_on=date,
-        )
-
-        await cruds_users.create_unregistred_user(
-            db=db,
-            user=new_user,
-        )
-
     recover_request_unregistred = models_users.CoreUnregistredUserRecoverRequest(
         email=email,
-        reset_token=reset_token,
         created_on=date,
-        expire_on=date
-        + timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRE_HOURS),
     )
+
     await cruds_users.create_unregistred_user_recover_request(
         db=db,
         recover_request=recover_request_unregistred,
@@ -670,7 +654,7 @@ async def recover_user(
         )
     else:
         hyperion_security_logger.info(
-            f"Reset password failed for {email} due to not active function",
+            f"Reset password for {email} due to inactive option",
         )
 
     return standard_responses.Result()
