@@ -627,6 +627,59 @@ async def get_tickets(
     ]
 
 
+async def get_tickets_by_event_id(
+    event_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_ticketing.TicketSimple]:
+    """Get all tickets for a specific event."""
+
+    tickets = await db.execute(
+        select(models_ticketing.TicketingTicket).where(
+            models_ticketing.TicketingTicket.event_id == event_id,
+        ),
+    )
+    return [
+        schemas_ticketing.TicketSimple(
+            id=ticket.id,
+            user_id=ticket.user_id,
+            event_id=ticket.event_id,
+            category_id=ticket.category_id,
+            session_id=ticket.session_id,
+            total=ticket.total,
+            created_at=ticket.created_at,
+            status=ticket.status,
+            nb_scan=ticket.nb_scan,
+        )
+        for ticket in tickets.scalars().all()
+    ]
+
+
+async def get_tickets_by_category_id(
+    category_id: UUID,
+    db: AsyncSession,
+) -> list[schemas_ticketing.TicketSimple]:
+    """Get all tickets for a specific category."""
+    tickets = await db.execute(
+        select(models_ticketing.TicketingTicket).where(
+            models_ticketing.TicketingTicket.category_id == category_id,
+        ),
+    )
+    return [
+        schemas_ticketing.TicketSimple(
+            id=ticket.id,
+            user_id=ticket.user_id,
+            event_id=ticket.event_id,
+            category_id=ticket.category_id,
+            session_id=ticket.session_id,
+            total=ticket.total,
+            created_at=ticket.created_at,
+            status=ticket.status,
+            nb_scan=ticket.nb_scan,
+        )
+        for ticket in tickets.scalars().all()
+    ]
+
+
 async def get_tickets_by_session_id(
     session_id: UUID,
     db: AsyncSession,

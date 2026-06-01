@@ -1,9 +1,11 @@
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.groups.groups_type import GroupType
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users
 from app.dependencies import get_db, get_redis_client, is_user, is_user_allowed_to
@@ -529,11 +531,22 @@ async def delete_category(
 async def get_ticket_by_id(
     ticket_id: UUID,
     db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([TicketingPermissions.access_ticketing]),
+    ),
 ) -> schemas_ticketing.TicketComplete | None:
     """Get a ticket by its ID."""
     ticket = await cruds_ticketing.get_ticket_by_id(ticket_id=ticket_id, db=db)
     if ticket is None:
         raise HTTPException(status_code=404, detail="Ticket not found")
+    # Allow access if it's the user's own ticket or if they're an admin
+    if ticket.user_id != user.id and GroupType.admin not in [
+        group.id for group in user.groups
+    ]:
+        raise HTTPException(
+            status_code=404,
+            detail="Ticket not found",
+        )
     return ticket
 
 
@@ -548,6 +561,54 @@ async def get_all_tickets(
 ) -> list[schemas_ticketing.TicketSimple]:
     """Get all tickets."""
     return await cruds_ticketing.get_tickets(db=db)
+
+
+@module.router.get(
+    "/ticketing/events/{event_id}/tickets/",
+    summary="Get all tickets for an event",
+    response_model=list[schemas_ticketing.TicketSimple],
+    status_code=200,
+)
+async def get_tickets_by_event(
+    event_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> list[schemas_ticketing.TicketSimple]:
+    """Get all tickets for an event."""
+    return await cruds_ticketing.get_tickets_by_event_id(event_id=event_id, db=db)
+
+
+@module.router.get(
+    "/ticketing/sessions/{session_id}/tickets/",
+    summary="Get all tickets for a session",
+    response_model=list[schemas_ticketing.TicketSimple],
+    status_code=200,
+)
+async def get_tickets_by_session(
+    session_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> list[schemas_ticketing.TicketSimple]:
+    """Get all tickets for a session."""
+    return await cruds_ticketing.get_tickets_by_session_id(
+        session_id=session_id,
+        db=db,
+    )
+
+
+@module.router.get(
+    "/ticketing/categories/{category_id}/tickets/",
+    summary="Get all tickets for a category",
+    response_model=list[schemas_ticketing.TicketSimple],
+    status_code=200,
+)
+async def get_tickets_by_category(
+    category_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> list[schemas_ticketing.TicketSimple]:
+    """Get all tickets for a category."""
+    return await cruds_ticketing.get_tickets_by_category_id(
+        category_id=category_id,
+        db=db,
+    )
 
 
 @module.router.get(
@@ -591,12 +652,21 @@ async def create_ticket(
     redis_client: Redis | None = Depends(get_redis_client),
 ) -> schemas_ticketing.TicketSimple:
     """Create a new ticket."""
+
+    if user.id != ticket.user_id and not await is_user_allowed_to(
+        [TicketingPermissions.manage_events],
+    )(user):
+        raise HTTPException(
+            status_code=403,
+            detail="Users can only create tickets for themselves",
+        )
+
     ticket_simple = schemas_ticketing.TicketSimple(
         **ticket.model_dump(),
         id=uuid4(),
-        user_id=user.id,
         status="pending",
         nb_scan=0,
+        created_at=datetime.now(UTC),
     )
 
     # Verify that the event, category and session exist before creating the ticket to prevent creating tickets for non existing entities
@@ -618,6 +688,22 @@ async def create_ticket(
     )
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
+
+    if category.event_id != event.id:
+        raise HTTPException(
+            status_code=400,
+            detail="Category does not belong to event",
+        )
+    if session.event_id != event.id:
+        raise HTTPException(
+            status_code=400,
+            detail="Session does not belong to event",
+        )
+    if category.sessions and session.id not in category.sessions:
+        raise HTTPException(
+            status_code=400,
+            detail="Session is not available for category",
+        )
 
     # TODO: Verify that the quota is not already full before creating the ticket to prevent overbooking in case of concurrent ticket purchases across multiple workers
     # First with redis cache and then with database queries as fallback if redis is not available
