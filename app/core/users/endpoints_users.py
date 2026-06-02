@@ -605,7 +605,6 @@ async def recover_user(
         return standard_responses.Result()
 
     # We check now if this unregistred mail is under cooldown
-    # We check now if this unregistred mail is under cooldown
 
     last_created_unregistred = (
         await cruds_users.get_recovery_request_within_delay_unregistred_user(
