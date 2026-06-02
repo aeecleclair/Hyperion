@@ -9,6 +9,8 @@ class FeedbackBase(BaseModel):
 
 
 class Feedback(FeedbackBase):
-    user_id: str
     id: uuid.UUID
+    user_id: str
+    user_name: str
     creation: datetime
+    is_addressed: bool

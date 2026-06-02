@@ -71,19 +71,28 @@ async def create_feedback(
     Creates a feedback.
     **The user must be authenticated to use this endpoint**
     """
+    print("createfeedback")
 
     feedback_complete = schemas_feedback.Feedback(
         content=feedback.content,
-        user_id=user.id,
         id=uuid.uuid4(),
+        user_id=user.id,
+        user_name=user.name,
         creation=datetime.now(UTC),
+        is_addressed=False,
     )
 
+    print("\n\n")
+    print(feedback_complete)
+    print("\n\n")
     await cruds_feedback.add_feedback(
         feedback=feedback_complete,
         db=db,
     )
 
+    print("\n\n")
+    print(feedback_complete)
+    print("\n\n")
     return feedback_complete
 
 

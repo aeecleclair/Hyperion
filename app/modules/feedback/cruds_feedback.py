@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import delete, select
@@ -11,10 +10,12 @@ async def get_feedbacks(db: AsyncSession) -> list[schemas_feedback.Feedback] | N
     result = await db.execute(select(models_feedback.Feedback))
     return [
         schemas_feedback.Feedback(
-            id=r.id,
-            creation=r.creation,
             content=r.content,
+            id=r.id,
             user_id=r.user_id,
+            user_name=r.user_name,
+            creation=r.creation,
+            is_addressed=r.is_addressed,
         )
         for r in result.scalars().all()
     ]
@@ -26,12 +27,15 @@ async def add_feedback(
 ) -> schemas_feedback.Feedback:
     feedback_db = models_feedback.Feedback(
         id=feedback.id,
-        creation=feedback.creation,
-        user_id=feedback.user_id,
         content=feedback.content,
+        user_id=feedback.user_id,
+        user_name=feedback.user_name,
+        creation=feedback.creation,
+        is_addressed=feedback.is_addressed,
     )
     db.add(feedback_db)
     await db.flush()
+    print("dbbbbbb")
 
 
 async def delete_feedback(db: AsyncSession, feedback_id: UUID):

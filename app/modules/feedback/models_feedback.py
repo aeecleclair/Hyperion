@@ -11,4 +11,6 @@ class Feedback(Base):
     id: Mapped[PrimaryKey]
     creation: Mapped[datetime]
     user_id: Mapped[str]
+    user_name: Mapped[str]
     content: Mapped[str]
+    is_addressed: Mapped[bool]
