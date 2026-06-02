@@ -7,7 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.groups.groups_type import AccountType
 from app.core.schools.models_schools import CoreSchool
-from app.types.sqlalchemy import Base, PrimaryKey
+from app.types.sqlalchemy import Base
 
 if TYPE_CHECKING:
     from app.core.groups.models_groups import CoreGroup
@@ -115,6 +115,5 @@ class CoreUnregisteredUserRecoverRequest(Base):
 
     # The email column should not be unique.
     # Someone can indeed create more than one password reset request,
-    id: Mapped[PrimaryKey]
-    email: Mapped[str]
-    created_on: Mapped[datetime]
+    email: Mapped[str] = mapped_column(primary_key=True)
+    created_on: Mapped[datetime] = mapped_column(primary_key=True)

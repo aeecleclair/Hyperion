@@ -625,7 +625,6 @@ async def recover_user(
         )
 
     recover_request_unregistered = models_users.CoreUnregisteredUserRecoverRequest(
-        id=uuid.uuid4(),
         email=email,
         created_on=date,
     )

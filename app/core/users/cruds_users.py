@@ -192,7 +192,6 @@ async def get_recovery_request_within_delay_unregistered_user(
     )
     return (
         schemas_users.CoreUnregisteredUserRecoverRequest(
-            id=result.id,
             email=result.email,
             created_on=result.created_on,
         )
