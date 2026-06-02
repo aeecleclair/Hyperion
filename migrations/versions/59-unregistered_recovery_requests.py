@@ -26,7 +26,7 @@ def upgrade() -> None:
 
     op.create_table(
         "core_unregistred_user_recover_request",
-        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("id", sa.UUID(), primary_key=True, nullable=False),
         sa.Column("email", sa.String(), nullable=False),
         sa.Column("created_on", TZDateTime(), nullable=False),
         sa.PrimaryKeyConstraint("id"),

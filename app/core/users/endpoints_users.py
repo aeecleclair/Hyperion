@@ -551,7 +551,7 @@ async def recover_user(
     last_created = await cruds_users.get_recovery_request_within_delay_registred_user(
         db=db,
         email=email,
-        minimumDelayMinutes=settings.PASWORD_RECOVERY_NEW_TOKEN_EXPIRE_MINUTES,
+        minimum_delay_minutes=settings.PASSWORD_RECOVERY_TOKEN_COOLDOWN_MINUTES,
         date=date,
     )
 
@@ -574,7 +574,7 @@ async def recover_user(
             reset_token=reset_token,
             created_on=date,
             expire_on=date
-            + timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRE_HOURS),
+            + timedelta(hours=settings.PASSWORD_RECOVERY_TOKEN_COOLDOWN_MINUTES),
         )
 
         await cruds_users.create_user_recover_request(
@@ -607,10 +607,10 @@ async def recover_user(
     # We check now if this unregistred mail is under cooldown
 
     last_created_unregistred = (
-        await cruds_users.get_recovery_request_within_delay_unregistred_user(
+        await cruds_users.get_recovery_request_within_delay_unregistered_user(
             db=db,
             email=email,
-            minimumDelayMinutes=settings.PASWORD_RECOVERY_NEW_TOKEN_EXPIRE_MINUTES,
+            minimum_delay_minutes=settings.PASSWORD_RECOVERY_TOKEN_COOLDOWN_MINUTES,
             date=date,
         )
     )
@@ -625,6 +625,7 @@ async def recover_user(
         )
 
     recover_request_unregistred = models_users.CoreUnregistredUserRecoverRequest(
+        id=uuid.uuid4(),
         email=email,
         created_on=date,
     )

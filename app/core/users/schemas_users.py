@@ -1,3 +1,4 @@
+import uuid
 from datetime import date, datetime
 from uuid import UUID
 
@@ -169,7 +170,7 @@ class CoreUserRecoverRequest(BaseModel):
 
 
 class CoreUnregistredUserRecoverRequest(BaseModel):
-    id: int
+    id: uuid.UUID
     email: str
     created_on: datetime
 

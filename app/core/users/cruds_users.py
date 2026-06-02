@@ -142,7 +142,7 @@ async def get_user_by_email(
 async def get_recovery_request_within_delay_registred_user(
     db: AsyncSession,
     email: str,
-    minimumDelayMinutes: int,
+    minimum_delay_minutes: int,
     date: datetime,
 ) -> schemas_users.CoreUserRecoverRequest | None:
     result = (
@@ -151,7 +151,7 @@ async def get_recovery_request_within_delay_registred_user(
                 select(models_users.CoreUserRecoverRequest).where(
                     models_users.CoreUserRecoverRequest.email == email,
                     date - models_users.CoreUserRecoverRequest.created_on
-                    < timedelta(minutes=minimumDelayMinutes),
+                    < timedelta(minutes=minimum_delay_minutes),
                 ),
             )
         )
@@ -171,10 +171,10 @@ async def get_recovery_request_within_delay_registred_user(
     )
 
 
-async def get_recovery_request_within_delay_unregistred_user(
+async def get_recovery_request_within_delay_unregistered_user(
     db: AsyncSession,
     email: str,
-    minimumDelayMinutes: int,
+    minimum_delay_minutes: int,
     date: datetime,
 ) -> schemas_users.CoreUnregistredUserRecoverRequest | None:
     result = (
@@ -183,7 +183,7 @@ async def get_recovery_request_within_delay_unregistred_user(
                 select(models_users.CoreUnregistredUserRecoverRequest).where(
                     models_users.CoreUnregistredUserRecoverRequest.email == email,
                     date - models_users.CoreUnregistredUserRecoverRequest.created_on
-                    < timedelta(minutes=minimumDelayMinutes),
+                    < timedelta(minutes=minimum_delay_minutes),
                 ),
             )
         )
