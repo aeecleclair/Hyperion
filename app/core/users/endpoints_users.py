@@ -604,9 +604,9 @@ async def recover_user(
 
         return standard_responses.Result()
 
-    # We check now if this unregistred mail is under cooldown
+    # We check now if this unregistered mail is under cooldown
 
-    last_created_unregistred = (
+    last_created_unregistered = (
         await cruds_users.get_recovery_request_within_delay_unregistered_user(
             db=db,
             email=email,
@@ -615,24 +615,24 @@ async def recover_user(
         )
     )
 
-    if last_created_unregistred is not None:
+    if last_created_unregistered is not None:
         hyperion_security_logger.info(
-            f"Reset password failed: user {email} is in cooldown and the user is unregistred.",
+            f"Reset password failed: user {email} is in cooldown and the user is unregistered.",
         )
         raise HTTPException(
             status_code=429,
             detail="Too Many Requests",
         )
 
-    recover_request_unregistred = models_users.CoreUnregistredUserRecoverRequest(
+    recover_request_unregistered = models_users.CoreUnregisteredUserRecoverRequest(
         id=uuid.uuid4(),
         email=email,
         created_on=date,
     )
 
-    await cruds_users.create_unregistred_user_recover_request(
+    await cruds_users.create_unregistered_user_recover_request(
         db=db,
-        recover_request=recover_request_unregistred,
+        recover_request=recover_request_unregistered,
     )
 
     if settings.SMTP_ACTIVE:

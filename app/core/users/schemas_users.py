@@ -169,7 +169,7 @@ class CoreUserRecoverRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class CoreUnregistredUserRecoverRequest(BaseModel):
+class CoreUnregisteredUserRecoverRequest(BaseModel):
     id: uuid.UUID
     email: str
     created_on: datetime

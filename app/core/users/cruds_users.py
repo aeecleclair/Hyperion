@@ -176,13 +176,13 @@ async def get_recovery_request_within_delay_unregistered_user(
     email: str,
     minimum_delay_minutes: int,
     date: datetime,
-) -> schemas_users.CoreUnregistredUserRecoverRequest | None:
+) -> schemas_users.CoreUnregisteredUserRecoverRequest | None:
     result = (
         (
             await db.execute(
-                select(models_users.CoreUnregistredUserRecoverRequest).where(
-                    models_users.CoreUnregistredUserRecoverRequest.email == email,
-                    date - models_users.CoreUnregistredUserRecoverRequest.created_on
+                select(models_users.CoreUnregisteredUserRecoverRequest).where(
+                    models_users.CoreUnregisteredUserRecoverRequest.email == email,
+                    date - models_users.CoreUnregisteredUserRecoverRequest.created_on
                     < timedelta(minutes=minimum_delay_minutes),
                 ),
             )
@@ -191,7 +191,7 @@ async def get_recovery_request_within_delay_unregistered_user(
         .first()
     )
     return (
-        schemas_users.CoreUnregistredUserRecoverRequest(
+        schemas_users.CoreUnregisteredUserRecoverRequest(
             id=result.id,
             email=result.email,
             created_on=result.created_on,
@@ -274,9 +274,9 @@ async def create_user_recover_request(
     db.add(recover_request)
 
 
-async def create_unregistred_user_recover_request(
+async def create_unregistered_user_recover_request(
     db: AsyncSession,
-    recover_request: models_users.CoreUnregistredUserRecoverRequest,
+    recover_request: models_users.CoreUnregisteredUserRecoverRequest,
 ) -> None:
     db.add(recover_request)
 

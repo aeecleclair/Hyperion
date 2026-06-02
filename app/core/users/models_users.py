@@ -110,8 +110,8 @@ class CoreUserEmailMigrationCode(Base):
     make_user_external: Mapped[bool] = mapped_column(default=False)
 
 
-class CoreUnregistredUserRecoverRequest(Base):
-    __tablename__ = "core_unregistred_user_recover_request"
+class CoreUnregisteredUserRecoverRequest(Base):
+    __tablename__ = "core_unregistered_user_recover_request"
 
     # The email column should not be unique.
     # Someone can indeed create more than one password reset request,
