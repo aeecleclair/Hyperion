@@ -574,7 +574,7 @@ async def recover_user(
             reset_token=reset_token,
             created_on=date,
             expire_on=date
-            + timedelta(hours=settings.PASSWORD_RECOVERY_TOKEN_COOLDOWN_MINUTES),
+            + timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRE_HOURS),
         )
 
         await cruds_users.create_user_recover_request(
