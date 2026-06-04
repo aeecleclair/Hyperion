@@ -174,7 +174,13 @@ ignore_missing_imports = true
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "module"
 asyncio_default_test_loop_scope = "module"
-filterwarnings = ["error", "ignore::DeprecationWarning"]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning",
+    # xdist controller imports `app` during collection before per-worker coverage starts;
+    # the warning is benign -- workers still measure correctly.
+    "ignore:Module .* was previously imported, but not measured:coverage.exceptions.CoverageWarning",
+]
 addopts = "-n 8 --dist=loadfile" # loadfile makes sure that tests are grouped by their containing file and distributed to available workers as whole units.
 
 
