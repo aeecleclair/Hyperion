@@ -175,6 +175,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "module"
 asyncio_default_test_loop_scope = "module"
 filterwarnings = ["error", "ignore::DeprecationWarning"]
+addopts = "-n 8 --dist=loadfile" # loadfile makes sure that tests are grouped by their containing file and distributed to available workers as whole units.
 
 
 [tool.coverage.run]
