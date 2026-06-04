@@ -342,6 +342,9 @@ class Settings(BaseSettings):
 
     USER_ACTIVATION_TOKEN_EXPIRE_HOURS: int = 24
     PASSWORD_RESET_TOKEN_EXPIRE_HOURS: int = 12
+    PASSWORD_RECOVERY_TOKEN_COOLDOWN_MINUTES: int = (
+        5  # The time between each new recovery mail to reset the password
+    )
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 14  # 14 days
     AUTHORIZATION_CODE_EXPIRE_MINUTES: int = 7

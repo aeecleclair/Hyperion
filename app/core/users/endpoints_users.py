@@ -547,30 +547,24 @@ async def recover_user(
     """
 
     db_user = await cruds_users.get_user_by_email(db=db, email=email)
-    if db_user is None:
-        if settings.SMTP_ACTIVE:
-            calypsso_register_url = (
-                settings.CLIENT_URL
-                + calypsso.get_register_relative_url(
-                    external=True,
-                )
-            )
+    date = datetime.now(UTC)
+    last_created = await cruds_users.get_recovery_request_within_delay_registred_user(
+        db=db,
+        email=email,
+        minimum_delay_minutes=settings.PASSWORD_RECOVERY_TOKEN_COOLDOWN_MINUTES,
+        date=date,
+    )
 
-            mail = mail_templates.get_mail_reset_password_account_does_not_exist(
-                register_url=calypsso_register_url,
-            )
-            send_email(
-                recipient=email,
-                subject="MyECL - reset your password",
-                content=mail,
-                settings=settings,
-            )
-        else:
-            hyperion_security_logger.info(
-                f"Reset password failed for {email}, user does not exist",
-            )
+    if last_created is not None:
+        hyperion_security_logger.info(
+            f"Reset password failed: user {email} is in cooldown",
+        )
+        raise HTTPException(
+            status_code=429,
+            detail="Too Many Requests",
+        )
 
-    else:
+    if db_user is not None:
         # The user exists, we can send a password reset invitation
         reset_token = security.generate_token()
 
@@ -578,8 +572,8 @@ async def recover_user(
             email=email,
             user_id=db_user.id,
             reset_token=reset_token,
-            created_on=datetime.now(UTC),
-            expire_on=datetime.now(UTC)
+            created_on=date,
+            expire_on=date
             + timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRE_HOURS),
         )
 
@@ -607,6 +601,60 @@ async def recover_user(
             hyperion_security_logger.info(
                 f"Reset password for {email}: {calypsso_reset_url}",
             )
+
+        return standard_responses.Result()
+
+    # We check now if this unregistered mail is under cooldown
+
+    last_created_unregistered = (
+        await cruds_users.get_recovery_request_within_delay_unregistered_user(
+            db=db,
+            email=email,
+            minimum_delay_minutes=settings.PASSWORD_RECOVERY_TOKEN_COOLDOWN_MINUTES,
+            date=date,
+        )
+    )
+
+    if last_created_unregistered is not None:
+        hyperion_security_logger.info(
+            f"Reset password failed: user {email} is in cooldown and the user is unregistered.",
+        )
+        raise HTTPException(
+            status_code=429,
+            detail="Too Many Requests",
+        )
+
+    recover_request_unregistered = models_users.CoreUnregisteredUserRecoverRequest(
+        email=email,
+        created_on=date,
+    )
+
+    await cruds_users.create_unregistered_user_recover_request(
+        db=db,
+        recover_request=recover_request_unregistered,
+    )
+
+    if settings.SMTP_ACTIVE:
+        calypsso_register_url = (
+            settings.CLIENT_URL
+            + calypsso.get_register_relative_url(
+                external=True,
+            )
+        )
+
+        mail = mail_templates.get_mail_reset_password_account_does_not_exist(
+            register_url=calypsso_register_url,
+        )
+        send_email(
+            recipient=email,
+            subject="MyECL - reset your password",
+            content=mail,
+            settings=settings,
+        )
+    else:
+        hyperion_security_logger.info(
+            f"Reset password for {email} due to inactive option",
+        )
 
     return standard_responses.Result()
 

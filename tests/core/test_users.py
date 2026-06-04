@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -332,13 +333,45 @@ def test_recover_and_reset_password(mocker: MockerFixture, client: TestClient) -
     assert response.status_code == 201
 
 
+def test_recover_overflow(mocker: MockerFixture, client: TestClient) -> None:
+    # NOTE: we don't want to mock app.core.security.generate_token but
+    # app.core.users.endpoints_users.security.generate_token which is the imported version of the function
+
+    mock_datetime = mocker.patch("app.core.users.endpoints_users.datetime")
+    mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 0, 0, tzinfo=UTC)
+
+    response = client.post(
+        "/users/recover",
+        json={"email": FABRISTPP_EMAIL_2},
+    )
+
+    assert response.status_code == 201
+
+    mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 2, 0, tzinfo=UTC)
+
+    response = client.post(
+        "/users/recover",
+        json={"email": FABRISTPP_EMAIL_2},
+    )
+
+    assert response.status_code == 429
+
+    mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 6, 0, tzinfo=UTC)
+
+    response = client.post(
+        "/users/recover",
+        json={"email": FABRISTPP_EMAIL_2},
+    )
+
+    assert response.status_code == 201
+
+
 def test_recover_with_non_existing_account(
     mocker: MockerFixture,
     client: TestClient,
 ) -> None:
-    mocked_hyperion_security_logger = mocker.patch(
-        "app.core.users.endpoints_users.hyperion_security_logger.info",
-    )
+    mock_datetime = mocker.patch("app.core.users.endpoints_users.datetime")
+    mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 0, 0, tzinfo=UTC)
 
     response = client.post(
         "/users/recover",
@@ -347,9 +380,23 @@ def test_recover_with_non_existing_account(
 
     assert response.status_code == 201
 
-    mocked_hyperion_security_logger.assert_called_once_with(
-        "Reset password failed for non-existing@myecl.fr, user does not exist",
+    mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 2, 0, tzinfo=UTC)
+
+    response = client.post(
+        "/users/recover",
+        json={"email": "non-existing@myecl.fr"},
     )
+
+    assert response.status_code == 429
+
+    mock_datetime.now.return_value = datetime(2005, 10, 24, 0, 6, 0, tzinfo=UTC)
+
+    response = client.post(
+        "/users/recover",
+        json={"email": "non-existing@myecl.fr"},
+    )
+
+    assert response.status_code == 201
 
 
 def test_update_user(client: TestClient) -> None:
