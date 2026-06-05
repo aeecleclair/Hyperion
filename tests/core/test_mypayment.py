@@ -335,7 +335,7 @@ async def init_objects() -> None:
     )
     await add_object_to_db(store3_wallet)
 
-    global store, store2
+    global store, store2, store3
     store = models_mypayment.Store(
         id=uuid4(),
         wallet_id=store_wallet.id,
@@ -1270,7 +1270,7 @@ async def test_get_stores_as_manager(client: TestClient):
         headers={"Authorization": f"Bearer {structure_manager_user_token}"},
     )
     assert response.status_code == 200
-    assert len(response.json()) == 1
+    assert len(response.json()) == 2
 
 
 async def test_update_store_non_existing(client: TestClient):
@@ -2341,7 +2341,7 @@ def test_hello_asso_transfer(
     assert response.json()["url"] == "https://some.url.fr/checkout"
 
     response = client.post(
-        "/checkout/helloasso/webhook",
+        "/payment/helloasso/webhook",
         json={
             "eventType": "Payment",
             "data": {"amount": 1000, "id": 123},
