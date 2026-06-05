@@ -333,7 +333,8 @@ async def use_lock_for_workers[**P, R](
 
     elif redis_client.set(key, "1", nx=True, ex=120):
         # We acquired the lock, we execute the function
-        logger.info(f"Running {job_function.__name__}")
+        job_name = getattr(job_function, "__name__", repr(job_function))
+        logger.info(f"Running {job_name}")
 
         await execute_async_or_sync_method(job_function, *args, **kwargs)
 
@@ -351,8 +352,9 @@ async def use_lock_for_workers[**P, R](
 
     elif unlock_key:
         # As an `unlock_key` is provided, we will wait until an other worker has finished executing `job_function`
+        job_name = getattr(job_function, "__name__", repr(job_function))
         while redis_client.get(unlock_key) is None:
-            logger.debug(f"Waiting for {job_function.__name__} to finish")
+            logger.debug(f"Waiting for {job_name} to finish")
             await asyncio.sleep(1)
 
 

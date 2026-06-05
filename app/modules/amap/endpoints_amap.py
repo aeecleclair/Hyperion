@@ -417,7 +417,9 @@ async def get_order_by_id(
 
     products = await cruds_amap.get_products_of_order(db=db, order_id=order_id)
     return schemas_amap.OrderReturn(
-        productsdetail=products,
+        productsdetail=[
+            schemas_amap.ProductQuantity.model_validate(p) for p in products
+        ],
         delivery_name=order.delivery.name,
         delivery_date=order.delivery.delivery_date,
         **order.__dict__,
@@ -542,7 +544,9 @@ async def add_order_to_delievery(
             raise HTTPException(status_code=404, detail="added order not found")
 
         return schemas_amap.OrderReturn(
-            productsdetail=productsret,
+            productsdetail=[
+                schemas_amap.ProductQuantity.model_validate(p) for p in productsret
+            ],
             delivery_name=orderret.delivery.name,
             delivery_date=orderret.delivery.delivery_date,
             **orderret.__dict__,
@@ -610,7 +614,7 @@ async def edit_order_from_delivery(
         ):
             raise HTTPException(status_code=400, detail="Invalid request")
 
-        amount = 0.0
+        amount = 0
         for product_id, product_quantity in zip(
             order.products_ids,
             order.products_quantity,
@@ -624,7 +628,6 @@ async def edit_order_from_delivery(
         db_order = schemas_amap.OrderComplete(
             order_id=order_id,
             ordering_date=previous_order.ordering_date,
-            delivery_date=delivery.delivery_date,
             delivery_id=previous_order.delivery_id,
             user_id=previous_order.user_id,
             amount=amount,
@@ -1059,7 +1062,9 @@ async def get_orders_of_user(
             raise HTTPException(status_code=404, detail="at least one order not found")
         res.append(
             schemas_amap.OrderReturn(
-                productsdetail=products,
+                productsdetail=[
+                    schemas_amap.ProductQuantity.model_validate(p) for p in products
+                ],
                 delivery_date=order.delivery.delivery_date,
                 delivery_name=order.delivery.name,
                 **order.__dict__,
