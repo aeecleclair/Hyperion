@@ -142,7 +142,11 @@ async def init_objects(client) -> None:
 
     global raid_admin_user, token_admin
     raid_admin_user = await create_user_with_groups([admin_group.id])
-    await _set_user_identity(raid_admin_user.id, "+33600000000", datetime.date(1990, 1, 1))
+    await _set_user_identity(
+        raid_admin_user.id,
+        "+33600000000",
+        datetime.date(1990, 1, 1),
+    )
     token_admin = create_api_access_token(raid_admin_user)
 
     global user_captain, token_captain
@@ -162,12 +166,20 @@ async def init_objects(client) -> None:
 
     global user_no_profile, token_no_profile
     user_no_profile = await create_user_with_groups([])
-    await _set_user_identity(user_no_profile.id, "+33644444444", datetime.date(2002, 2, 2))
+    await _set_user_identity(
+        user_no_profile.id,
+        "+33644444444",
+        datetime.date(2002, 2, 2),
+    )
     token_no_profile = create_api_access_token(user_no_profile)
 
     global user_volunteer, token_volunteer
     user_volunteer = await create_user_with_groups([])
-    await _set_user_identity(user_volunteer.id, "+33655555555", datetime.date(1998, 7, 7))
+    await _set_user_identity(
+        user_volunteer.id,
+        "+33655555555",
+        datetime.date(1998, 7, 7),
+    )
     token_volunteer = create_api_access_token(user_volunteer)
 
     global user_no_raid, token_no_raid
@@ -876,10 +888,14 @@ async def test_get_all_participants_scoped_by_edition() -> None:
 async def test_is_user_a_participant_true_and_false() -> None:
     async with get_TestingSessionLocal()() as db:
         assert await cruds_raid.is_user_a_participant(
-            user_second.id, active_edition.id, db,
+            user_second.id,
+            active_edition.id,
+            db,
         )
         assert not await cruds_raid.is_user_a_participant(
-            user_no_raid.id, active_edition.id, db,
+            user_no_raid.id,
+            active_edition.id,
+            db,
         )
 
 
@@ -887,10 +903,14 @@ async def test_is_user_a_participant_true_and_false() -> None:
 async def test_get_team_by_participant_id_finds_both_roles() -> None:
     async with get_TestingSessionLocal()() as db:
         captain_team = await cruds_raid.get_team_by_participant_id(
-            user_captain.id, active_edition.id, db,
+            user_captain.id,
+            active_edition.id,
+            db,
         )
         second_team = await cruds_raid.get_team_by_participant_id(
-            user_second.id, active_edition.id, db,
+            user_second.id,
+            active_edition.id,
+            db,
         )
         assert captain_team is not None
         assert second_team is not None
@@ -921,29 +941,39 @@ async def test_volunteer_crud_roundtrip() -> None:
         await db.commit()
     async with get_TestingSessionLocal()() as db:
         got = await cruds_raid.get_volunteer_by_user_id(
-            user.id, active_edition.id, db,
+            user.id,
+            active_edition.id,
+            db,
         )
         assert got is not None
         assert got.validated is False
 
         all_v = await cruds_raid.get_all_volunteers_by_edition(
-            active_edition.id, db,
+            active_edition.id,
+            db,
         )
         assert any(x.user_id == user.id for x in all_v)
 
         validated = await cruds_raid.get_all_volunteers_by_edition(
-            active_edition.id, db, validated=True,
+            active_edition.id,
+            db,
+            validated=True,
         )
         assert not any(x.user_id == user.id for x in validated)
 
         await cruds_raid.update_volunteer_validation(
-            user.id, active_edition.id, True, db,
+            user.id,
+            active_edition.id,
+            True,
+            db,
         )
         await db.commit()
 
     async with get_TestingSessionLocal()() as db:
         re_read = await cruds_raid.get_volunteer_by_user_id(
-            user.id, active_edition.id, db,
+            user.id,
+            active_edition.id,
+            db,
         )
         assert re_read is not None
         assert re_read.validated is True

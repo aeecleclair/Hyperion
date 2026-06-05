@@ -169,9 +169,7 @@ async def check_volunteer_validation_consistency(
             status_code=400,
             detail="Volunteer emergency contact is incomplete",
         )
-    if volunteer.has_car and (
-        volunteer.car_seats is None or volunteer.car_seats <= 0
-    ):
+    if volunteer.has_car and (volunteer.car_seats is None or volunteer.car_seats <= 0):
         raise HTTPException(
             status_code=400,
             detail="Volunteer has a car but car_seats is missing or invalid",
@@ -219,7 +217,9 @@ _STUDENT_SITUATIONS = (Situation.centrale, Situation.otherSchool)
 _DOCUMENT_RULES: tuple[_DocumentRule, ...] = (
     _DocumentRule("id_card", applies=lambda _c: True),
     _DocumentRule(
-        "medical_certificate", applies=lambda _c: True, counts_temporary=True,
+        "medical_certificate",
+        applies=lambda _c: True,
+        counts_temporary=True,
     ),
     _DocumentRule(
         "security_file",

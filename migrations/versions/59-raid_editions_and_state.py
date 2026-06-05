@@ -377,7 +377,10 @@ def downgrade() -> None:
     op.add_column("raid_participant", sa.Column("phone", sa.String(), nullable=True))
     op.add_column("raid_participant", sa.Column("birthday", sa.Date(), nullable=True))
     op.add_column("raid_participant", sa.Column("email", sa.String(), nullable=True))
-    op.add_column("raid_participant", sa.Column("firstname", sa.String(), nullable=True))
+    op.add_column(
+        "raid_participant",
+        sa.Column("firstname", sa.String(), nullable=True),
+    )
     op.add_column("raid_participant", sa.Column("name", sa.String(), nullable=True))
     conn.execute(
         sa.text(

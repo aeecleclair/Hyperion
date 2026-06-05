@@ -49,9 +49,7 @@ def will_birthday_be_minor_on(
             day=1,
         )
 
-    return (
-        date(birthday.year + 18, birthday.month, birthday.day) > raid_start_date
-    )
+    return date(birthday.year + 18, birthday.month, birthday.day) > raid_start_date
 
 
 async def validate_payment(
@@ -119,9 +117,7 @@ async def set_team_number(
         Difficulty.expert: 200,
     }
     new_team_number = (
-        difficulty_separator[team.difficulty] + 1
-        if not max_number
-        else max_number + 1
+        difficulty_separator[team.difficulty] + 1 if not max_number else max_number + 1
     )
     updated_team = schemas_raid.RaidTeamUpdate(number=new_team_number)
     await cruds_raid.update_team(team.id, updated_team, db)
@@ -228,9 +224,7 @@ async def get_all_security_files_zip(
     zip_file_path = f"data/raid/Fiches_Sécurité_{datetime.now(UTC).strftime('%Y-%m-%d_%H_%M_%S')}.zip"
     with zipfile.ZipFile(zip_file_path, mode="w") as archive:
         for team in teams:
-            for participant in [team.captain] + (
-                [team.second] if team.second else []
-            ):
+            for participant in [team.captain] + ([team.second] if team.second else []):
                 file_id = await generate_security_file_pdf(
                     participant,
                     information,
