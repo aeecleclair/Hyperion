@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import delete, select, true, update
+from sqlalchemy import and_, delete, select, true, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.users import schemas_users
@@ -77,7 +77,7 @@ async def get_offers(
             else true()
         )
         & (
-            models_pmf.PmfOffer.tags.any(models_pmf.Tags.tag.in_(included_tags))
+            models_pmf.PmfOffer.tags.any(models_pmf.Tag.tag.in_(included_tags))
             if included_tags
             else true()
         )
@@ -137,7 +137,7 @@ async def get_offers_by_author_id(
             else true()
         )
         & (
-            models_pmf.PmfOffer.tags.any(models_pmf.Tags.tag.in_(included_tags))
+            models_pmf.PmfOffer.tags.any(models_pmf.Tag.tag.in_(included_tags))
             if included_tags
             else true()
         )
@@ -197,7 +197,7 @@ async def get_me_offers(
             else true()
         )
         & (
-            models_pmf.PmfOffer.tags.any(models_pmf.Tags.tag.in_(included_tags))
+            models_pmf.PmfOffer.tags.any(models_pmf.Tag.tag.in_(included_tags))
             if included_tags
             else true()
         )
@@ -242,7 +242,7 @@ async def get_me_offers(
 
 async def get_tags(db: AsyncSession) -> list[schemas_pmf.TagComplete]:
     tags = await db.execute(
-        select(models_pmf.Tags).distinct(models_pmf.Tags.tag),
+        select(models_pmf.Tag).distinct(models_pmf.Tag.tag),
     )
     return [
         schemas_pmf.TagComplete(
@@ -257,9 +257,9 @@ async def get_tags(db: AsyncSession) -> list[schemas_pmf.TagComplete]:
 async def get_tag_by_name(
     tag_name: str,
     db: AsyncSession,
-) -> models_pmf.Tags | None:
+) -> models_pmf.Tag | None:
     result = await db.execute(
-        select(models_pmf.Tags).where(models_pmf.Tags.tag == tag_name),
+        select(models_pmf.Tag).where(models_pmf.Tag.tag == tag_name),
     )
     return result.scalars().first()
 
@@ -267,9 +267,9 @@ async def get_tag_by_name(
 async def get_tag_by_id(
     tag_id: UUID,
     db: AsyncSession,
-) -> models_pmf.Tags | None:
+) -> models_pmf.Tag | None:
     result = await db.execute(
-        select(models_pmf.Tags).where(models_pmf.Tags.id == tag_id),
+        select(models_pmf.Tag).where(models_pmf.Tag.id == tag_id),
     )
     return result.scalars().first()
 
@@ -278,7 +278,7 @@ async def create_tag(
     tag: schemas_pmf.TagComplete,
     db: AsyncSession,
 ) -> None:
-    tag_db = models_pmf.Tags(
+    tag_db = models_pmf.Tag(
         id=tag.id,
         tag=tag.tag,
         created_on=tag.created_on,
@@ -292,8 +292,8 @@ async def update_tag(
     db: AsyncSession,
 ) -> None:
     await db.execute(
-        update(models_pmf.Tags)
-        .where(models_pmf.Tags.id == tag_id)
+        update(models_pmf.Tag)
+        .where(models_pmf.Tag.id == tag_id)
         .values(**tag_update.model_dump(exclude_unset=True)),
     )
 
@@ -307,5 +307,96 @@ async def delete_tag(
         delete(models_pmf.OfferTags).where(models_pmf.OfferTags.tag_id == tag_id),
     )
     await db.execute(
-        delete(models_pmf.Tags).where(models_pmf.Tags.id == tag_id),
+        delete(models_pmf.Tag).where(models_pmf.Tag.id == tag_id),
+    )
+
+async def get_profile(
+    user_id: UUID,
+    db: AsyncSession
+) -> schemas_pmf.ProfileComplete:
+    result = await db.execute(
+        select(models_pmf.Profile).where(models_pmf.Profile.user_id == user_id),
+    )
+    profile = result.scalars().first()
+    return schemas_pmf.ProfileComplete(
+        cv_list=profile.cv_list,
+        user_id=profile.user_id
+    )
+
+async def create_profile(
+        profile: schemas_pmf.ProfileBase,
+        db: AsyncSession
+) -> None:
+    db.add(models_pmf.Profile(
+        user_id=profile.user_id,
+    ))
+
+async def create_cv(
+    cv: schemas_pmf.CvSimple,
+    db: AsyncSession
+) -> None:
+    cv_db = models_pmf.Cv(
+        id=cv.id,
+        user_id=cv.user_id,
+        name=cv.name,
+        created_on=cv.created_on,
+        allowed_users=[],
+    )
+    db.add(cv_db)
+
+async def update_cv(
+    cv_id: UUID,
+    cv_update: schemas_pmf.CvUpdate,
+    db: AsyncSession
+) -> None:
+    await db.execute(
+        update(models_pmf.Cv)
+        .where(models_pmf.Cv.id == cv_id)
+        .values(**cv_update.model_dump(exclude_unset=True)),
+    )
+
+async def get_cv_by_id(
+    cv_id: UUID,
+    db: AsyncSession
+) -> schemas_pmf.CvComplete:
+    result = await db.execute(
+        select(models_pmf.Cv).where(models_pmf.Cv.id == cv_id),
+    )
+    cv = result.scalars().first()
+    return schemas_pmf.CvComplete(
+        name=cv.name,
+        user_id=cv.user_id,
+        id=cv.id,
+        created_on=cv.created_on,
+        allowed_users=cv.allowed_users
+    )
+
+async def delete_cv(
+    cv_id: UUID,
+    db: AsyncSession
+) -> None:
+    await db.execute(
+        delete(models_pmf.Cv).where(models_pmf.Cv.id == cv_id),
+    )
+
+async def create_application(
+    application: schemas_pmf.ApplicationBase,
+    db: AsyncSession
+) -> None:
+    application_db=models_pmf.Application(
+        cv_id=application.cv_id,
+        student_id=application.student_id,
+        alumni_id=application.alumni_id,
+        offer_id=application.offer_id,
+        created_on=application.created_on
+    )
+    await db.add(application_db)
+
+async def delete_application(
+    student_id: str,
+    offer_id: UUID,
+    db: AsyncSession
+) -> None:
+    await db.execute(
+        delete(models_pmf.Application).where(and_(models_pmf.Application.student_id == student_id, models_pmf.Application.offer_id == offer_id))
     )

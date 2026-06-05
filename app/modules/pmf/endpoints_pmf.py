@@ -2,7 +2,8 @@ import uuid
 from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import AccountType, GroupType
@@ -11,9 +12,14 @@ from app.core.users import models_users
 from app.core.users.models_users import CoreUser
 from app.dependencies import get_db, is_user, is_user_in
 from app.modules.pmf import cruds_pmf, factory_pmf, schemas_pmf, types_pmf
+from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.tools import is_user_member_of_any_group
-
+from app.utils.tools import (
+    delete_file_from_data,
+    get_file_from_data,
+    save_file_as_data,
+)
 router = APIRouter(tags=["pmf"])
 
 
@@ -117,6 +123,120 @@ async def get_me_offers(
         show_hidden=True,
     )
 
+@router.get(
+    "/pmf/me/profile",
+    response_model=schemas_pmf.ProfileComplete,
+    status_code=200,
+)
+async def get_me_profile(
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(is_user()),
+):
+    return await cruds_pmf.get_profile(
+        user_id=user.id,
+        db=db,
+    )
+
+@router.post(
+    "/pmf/me/profile",
+    response_model=schemas_pmf.ProfileBase,
+    status_code=201,
+)
+async def create_me_profile(
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(
+    is_user(included_account_types=[AccountType.student]),
+    ),
+):
+    await cruds_pmf.create_profile(
+        schemas_pmf.ProfileBase(
+        user_id=user.id
+        ),
+        db=db,
+    )
+    db.flush()
+    return await cruds_pmf.get_profile(user_id=user.id, db=db)
+
+@router.post(
+    "/pmf/me/profile/cv",
+    response_model=None,
+    status_code=201,
+)
+async def create_me_cv(
+    pdf: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    user: CoreUser = Depends(
+    is_user(included_account_types=[AccountType.student])),
+):
+    id=uuid.uuid4()
+    cv_simple = schemas_pmf.CvSimple(
+    id=id,
+    created_on=datetime.now(UTC).date(),
+    user_id=user.id,
+    name=pdf.filename
+    )
+
+    await cruds_pmf.create_cv(
+        cv=cv_simple,
+        db=db,
+    )
+
+    await save_file_as_data(
+        upload_file=pdf,
+        directory="pmf/pdf",
+        filename=str(id),
+        max_file_size=10 * 1024 * 1024,  # 10 MB
+        accepted_content_types=[ContentType.pdf],
+    )
+
+@module.router.patch(
+        "/pmf/profile/cv/{cv_id}",
+        response_model=None,
+        status_code=204,
+)
+async def patch_cv(
+    cv_id:str,
+    cv_update: schemas_pmf.CvUpdate,
+    user: CoreUser = Depends(is_user),
+    db: AsyncSession = Depends(get_db),
+):
+    cv = cruds_pmf.get_cv_by_id(cv_id=cv_id,db=db)
+    if user.id != cv.user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden, you are not the author of this cv"
+        )
+    await cruds_pmf.update_cv(cv_id=cv_id,cv_update=cv_update,db=db)
+
+@module.router.get(
+    "/pmf/profile/cv/{cv_id}/pdf",
+    response_class=FileResponse,
+    status_code=200,
+)
+async def get_cv_pdf(
+    cv_id:str,
+    user: CoreUser = Depends(is_user()),
+    db: AsyncSession = Depends(get_db)
+):
+    cv = await cruds_pmf.get_cv_by_id(cv_id=cv_id,db=db)
+    if cv is None:
+        raise HTTPException(
+            status_code=404,
+            detail="The cv does not exist.",
+        )
+    if cv.user_id != user.id and not is_user_member_of_any_group(
+        user,
+        [
+            GroupType.admin,
+        ],
+    ) and not user in cv.allowed_users:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    return get_file_from_data(
+        default_asset="assets/pdf/default_PDF.pdf",
+        directory="pmf/pdf",
+        filename=str(cv_id),
+    )
 
 @router.get(
     "/pmf/offers/",

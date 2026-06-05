@@ -23,9 +23,9 @@ alumni_user: models_users.CoreUser
 admin_user: models_users.CoreUser
 
 tag1_id = uuid.UUID("0b7dc7bf-0ab4-421a-bbe7-7ec064fcec8d")
-tag1: models_pmf.Tags
+tag1: models_pmf.Tag
 tag2_id = uuid.UUID("1c8dc7bf-1ab4-421a-bbe7-7ec064fcec8d")
-tag2: models_pmf.Tags
+tag2: models_pmf.Tag
 tag_fake_id = uuid.UUID("5e8ec7bf-4ab4-421a-bbe7-7ec064fcec8d")
 
 offer1_id = uuid.UUID("2b7dc7bf-2ab4-421a-bbe7-7ec064fcec8d")
@@ -56,6 +56,10 @@ async def init_objects():
         groups=[],
         account_type=AccountType.former_student,
     )
+    alumni_user2 = await create_user_with_groups(
+        groups=[],
+        account_type=AccountType.former_student,
+    )
     admin_user = await create_user_with_groups(
         groups=[GroupType.admin],
         account_type=AccountType.former_student,
@@ -65,15 +69,16 @@ async def init_objects():
     not_alumni_token = create_api_access_token(not_alumni_user)
     student_token = create_api_access_token(student_user)
     alumni_token = create_api_access_token(alumni_user)
+    alumni_token2 = create_api_access_token(alumni_user2)
     admin_token = create_api_access_token(admin_user)
 
     global tag1, tag2
-    tag1 = models_pmf.Tags(
+    tag1 = models_pmf.Tag(
         tag="Aeronautics",
         id=tag1_id,
         created_on=date(2023, 5, 1),
     )
-    tag2 = models_pmf.Tags(
+    tag2 = models_pmf.Tag(
         tag="Artificial Intelligence",
         id=tag2_id,
         created_on=date(2023, 5, 1),
@@ -81,7 +86,7 @@ async def init_objects():
     await add_object_to_db(tag1)
     await add_object_to_db(tag2)
 
-    # Creat 5 offers
+    # Create 3 offers
     offer_1 = models_pmf.PmfOffer(
         id=offer1_id,
         author_id=alumni_user.id,
@@ -121,7 +126,7 @@ async def init_objects():
     # A 3rd offer with the two tags
     offer_3 = models_pmf.PmfOffer(
         id=offer3_id,
-        author_id=alumni_user.id,
+        author_id=alumni_user2.id,
         company_name="RoboAero",
         title="Robotics and Aerospace Internship",
         description="Combine robotics and aerospace in this exciting internship.",
@@ -139,20 +144,27 @@ async def init_objects():
     await add_object_to_db(offer_tag1)
     await add_object_to_db(offer_tag2)
 
+    profile_1 = models_pmf.Profile(user_id=student_token, cv_list=[])
+    await add_object_to_db(profile_1)
+
 
 @pytest.mark.parametrize(
-    ("offer_id", "expected_code"),
+    ("offer_id", "token", "expected_code"),
     [
-        (offer1_id, 200),
-        (offer2_id, 200),
-        (offer3_id, 200),
-        (offer_fake_id, 404),
+        (offer1_id, "student_token", 404),
+        (offer2_id, "student_token", 200),
+        (offer3_id, "student_token", 404),
+        (offer3_id, "admin_token", 200),
+        (offer3_id, "alumni_token2", 200),
+        (offer3_id, "alumni_token", 404),
+        (offer2_id, "alumni_token2", 200),
+        (offer_fake_id, "student_token", 404),
     ],
 )
-def test_get_offer(offer_id: uuid.UUID, expected_code: int, client: TestClient):
+def test_get_offer(offer_id: uuid.UUID, token: str, expected_code: int, client: TestClient):
     response = client.get(
         f"/pmf/offers/{offer_id}",
-        headers={"Authorization": f"Bearer {student_token}"},
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == expected_code
 
@@ -184,6 +196,7 @@ def test_get_offers(
 ):
     response = client.get(
         f"/pmf/offers/{query}",
+        headers={"Authorization": f"Bearer {admin_token}"}
     )
     assert response.status_code == expected_code
     if expected_code == 200:
@@ -508,3 +521,13 @@ def test_delete_nonexistent_tag(client: TestClient):
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 404
+
+def test_create_profile_forbidden(client: TestClient):
+    """Test profile creation for non-student user"""
+    profile_data={"user_id":alumni_user,"cv_list":[]}
+    response = client.post(
+        "/pmf/profile",
+        json=profile_data,
+        headers={"Authorization": f"Bearer {alumni_token}"},
+    )
+    assert response.status_code == 403

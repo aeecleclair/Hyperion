@@ -60,6 +60,21 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["tag_id"], ["pmf_tags.id"]),
         sa.PrimaryKeyConstraint("offer_id", "tag_id"),
     )
+    op.create_table(
+        "pmf_profiles",
+        sa.Column("user_id", sa.String(), nullable=False),
+        sa.ForeignKeyConstraint(["user_id"], ["core_user.id"]),
+        sa.PrimaryKeyConstraint("user_id"),
+    )
+    op.create_table(
+        "pmf_cvs",
+        sa.Column("name", sa.Uuid(), nullable=False),
+        sa.Column("user_id", sa.String(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("created_on", sa.Date(), nullable=False),
+        sa.ForeignKeyConstraint(["user_id"], ["pmf_profiles.user_id"]),
+        sa.PrimaryKeyConstraint("id"),
+    )
     # ### end Alembic commands ###
 
 
@@ -68,6 +83,8 @@ def downgrade() -> None:
     op.drop_table("pmf_offer_tags")
     op.drop_table("pmf_offers")
     op.drop_table("pmf_tags")
+    op.drop_table("pmf_profiles")
+    op.drop_table("pmf_cvs")
     # ### end Alembic commands ###
 
 

@@ -47,16 +47,15 @@ class PmfOffer(Base):
 
     created_on: Mapped[date] = mapped_column(insert_default=date.today)
     hidden: Mapped[bool]
-    tags: Mapped[list["Tags"]] = relationship(
-        "Tags",
+    tags: Mapped[list["Tag"]] = relationship(
+        "Tag",
         back_populates="offers",
         lazy="selectin",  # Small collection
         secondary="pmf_offer_tags",
         default_factory=list,
     )
 
-
-class Tags(Base):
+class Tag(Base):
     __tablename__ = "pmf_tags"
 
     id: Mapped[PrimaryKey]
@@ -70,3 +69,42 @@ class Tags(Base):
         secondary="pmf_offer_tags",
         default_factory=list,
     )
+
+class Profile(Base):
+    __tablename__ = "pmf_profiles"
+
+    user_id: Mapped[PrimaryKey] = mapped_column(ForeignKey("core_user.id"))
+    cv_list: Mapped[list["Cv"]] = relationship(
+        "Cv",
+        back_populates="profile",
+        default_factory=list,
+        lazy="selectin"
+    )
+
+class Cv(Base):
+    __tablename__ = "pmf_cvs"
+
+    name: Mapped[str]
+    user_id: Mapped[str] = mapped_column(ForeignKey("pmf_profiles.user_id"))
+    id: Mapped[PrimaryKey]
+    created_on: Mapped[date] = mapped_column(insert_default=date.today)
+    profile: Mapped["Profile"] = relationship(
+        "Profile",
+        back_populates="cv_list",
+        init=False
+    )
+    allowed_users: Mapped[list["CoreUser"]] = relationship(
+        "CoreUser",
+        lazy="selectin",  # Small collection
+        secondary="pmf_applications",
+        default_factory=list,
+        )
+
+class Application(Base):
+    __tablename__ = "pmf_applications"
+    motivation=Mapped[str]
+    cv_id: Mapped[UUID] = mapped_column(ForeignKey("pmf_cvs.id"))
+    student_id: Mapped[str] = mapped_column(ForeignKey("pmf_profiles.user_id"), primary_key=True)
+    alumni_id: Mapped[str] = mapped_column(ForeignKey("core_user.id"))
+    offer_id: Mapped[str] = mapped_column(ForeignKey("pmf_offers.id"), primary_key=True)
+    created_on: Mapped[date]
