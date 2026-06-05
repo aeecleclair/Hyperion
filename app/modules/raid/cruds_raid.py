@@ -742,9 +742,7 @@ async def get_participant_checkout_by_checkout_id(
         ),
     )
     model = checkout.scalars().first()
-    return (
-        schemas_raid.RaidParticipantCheckout.model_validate(model) if model else None
-    )
+    return schemas_raid.RaidParticipantCheckout.model_validate(model) if model else None
 
 
 # --- Edition CRUDs ------------------------------------------------------
@@ -754,9 +752,7 @@ async def get_all_editions(
     db: AsyncSession,
 ) -> list[schemas_raid.RaidEdition]:
     result = await db.execute(select(models_raid.RaidEdition))
-    return [
-        schemas_raid.RaidEdition.model_validate(e) for e in result.scalars().all()
-    ]
+    return [schemas_raid.RaidEdition.model_validate(e) for e in result.scalars().all()]
 
 
 async def get_edition_by_id(

@@ -36,28 +36,37 @@ def test_minor_when_birthday_unknown() -> None:
 def test_minor_without_raid_date_uses_next_year_jan_1() -> None:
     # A 16-year-old on today's year is still minor on Jan 1 next year.
     today = datetime.datetime.now(tz=datetime.UTC).date()
-    assert will_birthday_be_minor_on(
-        datetime.date(today.year - 16, today.month, today.day),
-        None,
-    ) is True
+    assert (
+        will_birthday_be_minor_on(
+            datetime.date(today.year - 16, today.month, today.day),
+            None,
+        )
+        is True
+    )
 
 
 def test_not_minor_if_birthday_18_years_before_raid() -> None:
     raid_date = datetime.date(2026, 5, 1)
     eighteenth_birthday_before_raid = datetime.date(2008, 4, 30)
-    assert will_birthday_be_minor_on(
-        eighteenth_birthday_before_raid,
-        raid_date,
-    ) is False
+    assert (
+        will_birthday_be_minor_on(
+            eighteenth_birthday_before_raid,
+            raid_date,
+        )
+        is False
+    )
 
 
 def test_minor_if_birthday_after_raid() -> None:
     raid_date = datetime.date(2026, 5, 1)
     eighteenth_birthday_after_raid = datetime.date(2008, 5, 2)
-    assert will_birthday_be_minor_on(
-        eighteenth_birthday_after_raid,
-        raid_date,
-    ) is True
+    assert (
+        will_birthday_be_minor_on(
+            eighteenth_birthday_after_raid,
+            raid_date,
+        )
+        is True
+    )
 
 
 # -- calculate_raid_payment (new enum semantics) ---------------------------
