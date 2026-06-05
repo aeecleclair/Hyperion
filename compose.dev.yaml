@@ -3,6 +3,12 @@ services:
     image: postgres:15.1-alpine3.17
     container_name: hyperion-db-dev
     restart: unless-stopped
+    # Headroom for the test suite: each xdist worker drops ~60 tables in a
+    # single transaction, which blows past the default 64-locks-per-tx limit.
+    command:
+      - postgres
+      - -c
+      - max_locks_per_transaction=512
     environment:
       POSTGRES_HOST: ${POSTGRES_HOST}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}

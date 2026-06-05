@@ -5,6 +5,7 @@ from unittest.mock import patch
 import psycopg
 import pytest
 from fastapi.testclient import TestClient
+from psycopg import sql
 
 from app.app import get_application
 from app.dependencies import (
@@ -56,16 +57,19 @@ def worker_database(worker_id: str) -> Generator[None]:
         "dbname": base.POSTGRES_DB,
     }
     worker_db = f"{base.POSTGRES_DB}_{worker_id}"
+    worker_db_ident = sql.Identifier(worker_db)
 
     with psycopg.connect(**conn_params, autocommit=True) as conn:
-        # Drop first to handle leftover DBs from interrupted previous runs
-        conn.execute(f'DROP DATABASE IF EXISTS "{worker_db}"')
-        conn.execute(f'CREATE DATABASE "{worker_db}"')
+        # Drop first to handle leftover DBs from interrupted previous runs.
+        conn.execute(sql.SQL("DROP DATABASE IF EXISTS {}").format(worker_db_ident))
+        conn.execute(sql.SQL("CREATE DATABASE {}").format(worker_db_ident))
 
     yield
 
     with psycopg.connect(**conn_params, autocommit=True) as conn:
-        conn.execute(f'DROP DATABASE "{worker_db}" WITH (FORCE)')
+        conn.execute(
+            sql.SQL("DROP DATABASE {} WITH (FORCE)").format(worker_db_ident),
+        )
 
 
 @pytest.fixture(scope="module", autouse=True)

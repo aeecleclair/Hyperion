@@ -30,25 +30,35 @@ jobs:
         ports:
           # Maps port 6379 on service container to the host
           - 6379:6379
-      postgres:
-        # Docker Hub image
-        image: postgres:15.1-alpine3.17
-        # Provide the password for postgres
-        env:
-          POSTGRES_PASSWORD: "somerealpassword"
-          POSTGRES_USER: "hyperion"
-          POSTGRES_DB: "hyperion"
-        # Set health checks to wait until postgres has started
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          # Maps tcp port 5432 on service container to the host
-          - 5432:5432
+      # Postgres is started manually in a step below (rather than via this
+      # `services:` block) because GitHub Actions does not expose docker's
+      # CMD/args field, and we need to pass `-c max_locks_per_transaction=512`
+      # to keep xdist's concurrent `drop_db` from exhausting Postgres's lock
+      # table.
 
     steps:
+      - name: Start Postgres with tuned lock limits
+        run: |
+          docker run -d --name postgres \
+            -e POSTGRES_PASSWORD=somerealpassword \
+            -e POSTGRES_USER=hyperion \
+            -e POSTGRES_DB=hyperion \
+            -p 5432:5432 \
+            --health-cmd=pg_isready \
+            --health-interval=10s \
+            --health-timeout=5s \
+            --health-retries=5 \
+            postgres:15.1-alpine3.17 \
+            postgres -c max_locks_per_transaction=512
+          # Wait for healthy
+          for i in $(seq 1 30); do
+            if docker exec postgres pg_isready -U hyperion >/dev/null 2>&1; then
+              echo "Postgres is ready"; exit 0
+            fi
+            sleep 1
+          done
+          echo "Postgres failed to become ready"; docker logs postgres; exit 1
+
       - name: Check out the code
         uses: actions/checkout@v6
 
