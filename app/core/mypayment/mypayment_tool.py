@@ -87,7 +87,6 @@ class MyPaymentTool:
         )
         if request is not None:
             return await utils_mypayment.refund_request(
-                user_id=user_id,
                 request=request,
                 amount=amount,
                 db=self.db,

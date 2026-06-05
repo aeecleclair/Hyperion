@@ -42,6 +42,8 @@ from app.core.mypayment.types_mypayment import (
     RETENTION_DURATION,
     RequestStatus,
     RequestType,
+    TransactionStatus,
+    TransactionType,
     TransferOrigin,
     WalletType,
 )
@@ -411,12 +413,11 @@ async def apply_transaction(
 
 
 async def refund_request(
-    user_id: str,
     request: schemas_mypayment.Request,
     amount: int,
     db: AsyncSession,
     notification_tool: NotificationTool,
-):
+) -> None:
     """
     Refund a payment request.
 
@@ -499,7 +500,7 @@ async def refund_direct_transfer(
     amount: int,
     db: AsyncSession,
     notification_tool: NotificationTool,
-):
+) -> None:
     """
     Refund a direct transfer.
 
@@ -554,8 +555,8 @@ async def refund_direct_transfer(
         credited_wallet_id=user_wallet.id,
         total=amount,
         creation=datetime.now(UTC),
-        status=schemas_mypayment.TransactionStatus.CONFIRMED,
-        transaction_type=schemas_mypayment.TransactionType.DIRECT,
+        status=TransactionStatus.CONFIRMED,
+        transaction_type=TransactionType.DIRECT,
         seller_user_id=None,
     )
     await cruds_mypayment.create_transaction(
