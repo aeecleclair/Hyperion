@@ -91,6 +91,7 @@ def init_redis_client(
                 host=settings.REDIS_HOST,
                 port=settings.REDIS_PORT,
                 password=settings.REDIS_PASSWORD,
+                db=settings.REDIS_DB,
                 socket_keepalive=True,
             )
             redis_client.ping()  # Test the connection
