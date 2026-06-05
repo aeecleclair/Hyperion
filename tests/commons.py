@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import (
 from app import dependencies
 from app.core.auth import schemas_auth
 from app.core.checkout import cruds_checkout, models_checkout, schemas_checkout
-from app.core.checkout.checkout_tool import PaymentTool
+from app.core.checkout.checkout_tool import CheckoutTool
 from app.core.checkout.types_checkout import HelloAssoConfig, HelloAssoConfigName
 from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import AccountType, GroupType
@@ -73,7 +73,7 @@ async def override_init_state(
 
     notification_manager = NotificationManager(settings=settings)
 
-    payment_tools = init_test_payment_tools()
+    checkout_tools = init_test_checkout_tools()
 
     mail_templates = init_mail_templates(settings=settings)
 
@@ -84,7 +84,7 @@ async def override_init_state(
         scheduler=scheduler,
         ws_manager=ws_manager,
         notification_manager=notification_manager,
-        payment_tools=payment_tools,
+        checkout_tools=checkout_tools,
         mail_templates=mail_templates,
     )
 
@@ -151,8 +151,8 @@ def init_test_SessionLocal(engine: AsyncEngine) -> SessionLocalType:
     return TestingSessionLocal
 
 
-def init_test_payment_tools() -> dict[HelloAssoConfigName, PaymentTool]:
-    payment_tools: dict[HelloAssoConfigName, PaymentTool] = {}
+def init_test_checkout_tools() -> dict[HelloAssoConfigName, CheckoutTool]:
+    payment_tools: dict[HelloAssoConfigName, CheckoutTool] = {}
     for helloasso_config_name in HelloAssoConfigName:
         payment_tools[helloasso_config_name] = MockedPaymentTool()
 
@@ -347,11 +347,12 @@ async def add_coredata_to_db(
 mocked_checkout_id: uuid.UUID = uuid.UUID("81c9ad91-f415-494a-96ad-87bf647df82c")
 
 
-class MockedPaymentTool(PaymentTool):
+class MockedPaymentTool(CheckoutTool):
     def __init__(
         self,
     ):
-        self.payment_tool = PaymentTool(
+        self.payment_tool = CheckoutTool(
+            name=HelloAssoConfigName.CDR,
             config=HelloAssoConfig(
                 helloasso_client_id="client",
                 helloasso_client_secret="secret",

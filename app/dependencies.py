@@ -277,7 +277,7 @@ def get_notification_tool(
 def get_checkout_tool(
     name: HelloAssoConfigName,
 ) -> Callable[[], CheckoutTool]:
-    def get_payment_tool() -> CheckoutTool:
+    def get_checkout_tool() -> CheckoutTool:
         checkout_tools = GLOBAL_STATE["checkout_tools"]
         if name not in checkout_tools:
             hyperion_error_logger.warning(
@@ -287,7 +287,7 @@ def get_checkout_tool(
 
         return checkout_tools[name]
 
-    return get_payment_tool
+    return get_checkout_tool
 
 
 def get_mypayment_tool(

@@ -7,15 +7,15 @@ from fastapi import Body, Depends, File, HTTPException, Query, Response, UploadF
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.checkout.checkout_tool import PaymentTool
+from app.core.checkout.checkout_tool import CheckoutTool
 from app.core.checkout.types_checkout import HelloAssoConfigName
 from app.core.groups.groups_type import AccountType, get_account_types_except_externals
 from app.core.schools import cruds_schools
 from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users, models_users, schemas_users
 from app.dependencies import (
+    get_checkout_tool,
     get_db,
-    get_payment_tool,
     is_user_allowed_to,
 )
 from app.modules.sport_competition import (
@@ -4443,8 +4443,8 @@ async def get_payment_url(
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
     ),
-    payment_tool: PaymentTool = Depends(
-        get_payment_tool(HelloAssoConfigName.CHALLENGER),
+    payment_tool: CheckoutTool = Depends(
+        get_checkout_tool(HelloAssoConfigName.CHALLENGER),
     ),
     edition: schemas_sport_competition.CompetitionEdition = Depends(
         get_current_edition,

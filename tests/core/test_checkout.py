@@ -15,7 +15,7 @@ from pytest_mock import MockerFixture
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.checkout import cruds_checkout, models_checkout, schemas_checkout
-from app.core.checkout.checkout_tool import PaymentTool
+from app.core.checkout.checkout_tool import CheckoutTool
 from app.core.checkout.types_checkout import HelloAssoConfig, HelloAssoConfigName
 from app.core.schools import schemas_schools
 from app.core.users import schemas_users
@@ -422,7 +422,8 @@ async def test_payment_tool_init_checkout(
             redirection_uri=redirect_url,
         ),
     }
-    payment_tool = PaymentTool(
+    payment_tool = CheckoutTool(
+        name=HelloAssoConfigName.CDR,
         config=settings.HELLOASSO_CONFIGURATIONS[HelloAssoConfigName.CDR],
         helloasso_api_base=settings.HELLOASSO_API_BASE,
     )
@@ -485,7 +486,8 @@ async def test_payment_tool_init_checkout_with_one_failure(
         ),
     }
 
-    payment_tool = PaymentTool(
+    payment_tool = CheckoutTool(
+        name=HelloAssoConfigName.CDR,
         config=settings.HELLOASSO_CONFIGURATIONS[HelloAssoConfigName.CDR],
         helloasso_api_base=settings.HELLOASSO_API_BASE,
     )
@@ -560,7 +562,8 @@ async def test_payment_tool_init_checkout_fail(
         ),
     }
 
-    payment_tool = PaymentTool(
+    payment_tool = CheckoutTool(
+        name=HelloAssoConfigName.CDR,
         config=settings.HELLOASSO_CONFIGURATIONS[HelloAssoConfigName.CDR],
         helloasso_api_base=settings.HELLOASSO_API_BASE,
     )
