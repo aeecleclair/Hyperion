@@ -4,6 +4,7 @@ Create Date: 2026-03-19 15:49:33.554684
 """
 
 from collections.abc import Sequence
+from enum import Enum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -11,12 +12,24 @@ if TYPE_CHECKING:
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "46fbbcee7237"
-down_revision: str | None = "e58ffcd6b9eb"
+down_revision: str | None = "7dbe3290e145"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
+
+
+class TransferOrigin(Enum):
+    HELLO_ASSO = "HELLO_ASSO"
+    CHECK = "CHECK"
+    CASH = "CASH"
+    BANK_TRANSFER = "BANK_TRANSFER"
+
+
+class TransferType(Enum):
+    HELLO_ASSO = "HELLO_ASSO"
 
 
 def upgrade() -> None:
@@ -32,6 +45,27 @@ def upgrade() -> None:
         "mypayment_transfer",
         sa.Column("object_id", sa.Uuid(), nullable=True),
     )
+    op.add_column(
+        "mypayment_seller",
+        sa.Column("can_manage_events", sa.Boolean(), nullable=False),
+    )
+    op.alter_column(
+        "mypayment_transaction",
+        "debited_wallet_device_id",
+        existing_type=sa.UUID(),
+        nullable=True,
+    )
+    postgresql.ENUM(TransferOrigin, name="transferorigin").create(op.get_bind())
+    op.alter_column(
+        "mypayment_transfer",
+        "type",
+        new_column_name="origin",
+        type_=sa.Enum(TransferOrigin, name="transferorigin"),
+        existing_type=sa.Enum(TransferType, name="transfertype"),
+        postgresql_using="type::text::transferorigin",
+    )
+    sa.Enum(TransferType, name="transfertype").drop(op.get_bind())
+
     # ### end Alembic commands ###
 
 
@@ -45,6 +79,27 @@ def downgrade() -> None:
     )
     op.drop_column("mypayment_request", "module")
     op.drop_column("mypayment_request", "object_id")
+    op.drop_column("mypayment_seller", "can_manage_events")
+    op.alter_column(
+        "mypayment_transaction",
+        "debited_wallet_device_id",
+        existing_type=sa.UUID(),
+        nullable=False,
+    )
+    postgresql.ENUM(
+        TransferType,
+        name="transfertype",
+    ).create(op.get_bind())
+    op.alter_column(
+        "mypayment_transfer",
+        "origin",
+        existing_type=sa.Enum(TransferOrigin, name="transferorigin"),
+        type_=sa.Enum(TransferType, name="transfertype"),
+        new_column_name="type",
+        postgresql_using="origin::text::transfertype",
+    )
+    sa.Enum(TransferOrigin, name="transferorigin").drop(op.get_bind())
+
     # ### end Alembic commands ###
 
 
