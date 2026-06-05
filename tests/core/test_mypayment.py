@@ -1981,7 +1981,7 @@ async def test_create_and_activate_user_device(
     async with get_TestingSessionLocal()() as db:
         wallet_device = await db.get(
             models_mypayment.WalletDevice,
-            UUID(response.json()["id"]),
+            response.json()["id"],
         )
         assert wallet_device is not None
         assert wallet_device.ed25519_public_key == public_key.public_bytes(
