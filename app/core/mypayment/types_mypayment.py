@@ -2,7 +2,7 @@ from enum import StrEnum
 
 LATEST_TOS = 2
 QRCODE_EXPIRATION = 5  # minutes
-REQUEST_EXPIRATION = 15  # minutes
+REQUEST_EXPIRATION = 8  # minutes
 RETENTION_DURATION = 10 * 365  # 10 years in days
 MYPAYMENT_ROOT = "mypayment"
 
@@ -25,17 +25,22 @@ class WalletDeviceStatus(StrEnum):
 
 
 class TransactionType(StrEnum):
+    # Direct correspond to a QR code payment
     DIRECT = "direct"
     REQUEST = "request"
-    REFUND = "refund"
 
 
 class HistoryType(StrEnum):
-    TRANSFER = "transfer"
-    RECEIVED = "received"
-    GIVEN = "given"
-    REFUND_CREDITED = "refund_credited"
-    REFUND_DEBITED = "refund_debited"
+    REFUND = "refund"
+    DIRECT_TRANSFER = "direct_transfer"
+    REQUEST_TRANSFER = "request_transfer"
+    DIRECT_TRANSACTION = "direct_transaction"
+    REQUEST_TRANSACTION = "request_transaction"
+
+
+class HistoryDirection(StrEnum):
+    CREDITED = "credited"
+    DEBITED = "debited"
 
 
 class TransactionStatus(StrEnum):
@@ -59,8 +64,15 @@ class RequestStatus(StrEnum):
     EXPIRED = "expired"
 
 
-class TransferType(StrEnum):
+class TransferOrigin(StrEnum):
     HELLO_ASSO = "hello_asso"
+
+
+class TransferType(StrEnum):
+    # The user transfer money to its own wallet
+    DIRECT = "direct"
+    # Requests are initiated by the client, who directly transfer the money to the store wallet
+    REQUEST = "request"
 
 
 class ActionType(StrEnum):
@@ -72,6 +84,9 @@ class ActionType(StrEnum):
     USER_FUSION = "user_fusion"
 
 
-class MyPaymentCallType(StrEnum):
-    TRANSFER = "transfer"
-    REQUEST = "request"
+class RequestType(StrEnum):
+    # The user will be redirected to a checkout payment page to complete the transfer
+    # The total will be directly credited to the store wallet as a *transfer*
+    TRANSFER_REQUEST = "transfer_request"
+    # After being accepted by the user, a transaction will be created between the user wallet and the store wallet
+    TRANSACTION_REQUEST = "transaction_request"

@@ -21,19 +21,19 @@ from app.core.mypayment.types_mypayment import ActionType
 
 def format_transfer_log(
     transfer: schemas_mypayment.Transfer | models_mypayment.Transfer,
-):
-    return f"{ActionType.TRANSFER.name} {transfer.id} {transfer.type.name} {transfer.total} {transfer.wallet_id}"
+) -> str:
+    return f"{ActionType.TRANSFER.name} {transfer.id} {transfer.origin.name} {transfer.total} {transfer.wallet_id}"
 
 
 def format_transaction_log(
     transaction: schemas_mypayment.TransactionBase,
-):
+) -> str:
     return f"{ActionType.TRANSACTION.name} {transaction.id} {transaction.debited_wallet_id} {transaction.credited_wallet_id} {transaction.total}"
 
 
 def format_refund_log(
     refund: schemas_mypayment.RefundBase,
-):
+) -> str:
     return (
         f"{ActionType.REFUND.name} {refund.id} {refund.transaction_id} {refund.total}"
     )
@@ -41,19 +41,19 @@ def format_refund_log(
 
 def format_cancel_log(
     transaction_id: UUID,
-):
+) -> str:
     return f"{ActionType.CANCEL.name} {transaction_id}"
 
 
 def format_withdrawal_log(
     wallet_id: UUID,
     total: int,
-):
+) -> str:
     return f"{ActionType.WITHDRAWAL.name} {wallet_id} {total}"
 
 
 def format_user_fusion_log(
     user_kept_id: str,
     user_deleted_id: str,
-):
+) -> str:
     return f"{ActionType.USER_FUSION.name} {user_kept_id} {user_deleted_id}"

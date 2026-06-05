@@ -4,10 +4,10 @@ import re
 import urllib.parse
 import uuid
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from uuid import UUID
 
 import calypsso
+from anyio import Path
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -22,15 +22,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
 from app.core.checkout import schemas_checkout
-from app.core.checkout.payment_tool import PaymentTool
+from app.core.checkout.payment_tool import CheckoutTool
 from app.core.checkout.types_checkout import HelloAssoConfigName
+from app.core.checkout.utils_checkout import CHECKOUT_EXPIRATION
 from app.core.core_endpoints import cruds_core
 from app.core.groups.groups_type import GroupType
 from app.core.memberships.utils_memberships import (
     get_user_active_membership_to_association_membership,
 )
 from app.core.mypayment import cruds_mypayment, schemas_mypayment
-from app.core.mypayment.coredata_mypayment import MyPaymentBankAccountHolder
+from app.core.mypayment.coredata_mypayment import (
+    MyPaymentBankAccountHolder,
+)
 from app.core.mypayment.dependencies_mypayment import is_user_bank_account_holder
 from app.core.mypayment.exceptions_mypayment import (
     InvoiceNotFoundAfterCreationError,
@@ -53,19 +56,20 @@ from app.core.mypayment.types_mypayment import (
     MYPAYMENT_STRUCTURE_S3_SUBFOLDER,
     MYPAYMENT_USERS_S3_SUBFOLDER,
     QRCODE_EXPIRATION,
-    REQUEST_EXPIRATION,
     RETENTION_DURATION,
+    HistoryDirection,
     HistoryType,
-    MyPaymentCallType,
     RequestStatus,
+    RequestType,
     TransactionStatus,
     TransactionType,
+    TransferOrigin,
     TransferType,
     WalletDeviceStatus,
     WalletType,
 )
 from app.core.mypayment.utils.data_exporter import generate_store_history_csv
-from app.core.mypayment.utils.schema_converters import structure_model_to_schema
+from app.core.mypayment.utils.models_converter import structure_model_to_schema
 from app.core.mypayment.utils_mypayment import (
     apply_transaction,
     call_mypayment_callback,
@@ -80,10 +84,10 @@ from app.core.users.models_users import CoreUser
 from app.core.utils import security
 from app.core.utils.config import Settings
 from app.dependencies import (
+    get_checkout_tool,
     get_db,
     get_mail_templates,
     get_notification_tool,
-    get_payment_tool,
     get_request_id,
     get_settings,
     get_token_data,
@@ -92,6 +96,7 @@ from app.dependencies import (
     is_user_in,
 )
 from app.types import standard_responses
+from app.types.exceptions import ObjectExpectedInDbNotFoundError
 from app.types.module import CoreModule
 from app.types.scopes_type import ScopeType
 from app.utils.auth.auth_utils import get_user_id_from_token_with_scopes
@@ -237,12 +242,13 @@ async def create_structure(
         name=structure.name,
         association_membership_id=structure.association_membership_id,
         manager_user_id=structure.manager_user_id,
-        siege_address_street=structure.siege_address_street,
-        siege_address_zipcode=structure.siege_address_zipcode,
-        siege_address_city=structure.siege_address_city,
-        siege_address_country=structure.siege_address_country,
+        siret=structure.siret,
         iban=structure.iban,
         bic=structure.bic,
+        siege_address_street=structure.siege_address_street,
+        siege_address_city=structure.siege_address_city,
+        siege_address_zipcode=structure.siege_address_zipcode,
+        siege_address_country=structure.siege_address_country,
         creation=datetime.now(tz=UTC),
     )
     await cruds_mypayment.create_structure(
@@ -408,6 +414,7 @@ async def create_structure_administrator(
                 can_see_history=True,
                 can_cancel=True,
                 can_manage_sellers=True,
+                can_manage_events=True,
                 db=db,
             )
         else:
@@ -562,7 +569,7 @@ async def init_transfer_structure_manager(
         background_tasks.add_task(
             send_email,
             recipient=user.email,
-            subject="MyECL - Confirm the structure manager transfer",
+            subject=f"{settings.school.application_name} - Confirm the structure manager transfer",
             content=mail,
             settings=settings,
         )
@@ -628,6 +635,7 @@ async def confirm_structure_manager_transfer(
                 can_see_history=True,
                 can_cancel=True,
                 can_manage_sellers=True,
+                can_manage_events=True,
                 db=db,
             )
         else:
@@ -726,6 +734,7 @@ async def create_store(
         can_see_history=True,
         can_cancel=True,
         can_manage_sellers=True,
+        can_manage_events=True,
         db=db,
     )
     for admin in structure.administrators:
@@ -736,6 +745,7 @@ async def create_store(
             can_see_history=True,
             can_cancel=True,
             can_manage_sellers=True,
+            can_manage_events=True,
             db=db,
         )
 
@@ -811,11 +821,17 @@ async def get_store_history(
                 creation=transaction.refund.creation,
             )
 
+        if transaction.transaction_type == TransactionType.DIRECT:
+            transaction_type = HistoryType.DIRECT_TRANSACTION
+        else:
+            transaction_type = HistoryType.REQUEST_TRANSACTION
+
         if transaction.debited_wallet_id == store.wallet_id:
             history.append(
                 schemas_mypayment.History(
                     id=transaction.id,
-                    type=HistoryType.GIVEN,
+                    type=transaction_type,
+                    direction=HistoryDirection.DEBITED,
                     total=transaction.total,
                     status=transaction.status,
                     creation=transaction.creation,
@@ -829,7 +845,8 @@ async def get_store_history(
             history.append(
                 schemas_mypayment.History(
                     id=transaction.id,
-                    type=HistoryType.RECEIVED,
+                    type=transaction_type,
+                    direction=HistoryDirection.CREDITED,
                     total=transaction.total,
                     status=transaction.status,
                     creation=transaction.creation,
@@ -846,9 +863,32 @@ async def get_store_history(
         start_datetime=start_date,
         end_datetime=end_date,
     )
-    if len(transfers) > 0:
-        hyperion_error_logger.error(
-            f"Store {store.id} should never have transfers",
+    for transfer in transfers:
+        if transfer.confirmed:
+            status = TransactionStatus.CONFIRMED
+        elif datetime.now(UTC) < transfer.creation + timedelta(
+            minutes=CHECKOUT_EXPIRATION,
+        ):
+            status = TransactionStatus.PENDING
+        else:
+            status = TransactionStatus.CANCELED
+
+        transfer_type = (
+            HistoryType.DIRECT_TRANSFER
+            if transfer.type == TransferType.DIRECT
+            else HistoryType.REQUEST_TRANSFER
+        )
+
+        history.append(
+            schemas_mypayment.History(
+                id=transfer.id,
+                type=transfer_type,
+                direction=HistoryDirection.CREDITED,
+                other_wallet_name="Transfer",
+                total=transfer.total,
+                creation=transfer.creation,
+                status=status,
+            ),
         )
 
     # We add refunds
@@ -860,16 +900,19 @@ async def get_store_history(
     )
     for refund in refunds:
         if refund.debited_wallet_id == store.wallet_id:
-            transaction_type = HistoryType.REFUND_DEBITED
+            transaction_type = HistoryType.REFUND
+            direction = HistoryDirection.DEBITED
             other_wallet_info = refund.credited_wallet
         else:
-            transaction_type = HistoryType.REFUND_CREDITED
+            transaction_type = HistoryType.REFUND
+            direction = HistoryDirection.CREDITED
             other_wallet_info = refund.debited_wallet
 
         history.append(
             schemas_mypayment.History(
                 id=refund.id,
                 type=transaction_type,
+                direction=direction,
                 other_wallet_name=other_wallet_info.owner_name or "Unknown",
                 total=refund.total,
                 creation=refund.creation,
@@ -1214,6 +1257,7 @@ async def create_store_seller(
         can_see_history=seller.can_see_history,
         can_cancel=seller.can_cancel,
         can_manage_sellers=seller.can_manage_sellers,
+        can_manage_events=seller.can_manage_events,
         db=db,
     )
 
@@ -1426,9 +1470,9 @@ async def register_user(
     ),
 ):
     """
-    Sign MyECL Pay TOS for the given user.
+    Sign MyPayment TOS for the given user.
 
-    The user will need to accept the latest TOS version to be able to use MyECL Pay.
+    The user will need to accept the latest TOS version to be able to use MyPayment.
 
     **The user must be authenticated to use this endpoint**
     """
@@ -1441,7 +1485,7 @@ async def register_user(
     if existing_user_payment is not None:
         raise HTTPException(
             status_code=400,
-            detail="User is already registered for MyECL Pay",
+            detail="User is already registered for MyPayment",
         )
 
     # Create new wallet for user
@@ -1515,14 +1559,14 @@ async def get_user_tos(
     if existing_user_payment is None:
         raise HTTPException(
             status_code=400,
-            detail="User is not registered for MyECL Pay",
+            detail="User is not registered for MyPayment",
         )
 
     return schemas_mypayment.TOSSignatureResponse(
         accepted_tos_version=existing_user_payment.accepted_tos_version,
         latest_tos_version=LATEST_TOS,
         tos_content=await patch_payment_identity_in_text(
-            Path("assets/mypayment-terms-of-service.txt").read_text("utf-8"),
+            await Path("assets/mypayment-terms-of-service.txt").read_text("utf-8"),
             settings,
             user,
             db,
@@ -1546,7 +1590,7 @@ async def sign_tos(
     settings: Settings = Depends(get_settings),
 ):
     """
-    Sign MyECL Pay TOS for the given user.
+    Sign MyPayment TOS for the given user.
 
     If the user is already registered in the MyPayment system, this will update the TOS version.
 
@@ -1566,7 +1610,7 @@ async def sign_tos(
     if existing_user_payment is None:
         raise HTTPException(
             status_code=400,
-            detail="User is not registered for MyECL Pay",
+            detail="User is not registered for MyPayment",
         )
 
     # Update existing user payment
@@ -1590,7 +1634,7 @@ async def sign_tos(
         background_tasks.add_task(
             send_email,
             recipient=user.email,
-            subject="MyECL - You signed the Terms of Service for MyPayment",
+            subject=f"{settings.school.application_name} - You signed the Terms of Service for {settings.school.payment_name}",
             content=mail,
             settings=settings,
         )
@@ -1620,7 +1664,7 @@ async def get_user_devices(
     if user_payment is None:
         raise HTTPException(
             status_code=400,
-            detail="User is not registered for MyECL Pay",
+            detail="User is not registered for MyPayment",
         )
 
     return await cruds_mypayment.get_wallet_devices_by_wallet_id(
@@ -1654,7 +1698,7 @@ async def get_user_device(
     if user_payment is None:
         raise HTTPException(
             status_code=400,
-            detail="User is not registered for MyECL Pay",
+            detail="User is not registered for MyPayment",
         )
 
     wallet_device = await cruds_mypayment.get_wallet_device(
@@ -1701,7 +1745,7 @@ async def get_user_wallet(
     if user_payment is None:
         raise HTTPException(
             status_code=400,
-            detail="User is not registered for MyECL Pay",
+            detail="User is not registered for MyPayment",
         )
 
     wallet = await cruds_mypayment.get_wallet(
@@ -1747,7 +1791,7 @@ async def create_user_devices(
     if user_payment is None or not is_user_latest_tos_signed(user_payment):
         raise HTTPException(
             status_code=400,
-            detail="User is not registered for MyECL Pay",
+            detail="User is not registered for MyPayment",
         )
 
     activation_token = security.generate_token(nbytes=16)
@@ -1777,7 +1821,7 @@ async def create_user_devices(
         background_tasks.add_task(
             send_email,
             recipient=user.email,
-            subject="MyECL - activate your device",
+            subject=f"{settings.school.application_name} - activate your {settings.school.payment_name} device",
             content=mail,
             settings=settings,
         )
@@ -1895,7 +1939,7 @@ async def revoke_user_devices(
     if user_payment is None or not is_user_latest_tos_signed(user_payment):
         raise HTTPException(
             status_code=400,
-            detail="User is not registered for MyECL Pay",
+            detail="User is not registered for MyPayment",
         )
 
     wallet_device = await cruds_mypayment.get_wallet_device(
@@ -1961,7 +2005,7 @@ async def get_user_wallet_history(
     if user_payment is None:
         raise HTTPException(
             status_code=404,
-            detail="User is not registered for MyECL Pay",
+            detail="User is not registered for MyPayment",
         )
 
     history: list[schemas_mypayment.History] = []
@@ -1975,13 +2019,19 @@ async def get_user_wallet_history(
     )
 
     for transaction in transactions:
+        if transaction.transaction_type == TransactionType.DIRECT:
+            transaction_type = HistoryType.DIRECT_TRANSACTION
+        elif transaction.transaction_type == TransactionType.REQUEST:
+            transaction_type = HistoryType.REQUEST_TRANSACTION
+        else:
+            raise UnexpectedError("Unknown transaction type")  # noqa: TRY003
         if transaction.credited_wallet_id == user_payment.wallet_id:
             # The user received the transaction
-            transaction_type = HistoryType.RECEIVED
+            direction = HistoryDirection.CREDITED
             other_wallet = transaction.debited_wallet
         else:
             # The user sent the transaction
-            transaction_type = HistoryType.GIVEN
+            direction = HistoryDirection.DEBITED
             other_wallet = transaction.credited_wallet
 
         # We need to find if the other wallet correspond to a store or a user to get its display name
@@ -2002,6 +2052,7 @@ async def get_user_wallet_history(
             schemas_mypayment.History(
                 id=transaction.id,
                 type=transaction_type,
+                direction=direction,
                 other_wallet_name=other_wallet_name,
                 total=transaction.total,
                 creation=transaction.creation,
@@ -2021,15 +2072,24 @@ async def get_user_wallet_history(
     for transfer in transfers:
         if transfer.confirmed:
             status = TransactionStatus.CONFIRMED
-        elif datetime.now(UTC) < transfer.creation + timedelta(minutes=15):
+        elif datetime.now(UTC) < transfer.creation + timedelta(
+            minutes=CHECKOUT_EXPIRATION,
+        ):
             status = TransactionStatus.PENDING
         else:
             status = TransactionStatus.CANCELED
 
+        transfer_type = (
+            HistoryType.DIRECT_TRANSFER
+            if transfer.type == TransferType.DIRECT
+            else HistoryType.REQUEST_TRANSFER
+        )
+
         history.append(
             schemas_mypayment.History(
                 id=transfer.id,
-                type=HistoryType.TRANSFER,
+                type=transfer_type,
+                direction=HistoryDirection.CREDITED,
                 other_wallet_name="Transfer",
                 total=transfer.total,
                 creation=transfer.creation,
@@ -2046,16 +2106,17 @@ async def get_user_wallet_history(
     )
     for refund in refunds:
         if refund.debited_wallet_id == user_payment.wallet_id:
-            transaction_type = HistoryType.REFUND_DEBITED
+            direction = HistoryDirection.DEBITED
             other_wallet_info = refund.credited_wallet
         else:
-            transaction_type = HistoryType.REFUND_CREDITED
+            direction = HistoryDirection.CREDITED
             other_wallet_info = refund.debited_wallet
 
         history.append(
             schemas_mypayment.History(
                 id=refund.id,
-                type=transaction_type,
+                type=HistoryType.REFUND,
+                direction=direction,
                 other_wallet_name=other_wallet_info.owner_name or "Unknown",
                 total=refund.total,
                 creation=refund.creation,
@@ -2078,8 +2139,8 @@ async def init_ha_transfer(
         is_user_allowed_to([MyPaymentPermissions.access_mypayment]),
     ),
     settings: Settings = Depends(get_settings),
-    payment_tool: PaymentTool = Depends(
-        get_payment_tool(HelloAssoConfigName.MYPAYMENT),
+    checkout_tool: CheckoutTool = Depends(
+        get_checkout_tool(HelloAssoConfigName.MYPAYMENT),
     ),
 ):
     """
@@ -2108,7 +2169,7 @@ async def init_ha_transfer(
     if user_payment is None:
         raise HTTPException(
             status_code=404,
-            detail="User is not registered for MyECL Pay",
+            detail="User is not registered for MyPayment",
         )
 
     if not is_user_latest_tos_signed(user_payment):
@@ -2150,8 +2211,8 @@ async def init_ha_transfer(
         firstname=user.firstname,
         nickname=user.nickname,
     )
-    checkout = await payment_tool.init_checkout(
-        module="mypayment",
+    checkout = await checkout_tool.init_checkout(
+        module=core_module.root,
         checkout_amount=transfer_info.amount,
         checkout_name=f"Recharge {settings.school.payment_name}",
         redirection_uri=f"{settings.CLIENT_URL}mypayment/transfer/redirect?url={transfer_info.redirect_url}",
@@ -2163,7 +2224,8 @@ async def init_ha_transfer(
         db=db,
         transfer=schemas_mypayment.Transfer(
             id=uuid.uuid4(),
-            type=TransferType.HELLO_ASSO,
+            type=TransferType.DIRECT,
+            origin=TransferOrigin.HELLO_ASSO,
             approver_user_id=None,
             total=transfer_info.amount,
             transfer_identifier=str(checkout.id),
@@ -2517,7 +2579,6 @@ async def store_scan_qrcode(
             transaction=transaction,
             db=db,
             notification_tool=notification_tool,
-            settings=settings,
         )
 
         return transaction
@@ -2701,6 +2762,7 @@ async def refund_transaction(
         )
 
     if wallet_previously_credited.user is not None:
+        wallet_previously_debited_name: str = "Unknown"
         if wallet_previously_debited.user is not None:
             wallet_previously_debited_name = wallet_previously_debited.user.full_name
         elif wallet_previously_debited.store is not None:
@@ -2890,7 +2952,7 @@ async def get_user_requests(
 )
 async def accept_request(
     request_id: UUID,
-    request_validation: schemas_mypayment.RequestValidation,
+    request_validation: schemas_mypayment.SignedContent,
     db: AsyncSession = Depends(get_db),
     user: CoreUser = Depends(
         is_user_allowed_to([MyPaymentPermissions.access_mypayment]),
@@ -2904,11 +2966,7 @@ async def accept_request(
 
     **The user must be authenticated to use this endpoint**
     """
-    await cruds_mypayment.mark_expired_requests_as_expired(
-        db=db,
-    )
-    await db.flush()
-    if request_id != request_validation.request_id:
+    if request_id != request_validation.id:
         raise HTTPException(
             status_code=400,
             detail="Request ID in the path and in the body do not match",
@@ -2921,6 +2979,21 @@ async def accept_request(
         raise HTTPException(
             status_code=404,
             detail="Request does not exist",
+        )
+    if request.total != request_validation.tot:
+        raise HTTPException(
+            status_code=400,
+            detail="Request total in the body do not match the request total in the database",
+        )
+    if request.status != RequestStatus.PROPOSED:
+        raise HTTPException(
+            status_code=400,
+            detail="Only pending requests can be confirmed",
+        )
+    if request.expiration_date < datetime.now(UTC):
+        raise HTTPException(
+            status_code=400,
+            detail="Request is expired",
         )
 
     user_payment = await cruds_mypayment.get_user_payment(
@@ -2952,17 +3025,6 @@ async def accept_request(
         raise HTTPException(
             status_code=400,
             detail="Wallet device is not associated with the user wallet",
-        )
-
-    if request.status != RequestStatus.PROPOSED:
-        raise HTTPException(
-            status_code=400,
-            detail="Only pending requests can be confirmed",
-        )
-    if request.creation < datetime.now(UTC) - timedelta(minutes=REQUEST_EXPIRATION):
-        raise HTTPException(
-            status_code=400,
-            detail="Request is expired",
         )
 
     if not verify_signature(
@@ -3019,10 +3081,11 @@ async def accept_request(
         db=db,
     )
     if store is None:
-        raise HTTPException(
-            status_code=500,
-            detail="Store linked to the request does not exist",
+        raise ObjectExpectedInDbNotFoundError(
+            object_name="Store",
+            object_id=request.store_id,
         )
+
     transaction = schemas_mypayment.TransactionBase(
         id=uuid.uuid4(),
         debited_wallet_id=debited_wallet_device.wallet_id,
@@ -3039,7 +3102,6 @@ async def accept_request(
         debited_wallet_device=debited_wallet_device,
         user_id=user.id,
         db=db,
-        settings=settings,
         notification_tool=notification_tool,
         store=store,
     )
@@ -3053,7 +3115,7 @@ async def accept_request(
         db=db,
     )
     await call_mypayment_callback(
-        call_type=MyPaymentCallType.REQUEST,
+        call_type=RequestType.TRANSACTION_REQUEST,
         module_root=request.module,
         object_id=request.object_id,
         call_id=request.id,
@@ -3226,9 +3288,9 @@ async def download_invoice(
             status_code=403,
             detail="User is not allowed to access this invoice",
         )
-    return get_file_from_data(
+    return await get_file_from_data(
         directory="mypayment/invoices",
-        filename=str(invoice_id),
+        filename=invoice_id,
     )
 
 
@@ -3240,8 +3302,8 @@ async def download_invoice(
 async def create_structure_invoice(
     structure_id: UUID,
     db: AsyncSession = Depends(get_db),
-    token_data: schemas_auth.TokenData = Depends(get_token_data),
     settings: Settings = Depends(get_settings),
+    token_data: schemas_auth.TokenData = Depends(get_token_data),
 ):
     """
     Create an invoice for a structure.
@@ -3255,15 +3317,10 @@ async def create_structure_invoice(
         scopes=[[ScopeType.API]],
         token_data=token_data,
     )
-    user = await cruds_users.get_user_by_id(
-        db=db,
-        user_id=user_id,
-    )
+    user = await cruds_users.get_user_by_id(db, user_id)
     if user is None:
-        raise HTTPException(
-            status_code=404,
-            detail="User does not exist",
-        )
+        raise HTTPException(404, "User not found in the database")
+
     bank_holder_structure = await get_bank_account_holder(
         user=user,
         db=db,
@@ -3308,9 +3365,9 @@ async def create_structure_invoice(
             hyperion_error_logger.error(
                 "MyPayment: Could not find wallet associated with a store, this should never happen",
             )
-            raise HTTPException(
-                status_code=500,
-                detail="Could not find wallet associated with the store",
+            raise ObjectExpectedInDbNotFoundError(
+                object_name="Wallet",
+                object_id=store.wallet_id,
             )
         store_wallet = schemas_mypayment.Wallet(
             id=store_wallet_db.id,
@@ -3476,9 +3533,9 @@ async def aknowledge_invoice_as_received(
         db=db,
     )
     if structure is None:
-        raise HTTPException(
-            status_code=500,
-            detail="Structure does not exist",
+        raise ObjectExpectedInDbNotFoundError(
+            object_name="Structure",
+            object_id=invoice.structure_id,
         )
     if structure.manager_user_id != user.id and user.id not in [
         admin.id for admin in structure.administrators
@@ -3501,9 +3558,9 @@ async def aknowledge_invoice_as_received(
             hyperion_error_logger.error(
                 "MyPayment: Could not find store associated with an invoice, this should never happen",
             )
-            raise HTTPException(
-                status_code=500,
-                detail="Could not find store associated with the invoice",
+            raise ObjectExpectedInDbNotFoundError(
+                object_name="Store",
+                object_id=detail.store_id,
             )
         await cruds_mypayment.increment_wallet_balance(
             wallet_id=store.wallet_id,
@@ -3573,13 +3630,13 @@ async def delete_structure_invoice(
     response_model=schemas_mypayment.IntegrityCheckData,
 )
 async def get_data_for_integrity_check(
-    headers: schemas_mypayment.IntegrityCheckHeaders = Header(),
+    headers: schemas_mypayment.IntegrityCheckHeaders = Header(...),
     query_params: schemas_mypayment.IntegrityCheckQuery = Query(),
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
     """
-    Send all the MyECL Pay data for integrity check.
+    Send all the MyPayment data for integrity check.
     Data includes:
     - Wallets deducted of the last 30 seconds transactions
     - Transactions with at least 30 seconds delay
@@ -3590,7 +3647,7 @@ async def get_data_for_integrity_check(
     """
     if settings.MYPAYMENT_DATA_VERIFIER_ACCESS_TOKEN is None:
         raise HTTPException(
-            status_code=301,
+            status_code=401,
             detail="MYPAYMENT_DATA_VERIFIER_ACCESS_TOKEN is not set in the settings",
         )
 

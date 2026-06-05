@@ -9,10 +9,12 @@ from pydantic import (
 
 from app.core.memberships import schemas_memberships
 from app.core.mypayment.types_mypayment import (
+    HistoryDirection,
     HistoryType,
     RequestStatus,
     TransactionStatus,
     TransactionType,
+    TransferOrigin,
     TransferType,
     WalletDeviceStatus,
     WalletType,
@@ -103,6 +105,7 @@ class SellerCreation(BaseModel):
     can_see_history: bool
     can_cancel: bool
     can_manage_sellers: bool
+    can_manage_events: bool = False
 
 
 class SellerUpdate(BaseModel):
@@ -110,6 +113,7 @@ class SellerUpdate(BaseModel):
     can_see_history: bool | None = None
     can_cancel: bool | None = None
     can_manage_sellers: bool | None = None
+    can_manage_events: bool | None = None
 
 
 class Seller(BaseModel):
@@ -119,6 +123,9 @@ class Seller(BaseModel):
     can_see_history: bool
     can_cancel: bool
     can_manage_sellers: bool
+
+    # Event module
+    can_manage_events: bool
 
     user: schemas_users.CoreUserSimple
 
@@ -169,36 +176,12 @@ class HistoryRefund(BaseModel):
 class History(BaseModel):
     id: UUID
     type: HistoryType
+    direction: HistoryDirection
     other_wallet_name: str
     total: int
     creation: datetime
     status: TransactionStatus
     refund: HistoryRefund | None = None
-
-
-class QRCodeContentData(BaseModel):
-    """
-    Format of the data stored in the QR code.
-
-    This data will be signed using ed25519 and the private key of the WalletDevice that generated the QR Code.
-
-    id: Unique identifier of the QR Code
-    tot: Total amount of the transaction, in cents
-    iat: Generation datetime of the QR Code
-    key: Id of the WalletDevice that generated the QR Code, will be used to verify the signature
-    store: If the QR Code is intended to be scanned for a Store Wallet, or for an other user Wallet
-    """
-
-    id: UUID
-    tot: int
-    iat: datetime
-    key: UUID
-    store: bool
-
-
-class ScanInfo(QRCodeContentData):
-    signature: str
-    bypass_membership: bool = False
 
 
 class WalletBase(BaseModel):
@@ -254,9 +237,9 @@ class Transaction(TransactionBase):
     refund: "RefundBase | None" = None
 
 
-class Transfer(BaseModel):
+class TransferCreation(BaseModel):
     id: UUID
-    type: TransferType
+    origin: TransferOrigin
     transfer_identifier: str
 
     # TODO remove if we only accept hello asso
@@ -268,6 +251,10 @@ class Transfer(BaseModel):
     confirmed: bool
     module: str | None
     object_id: UUID | None
+
+
+class Transfer(TransferCreation):
+    type: TransferType
 
 
 class RefundBase(BaseModel):
@@ -363,11 +350,12 @@ class Request(BaseModel):
     id: UUID
     wallet_id: UUID
     creation: datetime
+    expiration_date: datetime
     total: int  # Stored in cents
     store_id: UUID
     name: str
     store_note: str | None = None
-    module: str
+    module: str  # module root, will be used to call the payment callback with the provided object_id
     object_id: UUID
     status: RequestStatus
     transaction_id: UUID | None = None
@@ -380,22 +368,48 @@ class RequestEdit(BaseModel):
     transaction_id: UUID | None = None
 
 
-class RequestValidationData(BaseModel):
-    request_id: UUID
-    key: UUID
-    iat: datetime
+class RequestInfo(BaseModel):
+    store_id: UUID
+    total: int
+    request_name: str
+    store_note: str | None
+    module: str
+    # Id of the object from the module, this id will be passed to the module in the transaction callback
+    object_id: UUID
+
+
+class PaymentInfo(RequestInfo):
+    redirect_url: str
+
+
+class SecuredContentData(BaseModel):
+    """
+    Format of the data stored in the payment order.
+
+    This data will be signed using ed25519 and the private key of the WalletDevice that generated the payment order
+
+    id: Unique identifier of the payment
+    tot: Total amount of the transaction, in cents
+    iat: Generation datetime of the payment order
+    key: Id of the WalletDevice that generated the payment order, will be used to get the public key to verify the signature
+    store: If the payment is intended to be banked by a store or by an other user
+    """
+
+    id: UUID
     tot: int
+    iat: datetime
+    key: UUID
+    store: bool
 
 
-class RequestValidation(RequestValidationData):
+class SignedContent(SecuredContentData):
     signature: str
 
 
-class RequestInfo(BaseModel):
-    user_id: str
-    store_id: UUID
-    total: int
-    name: str
-    note: str | None
-    module: str
-    object_id: UUID
+class ScanInfo(SignedContent):
+    bypass_membership: bool = False
+
+
+class PaymentRequestInfo(BaseModel):
+    end_date: datetime
+    checkout_url: str | None = None

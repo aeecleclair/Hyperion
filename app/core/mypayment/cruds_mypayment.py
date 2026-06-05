@@ -16,7 +16,7 @@ from app.core.mypayment.types_mypayment import (
     WalletDeviceStatus,
     WalletType,
 )
-from app.core.mypayment.utils.schema_converters import (
+from app.core.mypayment.utils.models_converter import (
     invoice_model_to_schema,
     refund_model_to_schema,
     structure_model_to_schema,
@@ -221,7 +221,7 @@ async def update_store(
     await db.execute(
         update(models_mypayment.Store)
         .where(models_mypayment.Store.id == store_id)
-        .values(**store_update.model_dump(exclude_none=True)),
+        .values(**store_update.model_dump(exclude_unset=True)),
     )
 
 
@@ -253,6 +253,18 @@ async def get_store_by_name(
     return result.scalars().first()
 
 
+async def get_store_by_id(
+    store_id: UUID,
+    db: AsyncSession,
+) -> models_mypayment.Store | None:
+    result = await db.execute(
+        select(models_mypayment.Store).where(
+            models_mypayment.Store.id == store_id,
+        ),
+    )
+    return result.scalars().first()
+
+
 async def get_stores_by_structure_id(
     db: AsyncSession,
     structure_id: UUID,
@@ -272,6 +284,7 @@ async def create_seller(
     can_see_history: bool,
     can_cancel: bool,
     can_manage_sellers: bool,
+    can_manage_events: bool,
     db: AsyncSession,
 ) -> None:
     wallet = models_mypayment.Seller(
@@ -281,6 +294,7 @@ async def create_seller(
         can_see_history=can_see_history,
         can_cancel=can_cancel,
         can_manage_sellers=can_manage_sellers,
+        can_manage_events=can_manage_events,
     )
     db.add(wallet)
 
@@ -310,6 +324,7 @@ async def get_seller(
             can_see_history=result.can_see_history,
             can_cancel=result.can_cancel,
             can_manage_sellers=result.can_manage_sellers,
+            can_manage_events=result.can_manage_events,
             user=schemas_users.CoreUserSimple(
                 id=result.user.id,
                 firstname=result.user.firstname,
@@ -341,6 +356,7 @@ async def get_sellers_by_store_id(
             can_see_history=seller.can_see_history,
             can_cancel=seller.can_cancel,
             can_manage_sellers=seller.can_manage_sellers,
+            can_manage_events=seller.can_manage_events,
             user=schemas_users.CoreUserSimple(
                 id=seller.user.id,
                 firstname=seller.user.firstname,
@@ -379,7 +395,7 @@ async def update_seller(
             models_mypayment.Seller.store_id == store_id,
         )
         .values(
-            **seller_update.model_dump(exclude_none=True),
+            **seller_update.model_dump(exclude_unset=True),
         ),
     )
 
@@ -570,7 +586,7 @@ async def get_user_payment(
 
 async def create_transaction(
     transaction: schemas_mypayment.TransactionBase,
-    debited_wallet_device_id: UUID,
+    debited_wallet_device_id: UUID | None,
     store_note: str | None,
     db: AsyncSession,
 ) -> None:
@@ -757,6 +773,7 @@ async def get_transfers(
         schemas_mypayment.Transfer(
             id=transfer.id,
             type=transfer.type,
+            origin=transfer.origin,
             transfer_identifier=transfer.transfer_identifier,
             approver_user_id=transfer.approver_user_id,
             wallet_id=transfer.wallet_id,
@@ -770,13 +787,48 @@ async def get_transfers(
     ]
 
 
+async def get_transfer_by_object_id(
+    object_id: UUID,
+    db: AsyncSession,
+) -> schemas_mypayment.Transfer | None:
+    result = (
+        (
+            await db.execute(
+                select(models_mypayment.Transfer).where(
+                    models_mypayment.Transfer.object_id == object_id,
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+
+    return (
+        schemas_mypayment.Transfer(
+            id=result.id,
+            type=result.type,
+            origin=result.origin,
+            transfer_identifier=result.transfer_identifier,
+            approver_user_id=result.approver_user_id,
+            wallet_id=result.wallet_id,
+            total=result.total,
+            creation=result.creation,
+            confirmed=result.confirmed,
+            module=result.module,
+            object_id=result.object_id,
+        )
+        if result
+        else None
+    )
+
+
 async def create_transfer(
-    transfer: schemas_mypayment.Transfer,
+    transfer: schemas_mypayment.TransferCreation,
     db: AsyncSession,
 ) -> None:
     transfer_db = models_mypayment.Transfer(
         id=transfer.id,
-        type=transfer.type,
+        origin=transfer.origin,
         transfer_identifier=transfer.transfer_identifier,
         approver_user_id=transfer.approver_user_id,
         wallet_id=transfer.wallet_id,
@@ -824,6 +876,7 @@ async def get_transfers_by_wallet_id(
         schemas_mypayment.Transfer(
             id=transfer.id,
             type=transfer.type,
+            origin=transfer.origin,
             transfer_identifier=transfer.transfer_identifier,
             approver_user_id=transfer.approver_user_id,
             wallet_id=transfer.wallet_id,
@@ -894,6 +947,7 @@ async def get_transfer_by_transfer_identifier(
         schemas_mypayment.Transfer(
             id=result.id,
             type=result.type,
+            origin=result.origin,
             transfer_identifier=result.transfer_identifier,
             approver_user_id=result.approver_user_id,
             wallet_id=result.wallet_id,
@@ -1057,7 +1111,11 @@ async def get_requests_by_wallet_id(
     result = await db.execute(
         select(models_mypayment.Request).where(
             models_mypayment.Request.wallet_id == wallet_id,
-            models_mypayment.Request.status == RequestStatus.PROPOSED
+            and_(
+                models_mypayment.Request.status == RequestStatus.PROPOSED,
+                models_mypayment.Request.creation
+                > datetime.now(tz=UTC) - timedelta(minutes=REQUEST_EXPIRATION),
+            )
             if not include_used
             else and_(True),
         ),
@@ -1068,6 +1126,7 @@ async def get_requests_by_wallet_id(
             wallet_id=request.wallet_id,
             status=request.status,
             creation=request.creation,
+            expiration_date=request.expiration_date,
             total=request.total,
             store_note=request.store_note,
             store_id=request.store_id,
@@ -1083,9 +1142,43 @@ async def get_request_by_id(
     request_id: UUID,
     db: AsyncSession,
 ) -> schemas_mypayment.Request | None:
+    """
+    Return a request by its id. The request will be locked `for update`
+    """
+    result = await db.execute(
+        select(models_mypayment.Request)
+        .where(
+            models_mypayment.Request.id == request_id,
+        )
+        .with_for_update(of=models_mypayment.Request),
+    )
+    request = result.scalars().first()
+    return (
+        schemas_mypayment.Request(
+            id=request.id,
+            wallet_id=request.wallet_id,
+            status=request.status,
+            creation=request.creation,
+            expiration_date=request.expiration_date,
+            total=request.total,
+            store_note=request.store_note,
+            store_id=request.store_id,
+            name=request.name,
+            module=request.module,
+            object_id=request.object_id,
+        )
+        if request
+        else None
+    )
+
+
+async def get_request_by_object_id(
+    object_id: UUID,
+    db: AsyncSession,
+) -> schemas_mypayment.Request | None:
     result = await db.execute(
         select(models_mypayment.Request).where(
-            models_mypayment.Request.id == request_id,
+            models_mypayment.Request.object_id == object_id,
         ),
     )
     request = result.scalars().first()
@@ -1095,6 +1188,7 @@ async def get_request_by_id(
             wallet_id=request.wallet_id,
             status=request.status,
             creation=request.creation,
+            expiration_date=request.expiration_date,
             total=request.total,
             store_note=request.store_note,
             store_id=request.store_id,
@@ -1122,6 +1216,7 @@ async def get_request_by_store_id(
             wallet_id=request.wallet_id,
             status=request.status,
             creation=request.creation,
+            expiration_date=request.expiration_date,
             total=request.total,
             store_note=request.store_note,
             store_id=request.store_id,
@@ -1151,20 +1246,6 @@ async def create_request(
         object_id=request.object_id,
     )
     db.add(request_db)
-
-
-async def mark_expired_requests_as_expired(
-    db: AsyncSession,
-) -> None:
-    await db.execute(
-        update(models_mypayment.Request)
-        .where(
-            models_mypayment.Request.status == RequestStatus.PROPOSED,
-            models_mypayment.Request.creation
-            <= datetime.now(tz=UTC) - timedelta(minutes=REQUEST_EXPIRATION),
-        )
-        .values(status=RequestStatus.EXPIRED),
-    )
 
 
 async def update_request(
