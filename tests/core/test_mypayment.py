@@ -22,20 +22,22 @@ from app.core.mypayment.coredata_mypayment import (
 )
 from app.core.mypayment.endpoints_mypayment import MyPaymentPermissions
 from app.core.mypayment.schemas_mypayment import (
-    QRCodeContentData,
-    RequestValidation,
-    RequestValidationData,
+    SecuredContentData,
+    SignedContent,
 )
 from app.core.mypayment.types_mypayment import (
     LATEST_TOS,
+    REQUEST_EXPIRATION,
     RequestStatus,
     TransactionStatus,
     TransactionType,
-    TransferType,
+    TransferOrigin,
     WalletDeviceStatus,
     WalletType,
 )
-from app.core.mypayment.utils_mypayment import validate_transfer_callback
+from app.core.mypayment.utils_mypayment import (
+    validate_transfer_callback,
+)
 from app.core.permissions import models_permissions
 from app.core.users import models_users
 from app.types.module import Module
@@ -58,10 +60,6 @@ structure_manager_user: models_users.CoreUser
 structure_manager_user_token: str
 structure2_manager_user: models_users.CoreUser
 structure2_manager_user_token: str
-structure_admin_user: models_users.CoreUser
-structure_admin_user_token: str
-structure_admin_to_add: models_users.CoreUser
-structure_admin_to_add_token: str
 
 ecl_user: models_users.CoreUser
 ecl_user_access_token: str
@@ -78,6 +76,8 @@ ecl_user2_access_token: str
 ecl_user2_wallet: models_mypayment.Wallet
 ecl_user2_wallet_device: models_mypayment.WalletDevice
 ecl_user2_payment: models_mypayment.UserPayment
+
+core_association_group: models_groups.CoreGroup
 
 association_membership: models_memberships.CoreAssociationMembership
 association_membership_user: models_memberships.CoreAssociationUserMembership
@@ -136,12 +136,18 @@ async def init_objects() -> None:
     global bde_group
     bde_group = await create_groups_with_permissions(
         [],
-        "BDE Group",
+        "Payment BDE Group",
     )
 
     global admin_user, admin_user_token
     admin_user = await create_user_with_groups(groups=[GroupType.admin])
     admin_user_token = create_api_access_token(admin_user)
+
+    global core_association_group, core_association
+    core_association_group = await create_groups_with_permissions(
+        group_name="Core Association Group",
+        permissions=[],
+    )
 
     global association_membership
     association_membership = models_memberships.CoreAssociationMembership(
@@ -157,18 +163,10 @@ async def init_objects() -> None:
         structure, \
         structure2_manager_user, \
         structure2_manager_user_token, \
-        structure2, \
-        structure_admin_user, \
-        structure_admin_user_token, \
-        structure_admin_to_add, \
-        structure_admin_to_add_token
+        structure2
 
     structure_manager_user = await create_user_with_groups(groups=[])
     structure_manager_user_token = create_api_access_token(structure_manager_user)
-    structure_admin_user = await create_user_with_groups(groups=[])
-    structure_admin_user_token = create_api_access_token(structure_admin_user)
-    structure_admin_to_add = await create_user_with_groups(groups=[])
-    structure_admin_to_add_token = create_api_access_token(structure_admin_to_add)
 
     structure = models_mypayment.Structure(
         id=uuid4(),
@@ -186,13 +184,6 @@ async def init_objects() -> None:
         bic="AZERTYUIOP",
     )
     await add_object_to_db(structure)
-
-    await add_object_to_db(
-        models_mypayment.StructureAdministrator(
-            structure_id=structure.id,
-            user_id=structure_admin_user.id,
-        ),
-    )
 
     await add_coredata_to_db(
         MyPaymentBankAccountHolder(
@@ -361,6 +352,7 @@ async def init_objects() -> None:
         creation=datetime.now(UTC),
     )
     await add_object_to_db(store2)
+
     store3 = models_mypayment.Store(
         id=uuid4(),
         wallet_id=store3_wallet.id,
@@ -377,6 +369,7 @@ async def init_objects() -> None:
         can_see_history=True,
         can_cancel=True,
         can_manage_sellers=True,
+        can_manage_events=True,
     )
     await add_object_to_db(manager_as_admin)
 
@@ -400,7 +393,7 @@ async def init_objects() -> None:
     global store_direct_transfer
     store_direct_transfer = models_mypayment.Transfer(
         id=uuid4(),
-        type=TransferType.HELLO_ASSO,
+        origin=TransferOrigin.HELLO_ASSO,
         transfer_identifier=str(uuid4()),
         approver_user_id=None,
         wallet_id=store_wallet.id,
@@ -483,7 +476,7 @@ async def init_objects() -> None:
     global ecl_user_transfer
     ecl_user_transfer = models_mypayment.Transfer(
         id=uuid4(),
-        type=TransferType.HELLO_ASSO,
+        origin=TransferOrigin.HELLO_ASSO,
         transfer_identifier="transfer_identifier",
         approver_user_id=None,
         wallet_id=ecl_user_wallet.id,
@@ -522,6 +515,7 @@ async def init_objects() -> None:
         can_see_history=False,
         can_cancel=False,
         can_manage_sellers=False,
+        can_manage_events=True,
     )
     await add_object_to_db(store_seller_no_permission)
 
@@ -537,8 +531,9 @@ async def init_objects() -> None:
         store_id=store.id,
         can_bank=True,
         can_see_history=False,
-        can_cancel=False,
+        can_cancel=True,
         can_manage_sellers=False,
+        can_manage_events=True,
     )
     await add_object_to_db(store_seller_can_bank)
 
@@ -556,6 +551,7 @@ async def init_objects() -> None:
         can_see_history=False,
         can_cancel=True,
         can_manage_sellers=False,
+        can_manage_events=True,
     )
     await add_object_to_db(store_seller_can_cancel)
 
@@ -573,6 +569,7 @@ async def init_objects() -> None:
         can_see_history=False,
         can_cancel=False,
         can_manage_sellers=True,
+        can_manage_events=True,
     )
     await add_object_to_db(store_seller_can_manage_sellers)
 
@@ -587,6 +584,7 @@ async def init_objects() -> None:
         can_see_history=True,
         can_cancel=False,
         can_manage_sellers=False,
+        can_manage_events=True,
     )
     await add_object_to_db(store_seller_can_see_history_seller)
     store_seller_can_see_history_user_access_token = create_api_access_token(
@@ -683,7 +681,7 @@ async def init_objects() -> None:
         total=1000,
         name="Expired Request",
         store_note="Expired Request Note",
-        status=RequestStatus.EXPIRED,
+        status=RequestStatus.PROPOSED,
         module=TEST_MODULE_ROOT,
         object_id=uuid4(),
         transaction_id=None,
@@ -713,12 +711,6 @@ async def test_get_structures(client: TestClient):
     )
     assert response.status_code == 200
     assert len(response.json()) == 2
-    structure_from_response = next(
-        s for s in response.json() if s["id"] == str(structure.id)
-    )
-    assert structure_from_response["administrators"][0]["id"] == str(
-        structure_admin_user.id,
-    )
 
 
 async def test_create_structure(client: TestClient):
@@ -815,82 +807,6 @@ async def test_delete_structure_as_admin(client: TestClient):
         headers={"Authorization": f"Bearer {admin_user_token}"},
     )
     assert response.status_code == 204
-
-
-async def test_add_structure_administrator_as_manager(client: TestClient):
-    response = client.post(
-        f"/mypayment/structures/{structure.id}/admin/{structure_admin_to_add.id}",
-        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
-    )
-    assert response.status_code == 201
-
-    response = client.get(
-        "/mypayment/structures",
-        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
-    )
-    assert response.status_code == 200
-    structure_from_response = next(
-        s for s in response.json() if s["id"] == str(structure.id)
-    )
-    new_admin = next(
-        (
-            a
-            for a in structure_from_response["administrators"]
-            if a["id"] == str(structure_admin_to_add.id)
-        ),
-        None,
-    )
-    assert new_admin is not None
-
-    sellers = client.get(
-        "/mypayment/users/me/stores",
-        headers={"Authorization": f"Bearer {structure_admin_to_add_token}"},
-    )
-    assert sellers.status_code == 200
-    assert len(sellers.json()) == 1
-    assert sellers.json()[0]["id"] == str(store.id)
-    assert sellers.json()[0]["can_bank"] is True
-    assert sellers.json()[0]["can_cancel"] is True
-    assert sellers.json()[0]["can_manage_sellers"] is True
-    assert sellers.json()[0]["can_see_history"] is True
-
-
-async def test_delete_structure_administrator_as_manager(client: TestClient):
-    response = client.delete(
-        f"/mypayment/structures/{structure.id}/admin/{structure_admin_to_add.id}",
-        headers={"Authorization": f"Bearer {structure_manager_user_token}"},
-    )
-    assert response.status_code == 204
-
-    response = client.get(
-        "/mypayment/structures",
-        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
-    )
-    assert response.status_code == 200
-    structure_from_response = next(
-        s for s in response.json() if s["id"] == str(structure.id)
-    )
-    new_admin = next(
-        (
-            a
-            for a in structure_from_response["administrators"]
-            if a["id"] == str(structure_admin_to_add.id)
-        ),
-        None,
-    )
-    assert new_admin is None
-
-    sellers = client.get(
-        "/mypayment/users/me/stores",
-        headers={"Authorization": f"Bearer {structure_admin_to_add_token}"},
-    )
-    assert sellers.status_code == 200
-    assert len(sellers.json()) == 1
-    assert sellers.json()[0]["id"] == str(store.id)
-    assert sellers.json()[0]["can_bank"] is True
-    assert sellers.json()[0]["can_cancel"] is False
-    assert sellers.json()[0]["can_manage_sellers"] is False
-    assert sellers.json()[0]["can_see_history"] is True
 
 
 async def test_transfer_non_existing_structure_manager(client: TestClient):
@@ -1009,6 +925,7 @@ async def test_transfer_structure_manager_as_manager(
         can_see_history=False,
         can_cancel=False,
         can_manage_sellers=False,
+        can_manage_events=True,
     )
     await add_object_to_db(seller)
 
@@ -1142,13 +1059,18 @@ async def test_get_store_history(client: TestClient):
 
     assert response.status_code == 200
     history_list = response.json()
-    assert len(history_list) == 2
+    assert len(history_list) == 3
 
     history = {transaction["id"]: transaction for transaction in history_list}
     assert str(transaction_from_store_to_ecl_user.id) in history
     assert history[str(transaction_from_store_to_ecl_user.id)]["total"] == 700
     assert str(transaction_from_ecl_user_to_store.id) in history
     assert history[str(transaction_from_ecl_user_to_store.id)]["total"] == 500
+    assert str(store_direct_transfer.id) in history
+    assert history[str(store_direct_transfer.id)]["total"] == 1500
+    assert history[str(store_direct_transfer.id)]["type"] == "request_transfer"
+    assert history[str(store_direct_transfer.id)]["direction"] == "credited"
+    assert history[str(store_direct_transfer.id)]["status"] in ["pending", "canceled"]
 
 
 async def test_get_store_history_with_date(client: TestClient):
@@ -1348,7 +1270,7 @@ async def test_get_stores_as_manager(client: TestClient):
         headers={"Authorization": f"Bearer {structure_manager_user_token}"},
     )
     assert response.status_code == 200
-    assert len(response.json()) > 1
+    assert len(response.json()) == 1
 
 
 async def test_update_store_non_existing(client: TestClient):
@@ -1438,6 +1360,7 @@ async def test_delete_store(client: TestClient):
         can_see_history=True,
         can_cancel=True,
         can_manage_sellers=True,
+        can_manage_events=True,
     )
     await add_object_to_db(sellet)
 
@@ -1496,6 +1419,7 @@ async def test_add_seller_for_non_existing_store(client: TestClient):
             "can_see_history": True,
             "can_cancel": True,
             "can_manage_sellers": True,
+            "can_manage_events": True,
         },
     )
     assert response.status_code == 404
@@ -1512,6 +1436,7 @@ async def test_add_seller_as_lambda(client: TestClient):
             "can_see_history": True,
             "can_cancel": True,
             "can_manage_sellers": True,
+            "can_manage_events": True,
         },
     )
     assert response.status_code == 403
@@ -1536,6 +1461,7 @@ async def test_add_seller_as_seller_with_permission(client: TestClient):
             "can_see_history": True,
             "can_cancel": True,
             "can_manage_sellers": True,
+            "can_manage_events": True,
         },
     )
     assert response.status_code == 201
@@ -1556,6 +1482,7 @@ async def test_add_seller_as_seller_without_permission(client: TestClient):
             "can_see_history": True,
             "can_cancel": True,
             "can_manage_sellers": True,
+            "can_manage_events": True,
         },
     )
     assert response.status_code == 403
@@ -1576,6 +1503,7 @@ async def test_add_already_existing_seller(client: TestClient):
         can_see_history=True,
         can_cancel=True,
         can_manage_sellers=False,
+        can_manage_events=True,
     )
     await add_object_to_db(seller)
 
@@ -1590,6 +1518,7 @@ async def test_add_already_existing_seller(client: TestClient):
             "can_see_history": True,
             "can_cancel": True,
             "can_manage_sellers": True,
+            "can_manage_events": True,
         },
     )
     assert response.status_code == 400
@@ -1651,6 +1580,7 @@ async def test_update_seller_of_non_existing_store(client: TestClient):
             "can_see_history": True,
             "can_cancel": False,
             "can_manage_sellers": False,
+            "can_manage_events": False,
         },
     )
     assert response.status_code == 404
@@ -1666,6 +1596,7 @@ async def test_update_seller_as_lambda(client: TestClient):
             "can_see_history": True,
             "can_cancel": False,
             "can_manage_sellers": False,
+            "can_manage_events": False,
         },
     )
     assert response.status_code == 403
@@ -1686,6 +1617,7 @@ async def test_update_seller_as_seller_without_permission(client: TestClient):
             "can_see_history": False,
             "can_cancel": False,
             "can_manage_sellers": False,
+            "can_manage_events": False,
         },
     )
     assert response.status_code == 403
@@ -1706,6 +1638,7 @@ async def test_update_non_existing_seller(client: TestClient):
         can_see_history=False,
         can_cancel=False,
         can_manage_sellers=False,
+        can_manage_events=True,
     )
     await add_object_to_db(seller)
     response = client.patch(
@@ -1733,6 +1666,7 @@ async def test_update_seller_as_seller_with_permission(client: TestClient):
         can_see_history=False,
         can_cancel=False,
         can_manage_sellers=False,
+        can_manage_events=True,
     )
     await add_object_to_db(seller)
     response = client.patch(
@@ -1841,6 +1775,7 @@ async def test_delete_seller_as_seller_with_permission(client: TestClient):
         can_see_history=False,
         can_cancel=False,
         can_manage_sellers=False,
+        can_manage_events=True,
     )
     await add_object_to_db(seller)
     response = client.delete(
@@ -1872,7 +1807,7 @@ async def test_get_tos_for_unregistered_user(client: TestClient):
         headers={"Authorization": f"Bearer {unregistered_ecl_user_access_token}"},
     )
     assert response.status_code == 400
-    assert response.json()["detail"] == "User is not registered for MyECL Pay"
+    assert response.json()["detail"] == "User is not registered for MyPayment"
 
 
 async def test_get_user_tos(client: TestClient):
@@ -1902,7 +1837,7 @@ async def test_register_new_user(client: TestClient):
         headers={"Authorization": f"Bearer {user_to_register_token}"},
     )
     assert response.status_code == 400
-    assert response.json()["detail"] == "User is already registered for MyECL Pay"
+    assert response.json()["detail"] == "User is already registered for MyPayment"
 
 
 async def test_sign_tos_for_old_tos_version(client: TestClient):
@@ -1922,7 +1857,7 @@ async def test_sign_tos_for_unregistered_user(client: TestClient):
         json={"accepted_tos_version": LATEST_TOS},
     )
     assert response.status_code == 400
-    assert response.json()["detail"] == "User is not registered for MyECL Pay"
+    assert response.json()["detail"] == "User is not registered for MyPayment"
 
 
 async def test_sign_tos(client: TestClient):
@@ -1951,7 +1886,7 @@ async def test_get_user_devices_with_unregistred_user(client: TestClient):
         headers={"Authorization": f"Bearer {unregistered_ecl_user_access_token}"},
     )
     assert response.status_code == 400
-    assert response.json()["detail"] == "User is not registered for MyECL Pay"
+    assert response.json()["detail"] == "User is not registered for MyPayment"
 
 
 async def test_get_user_devices(client: TestClient):
@@ -1969,7 +1904,7 @@ async def test_get_user_wallet_unregistred_user(client: TestClient):
         headers={"Authorization": f"Bearer {unregistered_ecl_user_access_token}"},
     )
     assert response.status_code == 400
-    assert response.json()["detail"] == "User is not registered for MyECL Pay"
+    assert response.json()["detail"] == "User is not registered for MyPayment"
 
 
 async def test_get_user_wallet(client: TestClient):
@@ -1987,7 +1922,7 @@ async def test_get_user_device_non_existing_user(client: TestClient):
         headers={"Authorization": f"Bearer {unregistered_ecl_user_access_token}"},
     )
     assert response.status_code == 400
-    assert response.json()["detail"] == "User is not registered for MyECL Pay"
+    assert response.json()["detail"] == "User is not registered for MyPayment"
 
 
 async def test_get_user_device_non_existing_device(client: TestClient):
@@ -2032,7 +1967,7 @@ async def test_create_user_device_unregistred_user(client: TestClient):
         },
     )
     assert response.status_code == 400
-    assert response.json()["detail"] == "User is not registered for MyECL Pay"
+    assert response.json()["detail"] == "User is not registered for MyPayment"
 
 
 async def test_create_and_activate_user_device(
@@ -2123,7 +2058,7 @@ async def test_revoke_user_device_unregistered_user(
         headers={"Authorization": f"Bearer {unregistered_ecl_user_access_token}"},
     )
     assert response.status_code == 400
-    assert response.json()["detail"] == "User is not registered for MyECL Pay"
+    assert response.json()["detail"] == "User is not registered for MyPayment"
 
 
 async def test_revoke_user_device_device_does_not_exist(
@@ -2187,7 +2122,7 @@ async def test_get_transactions_unregistered(client: TestClient):
     )
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "User is not registered for MyECL Pay"
+    assert response.json()["detail"] == "User is not registered for MyPayment"
 
 
 def test_get_transactions_success(client: TestClient):
@@ -2206,7 +2141,10 @@ def test_get_transactions_success(client: TestClient):
         transactions_dict[transaction_from_ecl_user_to_store.id]["other_wallet_name"]
         == "Test Store"
     )
-    assert transactions_dict[transaction_from_ecl_user_to_store.id]["type"] == "given"
+    assert (
+        transactions_dict[transaction_from_ecl_user_to_store.id]["direction"]
+        == "debited"
+    )
     assert transactions_dict[transaction_from_ecl_user_to_store.id]["total"] == 500
     assert (
         transactions_dict[transaction_from_ecl_user_to_store.id]["status"]
@@ -2220,7 +2158,8 @@ def test_get_transactions_success(client: TestClient):
         == "firstname ECL User 2 (nickname)"
     )
     assert (
-        transactions_dict[transaction_from_ecl_user_to_ecl_user2.id]["type"] == "given"
+        transactions_dict[transaction_from_ecl_user_to_ecl_user2.id]["direction"]
+        == "debited"
     )
     assert transactions_dict[transaction_from_ecl_user_to_ecl_user2.id]["total"] == 600
     assert (
@@ -2233,7 +2172,12 @@ def test_get_transactions_success(client: TestClient):
         == "Test Store"
     )
     assert (
-        transactions_dict[transaction_from_store_to_ecl_user.id]["type"] == "received"
+        transactions_dict[transaction_from_store_to_ecl_user.id]["type"]
+        == "direct_transaction"
+    )
+    assert (
+        transactions_dict[transaction_from_store_to_ecl_user.id]["direction"]
+        == "credited"
     )
     assert transactions_dict[transaction_from_store_to_ecl_user.id]["total"] == 700
     assert (
@@ -2249,7 +2193,11 @@ def test_get_transactions_success(client: TestClient):
     )
     assert (
         transactions_dict[transaction_from_ecl_user2_to_ecl_user.id]["type"]
-        == "received"
+        == "direct_transaction"
+    )
+    assert (
+        transactions_dict[transaction_from_ecl_user2_to_ecl_user.id]["direction"]
+        == "credited"
     )
     assert transactions_dict[transaction_from_ecl_user2_to_ecl_user.id]["total"] == 800
     assert (
@@ -2281,7 +2229,12 @@ def test_get_transactions_success_with_date(client: TestClient):
         == "firstname ECL User 2 (nickname)"
     )
     assert (
-        transactions_dict[transaction_from_ecl_user_to_ecl_user2.id]["type"] == "given"
+        transactions_dict[transaction_from_ecl_user_to_ecl_user2.id]["type"]
+        == "direct_transaction"
+    )
+    assert (
+        transactions_dict[transaction_from_ecl_user_to_ecl_user2.id]["direction"]
+        == "debited"
     )
     assert transactions_dict[transaction_from_ecl_user_to_ecl_user2.id]["total"] == 600
     assert (
@@ -2294,7 +2247,12 @@ def test_get_transactions_success_with_date(client: TestClient):
         == "Test Store"
     )
     assert (
-        transactions_dict[transaction_from_store_to_ecl_user.id]["type"] == "received"
+        transactions_dict[transaction_from_store_to_ecl_user.id]["type"]
+        == "direct_transaction"
+    )
+    assert (
+        transactions_dict[transaction_from_store_to_ecl_user.id]["direction"]
+        == "credited"
     )
     assert transactions_dict[transaction_from_store_to_ecl_user.id]["total"] == 700
     assert (
@@ -2330,7 +2288,7 @@ def test_transfer_with_unregistered_user(client: TestClient):
     )
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "User is not registered for MyECL Pay"
+    assert response.json()["detail"] == "User is not registered for MyPayment"
 
 
 def test_transfer_with_too_small_amount(client: TestClient):
@@ -2383,7 +2341,7 @@ def test_hello_asso_transfer(
     assert response.json()["url"] == "https://some.url.fr/checkout"
 
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "eventType": "Payment",
             "data": {"amount": 1000, "id": 123},
@@ -2577,7 +2535,7 @@ def test_store_scan_store_invalid_signature(client: TestClient):
 def test_store_scan_store_with_non_store_qr_code(client: TestClient):
     qr_code_id = uuid4()
 
-    qr_code_content = QRCodeContentData(
+    qr_code_content = SecuredContentData(
         id=qr_code_id,
         tot=-1,
         iat=datetime.now(UTC),
@@ -2612,7 +2570,7 @@ def test_store_scan_store_with_non_store_qr_code(client: TestClient):
 def test_store_scan_store_negative_total(client: TestClient):
     qr_code_id = uuid4()
 
-    qr_code_content = QRCodeContentData(
+    qr_code_content = SecuredContentData(
         id=qr_code_id,
         tot=-1,
         iat=datetime.now(UTC),
@@ -2654,7 +2612,7 @@ def test_store_scan_store_missing_wallet(
 
     qr_code_id = uuid4()
 
-    qr_code_content = QRCodeContentData(
+    qr_code_content = SecuredContentData(
         id=qr_code_id,
         tot=100,
         iat=datetime.now(UTC),
@@ -2690,7 +2648,7 @@ def test_store_scan_store_missing_wallet(
 def test_store_scan_store_from_store_wallet(client: TestClient):
     qr_code_id = uuid4()
 
-    qr_code_content = QRCodeContentData(
+    qr_code_content = SecuredContentData(
         id=qr_code_id,
         tot=1100,
         iat=datetime.now(UTC),
@@ -2760,7 +2718,7 @@ async def test_store_scan_store_from_wallet_with_old_tos_version(client: TestCli
 
     qr_code_id = uuid4()
 
-    qr_code_content = QRCodeContentData(
+    qr_code_content = SecuredContentData(
         id=qr_code_id,
         tot=1100,
         iat=datetime.now(UTC),
@@ -2793,7 +2751,7 @@ async def test_store_scan_store_from_wallet_with_old_tos_version(client: TestCli
 def test_store_scan_store_insufficient_ballance(client: TestClient):
     qr_code_id = uuid4()
 
-    qr_code_content = QRCodeContentData(
+    qr_code_content = SecuredContentData(
         id=qr_code_id,
         tot=3000,
         iat=datetime.now(UTC),
@@ -2826,7 +2784,7 @@ def test_store_scan_store_insufficient_ballance(client: TestClient):
 async def test_store_scan_store_successful_scan(client: TestClient):
     qr_code_id = uuid4()
 
-    qr_code_content = QRCodeContentData(
+    qr_code_content = SecuredContentData(
         id=qr_code_id,
         tot=500,
         iat=datetime.now(UTC),
@@ -3134,6 +3092,37 @@ async def test_transaction_refund_partial(client: TestClient):
     )
 
 
+async def test_cancel_transaction(
+    client: TestClient,
+):
+    recent_transaction = models_mypayment.Transaction(
+        id=uuid4(),
+        debited_wallet_id=ecl_user_wallet.id,
+        credited_wallet_id=store_wallet.id,
+        total=100,
+        status=TransactionStatus.CONFIRMED,
+        creation=datetime.now(UTC),
+        transaction_type=TransactionType.DIRECT,
+        seller_user_id=store_seller_can_bank_user.id,
+        debited_wallet_device_id=ecl_user_wallet_device.id,
+        store_note="",
+        qr_code_id=None,
+    )
+    await add_object_to_db(recent_transaction)
+    response = client.post(
+        f"/mypayment/transactions/{recent_transaction.id}/cancel",
+        headers={"Authorization": f"Bearer {store_seller_can_bank_user_access_token}"},
+    )
+    assert response.status_code == 204, response.text
+    async with get_TestingSessionLocal()() as db:
+        transaction_after_cancel = await cruds_mypayment.get_transaction(
+            db=db,
+            transaction_id=recent_transaction.id,
+        )
+    assert transaction_after_cancel is not None
+    assert transaction_after_cancel.status == TransactionStatus.CANCELED
+
+
 async def test_get_invoices_as_random_user(client: TestClient):
     response = client.get(
         "/mypayment/invoices",
@@ -3431,6 +3420,242 @@ async def test_get_request_with_used_filter(
     assert len(response.json()) == 3
 
 
+async def test_accept_request_with_invalid_signature(
+    client: TestClient,
+):
+    response = client.post(
+        f"/mypayment/requests/{proposed_request.id}/accept",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        json=SignedContent(
+            id=proposed_request.id,
+            key=ecl_user_wallet_device.id,
+            iat=datetime.now(UTC),
+            tot=proposed_request.total,
+            store=True,
+            signature="invalid signature",
+        ).model_dump(mode="json"),
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid signature"
+
+
+async def test_accept_request_with_wrong_wallet_device(
+    client: TestClient,
+):
+    wrong_wallet_device_private_key = Ed25519PrivateKey.generate()
+    wrong_wallet_device = models_mypayment.WalletDevice(
+        id=uuid4(),
+        name="Wrong device",
+        wallet_id=ecl_user2_wallet.id,
+        ed25519_public_key=wrong_wallet_device_private_key.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        ),
+        creation=datetime.now(UTC),
+        status=WalletDeviceStatus.ACTIVE,
+        activation_token=str(uuid4()),
+    )
+    await add_object_to_db(wrong_wallet_device)
+
+    validation_data = SecuredContentData(
+        id=proposed_request.id,
+        key=wrong_wallet_device.id,
+        iat=datetime.now(UTC),
+        tot=proposed_request.total,
+        store=True,
+    )
+    validation_data_signature = wrong_wallet_device_private_key.sign(
+        validation_data.model_dump_json().encode("utf-8"),
+    )
+    validation = SignedContent(
+        **validation_data.model_dump(),
+        signature=base64.b64encode(validation_data_signature).decode("utf-8"),
+    )
+    response = client.post(
+        f"/mypayment/requests/{proposed_request.id}/accept",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        json=validation.model_dump(mode="json"),
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Wallet device is not associated with the user wallet"
+    )
+
+
+async def test_accept_request_with_wrong_user(
+    client: TestClient,
+):
+    validation_data = SecuredContentData(
+        id=proposed_request.id,
+        key=ecl_user_wallet_device.id,
+        iat=datetime.now(UTC),
+        tot=proposed_request.total,
+        store=True,
+    )
+    validation_data_signature = ecl_user_wallet_device_private_key.sign(
+        validation_data.model_dump_json().encode("utf-8"),
+    )
+    validation = SignedContent(
+        **validation_data.model_dump(),
+        signature=base64.b64encode(validation_data_signature).decode("utf-8"),
+    )
+    response = client.post(
+        f"/mypayment/requests/{proposed_request.id}/accept",
+        headers={"Authorization": f"Bearer {ecl_user2_access_token}"},
+        json=validation.model_dump(mode="json"),
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "User is not allowed to confirm this request"
+
+
+async def test_accept_request_with_different_total(
+    client: TestClient,
+):
+    validation_data = SecuredContentData(
+        id=proposed_request.id,
+        key=ecl_user_wallet_device.id,
+        iat=datetime.now(UTC),
+        tot=proposed_request.total + 100,
+        store=True,
+    )
+    validation_data_signature = ecl_user_wallet_device_private_key.sign(
+        validation_data.model_dump_json().encode("utf-8"),
+    )
+    validation = SignedContent(
+        **validation_data.model_dump(),
+        signature=base64.b64encode(validation_data_signature).decode("utf-8"),
+    )
+    response = client.post(
+        f"/mypayment/requests/{proposed_request.id}/accept",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        json=validation.model_dump(mode="json"),
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Request total in the body do not match the request total in the database"
+    )
+
+
+async def test_accept_request_with_inexistant_wallet_device(
+    client: TestClient,
+):
+    validation_data = SecuredContentData(
+        id=proposed_request.id,
+        key=uuid4(),
+        iat=datetime.now(UTC),
+        tot=proposed_request.total,
+        store=True,
+    )
+    validation_data_signature = ecl_user_wallet_device_private_key.sign(
+        validation_data.model_dump_json().encode("utf-8"),
+    )
+    validation = SignedContent(
+        **validation_data.model_dump(),
+        signature=base64.b64encode(validation_data_signature).decode("utf-8"),
+    )
+    response = client.post(
+        f"/mypayment/requests/{proposed_request.id}/accept",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        json=validation.model_dump(mode="json"),
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Wallet device does not exist"
+
+
+async def test_accept_request_with_wallet_device_linked_to_another_wallet(
+    client: TestClient,
+):
+    other_wallet = models_mypayment.Wallet(
+        id=uuid4(),
+        type=WalletType.USER,
+        balance=1000,
+    )
+    await add_object_to_db(other_wallet)
+
+    other_wallet_device_private_key = Ed25519PrivateKey.generate()
+    other_wallet_device = models_mypayment.WalletDevice(
+        id=uuid4(),
+        name="Other device",
+        wallet_id=other_wallet.id,
+        ed25519_public_key=other_wallet_device_private_key.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        ),
+        creation=datetime.now(UTC),
+        status=WalletDeviceStatus.ACTIVE,
+        activation_token=str(uuid4()),
+    )
+    await add_object_to_db(other_wallet_device)
+
+    validation_data = SecuredContentData(
+        id=proposed_request.id,
+        key=other_wallet_device.id,
+        iat=datetime.now(UTC),
+        tot=proposed_request.total,
+        store=True,
+    )
+    validation_data_signature = other_wallet_device_private_key.sign(
+        validation_data.model_dump_json().encode("utf-8"),
+    )
+    validation = SignedContent(
+        **validation_data.model_dump(),
+        signature=base64.b64encode(validation_data_signature).decode("utf-8"),
+    )
+    response = client.post(
+        f"/mypayment/requests/{proposed_request.id}/accept",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        json=validation.model_dump(mode="json"),
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Wallet device is not associated with the user wallet"
+    )
+
+
+async def test_accept_request_with_non_proposed_request(
+    client: TestClient,
+):
+    non_proposed_request = models_mypayment.Request(
+        id=uuid4(),
+        wallet_id=ecl_user_wallet.id,
+        store_id=store.id,
+        name="Test request",
+        store_note="",
+        module=TEST_MODULE_ROOT,
+        object_id=uuid4(),
+        transaction_id=None,
+        total=1000,
+        status=RequestStatus.ACCEPTED,
+        creation=datetime.now(UTC),
+    )
+    await add_object_to_db(non_proposed_request)
+
+    validation_data = SecuredContentData(
+        id=non_proposed_request.id,
+        key=ecl_user_wallet_device.id,
+        iat=datetime.now(UTC),
+        tot=non_proposed_request.total,
+        store=True,
+    )
+    validation_data_signature = ecl_user_wallet_device_private_key.sign(
+        validation_data.model_dump_json().encode("utf-8"),
+    )
+    validation = SignedContent(
+        **validation_data.model_dump(),
+        signature=base64.b64encode(validation_data_signature).decode("utf-8"),
+    )
+    response = client.post(
+        f"/mypayment/requests/{non_proposed_request.id}/accept",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        json=validation.model_dump(mode="json"),
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Only pending requests can be confirmed"
+
+
 async def test_accept_request(
     mocker: MockerFixture,
     client: TestClient,
@@ -3454,16 +3679,17 @@ async def test_accept_request(
         [test_module],
     )
 
-    validation_data = RequestValidationData(
-        request_id=proposed_request.id,
+    validation_data = SecuredContentData(
+        id=proposed_request.id,
         key=ecl_user_wallet_device.id,
         iat=datetime.now(UTC),
         tot=proposed_request.total,
+        store=True,
     )
     validation_data_signature = ecl_user_wallet_device_private_key.sign(
         validation_data.model_dump_json().encode("utf-8"),
     )
-    validation = RequestValidation(
+    validation = SignedContent(
         **validation_data.model_dump(),
         signature=base64.b64encode(validation_data_signature).decode("utf-8"),
     )
@@ -3490,6 +3716,132 @@ async def test_accept_request(
     assert accepted is not None
     assert accepted["status"] == RequestStatus.ACCEPTED
     mocked_callback.assert_called_once()
+
+
+async def test_accept_expired_request(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    # We patch the callback to be able to check if it was called
+    mocked_callback = mocker.patch(
+        "tests.core.test_mypayment.mypayment_callback",
+    )
+
+    # We patch the module_list to inject our custom test module
+    test_module = Module(
+        root=TEST_MODULE_ROOT,
+        tag="Tests",
+        default_allowed_groups_ids=[],
+        mypayment_callback=mypayment_callback,
+        factory=None,
+        permissions=None,
+    )
+    mocker.patch(
+        "app.core.mypayment.utils_mypayment.all_modules",
+        [test_module],
+    )
+
+    expired_request = models_mypayment.Request(
+        id=uuid4(),
+        wallet_id=ecl_user_wallet.id,
+        store_id=store.id,
+        name="Test request",
+        store_note="",
+        module=TEST_MODULE_ROOT,
+        object_id=uuid4(),
+        transaction_id=None,
+        total=1000,
+        status=RequestStatus.PROPOSED,
+        creation=datetime.now(UTC) - timedelta(minutes=REQUEST_EXPIRATION + 1),
+    )
+    await add_object_to_db(expired_request)
+
+    validation_data = SecuredContentData(
+        id=expired_request.id,
+        key=ecl_user_wallet_device.id,
+        iat=datetime.now(UTC),
+        tot=expired_request.total,
+        store=True,
+    )
+    validation_data_signature = ecl_user_wallet_device_private_key.sign(
+        validation_data.model_dump_json().encode("utf-8"),
+    )
+    validation = SignedContent(
+        **validation_data.model_dump(),
+        signature=base64.b64encode(validation_data_signature).decode("utf-8"),
+    )
+    response = client.post(
+        f"/mypayment/requests/{expired_request.id}/accept",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+        json=validation.model_dump(mode="json"),
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Request is expired"
+
+    mocked_callback.assert_not_called()
+
+
+async def test_refuse_request(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    # We patch the callback to be able to check if it was called
+    mocked_callback = mocker.patch(
+        "tests.core.test_mypayment.mypayment_callback",
+    )
+
+    # We patch the module_list to inject our custom test module
+    test_module = Module(
+        root=TEST_MODULE_ROOT,
+        tag="Tests",
+        default_allowed_groups_ids=[],
+        mypayment_callback=mypayment_callback,
+        factory=None,
+        permissions=None,
+    )
+    mocker.patch(
+        "app.core.mypayment.utils_mypayment.all_modules",
+        [test_module],
+    )
+
+    new_request = models_mypayment.Request(
+        id=uuid4(),
+        wallet_id=ecl_user_wallet.id,
+        store_id=store.id,
+        name="Test request",
+        store_note="",
+        module=TEST_MODULE_ROOT,
+        object_id=uuid4(),
+        transaction_id=None,
+        total=1000,
+        status=RequestStatus.PROPOSED,
+        creation=datetime.now(UTC),
+    )
+    await add_object_to_db(new_request)
+
+    response = client.post(
+        f"/mypayment/requests/{new_request.id}/refuse",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert response.status_code == 204
+
+    mocked_callback.assert_not_called()
+
+    responser = client.get(
+        "/mypayment/requests?used=true",
+        headers={"Authorization": f"Bearer {ecl_user_access_token}"},
+    )
+    assert responser.status_code == 200
+    refused = next(
+        (
+            request
+            for request in responser.json()
+            if request["id"] == str(new_request.id)
+        ),
+        None,
+    )
+    assert refused is not None
+    assert refused["status"] == RequestStatus.REFUSED
 
 
 async def test_direct_transfer_callback(
@@ -3526,3 +3878,13 @@ async def test_direct_transfer_callback(
         )
 
     mocked_callback.assert_called_once()
+
+
+async def test_integrity_check(
+    client: TestClient,
+):
+    response = client.get(
+        "/mypayment/integrity-check",
+        headers={"x-data-verifier-token": "test_data_verifier_access_token"},
+    )
+    assert response.status_code == 200, response.text

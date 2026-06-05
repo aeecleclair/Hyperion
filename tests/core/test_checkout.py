@@ -21,7 +21,7 @@ from app.core.schools import schemas_schools
 from app.core.users import schemas_users
 from app.types.module import Module
 from tests.commons import (
-    MockedPaymentTool,
+    MockedCheckoutTool,
     add_object_to_db,
     create_user_with_groups,
     get_TestingSessionLocal,
@@ -388,7 +388,7 @@ async def test_webhook_payment_callback_fail(
 async def test_payment_tool_get_checkout(
     client: TestClient,
 ):
-    payment_tool = MockedPaymentTool()
+    payment_tool = MockedCheckoutTool()
 
     async with get_TestingSessionLocal()() as db:
         # Get existing checkout

@@ -154,7 +154,7 @@ def init_test_SessionLocal(engine: AsyncEngine) -> SessionLocalType:
 def init_test_checkout_tools() -> dict[HelloAssoConfigName, CheckoutTool]:
     payment_tools: dict[HelloAssoConfigName, CheckoutTool] = {}
     for helloasso_config_name in HelloAssoConfigName:
-        payment_tools[helloasso_config_name] = MockedPaymentTool()
+        payment_tools[helloasso_config_name] = MockedCheckoutTool()
 
     return payment_tools
 
@@ -347,7 +347,7 @@ async def add_coredata_to_db(
 mocked_checkout_id: uuid.UUID = uuid.UUID("81c9ad91-f415-494a-96ad-87bf647df82c")
 
 
-class MockedPaymentTool(CheckoutTool):
+class MockedCheckoutTool(CheckoutTool):
     def __init__(
         self,
     ):
