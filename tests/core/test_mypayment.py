@@ -143,7 +143,7 @@ async def init_objects() -> None:
     admin_user = await create_user_with_groups(groups=[GroupType.admin])
     admin_user_token = create_api_access_token(admin_user)
 
-    global core_association_group, core_association
+    global core_association_group
     core_association_group = await create_groups_with_permissions(
         group_name="Core Association Group",
         permissions=[],
