@@ -50,7 +50,7 @@ class RaidPermissions(ModulePermissions):
 module = Module(
     root="raid",
     tag="Raid",
-    payment_callback=validate_payment,
+    checkout_callback=validate_payment,
     default_allowed_account_types=list(AccountType),
     factory=None,
     permissions=RaidPermissions,

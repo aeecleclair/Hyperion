@@ -18,7 +18,7 @@ class CoreModule:
         tag: str,
         factory: Factory | None,
         router: APIRouter | None = None,
-        payment_callback: Callable[
+        checkout_callback: Callable[
             [schemas_checkout.CheckoutPayment, AsyncSession],
             Awaitable[None],
         ]
@@ -44,10 +44,10 @@ class CoreModule:
         """
         self.root = root
         self.router = router or APIRouter(tags=[tag])
-        self.payment_callback: (
+        self.checkout_callback: (
             Callable[[schemas_checkout.CheckoutPayment, AsyncSession], Awaitable[None]]
             | None
-        ) = payment_callback
+        ) = checkout_callback
         self.mypayment_callback: (
             Callable[[UUID, AsyncSession], Awaitable[None]] | None
         ) = mypayment_callback
@@ -65,7 +65,7 @@ class Module(CoreModule):
         default_allowed_groups_ids: list[GroupType] | None = None,
         default_allowed_account_types: list[AccountType] | None = None,
         router: APIRouter | None = None,
-        payment_callback: Callable[
+        checkout_callback: Callable[
             [schemas_checkout.CheckoutPayment, AsyncSession],
             Awaitable[None],
         ]
@@ -95,10 +95,10 @@ class Module(CoreModule):
         self.default_allowed_groups_ids = default_allowed_groups_ids
         self.default_allowed_account_types = default_allowed_account_types
         self.router = router or APIRouter(tags=[tag])
-        self.payment_callback: (
+        self.checkout_callback: (
             Callable[[schemas_checkout.CheckoutPayment, AsyncSession], Awaitable[None]]
             | None
-        ) = payment_callback
+        ) = checkout_callback
         self.mypayment_callback: (
             Callable[[UUID, AsyncSession], Awaitable[None]] | None
         ) = mypayment_callback
