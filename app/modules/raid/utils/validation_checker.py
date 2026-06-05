@@ -5,6 +5,9 @@ passes; the same applies to volunteers (with a lighter gate). Each check
 raises a distinct HTTPException so the frontend can i18n cleanly.
 """
 
+from collections.abc import Callable
+from dataclasses import dataclass
+
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -175,119 +178,146 @@ async def check_volunteer_validation_consistency(
         )
 
 
+# ---------------------------------------------------------------------------
+# Declarative progress / required-documents rules
+# ---------------------------------------------------------------------------
+#
+# The "registration completeness" used to be hand-rolled with nested ifs and
+# magic constants (a `number_total = 10` baseline that did not actually map to
+# 10 slots once you counted them). The model below makes every slot explicit
+# so the rules can be read top-to-bottom.
+
+
+@dataclass(frozen=True)
+class _ParticipantContext:
+    """Flags that decide which document slots apply to a given participant."""
+
+    situation: Situation | None
+    is_minor: bool
+
+
+@dataclass(frozen=True)
+class _DocumentRule:
+    """One progress slot tied to a participant attribute.
+
+    `applies(context)` decides whether this slot exists for the participant
+    at all; `counts_temporary` lets a `DocumentValidation.temporary` score
+    half a slot rather than zero; `is_required_document` distinguishes actual
+    uploads (id card, medical certificate, …) from the SecurityFile form,
+    which contributes to overall progress but is not exposed in the
+    `n / total documents` counter the frontend shows.
+    """
+
+    attr: str
+    applies: Callable[[_ParticipantContext], bool]
+    counts_temporary: bool = False
+    is_required_document: bool = True
+
+
+_STUDENT_SITUATIONS = (Situation.centrale, Situation.otherSchool)
+
+_DOCUMENT_RULES: tuple[_DocumentRule, ...] = (
+    _DocumentRule("id_card", applies=lambda _c: True),
+    _DocumentRule(
+        "medical_certificate", applies=lambda _c: True, counts_temporary=True,
+    ),
+    _DocumentRule(
+        "security_file",
+        applies=lambda _c: True,
+        counts_temporary=True,
+        is_required_document=False,
+    ),
+    _DocumentRule("raid_rules", applies=lambda _c: True),
+    _DocumentRule(
+        "student_card",
+        applies=lambda c: c.situation in _STUDENT_SITUATIONS,
+    ),
+    _DocumentRule(
+        "parent_authorization",
+        applies=lambda c: c.is_minor,
+        counts_temporary=True,
+    ),
+)
+
+# Profile fields that each count one slot when set on the participant.
+_PROFILE_FIELDS: tuple[str, ...] = (
+    "address",
+    "bike_size",
+    "t_shirt_size",
+    "situation",
+    "attestation_on_honour",
+)
+
+
+def _context(participant: schemas_raid.RaidParticipant) -> _ParticipantContext:
+    return _ParticipantContext(
+        situation=participant.situation,
+        is_minor=participant.is_minor,
+    )
+
+
+def _applicable_rules(ctx: _ParticipantContext) -> list[_DocumentRule]:
+    return [rule for rule in _DOCUMENT_RULES if rule.applies(ctx)]
+
+
+def _score(participant: schemas_raid.RaidParticipant, rule: _DocumentRule) -> float:
+    doc = getattr(participant, rule.attr)
+    if doc is None:
+        return 0.0
+    if doc.validation == DocumentValidation.accepted:
+        return 1.0
+    if rule.counts_temporary and doc.validation == DocumentValidation.temporary:
+        return 0.5
+    return 0.0
+
+
 def compute_participant_progress(
     participant: schemas_raid.RaidParticipant,
 ) -> float:
-    """Pure port of the former RaidParticipant.validation_progress @property.
+    """Return the participant's registration progress as a 0-100 percentage.
 
-    Kept as a read-only helper so the frontend can display a percentage while
-    RaidRegistrationStatus remains the actual source of truth.
+    Read-only helper so the frontend can show a completion bar; the actual
+    source of truth for whether a participant is allowed to take part remains
+    their `RaidRegistrationStatus`.
     """
-    number_total = 10
-    conditions = [
-        participant.address,
-        participant.bike_size,
-        participant.t_shirt_size,
-        participant.situation,
-        participant.attestation_on_honour,
-    ]
-    number_validated: float = sum(condition is not None for condition in conditions)
-    if participant.situation in (Situation.centrale, Situation.otherSchool):
-        number_total += 1
-        if (
-            participant.student_card
-            and participant.student_card.validation == DocumentValidation.accepted
-        ):
-            number_validated += 1
-    if participant.is_minor:
-        number_total += 1
-        if participant.parent_authorization:
-            if participant.parent_authorization.validation == DocumentValidation.accepted:
-                number_validated += 1
-            elif (
-                participant.parent_authorization.validation
-                == DocumentValidation.temporary
-            ):
-                number_validated += 0.5
-    if (
-        participant.id_card
-        and participant.id_card.validation == DocumentValidation.accepted
-    ):
-        number_validated += 1
-    if participant.medical_certificate:
-        if participant.medical_certificate.validation == DocumentValidation.accepted:
-            number_validated += 1
-        elif (
-            participant.medical_certificate.validation == DocumentValidation.temporary
-        ):
-            number_validated += 0.5
-    if participant.security_file:
-        security_validation = participant.security_file.validation
-        if security_validation == DocumentValidation.accepted:
-            number_validated += 1
-        elif security_validation == DocumentValidation.temporary:
-            number_validated += 0.5
-    if (
-        participant.raid_rules
-        and participant.raid_rules.validation == DocumentValidation.accepted
-    ):
-        number_validated += 1
-    return (number_validated / number_total) * 100
+    rules = _applicable_rules(_context(participant))
+    total = len(_PROFILE_FIELDS) + len(rules)
+    if not total:
+        return 0.0
+    filled_profile = sum(
+        getattr(participant, field) is not None for field in _PROFILE_FIELDS
+    )
+    scored_docs = sum(_score(participant, rule) for rule in rules)
+    return ((filled_profile + scored_docs) / total) * 100
 
 
 def compute_team_progress(team: schemas_raid.RaidTeam) -> float:
-    """Pure port of the former RaidTeam.validation_progress @property."""
-    number_validated = 0
-    number_total = 2
-    if team.difficulty:
-        number_validated += 1
-    if team.meeting_place:
-        number_validated += 1
-    return (number_validated / number_total) * 10 + (
-        compute_participant_progress(team.captain)
-        + (compute_participant_progress(team.second) if team.second else 0)
-    ) * 0.45
+    """Combine the two participants' progress with the team-level metadata."""
+    team_filled = int(team.difficulty is not None) + int(team.meeting_place is not None)
+    team_share = (team_filled / 2) * 10
+    captain = compute_participant_progress(team.captain)
+    second = compute_participant_progress(team.second) if team.second else 0
+    return team_share + (captain + second) * 0.45
 
 
 def count_total_required_documents(participant: schemas_raid.RaidParticipant) -> int:
-    number_total = 3
-    if participant.situation in (Situation.centrale, Situation.otherSchool):
-        number_total += 1
-    if participant.is_minor:
-        number_total += 1
-    return number_total
+    """Number of upload slots required for this participant's profile."""
+    return sum(
+        1
+        for rule in _applicable_rules(_context(participant))
+        if rule.is_required_document
+    )
 
 
 def count_accepted_documents(participant: schemas_raid.RaidParticipant) -> int:
-    number_validated = 0
-    if (
-        participant.situation in (Situation.centrale, Situation.otherSchool)
-        and participant.student_card
-        and participant.student_card.validation == DocumentValidation.accepted
-    ):
-        number_validated += 1
-    if (
-        participant.id_card
-        and participant.id_card.validation == DocumentValidation.accepted
-    ):
-        number_validated += 1
-    if (
-        participant.medical_certificate
-        and participant.medical_certificate.validation == DocumentValidation.accepted
-    ):
-        number_validated += 1
-    if (
-        participant.raid_rules
-        and participant.raid_rules.validation == DocumentValidation.accepted
-    ):
-        number_validated += 1
-    if (
-        participant.is_minor
-        and participant.parent_authorization
-        and participant.parent_authorization.validation == DocumentValidation.accepted
-    ):
-        number_validated += 1
-    return number_validated
+    """Number of required uploads that are currently in the `accepted` state."""
+    return sum(
+        1
+        for rule in _applicable_rules(_context(participant))
+        if rule.is_required_document
+        and (doc := getattr(participant, rule.attr)) is not None
+        and doc.validation == DocumentValidation.accepted
+    )
 
 
 __all__ = [
