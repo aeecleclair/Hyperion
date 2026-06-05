@@ -3,9 +3,9 @@ import zipfile
 
 # import uuid
 from datetime import UTC, date, datetime
-from pathlib import Path
 
 import fitz
+from anyio import Path
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -220,7 +220,7 @@ async def get_all_security_files_zip(
 
     # TODO: delete the previous zip?
     # TODO: iotemp file?
-    Path("data/raid/").mkdir(parents=True, exist_ok=True)
+    await Path("data/raid/").mkdir(parents=True, exist_ok=True)
     zip_file_path = f"data/raid/Fiches_Sécurité_{datetime.now(UTC).strftime('%Y-%m-%d_%H_%M_%S')}.zip"
     with zipfile.ZipFile(
         zip_file_path,
@@ -233,7 +233,7 @@ async def get_all_security_files_zip(
                     information,
                     team.number,
                 )
-                src_pdf = get_file_path_from_data(
+                src_pdf = await get_file_path_from_data(
                     directory="raid/security_file",
                     filename=file_id,
                 )
@@ -260,7 +260,7 @@ async def get_all_team_files_zip(
 
     # TODO: delete the previous zip?
     # TODO: iotemp file?
-    Path("data/raid/").mkdir(parents=True, exist_ok=True)
+    await Path("data/raid/").mkdir(parents=True, exist_ok=True)
     zip_file_path = (
         f"data/raid/Teams_{datetime.now(UTC).strftime('%Y-%m-%d_%H_%M_%S')}.zip"
     )
@@ -272,7 +272,7 @@ async def get_all_team_files_zip(
             file_id = await generate_recap_file_pdf(
                 team,
             )
-            src_pdf = get_file_path_from_data(
+            src_pdf = await get_file_path_from_data(
                 directory="raid/recap",
                 filename=file_id,
             )

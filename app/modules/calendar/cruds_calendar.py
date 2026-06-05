@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
 
-import aiofiles
+from anyio import Path
 from icalendar import Calendar, Event, vRecur
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.modules.calendar import models_calendar, schemas_calendar
 from app.modules.calendar.types_calendar import Decision
 
-calendar_file_path = "data/ics/ae_calendar.ics"
+calendar_file_path = Path("data/ics/ae_calendar.ics")
 
 
 async def get_all_events(db: AsyncSession) -> Sequence[models_calendar.Event]:
@@ -140,5 +140,5 @@ async def create_icalendar_file(db: AsyncSession) -> None:
 
             calendar.add_component(ical_event)
 
-    async with aiofiles.open(calendar_file_path, mode="wb") as calendar_file:
+    async with await calendar_file_path.open(mode="wb") as calendar_file:
         await calendar_file.write(calendar.to_ical())

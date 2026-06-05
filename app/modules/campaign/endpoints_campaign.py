@@ -3,7 +3,7 @@ import logging
 import uuid
 from datetime import UTC, datetime
 
-import aiofiles
+from anyio import Path
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -493,8 +493,8 @@ async def open_vote(
 
     # Archive all changes to a json file
     lists = await cruds_campaign.get_lists(db=db)
-    async with aiofiles.open(
-        f"data/campaigns/lists-{datetime.now(tz=UTC).date().isoformat()}.json",
+    path = Path(f"data/campaigns/lists-{datetime.now(UTC).date().isoformat()}.json")
+    async with await path.open(
         mode="w",
     ) as file:
         await file.write(json.dumps([liste.as_dict() for liste in lists]))
@@ -610,8 +610,8 @@ async def reset_vote(
 
     # Archive results to a json file
     results = await get_results(db=db, user=user)
-    async with aiofiles.open(
-        f"data/campaigns/results-{datetime.now(UTC).date().isoformat()}.json",
+    path = Path(f"data/campaigns/results-{datetime.now(UTC).date().isoformat()}.json")
+    async with await path.open(
         mode="w",
     ) as file:
         await file.write(
@@ -892,7 +892,7 @@ async def read_campaigns_logo(
             detail="The list does not exist.",
         )
 
-    return get_file_from_data(
+    return await get_file_from_data(
         directory="campaigns",
         filename=str(list_id),
         default_asset="assets/images/default_campaigns_logo.png",

@@ -4,12 +4,12 @@ import logging
 import uuid
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import alembic.command as alembic_command
 import alembic.config as alembic_config
 import alembic.migration as alembic_migration
+from anyio import Path
 from calypsso import get_calypsso_app
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.encoders import jsonable_encoder
@@ -475,7 +475,7 @@ async def init_google_API(
             pass
 
 
-def test_configuration(
+async def test_configuration(
     settings: Settings,
     hyperion_error_logger: logging.Logger,
 ) -> None:
@@ -499,8 +499,8 @@ def test_configuration(
             )
 
     # Create folder for calendars if they don't already exists
-    Path("data/ics/").mkdir(parents=True, exist_ok=True)
-    Path("data/core/").mkdir(parents=True, exist_ok=True)
+    await Path("data/ics/").mkdir(parents=True, exist_ok=True)
+    await Path("data/core/").mkdir(parents=True, exist_ok=True)
 
 
 async def init_lifespan(
