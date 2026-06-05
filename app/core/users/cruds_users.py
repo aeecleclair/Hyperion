@@ -1,6 +1,7 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
 from collections.abc import Sequence
+from datetime import datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import ForeignKey, and_, delete, not_, or_, select, update
@@ -124,7 +125,7 @@ async def get_user_by_email(
     db: AsyncSession,
     email: str,
 ) -> models_users.CoreUser | None:
-    """Return user with id from database as a dictionary"""
+    """Return user with email from database as a dictionary"""
 
     result = await db.execute(
         select(models_users.CoreUser)
@@ -136,6 +137,67 @@ async def get_user_by_email(
         ),
     )
     return result.scalars().first()
+
+
+async def get_recovery_request_within_delay_registred_user(
+    db: AsyncSession,
+    email: str,
+    minimum_delay_minutes: int,
+    date: datetime,
+) -> schemas_users.CoreUserRecoverRequest | None:
+    result = (
+        (
+            await db.execute(
+                select(models_users.CoreUserRecoverRequest).where(
+                    models_users.CoreUserRecoverRequest.email == email,
+                    date - models_users.CoreUserRecoverRequest.created_on
+                    < timedelta(minutes=minimum_delay_minutes),
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return (
+        schemas_users.CoreUserRecoverRequest(
+            email=result.email,
+            user_id=result.user_id,
+            reset_token=result.reset_token,
+            created_on=result.created_on,
+            expire_on=result.expire_on,
+        )
+        if result
+        else None
+    )
+
+
+async def get_recovery_request_within_delay_unregistered_user(
+    db: AsyncSession,
+    email: str,
+    minimum_delay_minutes: int,
+    date: datetime,
+) -> schemas_users.CoreUnregisteredUserRecoverRequest | None:
+    result = (
+        (
+            await db.execute(
+                select(models_users.CoreUnregisteredUserRecoverRequest).where(
+                    models_users.CoreUnregisteredUserRecoverRequest.email == email,
+                    date - models_users.CoreUnregisteredUserRecoverRequest.created_on
+                    < timedelta(minutes=minimum_delay_minutes),
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return (
+        schemas_users.CoreUnregisteredUserRecoverRequest(
+            email=result.email,
+            created_on=result.created_on,
+        )
+        if result
+        else None
+    )
 
 
 async def update_user(
@@ -207,10 +269,15 @@ async def delete_user(db: AsyncSession, user_id: str):
 async def create_user_recover_request(
     db: AsyncSession,
     recover_request: models_users.CoreUserRecoverRequest,
-) -> models_users.CoreUserRecoverRequest:
+) -> None:
     db.add(recover_request)
-    await db.flush()
-    return recover_request
+
+
+async def create_unregistered_user_recover_request(
+    db: AsyncSession,
+    recover_request: models_users.CoreUnregisteredUserRecoverRequest,
+) -> None:
+    db.add(recover_request)
 
 
 async def get_recover_request_by_reset_token(

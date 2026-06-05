@@ -1463,6 +1463,23 @@ async def register_user(
     )
 
 
+async def patch_payment_identity_in_text(
+    text: str,
+    settings: Settings,
+    user: CoreUser,
+    db: AsyncSession,
+) -> str:
+    account_holder = await get_bank_account_holder(user, db)
+    patched_text: str = patch_identity_in_text(
+        text=text,
+        settings=settings,
+    ).replace(
+        "{bank_account_holder}",
+        account_holder.name,
+    )
+    return patched_text
+
+
 @router.get(
     "/mypayment/users/me/tos",
     status_code=200,
@@ -1495,6 +1512,8 @@ async def get_user_tos(
         tos_content=patch_identity_in_text(
             await Path("assets/mypayment-terms-of-service.txt").read_text("utf-8"),
             settings,
+            user,
+            db,
         ),
         max_wallet_balance=settings.MYPAYMENT_MAXIMUM_WALLET_BALANCE,
     )
