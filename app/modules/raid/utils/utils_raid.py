@@ -9,7 +9,7 @@ import fitz
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.payment import schemas_payment
+from app.core.checkout import schemas_checkout
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
 from app.modules.raid.raid_type import Difficulty, Size
 from app.modules.raid.schemas_raid import (
@@ -73,7 +73,7 @@ def will_participant_be_minor_on(
 
 
 async def validate_payment(
-    checkout_payment: schemas_payment.CheckoutPayment,
+    checkout_payment: schemas_checkout.CheckoutPayment,
     db: AsyncSession,
 ) -> None:
     paid_amount = checkout_payment.paid_amount

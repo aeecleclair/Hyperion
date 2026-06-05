@@ -1,10 +1,10 @@
+import tomllib
 from functools import cached_property
 from pathlib import Path
 from re import Pattern
 from typing import Any, ClassVar
 
 import jwt
-import tomllib
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from pydantic import BaseModel, computed_field, model_validator
@@ -16,8 +16,8 @@ from pydantic_settings import (
     YamlConfigSettingsSource,
 )
 
+from app.core.checkout.types_checkout import HelloAssoConfig, HelloAssoConfigName
 from app.core.core_endpoints.schemas_core import MainActivationForm
-from app.core.payment.types_payment import HelloAssoConfig, HelloAssoConfigName
 from app.types.exceptions import (
     DotenvInvalidAuthClientNameInError,
     DotenvInvalidVariableError,

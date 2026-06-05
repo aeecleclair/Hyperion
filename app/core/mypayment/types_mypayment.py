@@ -1,5 +1,17 @@
 from enum import StrEnum
 
+LATEST_TOS = 2
+QRCODE_EXPIRATION = 5  # minutes
+REQUEST_EXPIRATION = 15  # minutes
+RETENTION_DURATION = 10 * 365  # 10 years in days
+MYPAYMENT_ROOT = "mypayment"
+
+MYPAYMENT_STRUCTURE_S3_SUBFOLDER = "structures"
+MYPAYMENT_STORES_S3_SUBFOLDER = "stores"
+MYPAYMENT_USERS_S3_SUBFOLDER = "users"
+MYPAYMENT_DEVICES_S3_SUBFOLDER = "devices"
+MYPAYMENT_LOGS_S3_SUBFOLDER = "logs"
+
 
 class WalletType(StrEnum):
     USER = "user"

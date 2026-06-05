@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import HTTPException
 
-from app.core.payment.types_payment import HelloAssoConfigName
+from app.core.checkout.types_checkout import HelloAssoConfigName
 
 
 class InvalidAppStateTypeError(Exception):

@@ -11,8 +11,8 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from app.core.payment.payment_tool import PaymentTool
-from app.core.payment.types_payment import HelloAssoConfigName
+from app.core.checkout.payment_tool import PaymentTool
+from app.core.checkout.types_checkout import HelloAssoConfigName
 from app.core.utils.config import Settings
 from app.types.scheduler import OfflineScheduler, Scheduler
 from app.types.sqlalchemy import SessionLocalType
