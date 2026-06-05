@@ -17,7 +17,7 @@ from app.dependencies import (
     get_payment_tool,
     is_user_allowed_to,
 )
-from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
+from app.modules.raid import coredata_raid, cruds_raid, schemas_raid
 from app.modules.raid.dependencies_raid import (
     ensure_user_is_not_participant_in_edition,
     ensure_user_is_not_volunteer_in_edition,
@@ -117,8 +117,9 @@ async def create_edition(
 ):
     if edition.active:
         await cruds_raid.deactivate_all_editions(db)
-    model_edition = models_raid.RaidEdition(
-        id=uuid.uuid4(),
+    edition_id = uuid.uuid4()
+    edition_schema = schemas_raid.RaidEdition(
+        id=edition_id,
         name=edition.name,
         year=edition.year,
         start_date=edition.start_date,
@@ -127,7 +128,8 @@ async def create_edition(
         active=edition.active,
         inscription_enabled=edition.inscription_enabled,
     )
-    return await cruds_raid.create_edition(model_edition, db)
+    await cruds_raid.create_edition(edition_schema, db)
+    return await cruds_raid.get_edition_by_id(edition_id, db)
 
 
 @module.router.patch(
@@ -230,13 +232,13 @@ async def create_participant(
         raid_start_date=raid_information.raid_start_date,
     )
 
-    db_participant = models_raid.RaidParticipant(
+    participant_create = schemas_raid.RaidParticipantCreate(
         user_id=user.id,
         edition_id=edition.id,
         status=RaidRegistrationStatus.draft,
         is_minor=is_minor,
     )
-    await cruds_raid.create_participant(db_participant, db)
+    await cruds_raid.create_participant(participant_create, db)
     return await get_participant_or_404(user.id, edition.id, db)
 
 
@@ -439,8 +441,9 @@ async def create_team(
     if await cruds_raid.get_team_by_participant_id(user.id, edition.id, db):
         raise HTTPException(status_code=403, detail="You already have a team.")
 
-    db_team = models_raid.RaidTeam(
-        id=str(uuid.uuid4()),
+    team_id = str(uuid.uuid4())
+    team_create = schemas_raid.RaidTeamCreate(
+        id=team_id,
         edition_id=edition.id,
         name=team.name,
         number=None,
@@ -448,8 +451,8 @@ async def create_team(
         second_id=None,
         difficulty=None,
     )
-    await cruds_raid.create_team(db_team, db)
-    return await cruds_raid.get_team_by_id(team_id=db_team.id, db=db)
+    await cruds_raid.create_team(team_create, db)
+    return await cruds_raid.get_team_by_id(team_id=team_id, db=db)
 
 
 @module.router.get(
@@ -602,15 +605,14 @@ async def upload_document(
         ],
     )
 
-    model_document = models_raid.Document(
+    document_schema = schemas_raid.Document(
         id=document_id,
-        edition_id=edition.id,
         name=file.filename or document_id,
         uploaded_at=datetime.now(UTC).date(),
         type=document_type,
         validation=DocumentValidation.pending,
     )
-    await cruds_raid.create_document(model_document, db)
+    await cruds_raid.create_document(document_schema, edition.id, db)
 
     document_key = {
         DocumentType.idCard: "id_card_id",
@@ -752,9 +754,10 @@ async def set_security_file(
             db,
         )
 
-    model_security_file = models_raid.SecurityFile(
-        id=str(uuid.uuid4()),
-        edition_id=edition.id,
+    new_security_file_id = str(uuid.uuid4())
+    security_file_schema = schemas_raid.SecurityFile(
+        id=new_security_file_id,
+        validation=DocumentValidation.pending,
         allergy=security_file.allergy,
         asthma=security_file.asthma,
         intensive_care_unit=security_file.intensive_care_unit,
@@ -770,9 +773,17 @@ async def set_security_file(
         emergency_person_phone=security_file.emergency_person_phone,
         file_id=security_file.file_id,
     )
-    created = await cruds_raid.add_security_file(model_security_file, db)
-    await cruds_raid.assign_security_file(participant_id, edition.id, created.id, db)
-    return created
+    await cruds_raid.add_security_file(security_file_schema, edition.id, db)
+    await cruds_raid.assign_security_file(
+        participant_id,
+        edition.id,
+        new_security_file_id,
+        db,
+    )
+    return await cruds_raid.get_security_file_by_security_id(
+        new_security_file_id,
+        db,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -862,13 +873,14 @@ async def create_invite_token(
     if existing:
         return existing
 
-    invite_token = models_raid.InviteToken(
+    invite_token = schemas_raid.InviteToken(
         id=str(uuid.uuid4()),
         edition_id=edition.id,
         team_id=team_id,
         token=get_random_string(length=10),
     )
-    return await cruds_raid.create_invite_token(invite_token, db)
+    await cruds_raid.create_invite_token(invite_token, db)
+    return await cruds_raid.get_invite_token_by_team_id(team_id, db)
 
 
 @module.router.post(
@@ -1137,8 +1149,7 @@ async def get_payment_url(
     )
     hyperion_error_logger.info(f"RAID: Logging Checkout id {checkout.id}")
     await cruds_raid.create_participant_checkout(
-        models_raid.RaidParticipantCheckout(
-            id=str(uuid.uuid4()),
+        schemas_raid.RaidParticipantCheckout(
             participant_user_id=user.id,
             edition_id=edition.id,
             checkout_id=str(checkout.id),
@@ -1217,7 +1228,7 @@ async def create_volunteer(
         raise HTTPException(status_code=403, detail="You are already a volunteer.")
     await ensure_user_is_not_participant_in_edition(user.id, edition.id, db)
 
-    model_volunteer = models_raid.RaidVolunteer(
+    volunteer_create = schemas_raid.RaidVolunteerCreate(
         user_id=user.id,
         edition_id=edition.id,
         created_at=datetime.now(UTC),
@@ -1234,7 +1245,7 @@ async def create_volunteer(
         is_utility_vehicle_driver=volunteer.is_utility_vehicle_driver,
         is_parcours_helper=volunteer.is_parcours_helper,
     )
-    await cruds_raid.create_volunteer(model_volunteer, db)
+    await cruds_raid.create_volunteer(volunteer_create, db)
     return await get_volunteer_or_404(user.id, edition.id, db)
 
 
