@@ -33,10 +33,10 @@ class Difficulty(str, Enum):  # the difficulty of the raid
 
 
 class Situation(str, Enum):  # the situation of the participant
-    centrale = "centrale"
-    otherSchool = "otherSchool"
-    corporatePartner = "corporatePartner"
-    other = "other"
+    centrale = "centrale"  # student from Centrale Lyon
+    otherSchool = "otherSchool"  # student from another school
+    corporatePartner = "corporatePartner"  # enterprise team
+    other = "other"  # anything else
 
 
 class DocumentValidation(str, Enum):
@@ -44,3 +44,10 @@ class DocumentValidation(str, Enum):
     accepted = "accepted"
     refused = "refused"
     temporary = "temporary"
+
+
+class RaidRegistrationStatus(str, Enum):
+    draft = "draft"
+    submitted = "submitted"
+    validated = "validated"
+    cancelled = "cancelled"

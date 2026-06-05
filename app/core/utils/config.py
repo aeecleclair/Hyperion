@@ -1,3 +1,4 @@
+from datetime import date
 from functools import cached_property
 from pathlib import Path
 from re import Pattern
@@ -98,6 +99,8 @@ class UserDemoFactoryConfig(BaseModel):
     email: str
     password: str | None  # If None, the password will be generated randomly
     groups: list[str] = []  # Groups id to which the user will be added
+    phone: str | None = None
+    birthday: date | None = None
 
 
 class Settings(BaseSettings):
@@ -249,6 +252,7 @@ class Settings(BaseSettings):
     REDIS_HOST: str | None = None
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: str | None = None
+    REDIS_DB: int = 0  # numbered Redis DB; tests use this for per-worker isolation
     REDIS_LIMIT: int = 1000
     REDIS_WINDOW: int = 60
 
@@ -354,14 +358,14 @@ class Settings(BaseSettings):
     # pyproject.toml parameters #
     #############################
 
-    @computed_field  # type: ignore[prop-decorator]
+    @computed_field
     @cached_property
     def HYPERION_VERSION(cls) -> str:
         with Path("pyproject.toml").open("rb") as pyproject_binary:
             pyproject = tomllib.load(pyproject_binary)
         return str(pyproject["project"]["version"])
 
-    @computed_field  # type: ignore[prop-decorator]
+    @computed_field
     @cached_property
     def MINIMAL_TITAN_VERSION_CODE(cls) -> int:
         with Path("pyproject.toml").open("rb") as pyproject_binary:
@@ -379,7 +383,7 @@ class Settings(BaseSettings):
     # The combination of `@property` and `@lru_cache` should be replaced by `@cached_property`
     # See https://docs.python.org/3.8/library/functools.html?highlight=#functools.cached_property
 
-    @computed_field  # type: ignore[prop-decorator] # Current issue with mypy, see https://docs.pydantic.dev/2.0/usage/computed_fields/ and https://github.com/python/mypy/issues/1362
+    @computed_field
     @cached_property
     def RSA_PRIVATE_KEY(cls) -> rsa.RSAPrivateKey:
         # https://cryptography.io/en/latest/hazmat/primitives/asymmetric/serialization/#module-cryptography.hazmat.primitives.serialization
@@ -388,12 +392,12 @@ class Settings(BaseSettings):
             raise InvalidRSAKeyInDotenvError(private_key.__class__.__name__)
         return private_key
 
-    @computed_field  # type: ignore[prop-decorator]
+    @computed_field
     @cached_property
     def RSA_PUBLIC_KEY(cls) -> rsa.RSAPublicKey:
         return cls.RSA_PRIVATE_KEY.public_key()
 
-    @computed_field  # type: ignore[prop-decorator]
+    @computed_field
     @cached_property
     def RSA_PUBLIC_JWK(cls) -> dict[str, list[dict[str, Any]]]:
         # See https://github.com/jpadilla/pyjwt/issues/880
@@ -409,7 +413,7 @@ class Settings(BaseSettings):
 
     # This property parse AUTH_CLIENTS to create a dictionary of auth clients:
     # {"client_id": AuthClientClassInstance}
-    @computed_field  # type: ignore[prop-decorator]
+    @computed_field
     @cached_property
     def KNOWN_AUTH_CLIENTS(cls) -> dict[str, providers.BaseAuthClient]:
         clients = {}
@@ -435,12 +439,12 @@ class Settings(BaseSettings):
             )
         return clients
 
-    @computed_field  # type: ignore[prop-decorator]
+    @computed_field
     @cached_property
     def OIDC_ISSUER(cls) -> str:
         return cls.CLIENT_URL[:-1]
 
-    @computed_field  # type: ignore[prop-decorator]
+    @computed_field
     @cached_property
     def REDIS_URL(cls) -> str | None:
         if cls.REDIS_HOST is not None and cls.REDIS_HOST != "":

@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.payment import cruds_payment, models_payment, schemas_payment
 from app.core.payment.types_payment import (
     NotificationResultContent,
+    PayementNotificationResultContent,
 )
 from app.dependencies import get_db
 from app.module import all_modules
@@ -70,6 +71,7 @@ async def webhook(
     if (
         content.eventType
         == HelloAssoApiV5ModelsApiNotificationsApiNotificationType.PAYMENT
+        and isinstance(content, PayementNotificationResultContent)
     ):
         # We may receive the webhook multiple times, we only want to save a CheckoutPayment
         # in the database the first time

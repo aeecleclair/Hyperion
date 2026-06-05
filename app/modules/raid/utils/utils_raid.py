@@ -1,36 +1,25 @@
 import logging
 import zipfile
-
-# import uuid
 from datetime import UTC, date, datetime
 from pathlib import Path
+from uuid import UUID
 
 import fitz
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.payment import schemas_payment
-from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
-from app.modules.raid.raid_type import Difficulty, Size
-from app.modules.raid.schemas_raid import (
-    RaidParticipantBase,
-    RaidParticipantUpdate,
-)
+from app.modules.raid import coredata_raid, cruds_raid, schemas_raid
+from app.modules.raid.raid_type import Difficulty, Situation, Size
 from app.modules.raid.utils.pdf.conversion_utils import (
-    # date_to_string,
     get_difficulty_label,
-    # get_document_validation_label,
     get_meeting_place_label,
     nullable_number_to_string,
 )
 from app.utils.tools import (
-    # concat_pdf,
-    # delete_file_from_data,
     generate_pdf_from_template,
     get_core_data,
     get_file_path_from_data,
-    # get_file_path_from_data,
-    # save_bytes_as_data,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -41,18 +30,16 @@ class RaidPayementError(ValueError):
         super().__init__(f"RAID participant checkout {checkout_id} not found.")
 
 
-def will_participant_be_minor_on(
-    participant: RaidParticipantUpdate
-    | models_raid.RaidParticipant
-    | RaidParticipantBase,
+def will_birthday_be_minor_on(
+    birthday: date | None,
     raid_start_date: date | None,
 ) -> bool:
     """
-    Determine if the participant will be minor at the RAID dates. If the date is not known, we will use January the first of next year.
+    Determine if a participant will be minor at the RAID dates. If the raid
+    date is not known, fall back to January 1st of next year. If the birthday
+    is unknown, assume they may be minor.
     """
-
-    # If we don't know the participant birthday we may consider they may be minor
-    if participant.birthday is None:
+    if birthday is None:
         return True
 
     if raid_start_date is None:
@@ -62,14 +49,7 @@ def will_participant_be_minor_on(
             day=1,
         )
 
-    return (
-        date(
-            participant.birthday.year + 18,
-            participant.birthday.month,
-            participant.birthday.day,
-        )
-        > raid_start_date
-    )
+    return date(birthday.year + 18, birthday.month, birthday.day) > raid_start_date
 
 
 async def validate_payment(
@@ -86,14 +66,19 @@ async def validate_payment(
     )
     if not participant_checkout:
         raise RaidPayementError(checkout_id)
-    participant_id = participant_checkout.participant_id
+    participant_user_id = participant_checkout.participant_user_id
+    edition_id = participant_checkout.edition_id
     prices = await get_core_data(coredata_raid.RaidPrice, db)
     if (prices.student_price and paid_amount == prices.student_price) or (
         prices.external_price and paid_amount == prices.external_price
     ):
-        await cruds_raid.confirm_payment(participant_id, db)
+        await cruds_raid.confirm_payment(participant_user_id, edition_id, db)
     elif prices.t_shirt_price and paid_amount == prices.t_shirt_price:
-        await cruds_raid.confirm_t_shirt_payment(participant_id, db)
+        await cruds_raid.confirm_t_shirt_payment(
+            participant_user_id,
+            edition_id,
+            db,
+        )
     elif prices.t_shirt_price and (
         (
             prices.student_price
@@ -104,17 +89,26 @@ async def validate_payment(
             and paid_amount == prices.external_price + prices.t_shirt_price
         )
     ):
-        await cruds_raid.confirm_payment(participant_id, db)
-        await cruds_raid.confirm_t_shirt_payment(participant_id, db)
+        await cruds_raid.confirm_payment(participant_user_id, edition_id, db)
+        await cruds_raid.confirm_t_shirt_payment(
+            participant_user_id,
+            edition_id,
+            db,
+        )
     else:
         hyperion_error_logger.error("Invalid payment amount")
 
 
-async def set_team_number(team: models_raid.RaidTeam, db: AsyncSession) -> None:
+async def set_team_number(
+    team: schemas_raid.RaidTeam,
+    edition_id: UUID,
+    db: AsyncSession,
+) -> None:
     if team.difficulty is None:
         return
-    number_of_team = await cruds_raid.get_number_of_team_by_difficulty(
+    max_number = await cruds_raid.get_max_team_number_by_difficulty(
         team.difficulty,
+        edition_id,
         db,
     )
     difficulty_separator = {
@@ -123,27 +117,32 @@ async def set_team_number(team: models_raid.RaidTeam, db: AsyncSession) -> None:
         Difficulty.expert: 200,
     }
     new_team_number = (
-        difficulty_separator[team.difficulty] + 1
-        if number_of_team == 0
-        else number_of_team + 1
+        difficulty_separator[team.difficulty] + 1 if not max_number else max_number + 1
     )
-    updated_team: schemas_raid.RaidTeamUpdate = schemas_raid.RaidTeamUpdate(
-        number=new_team_number,
-    )
+    updated_team = schemas_raid.RaidTeamUpdate(number=new_team_number)
     await cruds_raid.update_team(team.id, updated_team, db)
 
 
+def _participant_pdf_context(participant: schemas_raid.RaidParticipant) -> dict:
+    """Build a template context with identity fields pulled from CoreUser."""
+    ctx = participant.model_dump()
+    if participant.user is not None:
+        ctx["name"] = participant.user.name
+        ctx["firstname"] = participant.user.firstname
+        ctx["email"] = participant.user.email
+        ctx["phone"] = participant.user.phone
+        ctx["birthday"] = participant.user.birthday
+    return ctx
+
+
 async def generate_security_file_pdf(
-    participant: models_raid.RaidParticipant,
+    participant: schemas_raid.RaidParticipant,
     information: coredata_raid.RaidInformation,
     team_number: int | None = None,
 ):
-    """
-    Generate a security file PDF for a participant.
-    The file will be saved in the `raid/security_file` directory with the participant's ID as the filename.
-    """
+    """Generate a security file PDF for a participant."""
     context = {
-        **participant.__dict__,
+        **_participant_pdf_context(participant),
         "president": information.president.__dict__ if information.president else None,
         "rescue": information.rescue.__dict__ if information.rescue else None,
         "security_responsible": information.security_responsible.__dict__
@@ -158,24 +157,26 @@ async def generate_security_file_pdf(
     await generate_pdf_from_template(
         template_name="raid_security_file.html",
         directory="raid/security_file",
-        filename=participant.id,
+        filename=participant.user_id,
         context=context,
     )
 
-    return participant.id
+    return participant.user_id
 
 
 async def generate_recap_file_pdf(
-    team: models_raid.RaidTeam,
+    team: schemas_raid.RaidTeam,
 ):
+    from app.modules.raid.utils.validation_checker import compute_team_progress
+
     context = {
         "team_name": team.name,
         "parcours": get_difficulty_label(team.difficulty),
         "lieu_rdv": get_meeting_place_label(team.meeting_place),
         "numero": nullable_number_to_string(team.number),
-        "inscription": str(int(team.validation_progress)) + " %",
-        "capitaine": team.captain.__dict__,
-        "participant": team.second.__dict__ if team.second else None,
+        "inscription": str(int(compute_team_progress(team))) + " %",
+        "capitaine": _participant_pdf_context(team.captain),
+        "participant": _participant_pdf_context(team.second) if team.second else None,
     }
 
     file_id = team.id
@@ -209,8 +210,9 @@ def scale_rect_to_fit(container, content_width, content_height):
 async def get_all_security_files_zip(
     db: AsyncSession,
     information: coredata_raid.RaidInformation,
+    edition_id: UUID,
 ) -> str:
-    teams = await cruds_raid.get_all_teams(db)
+    teams = await cruds_raid.get_all_teams(edition_id, db)
     hyperion_error_logger.info(
         f"RAID: Generating ZIP for {len(teams)} security files",
     )
@@ -218,14 +220,9 @@ async def get_all_security_files_zip(
     if len(teams) == 0:
         raise HTTPException(status_code=400, detail="No team found.")
 
-    # TODO: delete the previous zip?
-    # TODO: iotemp file?
     Path("data/raid/").mkdir(parents=True, exist_ok=True)
     zip_file_path = f"data/raid/Fiches_Sécurité_{datetime.now(UTC).strftime('%Y-%m-%d_%H_%M_%S')}.zip"
-    with zipfile.ZipFile(
-        zip_file_path,
-        mode="w",
-    ) as archive:
+    with zipfile.ZipFile(zip_file_path, mode="w") as archive:
         for team in teams:
             for participant in [team.captain] + ([team.second] if team.second else []):
                 file_id = await generate_security_file_pdf(
@@ -240,7 +237,7 @@ async def get_all_security_files_zip(
 
                 archive.write(
                     str(src_pdf),
-                    arcname=f"{team.name}_{participant.firstname}_{participant.name}.pdf",
+                    arcname=f"{team.name}_{participant.user.firstname}_{participant.user.name}.pdf",
                 )
 
     return zip_file_path
@@ -249,29 +246,23 @@ async def get_all_security_files_zip(
 async def get_all_team_files_zip(
     db: AsyncSession,
     information: coredata_raid.RaidInformation,
+    edition_id: UUID,
 ) -> str:
-    teams = await cruds_raid.get_all_teams(db)
+    teams = await cruds_raid.get_all_teams(edition_id, db)
     hyperion_error_logger.info(
-        f"RAID: Generating ZIP for {len(teams)} security files",
+        f"RAID: Generating ZIP for {len(teams)} team recap files",
     )
 
     if len(teams) == 0:
         raise HTTPException(status_code=400, detail="No team found.")
 
-    # TODO: delete the previous zip?
-    # TODO: iotemp file?
     Path("data/raid/").mkdir(parents=True, exist_ok=True)
     zip_file_path = (
         f"data/raid/Teams_{datetime.now(UTC).strftime('%Y-%m-%d_%H_%M_%S')}.zip"
     )
-    with zipfile.ZipFile(
-        zip_file_path,
-        mode="w",
-    ) as archive:
+    with zipfile.ZipFile(zip_file_path, mode="w") as archive:
         for team in teams:
-            file_id = await generate_recap_file_pdf(
-                team,
-            )
+            file_id = await generate_recap_file_pdf(team)
             src_pdf = get_file_path_from_data(
                 directory="raid/recap",
                 filename=file_id,
@@ -286,17 +277,18 @@ async def get_all_team_files_zip(
 
 
 async def get_participant(
-    participant_id: str,
+    user_id: str,
+    edition_id: UUID,
     db: AsyncSession,
-) -> models_raid.RaidParticipant:
-    participant = await cruds_raid.get_participant_by_id(participant_id, db)
+) -> schemas_raid.RaidParticipant:
+    participant = await cruds_raid.get_participant_by_user_id(user_id, edition_id, db)
     if not participant:
         raise HTTPException(status_code=404, detail="Participant not found.")
     return participant
 
 
 def calculate_raid_payment(
-    participant: models_raid.RaidParticipant,
+    participant: schemas_raid.RaidParticipant,
     raid_prices: coredata_raid.RaidPrice,
 ):
     if (
@@ -313,8 +305,7 @@ def calculate_raid_payment(
 
     if not participant.payment:
         if (
-            participant.situation
-            and participant.situation.split(" : ")[0] in ["centrale", "otherschool"]
+            participant.situation in (Situation.centrale, Situation.otherSchool)
             and participant.student_card_id is not None
         ):
             price += raid_prices.student_price

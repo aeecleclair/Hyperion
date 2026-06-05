@@ -46,12 +46,14 @@ jobs:
           ruff check --output-format=github
           ruff format --check
 
-      - name: Cache .mypy_cache folder
-        id: mypy_cache
+      - name: Cache .ty_cache folder
+        id: ty_cache
         uses: actions/cache@v4.3.0
         with:
-          path: .mypy_cache
-          key: mypy_cache-${{ github.head_ref }}
+          path: .ty_cache
+          key: ty_cache-${{ github.head_ref }}
 
-      - name: Type checking using mypy
-        run: mypy .
+      - name: Type checking using ty
+        # `uv pip install --system` puts third-party packages in the system
+        # Python; ty needs `--python` to find them since there is no .venv.
+        run: ty check --python "$(which python)"
