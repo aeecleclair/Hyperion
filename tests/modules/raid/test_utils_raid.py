@@ -10,6 +10,7 @@ Covers:
 
 import datetime
 import uuid
+from typing import Any
 from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
@@ -82,7 +83,7 @@ def prices() -> coredata_raid.RaidPrice:
 
 
 def _participant(**kwargs):
-    defaults = {
+    defaults: dict[str, Any] = {
         "user_id": str(uuid4()),
         "edition_id": uuid4(),
         "payment": False,
