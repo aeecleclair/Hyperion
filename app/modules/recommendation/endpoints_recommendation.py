@@ -169,7 +169,7 @@ async def read_recommendation_image(
     if not recommendation:
         raise HTTPException(status_code=404, detail="The recommendation does not exist")
 
-    return get_file_from_data(
+    return await get_file_from_data(
         default_asset="assets/images/default_recommendation.png",
         directory="recommendations",
         filename=str(recommendation_id),

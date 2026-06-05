@@ -1,5 +1,4 @@
-from pathlib import Path
-
+from anyio import Path
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import FileResponse
 
@@ -51,7 +50,7 @@ async def read_privacy(settings: Settings = Depends(get_settings)):
     """
 
     return patch_identity_in_text(
-        Path("assets/privacy.txt").read_text(encoding="utf-8"),
+        await Path("assets/privacy.txt").read_text(encoding="utf-8"),
         settings,
     )
 
@@ -66,7 +65,7 @@ async def read_terms_and_conditions(settings: Settings = Depends(get_settings)):
     """
 
     return patch_identity_in_text(
-        Path("assets/terms-and-conditions.txt").read_text(encoding="utf-8"),
+        await Path("assets/terms-and-conditions.txt").read_text(encoding="utf-8"),
         settings,
     )
 
@@ -80,7 +79,7 @@ async def read_mypayment_tos(settings: Settings = Depends(get_settings)):
     Return MyPayment latest ToS
     """
     return patch_identity_in_text(
-        Path("assets/mypayment-terms-of-service.txt").read_text(encoding="utf-8"),
+        await Path("assets/mypayment-terms-of-service.txt").read_text(encoding="utf-8"),
         settings,
     )
 
@@ -95,7 +94,7 @@ async def read_support(settings: Settings = Depends(get_settings)):
     """
 
     return patch_identity_in_text(
-        Path("assets/support.txt").read_text(encoding="utf-8"),
+        await Path("assets/support.txt").read_text(encoding="utf-8"),
         settings,
     )
 
@@ -109,7 +108,7 @@ async def read_security_txt(settings: Settings = Depends(get_settings)):
     Return Hyperion security.txt file
     """
     return patch_identity_in_text(
-        Path("assets/security.txt").read_text(encoding="utf-8"),
+        await Path("assets/security.txt").read_text(encoding="utf-8"),
         settings,
     )
 
@@ -124,7 +123,7 @@ async def read_wellknown_security_txt(settings: Settings = Depends(get_settings)
     """
 
     return patch_identity_in_text(
-        Path("assets/security.txt").read_text(encoding="utf-8"),
+        await Path("assets/security.txt").read_text(encoding="utf-8"),
         settings,
     )
 
@@ -139,7 +138,7 @@ async def read_robots_txt(settings: Settings = Depends(get_settings)):
     """
 
     return patch_identity_in_text(
-        Path("assets/robots.txt").read_text(encoding="utf-8"),
+        await Path("assets/robots.txt").read_text(encoding="utf-8"),
         settings,
     )
 

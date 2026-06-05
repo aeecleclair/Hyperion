@@ -2256,7 +2256,7 @@ async def download_participant_certificate(
             status_code=404,
             detail="No certificate uploaded for this participant",
         )
-    return get_file_from_data(
+    return await get_file_from_data(
         directory="sport_competition/certificates",
         filename=str(participant.certificate_file_id),
     )
@@ -2669,7 +2669,7 @@ async def withdraw_from_sport(
         db,
     )
     if participant.certificate_file_id is not None:
-        delete_file_from_data(
+        await delete_file_from_data(
             directory="sport_competition/certificates",
             filename=str(participant.certificate_file_id),
         )
@@ -2749,7 +2749,7 @@ async def delete_participant(
         db,
     )
     if participant.certificate_file_id is not None:
-        delete_file_from_data(
+        await delete_file_from_data(
             directory="sport_competition/certificates",
             filename=str(participant.certificate_file_id),
         )
@@ -2794,7 +2794,7 @@ async def delete_participant_certificate_file(
             None,
             db,
         )
-        delete_file_from_data(
+        await delete_file_from_data(
             directory="sport_competition/certificates",
             filename=str(participant.certificate_file_id),
         )

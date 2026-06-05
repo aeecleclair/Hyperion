@@ -1,6 +1,6 @@
 import uuid
-from pathlib import Path
 
+from anyio import Path
 from fastapi import Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -281,10 +281,10 @@ async def recreate_ical_file(
     response_class=FileResponse,
     status_code=200,
 )
-async def get_icalendar_file(db: AsyncSession = Depends(get_db)):
+async def get_icalendar_file():
     """Get the icalendar file corresponding to the event in the database."""
 
-    if Path(ical_file_path).exists():
+    if await Path(ical_file_path).exists():
         return FileResponse(ical_file_path)
 
     raise HTTPException(status_code=404)
