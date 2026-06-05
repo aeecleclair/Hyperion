@@ -9,7 +9,7 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.checkout import schemas_checkout
-from app.core.checkout.payment_tool import CheckoutTool
+from app.core.checkout.checkout_tool import CheckoutTool
 from app.core.checkout.types_checkout import HelloAssoConfigName
 from app.core.checkout.utils_checkout import CHECKOUT_EXPIRATION
 from app.core.mypayment import cruds_mypayment, models_mypayment, schemas_mypayment

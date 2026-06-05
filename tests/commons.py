@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import (
 from app import dependencies
 from app.core.auth import schemas_auth
 from app.core.checkout import cruds_checkout, models_checkout, schemas_checkout
-from app.core.checkout.payment_tool import PaymentTool
+from app.core.checkout.checkout_tool import PaymentTool
 from app.core.checkout.types_checkout import HelloAssoConfig, HelloAssoConfigName
 from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import AccountType, GroupType

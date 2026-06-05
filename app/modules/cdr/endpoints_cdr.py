@@ -15,7 +15,7 @@ from fastapi import (
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.checkout.payment_tool import PaymentTool
+from app.core.checkout.checkout_tool import PaymentTool
 from app.core.checkout.types_checkout import HelloAssoConfigName
 from app.core.groups import cruds_groups, schemas_groups
 from app.core.groups.groups_type import AccountType

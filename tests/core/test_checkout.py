@@ -15,7 +15,7 @@ from pytest_mock import MockerFixture
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.checkout import cruds_checkout, models_checkout, schemas_checkout
-from app.core.checkout.payment_tool import PaymentTool
+from app.core.checkout.checkout_tool import PaymentTool
 from app.core.checkout.types_checkout import HelloAssoConfig, HelloAssoConfigName
 from app.core.schools import schemas_schools
 from app.core.users import schemas_users
@@ -442,7 +442,7 @@ async def test_payment_tool_init_checkout(
         redirect_url=redirect_url,
     )
     mocker.patch(
-        "app.core.checkout.payment_tool.CheckoutApi",
+        "app.core.checkout.checkout_tool.CheckoutApi",
         return_value=mock_checkout_api,
     )
 
@@ -515,7 +515,7 @@ async def test_payment_tool_init_checkout_with_one_failure(
     mock_checkout_api = mocker.MagicMock()
     mock_checkout_api.organizations_organization_slug_checkout_intents_post.side_effect = init_a_checkout_side_effect
     mocker.patch(
-        "app.core.checkout.payment_tool.CheckoutApi",
+        "app.core.checkout.checkout_tool.CheckoutApi",
         return_value=mock_checkout_api,
     )
 
@@ -580,7 +580,7 @@ async def test_payment_tool_init_checkout_fail(
     )
 
     mocker.patch(
-        "app.core.checkout.payment_tool.CheckoutApi",
+        "app.core.checkout.checkout_tool.CheckoutApi",
         return_value=mock_checkout_api,
     )
 

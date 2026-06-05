@@ -2,7 +2,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.checkout.payment_tool import CheckoutTool
+from app.core.checkout.checkout_tool import CheckoutTool
 from app.core.mypayment import (
     cruds_mypayment,
     schemas_mypayment,

@@ -7,7 +7,7 @@ from fastapi import Body, Depends, File, HTTPException, Query, Response, UploadF
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.checkout.payment_tool import PaymentTool
+from app.core.checkout.checkout_tool import PaymentTool
 from app.core.checkout.types_checkout import HelloAssoConfigName
 from app.core.groups.groups_type import AccountType, get_account_types_except_externals
 from app.core.schools import cruds_schools
