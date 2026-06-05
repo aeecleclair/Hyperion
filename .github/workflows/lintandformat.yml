@@ -54,4 +54,6 @@ jobs:
           key: ty_cache-${{ github.head_ref }}
 
       - name: Type checking using ty
-        run: ty check
+        # `uv pip install --system` puts third-party packages in the system
+        # Python; ty needs `--python` to find them since there is no .venv.
+        run: ty check --python "$(which python)"
