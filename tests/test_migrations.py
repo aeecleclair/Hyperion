@@ -17,7 +17,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import Connection
 
 from app.utils.initialization import drop_db_sync
-from tests.commons import override_get_settings
+from tests.commons import get_database_sync_url
 
 pre_test_upgrade_dict: dict[
     str,
@@ -94,20 +94,6 @@ def alembic_engine(alembic_connection: Connection) -> Connection:
     return alembic_connection
 
 
-def _get_migrations_sync_url() -> str:
-    """Migration tests always target PostgreSQL.
-
-    Several migrations use Postgres-only features (ALTER COLUMN TYPE, native
-    enum types, server defaults) that SQLite does not implement, so we ignore
-    ``SQLITE_DB`` here even when the rest of the suite runs on SQLite.
-    """
-    settings = override_get_settings()
-    return (
-        f"postgresql+psycopg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}"
-        f"@{settings.POSTGRES_HOST}/{settings.POSTGRES_DB}"
-    )
-
-
 @pytest.fixture
 def alembic_connection() -> Generator[Connection]:
     """
@@ -117,7 +103,7 @@ def alembic_connection() -> Generator[Connection]:
     """
     # We use `echo=False` to disable SQLAlchemy logging for migrations
     # as errors are easier to see without all SQLAlchemy info
-    SQLALCHEMY_DATABASE_URL_SYNC = _get_migrations_sync_url()
+    SQLALCHEMY_DATABASE_URL_SYNC = get_database_sync_url()
     connectable = create_engine(SQLALCHEMY_DATABASE_URL_SYNC, echo=False)
 
     with connectable.begin() as connection:
