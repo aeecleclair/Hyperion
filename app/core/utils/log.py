@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import uvicorn
+import uvicorn.logging
 
 from app.core.utils.config import Settings
 

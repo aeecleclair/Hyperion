@@ -211,7 +211,10 @@ def upgrade() -> None:
     }
 
     module_awareness = ModuleVisibilityAwareness(
-        roots={group_visibility.root for group_visibility in group_visibilities},
+        # Use list() over a set comprehension to match the schema's `list[str]`
+        # field type; the source `group_visibilities` rows are unique by primary
+        # key so deduplication is unnecessary.
+        roots=[group_visibility.root for group_visibility in group_visibilities],
     )
 
     conn.execute(

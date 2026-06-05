@@ -245,7 +245,8 @@ class DriveGoogleAPI:
             "mimeType": "application/vnd.google-apps.folder",
             "parents": [parent_folder_id],
         }
-        response = self._drive.files().create(body=file_metadata).execute()
+        # googleapiclient builds resource methods dynamically; ty cannot see `.files()`.
+        response = self._drive.files().create(body=file_metadata).execute()  # type: ignore[unresolved-attribute]
         folder_id: GoogleId = response.get("id")
         return folder_id
 
@@ -268,8 +269,9 @@ class DriveGoogleAPI:
             file_path,
             mimetype=mimetype,
         )
+        # googleapiclient builds resource methods dynamically; ty cannot see `.files()`.
         response = (
-            self._drive.files().create(body=file_metadata, media_body=media).execute()
+            self._drive.files().create(body=file_metadata, media_body=media).execute()  # type: ignore[unresolved-attribute]
         )
         uploaded_file_id: GoogleId = response.get("id")
         return uploaded_file_id
@@ -286,8 +288,9 @@ class DriveGoogleAPI:
             file_path,
             mimetype="application/pdf",
         )
+        # googleapiclient builds resource methods dynamically; ty cannot see `.files()`.
         response = (
-            self._drive.files()
+            self._drive.files()  # type: ignore[unresolved-attribute]
             .update(fileId=file_id, body=file_metadata, media_body=media)
             .execute()
         )
@@ -295,4 +298,5 @@ class DriveGoogleAPI:
         return result
 
     def delete_file(self, file_id: GoogleId) -> None:
-        self._drive.files().delete(fileId=file_id).execute()
+        # googleapiclient builds resource methods dynamically; ty cannot see `.files()`.
+        self._drive.files().delete(fileId=file_id).execute()  # type: ignore[unresolved-attribute]

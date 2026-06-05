@@ -167,7 +167,9 @@ class RaidParticipantUpdate(BaseModel):
     address: str | None = None
     bike_size: Size | None = None
     t_shirt_size: Size | None = None
-    situation: Situation | None = None
+    # Accept legacy string values (e.g. "otherschool", "otherschool : MyPrepa");
+    # `_coerce_legacy_situation` normalizes them to a `Situation`.
+    situation: Situation | str | None = None
     other_school: str | None = None
     company: str | None = None
     diet: str | None = None

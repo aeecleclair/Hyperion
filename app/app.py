@@ -649,7 +649,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
     use_route_path_as_operation_ids(app)
 
     app.add_middleware(
-        CORSMiddleware,
+        CORSMiddleware,  # type: ignore[arg-type]  # Starlette typeshed limitation: CORSMiddleware is a valid _MiddlewareFactory but ty cannot prove it.
         allow_origins=settings.CORS_ORIGINS,
         allow_credentials=True,
         allow_methods=["*"],

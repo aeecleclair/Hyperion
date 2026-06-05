@@ -233,7 +233,7 @@ async def get_loans_by_loaner(
             loans.append(
                 schemas_loan.Loan(
                     items_qty=items_qty_ret,
-                    loaner=loaner,
+                    loaner=schemas_loan.Loaner.model_validate(loaner),
                     **loan.__dict__,
                 ),
             )

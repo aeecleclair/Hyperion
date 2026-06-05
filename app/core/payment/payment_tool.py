@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, time
 from typing import TYPE_CHECKING
 
 from authlib.integrations.requests_client import OAuth2Session
@@ -164,23 +164,28 @@ class PaymentTool:
             payer: HelloAssoApiV5ModelsCartsCheckoutPayer | None = None
             if payer_user:
                 payer = HelloAssoApiV5ModelsCartsCheckoutPayer(
-                    firstName=payer_user.firstname,
-                    lastName=payer_user.name,
+                    first_name=payer_user.firstname,
+                    last_name=payer_user.name,
                     email=payer_user.email,
-                    dateOfBirth=payer_user.birthday,
+                    # The SDK expects a `datetime`; CoreUser.birthday is a `date`.
+                    date_of_birth=(
+                        datetime.combine(payer_user.birthday, time.min)
+                        if payer_user.birthday is not None
+                        else None
+                    ),
                 )
 
             checkout_model_id = uuid.uuid4()
             secret = security.generate_token(nbytes=12)
 
             init_checkout_body = HelloAssoApiV5ModelsCartsInitCheckoutBody(
-                total_amount=checkout_amount,
-                initial_amount=checkout_amount,
-                item_name=checkout_name,
-                back_url=redirection_uri,
-                error_url=redirection_uri,
-                return_url=redirection_uri,
-                contains_donation=False,
+                totalAmount=checkout_amount,
+                initialAmount=checkout_amount,
+                itemName=checkout_name,
+                backUrl=redirection_uri,
+                errorUrl=redirection_uri,
+                returnUrl=redirection_uri,
+                containsDonation=False,
                 payer=payer,
                 metadata=schemas_payment.HelloAssoCheckoutMetadata(
                     secret=secret,
@@ -233,6 +238,12 @@ class PaymentTool:
                 )
 
                 await cruds_payment.create_checkout(db=db, checkout=checkout_model)
+
+                if response.redirect_url is None:
+                    hyperion_error_logger.error(
+                        f"Payment: HelloAsso returned no redirect_url for module {module} and name {checkout_name}.",
+                    )
+                    raise MissingHelloAssoCheckoutIdError()  # noqa: TRY301
 
                 return schemas_payment.Checkout(
                     id=checkout_model_id,

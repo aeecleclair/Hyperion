@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import AccountType
 from app.core.permissions.type_permissions import ModulePermissions
-from app.core.users import cruds_users, models_users
+from app.core.users import cruds_users, models_users, schemas_users
 from app.core.users.endpoints_users import read_user
 from app.dependencies import (
     get_db,
@@ -212,7 +212,7 @@ async def get_raffle_stats(
 
     return schemas_raffle.RaffleStats(
         tickets_sold=tickets_sold,
-        amount_raised=amount_raised,
+        amount_raised=int(amount_raised),
     )
 
 
@@ -901,7 +901,11 @@ async def get_cash_by_id(
         # We want to return a balance of 0 but we don't want to add it to the database
         # An admin AMAP has indeed to add a cash to the user the first time
         # TODO: this is a strange behaviour
-        return schemas_raffle.CashComplete(balance=0, user_id=user_id, user=user_db)
+        return schemas_raffle.CashComplete(
+            balance=0,
+            user_id=user_id,
+            user=schemas_users.CoreUserSimple.model_validate(user_db),
+        )
     raise HTTPException(
         status_code=403,
         detail="Users that are not member of the group admin can only access the endpoint for their own user_id.",
