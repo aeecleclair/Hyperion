@@ -156,6 +156,7 @@ def test_team_preview_progress_with_no_participants() -> None:
         edition_id=uuid4(),
         name="T",
         number=None,
+        captain_id="u1",
         captain=schemas_raid.RaidParticipantPreview(
             user_id="u1",
             edition_id=uuid4(),
@@ -179,6 +180,7 @@ def test_team_preview_progress_with_filled_meta_only() -> None:
         edition_id=uuid4(),
         name="T",
         number=42,
+        captain_id="u1",
         captain=schemas_raid.RaidParticipantPreview(
             user_id="u1",
             edition_id=uuid4(),

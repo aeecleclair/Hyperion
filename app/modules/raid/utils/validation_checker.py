@@ -8,7 +8,7 @@ raises a distinct HTTPException so the frontend can i18n cleanly.
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.raid import cruds_raid, models_raid
+from app.modules.raid import cruds_raid, schemas_raid
 from app.modules.raid.raid_type import (
     DocumentValidation,
     RaidRegistrationStatus,
@@ -18,7 +18,7 @@ from app.modules.raid.raid_type import (
 
 
 async def check_participant_validation_consistency(
-    participant: models_raid.RaidParticipant,
+    participant: schemas_raid.RaidParticipant,
     edition_id,
     db: AsyncSession,
 ) -> None:
@@ -33,7 +33,7 @@ async def check_participant_validation_consistency(
 
 
 def _check_edition_scope(
-    participant: models_raid.RaidParticipant,
+    participant: schemas_raid.RaidParticipant,
     edition_id,
 ) -> None:
     if participant.edition_id != edition_id:
@@ -43,7 +43,7 @@ def _check_edition_scope(
         )
 
 
-def _check_attestation_signed(participant: models_raid.RaidParticipant) -> None:
+def _check_attestation_signed(participant: schemas_raid.RaidParticipant) -> None:
     if not participant.attestation_on_honour:
         raise HTTPException(
             status_code=400,
@@ -51,7 +51,7 @@ def _check_attestation_signed(participant: models_raid.RaidParticipant) -> None:
         )
 
 
-def _check_payment_done(participant: models_raid.RaidParticipant) -> None:
+def _check_payment_done(participant: schemas_raid.RaidParticipant) -> None:
     if not participant.payment:
         raise HTTPException(
             status_code=400,
@@ -68,7 +68,7 @@ def _check_payment_done(participant: models_raid.RaidParticipant) -> None:
         )
 
 
-def _check_security_file_complete(participant: models_raid.RaidParticipant) -> None:
+def _check_security_file_complete(participant: schemas_raid.RaidParticipant) -> None:
     security_file = participant.security_file
     if security_file is None:
         raise HTTPException(
@@ -86,7 +86,7 @@ def _check_security_file_complete(participant: models_raid.RaidParticipant) -> N
         )
 
 
-def _check_all_documents_accepted(participant: models_raid.RaidParticipant) -> None:
+def _check_all_documents_accepted(participant: schemas_raid.RaidParticipant) -> None:
     _check_document_accepted(participant.id_card, "id card")
     _check_document_accepted(participant.medical_certificate, "medical certificate")
     _check_document_accepted(participant.raid_rules, "raid rules")
@@ -100,7 +100,7 @@ def _check_all_documents_accepted(participant: models_raid.RaidParticipant) -> N
 
 
 def _check_document_accepted(
-    document: models_raid.Document | None,
+    document: schemas_raid.Document | None,
     label: str,
 ) -> None:
     if document is None:
@@ -116,7 +116,7 @@ def _check_document_accepted(
 
 
 async def _check_team_complete(
-    participant: models_raid.RaidParticipant,
+    participant: schemas_raid.RaidParticipant,
     db: AsyncSession,
 ) -> None:
     team = await cruds_raid.get_team_by_participant_id(
@@ -129,7 +129,7 @@ async def _check_team_complete(
             status_code=400,
             detail="Participant is not in a team",
         )
-    if team.second_id is None:
+    if team.second is None:
         raise HTTPException(
             status_code=400,
             detail="Team is missing a second member",
@@ -147,7 +147,7 @@ async def _check_team_complete(
 
 
 async def check_volunteer_validation_consistency(
-    volunteer: models_raid.RaidVolunteer,
+    volunteer: schemas_raid.RaidVolunteer,
     edition_id,
     db: AsyncSession,
 ) -> None:
@@ -176,7 +176,7 @@ async def check_volunteer_validation_consistency(
 
 
 def compute_participant_progress(
-    participant: models_raid.RaidParticipant,
+    participant: schemas_raid.RaidParticipant,
 ) -> float:
     """Pure port of the former RaidParticipant.validation_progress @property.
 
@@ -235,7 +235,7 @@ def compute_participant_progress(
     return (number_validated / number_total) * 100
 
 
-def compute_team_progress(team: models_raid.RaidTeam) -> float:
+def compute_team_progress(team: schemas_raid.RaidTeam) -> float:
     """Pure port of the former RaidTeam.validation_progress @property."""
     number_validated = 0
     number_total = 2
@@ -249,7 +249,7 @@ def compute_team_progress(team: models_raid.RaidTeam) -> float:
     ) * 0.45
 
 
-def count_total_required_documents(participant: models_raid.RaidParticipant) -> int:
+def count_total_required_documents(participant: schemas_raid.RaidParticipant) -> int:
     number_total = 3
     if participant.situation in (Situation.centrale, Situation.otherSchool):
         number_total += 1
@@ -258,7 +258,7 @@ def count_total_required_documents(participant: models_raid.RaidParticipant) -> 
     return number_total
 
 
-def count_accepted_documents(participant: models_raid.RaidParticipant) -> int:
+def count_accepted_documents(participant: schemas_raid.RaidParticipant) -> int:
     number_validated = 0
     if (
         participant.situation in (Situation.centrale, Situation.otherSchool)

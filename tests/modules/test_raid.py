@@ -19,7 +19,7 @@ from sqlalchemy import update
 from app.core.groups import models_groups
 from app.core.groups.groups_type import AccountType
 from app.core.users import cruds_users, models_users, schemas_users
-from app.modules.raid import coredata_raid, cruds_raid, models_raid
+from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
 from app.modules.raid.endpoints_raid import RaidPermissions
 from app.modules.raid.raid_type import (
     Difficulty,
@@ -910,7 +910,7 @@ async def test_volunteer_crud_roundtrip() -> None:
     await _set_user_identity(user.id, "+33600000001", datetime.date(1998, 1, 1))
 
     async with get_TestingSessionLocal()() as db:
-        v = models_raid.RaidVolunteer(
+        v = schemas_raid.RaidVolunteerCreate(
             user_id=user.id,
             edition_id=active_edition.id,
             created_at=datetime.datetime.now(tz=datetime.UTC),
@@ -952,7 +952,7 @@ async def test_volunteer_crud_roundtrip() -> None:
 @pytest.mark.asyncio
 async def test_edition_crud_create_read_delete() -> None:
     async with get_TestingSessionLocal()() as db:
-        new_edition = models_raid.RaidEdition(
+        new_edition = schemas_raid.RaidEdition(
             id=uuid.uuid4(),
             year=2019,
             name="Legacy",
