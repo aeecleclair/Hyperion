@@ -42,11 +42,7 @@ async def webhook(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    try:
-        body_json = await request.json()
-    except Exception:
-        hyperion_error_logger.exception("Payment: could not fetch the webhook body")
-        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+    body_json = await request.json()
     try:
         # We validate the body of the request ourself
         # to prevent FastAPI from returning a 422 error to HelloAsso
