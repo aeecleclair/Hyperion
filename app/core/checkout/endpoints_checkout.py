@@ -16,11 +16,11 @@ from app.dependencies import get_db
 from app.module import all_modules
 from app.types.module import CoreModule
 
-router = APIRouter(tags=["Payments"])
+router = APIRouter(tags=["Checkout"])
 
 core_module = CoreModule(
-    root="payment",
-    tag="Payments",
+    root="checkout",
+    tag="Checkout",
     router=router,
     factory=None,
 )
@@ -31,11 +31,21 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 @router.post(
     "/payment/helloasso/webhook",
     status_code=204,
+    deprecated=True,
+    description="This endpoint is deprecated and will be removed in a future version. Please use /checkout/helloasso/webhook instead.",
+)
+@router.post(
+    "/checkout/helloasso/webhook",
+    status_code=204,
 )
 async def webhook(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
+    try:
+        body_json = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
     try:
         # We validate the body of the request ourself
         # to prevent FastAPI from returning a 422 error to HelloAsso
@@ -44,7 +54,7 @@ async def webhook(
             NotificationResultContent,
         )
         content = type_adapter.validate_python(
-            await request.json(),
+            body_json,
         )
         if content.metadata:
             checkout_metadata = (
@@ -56,7 +66,7 @@ async def webhook(
             checkout_metadata = None
     except ValidationError:
         hyperion_error_logger.exception(
-            f"Payment: could not validate the webhook body: {await request.json()}, failed",
+            f"Payment: could not validate the webhook body: {body_json}, failed",
         )
         raise HTTPException(
             status_code=400,

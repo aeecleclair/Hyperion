@@ -1489,7 +1489,7 @@ async def test_pay(client: TestClient):
     assert response.json()["url"] == "https://some.url.fr/checkout"
 
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "eventType": "Payment",
             "data": {"amount": 800, "id": 123},

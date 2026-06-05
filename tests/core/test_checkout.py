@@ -94,7 +94,7 @@ async def init_objects() -> None:
 
 def test_webhook_with_invalid_body(client: TestClient) -> None:
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "invalid": "body",
         },
@@ -105,7 +105,7 @@ def test_webhook_with_invalid_body(client: TestClient) -> None:
 
 def test_webhook_order(client: TestClient) -> None:
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "eventType": "Order",
             "data": {},
@@ -126,7 +126,7 @@ def test_webhook_payment_for_already_received_payment(
     )
 
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "eventType": "Payment",
             "data": {
@@ -154,7 +154,7 @@ def test_webhook_payment_without_metadata(
     """
 
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "eventType": "Payment",
             "data": {
@@ -175,7 +175,7 @@ def test_webhook_payment_with_non_existing_checkout(
     """
 
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "eventType": "Payment",
             "data": {
@@ -204,7 +204,7 @@ def test_webhook_payment_with_invalid_helloasso_secret(
     """
 
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "eventType": "Payment",
             "data": {
@@ -228,7 +228,7 @@ async def test_webhook_payment(
     # We will simulate a first payment of 0,7 € then a payment of 0,3 €
 
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "eventType": "Payment",
             "data": {
@@ -254,7 +254,7 @@ async def test_webhook_payment(
         assert checkout_model.payments[0].paid_amount == 70
 
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "eventType": "Payment",
             "data": {
@@ -314,7 +314,7 @@ async def test_webhook_payment_callback(
     )
 
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "eventType": "Payment",
             "data": {
@@ -361,7 +361,7 @@ async def test_webhook_payment_callback_fail(
     )
 
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "eventType": "Payment",
             "data": {

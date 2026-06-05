@@ -2341,7 +2341,7 @@ def test_hello_asso_transfer(
     assert response.json()["url"] == "https://some.url.fr/checkout"
 
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "eventType": "Payment",
             "data": {"amount": 1000, "id": 123},
