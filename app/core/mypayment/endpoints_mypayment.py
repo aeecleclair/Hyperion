@@ -1509,7 +1509,7 @@ async def get_user_tos(
     return schemas_mypayment.TOSSignatureResponse(
         accepted_tos_version=existing_user_payment.accepted_tos_version,
         latest_tos_version=LATEST_TOS,
-        tos_content=patch_identity_in_text(
+        tos_content=await patch_payment_identity_in_text(
             await Path("assets/mypayment-terms-of-service.txt").read_text("utf-8"),
             settings,
             user,
