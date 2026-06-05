@@ -260,7 +260,7 @@ async def test_full_participant_checker_passes_for_valid_data() -> None:
     from app.modules.raid import cruds_raid
 
     original = cruds_raid.get_team_by_participant_id
-    cruds_raid.get_team_by_participant_id = AsyncMock(return_value=team)
+    cruds_raid.get_team_by_participant_id = AsyncMock(return_value=team)  # type: ignore[assignment]
     try:
         await validation_checker.check_participant_validation_consistency(
             p,
@@ -287,7 +287,7 @@ async def test_full_participant_checker_fails_when_team_incomplete() -> None:
     from app.modules.raid import cruds_raid
 
     original = cruds_raid.get_team_by_participant_id
-    cruds_raid.get_team_by_participant_id = AsyncMock(return_value=team_no_second)
+    cruds_raid.get_team_by_participant_id = AsyncMock(return_value=team_no_second)  # type: ignore[assignment]
     try:
         with pytest.raises(HTTPException) as exc_info:
             await validation_checker.check_participant_validation_consistency(
@@ -310,7 +310,7 @@ async def test_full_participant_checker_fails_when_no_team() -> None:
     from app.modules.raid import cruds_raid
 
     original = cruds_raid.get_team_by_participant_id
-    cruds_raid.get_team_by_participant_id = AsyncMock(return_value=None)
+    cruds_raid.get_team_by_participant_id = AsyncMock(return_value=None)  # type: ignore[assignment]
     try:
         with pytest.raises(HTTPException) as exc_info:
             await validation_checker.check_participant_validation_consistency(
