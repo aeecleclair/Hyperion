@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from app.core.checkout.checkout_tool import PaymentTool
+from app.core.checkout.checkout_tool import CheckoutTool
 from app.core.checkout.types_checkout import HelloAssoConfigName
 from app.core.utils.config import Settings
 from app.types.scheduler import OfflineScheduler, Scheduler
@@ -34,7 +34,7 @@ class GlobalState(TypedDict):
     scheduler: Scheduler
     ws_manager: WebsocketConnectionManager
     notification_manager: NotificationManager
-    payment_tools: dict[HelloAssoConfigName, PaymentTool]
+    checkout_tools: dict[HelloAssoConfigName, CheckoutTool]
     mail_templates: calypsso.MailTemplates
 
 
@@ -147,19 +147,20 @@ async def disconnect_websocket_connection_manager(
     await ws_manager.disconnect_broadcaster()
 
 
-def init_payment_tools(
+def init_checkout_tools(
     settings: Settings,
     hyperion_error_logger: logging.Logger,
-) -> dict[HelloAssoConfigName, PaymentTool]:
+) -> dict[HelloAssoConfigName, CheckoutTool]:
     if settings.HELLOASSO_API_BASE is None:
         hyperion_error_logger.warning(
             "HelloAsso API base URL is not set in settings, payment won't be available",
         )
         return {}
 
-    payment_tools: dict[HelloAssoConfigName, PaymentTool] = {}
+    payment_tools: dict[HelloAssoConfigName, CheckoutTool] = {}
     for helloasso_config_name in settings.HELLOASSO_CONFIGURATIONS:
-        payment_tools[helloasso_config_name] = PaymentTool(
+        payment_tools[helloasso_config_name] = CheckoutTool(
+            name=helloasso_config_name,
             config=settings.HELLOASSO_CONFIGURATIONS[helloasso_config_name],
             helloasso_api_base=settings.HELLOASSO_API_BASE,
         )

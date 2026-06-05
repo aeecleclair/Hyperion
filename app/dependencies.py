@@ -22,9 +22,10 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.core.auth import schemas_auth
-from app.core.checkout.checkout_tool import PaymentTool
+from app.core.checkout.checkout_tool import CheckoutTool
 from app.core.checkout.types_checkout import HelloAssoConfigName
 from app.core.groups.groups_type import AccountType, GroupType, get_ecl_account_types
+from app.core.mypayment.mypayment_tool import MyPaymentTool
 from app.core.permissions import cruds_permissions
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users, models_users
@@ -45,9 +46,9 @@ from app.utils.state import (
     disconnect_redis_client,
     disconnect_scheduler,
     disconnect_websocket_connection_manager,
+    init_checkout_tools,
     init_engine,
     init_mail_templates,
-    init_payment_tools,
     init_redis_client,
     init_scheduler,
     init_SessionLocal,
@@ -107,7 +108,7 @@ async def init_state(
 
     notification_manager = NotificationManager(settings=settings)
 
-    payment_tools = init_payment_tools(
+    checkout_tools = init_checkout_tools(
         settings=settings,
         hyperion_error_logger=hyperion_error_logger,
     )
@@ -121,7 +122,7 @@ async def init_state(
         scheduler=scheduler,
         ws_manager=ws_manager,
         notification_manager=notification_manager,
-        payment_tools=payment_tools,
+        checkout_tools=checkout_tools,
         mail_templates=mail_templates,
     )
 
@@ -273,20 +274,40 @@ def get_notification_tool(
 
 
 @lru_cache
-def get_payment_tool(
+def get_checkout_tool(
     name: HelloAssoConfigName,
-) -> Callable[[], PaymentTool]:
-    def get_payment_tool() -> PaymentTool:
-        payment_tools = GLOBAL_STATE["payment_tools"]
-        if name not in payment_tools:
+) -> Callable[[], CheckoutTool]:
+    def get_payment_tool() -> CheckoutTool:
+        checkout_tools = GLOBAL_STATE["checkout_tools"]
+        if name not in checkout_tools:
             hyperion_error_logger.warning(
                 f"HelloAsso API credentials are not set for {name.value}, payment won't be available",
             )
             raise PaymentToolCredentialsNotSetException
 
-        return payment_tools[name]
+        return checkout_tools[name]
 
     return get_payment_tool
+
+
+def get_mypayment_tool(
+    db: AsyncSession = Depends(get_db),
+    checkout_tool: CheckoutTool = Depends(
+        get_checkout_tool(name=HelloAssoConfigName.MYPAYMENT),
+    ),
+    notification_tool: NotificationTool = Depends(get_notification_tool),
+    settings: Settings = Depends(get_settings),
+) -> MyPaymentTool:
+    """
+    Dependency that returns a MyPaymentTool, allowing to interact with the MyPayment core module.
+    """
+
+    return MyPaymentTool(
+        db=db,
+        checkout_tool=checkout_tool,
+        notification_tool=notification_tool,
+        settings=settings,
+    )
 
 
 def get_mail_templates() -> calypsso.MailTemplates:
