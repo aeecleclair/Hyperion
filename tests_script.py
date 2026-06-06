@@ -101,11 +101,9 @@ def get_other_tests_patterns(changed_files: list[str]) -> list[str]:
     return patterns
 
 
-def run_tests(modules, changed_files, coverage=True, run_all=False):
+def run_tests(modules, changed_files, nb_workers=8, coverage=True, run_all=False):
     """Run tests based on changed modules."""
-    base_cmd = [
-        "pytest",
-    ]
+    base_cmd = ["pytest", f"-n{nb_workers}"]
 
     if run_all:
         logger.info("Running all tests.")
@@ -154,10 +152,14 @@ if __name__ == "__main__":
     # If so, we run tests only for those modules
     if scope_only:
         logger.info("Changes are module-scoped only.")
+
+        # Detect the number of modules to choose a correct number of workers for pytest-xdist
+        n = min(len(changed_files), 8)  # Limit to 8 workers
+
         modules = detect_modules(changed_files)
-        run_tests(modules, changed_files, coverage=coverage)
+        run_tests(modules, changed_files, nb_workers=n, coverage=coverage)
     # Else
     else:
         logger.info("Changes affect broader scope, running all tests.")
         modules = []
-        run_tests(modules, changed_files, coverage=coverage, run_all=True)
+        run_tests(modules, changed_files, nb_workers=8, coverage=coverage, run_all=True)
