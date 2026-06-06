@@ -680,7 +680,7 @@ async def create_category(
 ) -> None:
     """Create a new category."""
     db.add(
-        models_ticketing.TicketingCategory(**category.model_dump()),
+        models_ticketing.TicketingCategory(**category.model_dump(), used_quota=0),
     )
     await db.flush()
 
