@@ -357,7 +357,8 @@ async def update_session(
 ) -> None:
     """Update an existing session."""
     used_quota = await cruds_ticketing.get_session_used_quota(
-        db=db, session_id=session_id,
+        db=db,
+        session_id=session_id,
     )
     if used_quota is None:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -388,7 +389,8 @@ async def delete_session(
 ) -> None:
     """Delete an existing session."""
     used_quota = await cruds_ticketing.get_session_used_quota(
-        db=db, session_id=session_id,
+        db=db,
+        session_id=session_id,
     )
     if used_quota is None:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -552,7 +554,8 @@ async def update_category(
 ) -> None:
     """Update an existing category."""
     used_quota = await cruds_ticketing.get_category_used_quota(
-        db=db, category_id=category_id,
+        db=db,
+        category_id=category_id,
     )
     if used_quota is None:
         raise HTTPException(status_code=404, detail="Category not found")
@@ -583,7 +586,8 @@ async def delete_category(
 ) -> None:
     """Delete an existing category."""
     used_quota = await cruds_ticketing.get_category_used_quota(
-        db=db, category_id=category_id,
+        db=db,
+        category_id=category_id,
     )
     if used_quota is None:
         raise HTTPException(status_code=404, detail="Category not found")
