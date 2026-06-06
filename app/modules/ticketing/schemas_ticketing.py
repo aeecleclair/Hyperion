@@ -33,7 +33,6 @@ class EventBase(BaseModel):
 class EventSimple(EventBase):
     creator_id: str
     id: UUID
-    used_quota: int
     disabled: bool
 
     model_config = ConfigDict(from_attributes=True)
@@ -66,7 +65,6 @@ class SessionBase(BaseModel):
 
 class SessionSimple(SessionBase):
     id: UUID
-    used_quota: int
     disabled: bool
 
     model_config = ConfigDict(from_attributes=True)
@@ -100,7 +98,6 @@ class CategoryCreate(CategoryBase):
 
 class CategorySimple(CategoryBase):
     id: UUID
-    used_quota: int
     disabled: bool
 
     model_config = ConfigDict(from_attributes=True)

@@ -165,7 +165,6 @@ async def create_event(
         **event.model_dump(),
         id=uuid4(),
         creator_id=user.id,
-        used_quota=0,
         disabled=False,
     )
     await cruds_ticketing.create_event(event=event, db=db)
@@ -187,15 +186,16 @@ async def update_event(
     event_id: UUID,
     event_update: schemas_ticketing.EventUpdate,
     db: AsyncSession = Depends(get_db),
+    redis: Redis | None = Depends(get_redis_client),
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([TicketingPermissions.manage_events]),
     ),
 ) -> None:
     """Update an existing event."""
-    stored = await cruds_ticketing.get_event_by_id(event_id=event_id, db=db)
-    if stored is None:
+    used_quota = await cruds_ticketing.get_event_used_quota(db=db, event_id=event_id)
+    if used_quota is None:
         raise HTTPException(status_code=404, detail="Event not found")
-    if event_update.quota is not None and stored.used_quota > event_update.quota:
+    if event_update.quota is not None and used_quota > event_update.quota:
         raise HTTPException(
             status_code=400,
             detail="Cannot set quota less than used quota",
@@ -221,10 +221,10 @@ async def delete_event(
     ),
 ) -> None:
     """Delete an existing event."""
-    stored = await cruds_ticketing.get_event_by_id(event_id=event_id, db=db)
-    if stored is None:
+    used_quota = await cruds_ticketing.get_event_used_quota(db=db, event_id=event_id)
+    if used_quota is None:
         raise HTTPException(status_code=404, detail="Event not found")
-    if stored.used_quota > 0:
+    if used_quota > 0:
         raise HTTPException(
             status_code=400,
             detail="Cannot delete an event with used quota",
@@ -311,7 +311,6 @@ async def create_session(
     session_simple = schemas_ticketing.SessionSimple(
         **session.model_dump(),
         id=uuid4(),
-        used_quota=0,
         disabled=False,
     )
     # Verify that the event exists before
@@ -357,10 +356,12 @@ async def update_session(
     ),
 ) -> None:
     """Update an existing session."""
-    stored = await cruds_ticketing.get_session_by_id(session_id=session_id, db=db)
-    if stored is None:
+    used_quota = await cruds_ticketing.get_session_used_quota(
+        db=db, session_id=session_id
+    )
+    if used_quota is None:
         raise HTTPException(status_code=404, detail="Session not found")
-    if session_update.quota is not None and stored.used_quota > session_update.quota:
+    if session_update.quota is not None and used_quota > session_update.quota:
         raise HTTPException(
             status_code=400,
             detail="Cannot set quota less than used quota",
@@ -386,10 +387,12 @@ async def delete_session(
     ),
 ) -> None:
     """Delete an existing session."""
-    stored = await cruds_ticketing.get_session_by_id(session_id=session_id, db=db)
-    if stored is None:
+    used_quota = await cruds_ticketing.get_session_used_quota(
+        db=db, session_id=session_id
+    )
+    if used_quota is None:
         raise HTTPException(status_code=404, detail="Session not found")
-    if stored.used_quota > 0:
+    if used_quota > 0:
         raise HTTPException(
             status_code=400,
             detail="Cannot delete a session with used quota",
@@ -526,7 +529,6 @@ async def create_category(
     category_simple = schemas_ticketing.CategorySimple(
         **category.model_dump(),
         id=uuid4(),
-        used_quota=0,
         disabled=False,
     )
     await cruds_ticketing.create_category(category=category_simple, db=db)
@@ -543,15 +545,18 @@ async def update_category(
     category_id: UUID,
     category_update: schemas_ticketing.CategoryUpdate,
     db: AsyncSession = Depends(get_db),
+    redis: Redis | None = Depends(get_redis_client),
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([TicketingPermissions.manage_events]),
     ),
 ) -> None:
     """Update an existing category."""
-    stored = await cruds_ticketing.get_category_by_id(category_id=category_id, db=db)
-    if stored is None:
+    used_quota = await cruds_ticketing.get_category_used_quota(
+        db=db, category_id=category_id
+    )
+    if used_quota is None:
         raise HTTPException(status_code=404, detail="Category not found")
-    if category_update.quota is not None and stored.used_quota > category_update.quota:
+    if category_update.quota is not None and used_quota > category_update.quota:
         raise HTTPException(
             status_code=400,
             detail="Cannot set quota less than used quota",
@@ -577,10 +582,12 @@ async def delete_category(
     ),
 ) -> None:
     """Delete an existing category."""
-    stored = await cruds_ticketing.get_category_by_id(category_id=category_id, db=db)
-    if stored is None:
+    used_quota = await cruds_ticketing.get_category_used_quota(
+        db=db, category_id=category_id
+    )
+    if used_quota is None:
         raise HTTPException(status_code=404, detail="Category not found")
-    if stored.used_quota > 0:
+    if used_quota > 0:
         raise HTTPException(
             status_code=400,
             detail="Cannot delete a category with used quota",
