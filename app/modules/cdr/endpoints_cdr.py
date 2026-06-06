@@ -15,19 +15,19 @@ from fastapi import (
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.checkout.checkout_tool import CheckoutTool
+from app.core.checkout.types_checkout import HelloAssoConfigName
 from app.core.groups import cruds_groups, schemas_groups
 from app.core.groups.groups_type import AccountType
 from app.core.memberships import cruds_memberships, schemas_memberships
-from app.core.payment.payment_tool import PaymentTool
-from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users, models_users, schemas_users
 from app.core.users.cruds_users import get_user_by_id, get_users
 from app.core.utils.config import Settings
 from app.dependencies import (
+    get_checkout_tool,
     get_db,
     get_mail_templates,
-    get_payment_tool,
     get_settings,
     get_unsafe_db,
     get_websocket_connection_manager,
@@ -71,7 +71,7 @@ class CdrPermissions(ModulePermissions):
 module = Module(
     root="cdr",
     tag="Cdr",
-    payment_callback=validate_payment,
+    checkout_callback=validate_payment,
     default_allowed_account_types=list(AccountType),
     factory=None,
     permissions=CdrPermissions,
@@ -2761,7 +2761,7 @@ async def get_payment_url(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
     settings: Settings = Depends(get_settings),
-    payment_tool: PaymentTool = Depends(get_payment_tool(HelloAssoConfigName.CDR)),
+    payment_tool: CheckoutTool = Depends(get_checkout_tool(HelloAssoConfigName.CDR)),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """

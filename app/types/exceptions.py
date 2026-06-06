@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import HTTPException
 
-from app.core.payment.types_payment import HelloAssoConfigName
+from app.core.checkout.types_checkout import HelloAssoConfigName
 
 
 class InvalidAppStateTypeError(Exception):
@@ -83,7 +83,7 @@ class PaymentToolCredentialsNotSetException(Exception):
 
 class UnsetRedirectionUriError(Exception):
     def __init__(self):
-        super().__init__("No redirection URI set in the PaymentTool configuration.")
+        super().__init__("No redirection URI set in the CheckoutTool configuration.")
 
 
 class FileNameIsNotAnUUIDError(Exception):

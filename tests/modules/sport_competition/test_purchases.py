@@ -5,8 +5,8 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
+from app.core.checkout import models_checkout
 from app.core.groups import models_groups
-from app.core.payment import models_payment
 from app.core.schools import models_schools
 from app.core.schools.schools_type import SchoolType
 from app.core.users import models_users
@@ -538,7 +538,7 @@ async def setup():
         created_at=datetime.now(UTC),
     )
     await add_object_to_db(payment)
-    base_checkout = models_payment.Checkout(
+    base_checkout = models_checkout.Checkout(
         id=uuid4(),
         module="competition",
         name="Competition Checkout",
@@ -1489,7 +1489,7 @@ async def test_pay(client: TestClient):
     assert response.json()["url"] == "https://some.url.fr/checkout"
 
     response = client.post(
-        "/payment/helloasso/webhook",
+        "/checkout/helloasso/webhook",
         json={
             "eventType": "Payment",
             "data": {"amount": 800, "id": 123},

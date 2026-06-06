@@ -16,8 +16,8 @@ from pydantic_settings import (
     YamlConfigSettingsSource,
 )
 
+from app.core.checkout.types_checkout import HelloAssoConfig, HelloAssoConfigName
 from app.core.core_endpoints.schemas_core import MainActivationForm
-from app.core.payment.types_payment import HelloAssoConfig, HelloAssoConfigName
 from app.types.exceptions import (
     DotenvInvalidAuthClientNameInError,
     DotenvInvalidVariableError,

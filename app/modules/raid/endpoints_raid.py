@@ -7,14 +7,14 @@ from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.checkout.checkout_tool import CheckoutTool
+from app.core.checkout.types_checkout import HelloAssoConfigName
 from app.core.groups.groups_type import AccountType
-from app.core.payment.payment_tool import PaymentTool
-from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users, schemas_users
 from app.dependencies import (
+    get_checkout_tool,
     get_db,
-    get_payment_tool,
     is_user_allowed_to,
 )
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
@@ -50,7 +50,7 @@ class RaidPermissions(ModulePermissions):
 module = Module(
     root="raid",
     tag="Raid",
-    payment_callback=validate_payment,
+    checkout_callback=validate_payment,
     default_allowed_account_types=list(AccountType),
     factory=None,
     permissions=RaidPermissions,
@@ -949,7 +949,7 @@ async def get_payment_url(
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
-    payment_tool: PaymentTool = Depends(get_payment_tool(HelloAssoConfigName.RAID)),
+    payment_tool: CheckoutTool = Depends(get_checkout_tool(HelloAssoConfigName.RAID)),
 ):
     """
     Get payment url

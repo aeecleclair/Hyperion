@@ -1,11 +1,12 @@
 from collections.abc import Awaitable, Callable
+from uuid import UUID
 
 from fastapi import APIRouter
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.checkout import schemas_checkout
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification.schemas_notification import Topic
-from app.core.payment import schemas_payment
 from app.core.permissions.type_permissions import ModulePermissions
 from app.types.factory import Factory
 
@@ -17,8 +18,13 @@ class CoreModule:
         tag: str,
         factory: Factory | None,
         router: APIRouter | None = None,
-        payment_callback: Callable[
-            [schemas_payment.CheckoutPayment, AsyncSession],
+        checkout_callback: Callable[
+            [schemas_checkout.CheckoutPayment, AsyncSession],
+            Awaitable[None],
+        ]
+        | None = None,
+        mypayment_callback: Callable[
+            [UUID, AsyncSession],
             Awaitable[None],
         ]
         | None = None,
@@ -38,10 +44,13 @@ class CoreModule:
         """
         self.root = root
         self.router = router or APIRouter(tags=[tag])
-        self.payment_callback: (
-            Callable[[schemas_payment.CheckoutPayment, AsyncSession], Awaitable[None]]
+        self.checkout_callback: (
+            Callable[[schemas_checkout.CheckoutPayment, AsyncSession], Awaitable[None]]
             | None
-        ) = payment_callback
+        ) = checkout_callback
+        self.mypayment_callback: (
+            Callable[[UUID, AsyncSession], Awaitable[None]] | None
+        ) = mypayment_callback
         self.registred_topics = registred_topics
         self.factory = factory
         self.permissions = permissions
@@ -56,8 +65,13 @@ class Module(CoreModule):
         default_allowed_groups_ids: list[GroupType] | None = None,
         default_allowed_account_types: list[AccountType] | None = None,
         router: APIRouter | None = None,
-        payment_callback: Callable[
-            [schemas_payment.CheckoutPayment, AsyncSession],
+        checkout_callback: Callable[
+            [schemas_checkout.CheckoutPayment, AsyncSession],
+            Awaitable[None],
+        ]
+        | None = None,
+        mypayment_callback: Callable[
+            [UUID, AsyncSession],
             Awaitable[None],
         ]
         | None = None,
@@ -81,10 +95,13 @@ class Module(CoreModule):
         self.default_allowed_groups_ids = default_allowed_groups_ids
         self.default_allowed_account_types = default_allowed_account_types
         self.router = router or APIRouter(tags=[tag])
-        self.payment_callback: (
-            Callable[[schemas_payment.CheckoutPayment, AsyncSession], Awaitable[None]]
+        self.checkout_callback: (
+            Callable[[schemas_checkout.CheckoutPayment, AsyncSession], Awaitable[None]]
             | None
-        ) = payment_callback
+        ) = checkout_callback
+        self.mypayment_callback: (
+            Callable[[UUID, AsyncSession], Awaitable[None]] | None
+        ) = mypayment_callback
         self.registred_topics = registred_topics
         self.factory = factory
         self.permissions = permissions

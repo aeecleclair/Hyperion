@@ -17,8 +17,8 @@ from helloasso_python.models.hello_asso_api_v5_models_carts_init_checkout_body i
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.payment import cruds_payment, models_payment, schemas_payment
-from app.core.payment.types_payment import HelloAssoConfig
+from app.core.checkout import cruds_checkout, models_checkout, schemas_checkout
+from app.core.checkout.types_checkout import HelloAssoConfig, HelloAssoConfigName
 from app.core.users import schemas_users
 from app.core.utils import security
 from app.types.exceptions import (
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
-class PaymentTool:
+class CheckoutTool:
     _access_token: str | None = None
     _refresh_token: str | None = None
     _access_token_expiry: int | None = None
@@ -48,9 +48,11 @@ class PaymentTool:
 
     def __init__(
         self,
+        name: HelloAssoConfigName,
         config: HelloAssoConfig,
         helloasso_api_base: str,
     ):
+        self.name = name
         self._helloasso_api_base = helloasso_api_base
         self._auth_client = OAuth2Session(
             client_id=config.helloasso_client_id,
@@ -111,7 +113,7 @@ class PaymentTool:
             retries=3,
         )
 
-    def is_payment_available(self) -> bool:
+    def is_checkout_available(self) -> bool:
         """
         If the API credentials are not set, payment won't be available. If credentials are set, this doesn't ensure that they are valid.
 
@@ -132,7 +134,7 @@ class PaymentTool:
         db: AsyncSession,
         payer_user: schemas_users.CoreUser | None = None,
         redirection_uri: str | None = None,
-    ) -> schemas_payment.Checkout:
+    ) -> schemas_checkout.Checkout:
         """
         Init an HelloAsso checkout
 
@@ -162,31 +164,37 @@ class PaymentTool:
         # Thus we catch any exception and log it, then reraise it
         try:
             payer: HelloAssoApiV5ModelsCartsCheckoutPayer | None = None
-            if payer_user:
+            if payer_user is not None:
                 payer = HelloAssoApiV5ModelsCartsCheckoutPayer(
-                    firstName=payer_user.firstname,
-                    lastName=payer_user.name,
+                    first_name=payer_user.firstname,
+                    last_name=payer_user.name,
                     email=payer_user.email,
-                    dateOfBirth=payer_user.birthday,
+                    date_of_birth=datetime.combine(
+                        payer_user.birthday,
+                        datetime.min.time(),
+                        tzinfo=UTC,
+                    )
+                    if payer_user.birthday
+                    else None,
                 )
 
             checkout_model_id = uuid.uuid4()
             secret = security.generate_token(nbytes=12)
 
             init_checkout_body = HelloAssoApiV5ModelsCartsInitCheckoutBody(
-                total_amount=checkout_amount,
-                initial_amount=checkout_amount,
-                item_name=checkout_name,
-                back_url=redirection_uri,
-                error_url=redirection_uri,
-                return_url=redirection_uri,
-                contains_donation=False,
+                total_amount=checkout_amount,  # ty:ignore[unknown-argument]
+                initial_amount=checkout_amount,  # ty:ignore[unknown-argument]
+                item_name=checkout_name,  # ty:ignore[unknown-argument]
+                back_url=redirection_uri,  # ty:ignore[unknown-argument]
+                error_url=redirection_uri,  # ty:ignore[unknown-argument]
+                return_url=redirection_uri,  # ty:ignore[unknown-argument]
+                contains_donation=False,  # ty:ignore[unknown-argument]
                 payer=payer,
-                metadata=schemas_payment.HelloAssoCheckoutMetadata(
+                metadata=schemas_checkout.HelloAssoCheckoutMetadata(
                     secret=secret,
                     hyperion_checkout_id=str(checkout_model_id),
                 ).model_dump(),
-            )
+            )  # ty:ignore[missing-argument] # See https://github.com/astral-sh/ty/issues/1438
 
             response: HelloAssoApiV5ModelsCartsInitCheckoutResponse
             with ApiClient(configuration) as api_client:
@@ -196,7 +204,7 @@ class PaymentTool:
                         self._helloasso_slug,
                         init_checkout_body,
                     )
-                except (UnauthorizedException, BadRequestException):
+                except UnauthorizedException, BadRequestException:
                     # We know that HelloAsso may refuse some payer infos, like using the firstname "test"
                     # Even when prefilling the payer infos,the user will be able to edit them on the payment page,
                     # so we can safely retry without the payer infos
@@ -204,26 +212,28 @@ class PaymentTool:
                         hyperion_error_logger.exception(
                             f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name} (no payer info provided).",
                         )
-                    else:
-                        payer_user_name = f"{payer_user.firstname} {payer_user.name}"
-                        hyperion_error_logger.warning(
-                            f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}. Retrying without payer infos for {payer_user_name}",
+                        raise
+
+                    payer_user_name = f"{payer_user.firstname} {payer_user.name}"
+                    hyperion_error_logger.warning(
+                        f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}. Retrying without payer infos for {payer_user_name}",
+                    )
+
+                    init_checkout_body.payer = None
+                    try:
+                        response = checkout_api.organizations_organization_slug_checkout_intents_post(
+                            self._helloasso_slug,
+                            init_checkout_body,
                         )
+                    except UnauthorizedException:
+                        # HelloAsso returned a 401 unauthorized again
+                        hyperion_error_logger.exception(
+                            f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}, with and without payer {payer_user_name} infos",
+                        )
+                        raise
 
-                        init_checkout_body.payer = None
-                        try:
-                            response = checkout_api.organizations_organization_slug_checkout_intents_post(
-                                self._helloasso_slug,
-                                init_checkout_body,
-                            )
-                        except UnauthorizedException:
-                            # HelloAsso returned a 401 unauthorized again
-                            hyperion_error_logger.exception(
-                                f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}, with and without payer {payer_user_name} infos",
-                            )
-
-            if response and response.id:
-                checkout_model = models_payment.Checkout(
+            if response and response.id and response.redirect_url:
+                checkout_model = models_checkout.Checkout(
                     id=checkout_model_id,
                     module=module,
                     name=checkout_name,
@@ -232,14 +242,14 @@ class PaymentTool:
                     secret=secret,
                 )
 
-                await cruds_payment.create_checkout(db=db, checkout=checkout_model)
+                await cruds_checkout.create_checkout(db=db, checkout=checkout_model)
 
-                return schemas_payment.Checkout(
+                return schemas_checkout.Checkout(
                     id=checkout_model_id,
-                    payment_url=response.redirect_url,
+                    payment_url=response.redirect_url or "",
                 )
             hyperion_error_logger.error(
-                f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}. No checkout id returned",
+                f"Payment: failed to init a checkout with HA for module {module} and name {checkout_name}. No checkout id or redirect URL returned",
             )
             raise MissingHelloAssoCheckoutIdError()  # noqa: TRY301
 
@@ -257,8 +267,8 @@ class PaymentTool:
         self,
         checkout_id: uuid.UUID,
         db: AsyncSession,
-    ) -> schemas_payment.CheckoutComplete | None:
-        checkout_model = await cruds_payment.get_checkout_by_id(
+    ) -> schemas_checkout.CheckoutComplete | None:
+        checkout_model = await cruds_checkout.get_checkout_by_id(
             checkout_id=checkout_id,
             db=db,
         )
@@ -267,12 +277,12 @@ class PaymentTool:
 
         checkout_dict = checkout_model.__dict__
         checkout_dict["payments"] = [
-            schemas_payment.CheckoutPayment(**payment.__dict__)
+            schemas_checkout.CheckoutPayment(**payment.__dict__)
             for payment in checkout_dict["payments"]
         ]
-        return schemas_payment.CheckoutComplete(**checkout_dict)
+        return schemas_checkout.CheckoutComplete(**checkout_dict)
 
-    async def refund_payment(
+    async def refund_checkout(
         self,
         checkout_id: uuid.UUID,
         hello_asso_payment_id: int,

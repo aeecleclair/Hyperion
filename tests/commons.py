@@ -14,11 +14,11 @@ from sqlalchemy.ext.asyncio import (
 
 from app import dependencies
 from app.core.auth import schemas_auth
+from app.core.checkout import cruds_checkout, models_checkout, schemas_checkout
+from app.core.checkout.checkout_tool import CheckoutTool
+from app.core.checkout.types_checkout import HelloAssoConfig, HelloAssoConfigName
 from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import AccountType, GroupType
-from app.core.payment import cruds_payment, models_payment, schemas_payment
-from app.core.payment.payment_tool import PaymentTool
-from app.core.payment.types_payment import HelloAssoConfig, HelloAssoConfigName
 from app.core.permissions import cruds_permissions, schemas_permissions
 from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users, models_users, schemas_users
@@ -73,7 +73,7 @@ async def override_init_state(
 
     notification_manager = NotificationManager(settings=settings)
 
-    payment_tools = init_test_payment_tools()
+    checkout_tools = init_test_checkout_tools()
 
     mail_templates = init_mail_templates(settings=settings)
 
@@ -84,7 +84,7 @@ async def override_init_state(
         scheduler=scheduler,
         ws_manager=ws_manager,
         notification_manager=notification_manager,
-        payment_tools=payment_tools,
+        checkout_tools=checkout_tools,
         mail_templates=mail_templates,
     )
 
@@ -151,10 +151,10 @@ def init_test_SessionLocal(engine: AsyncEngine) -> SessionLocalType:
     return TestingSessionLocal
 
 
-def init_test_payment_tools() -> dict[HelloAssoConfigName, PaymentTool]:
-    payment_tools: dict[HelloAssoConfigName, PaymentTool] = {}
+def init_test_checkout_tools() -> dict[HelloAssoConfigName, CheckoutTool]:
+    payment_tools: dict[HelloAssoConfigName, CheckoutTool] = {}
     for helloasso_config_name in HelloAssoConfigName:
-        payment_tools[helloasso_config_name] = MockedPaymentTool()
+        payment_tools[helloasso_config_name] = MockedCheckoutTool()
 
     return payment_tools
 
@@ -347,11 +347,12 @@ async def add_coredata_to_db(
 mocked_checkout_id: uuid.UUID = uuid.UUID("81c9ad91-f415-494a-96ad-87bf647df82c")
 
 
-class MockedPaymentTool(PaymentTool):
+class MockedCheckoutTool(CheckoutTool):
     def __init__(
         self,
     ):
-        self.payment_tool = PaymentTool(
+        self.payment_tool = CheckoutTool(
+            name=HelloAssoConfigName.CDR,
             config=HelloAssoConfig(
                 helloasso_client_id="client",
                 helloasso_client_secret="secret",
@@ -372,10 +373,10 @@ class MockedPaymentTool(PaymentTool):
         db: AsyncSession,
         payer_user: schemas_users.CoreUser | None = None,
         redirection_uri: str | None = None,
-    ) -> schemas_payment.Checkout:
-        exist = await cruds_payment.get_checkout_by_id(mocked_checkout_id, db)
+    ) -> schemas_checkout.Checkout:
+        exist = await cruds_checkout.get_checkout_by_id(mocked_checkout_id, db)
         if exist is None:
-            checkout_model = models_payment.Checkout(
+            checkout_model = models_checkout.Checkout(
                 id=mocked_checkout_id,
                 module=module,
                 name=checkout_name,
@@ -383,9 +384,9 @@ class MockedPaymentTool(PaymentTool):
                 hello_asso_checkout_id=123,
                 secret="checkoutsecret",
             )
-            await cruds_payment.create_checkout(db, checkout_model)
+            await cruds_checkout.create_checkout(db, checkout_model)
 
-        return schemas_payment.Checkout(
+        return schemas_checkout.Checkout(
             id=mocked_checkout_id,
             payment_url="https://some.url.fr/checkout",
         )
@@ -394,7 +395,7 @@ class MockedPaymentTool(PaymentTool):
         self,
         checkout_id: uuid.UUID,
         db: AsyncSession,
-    ) -> schemas_payment.CheckoutComplete | None:
+    ) -> schemas_checkout.CheckoutComplete | None:
         return await self.payment_tool.get_checkout(
             checkout_id=checkout_id,
             db=db,
