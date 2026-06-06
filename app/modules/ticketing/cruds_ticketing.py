@@ -95,7 +95,6 @@ async def get_events(
             close_date=event.close_date,
             quota=event.quota,
             user_quota=event.user_quota,
-            used_quota=event.used_quota,
             disabled=event.disabled,
         )
         for event in events.scalars().all()
@@ -135,7 +134,6 @@ async def get_event_by_id(
             close_date=event.close_date,
             quota=event.quota,
             user_quota=event.user_quota,
-            used_quota=event.used_quota,
             disabled=event.disabled,
             organiser=schemas_ticketing.OrganiserComplete(
                 id=event.organiser.id,
@@ -150,7 +148,6 @@ async def get_event_by_id(
                     name=session.name,
                     quota=session.quota,
                     user_quota=session.user_quota,
-                    used_quota=session.used_quota,
                     disabled=session.disabled,
                 )
                 for session in event.sessions
@@ -163,7 +160,6 @@ async def get_event_by_id(
                     required_mebership=category.required_mebership,
                     quota=category.quota,
                     user_quota=category.user_quota,
-                    used_quota=category.used_quota,
                     price=category.price,
                     disabled=category.disabled,
                 )
@@ -172,6 +168,25 @@ async def get_event_by_id(
         )
         if event
         else None
+    )
+
+
+async def get_event_used_quota(
+    db: AsyncSession,
+    event_id: UUID,
+) -> int | None:
+    """Get the used quota for an event."""
+
+    return (
+        (
+            await db.execute(
+                select(models_ticketing.TicketingEvent.used_quota).where(
+                    models_ticketing.TicketingEvent.id == event_id,
+                ),
+            )
+        )
+        .scalars()
+        .first()
     )
 
 
@@ -229,7 +244,6 @@ async def get_event_by_name(
             close_date=event.close_date,
             quota=event.quota,
             user_quota=event.user_quota,
-            used_quota=event.used_quota,
             disabled=event.disabled,
             organiser=schemas_ticketing.OrganiserComplete(
                 id=event.organiser.id,
@@ -237,11 +251,28 @@ async def get_event_by_name(
                 store_id=event.organiser.store_id,
             ),
             sessions=[
-                schemas_ticketing.SessionSimple.model_validate(session)
+                schemas_ticketing.SessionSimple(
+                    id=session.id,
+                    event_id=session.event_id,
+                    date=session.date,
+                    name=session.name,
+                    quota=session.quota,
+                    user_quota=session.user_quota,
+                    disabled=session.disabled,
+                )
                 for session in event.sessions
             ],
             categories=[
-                schemas_ticketing.CategorySimple.model_validate(category)
+                schemas_ticketing.CategorySimple(
+                    id=category.id,
+                    event_id=category.event_id,
+                    name=category.name,
+                    required_mebership=category.required_mebership,
+                    quota=category.quota,
+                    user_quota=category.user_quota,
+                    price=category.price,
+                    disabled=category.disabled,
+                )
                 for category in event.categories
             ],
         )
@@ -257,7 +288,7 @@ async def create_event(
     """Create a new event."""
 
     db.add(
-        models_ticketing.TicketingEvent(**event.model_dump()),
+        models_ticketing.TicketingEvent(**event.model_dump(), used_quota=0),
     )
     await db.flush()
 
@@ -356,13 +387,31 @@ async def get_session_by_id(
             date=session.date,
             quota=session.quota,
             user_quota=session.user_quota,
-            used_quota=session.used_quota,
             disabled=session.disabled,
             event_id=session.event_id,
             event=session.event,
         )
         if session
         else None
+    )
+
+
+async def get_session_used_quota(
+    db: AsyncSession,
+    session_id: UUID,
+) -> int | None:
+    """Get the used quota for a session."""
+
+    return (
+        (
+            await db.execute(
+                select(models_ticketing.TicketingSession.used_quota).where(
+                    models_ticketing.TicketingSession.id == session_id,
+                ),
+            )
+        )
+        .scalars()
+        .first()
     )
 
 
@@ -401,7 +450,6 @@ async def get_sessions_by_ids(
             date=session.date,
             quota=session.quota,
             user_quota=session.user_quota,
-            used_quota=session.used_quota,
             disabled=session.disabled,
             event_id=session.event_id,
         )
@@ -424,7 +472,7 @@ async def create_session(
     """Create a new session."""
 
     db.add(
-        models_ticketing.TicketingSession(**session.model_dump()),
+        models_ticketing.TicketingSession(**session.model_dump(), used_quota=0),
     )
     await db.flush()
 
@@ -510,19 +558,36 @@ async def get_category_by_id(
                 close_date=category.event.close_date,
                 quota=category.event.quota,
                 user_quota=category.event.user_quota,
-                used_quota=category.event.used_quota,
                 disabled=category.event.disabled,
             ),
             sessions=[session.id for session in category.sessions],
             required_mebership=category.required_mebership,
             quota=category.quota,
             user_quota=category.user_quota,
-            used_quota=category.used_quota,
             price=category.price,
             disabled=category.disabled,
         )
         if category
         else None
+    )
+
+
+async def get_category_used_quota(
+    db: AsyncSession,
+    category_id: UUID,
+) -> int | None:
+    """Get the used quota for a category."""
+
+    return (
+        (
+            await db.execute(
+                select(models_ticketing.TicketingCategory.used_quota).where(
+                    models_ticketing.TicketingCategory.id == category_id,
+                ),
+            )
+        )
+        .scalars()
+        .first()
     )
 
 
@@ -562,7 +627,6 @@ async def get_categories_by_session_id(
             required_mebership=category.required_mebership,
             quota=category.quota,
             user_quota=category.user_quota,
-            used_quota=category.used_quota,
             price=category.price,
             disabled=category.disabled,
         )
@@ -595,7 +659,6 @@ async def get_categories_by_event_id(
             required_mebership=category.required_mebership,
             quota=category.quota,
             user_quota=category.user_quota,
-            used_quota=category.used_quota,
             price=category.price,
             disabled=category.disabled,
         )
@@ -836,7 +899,6 @@ async def get_ticket_by_id(
                 close_date=ticket.event.close_date,
                 quota=ticket.event.quota,
                 user_quota=ticket.event.user_quota,
-                used_quota=ticket.event.used_quota,
                 disabled=ticket.event.disabled,
             ),
             session=schemas_ticketing.SessionSimple(
@@ -846,7 +908,6 @@ async def get_ticket_by_id(
                 name=ticket.session.name,
                 quota=ticket.session.quota,
                 user_quota=ticket.session.user_quota,
-                used_quota=ticket.session.used_quota,
                 disabled=ticket.session.disabled,
             )
             if ticket.session
@@ -858,7 +919,6 @@ async def get_ticket_by_id(
                 required_mebership=ticket.category.required_mebership,
                 quota=ticket.category.quota,
                 user_quota=ticket.category.user_quota,
-                used_quota=ticket.category.used_quota,
                 price=ticket.category.price,
                 disabled=ticket.category.disabled,
             ),
