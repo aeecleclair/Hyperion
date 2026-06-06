@@ -180,6 +180,8 @@ filterwarnings = [
     # xdist controller imports `app` during collection before per-worker coverage starts;
     # the warning is benign -- workers still measure correctly.
     "ignore:Module .* was previously imported, but not measured:coverage.exceptions.CoverageWarning",
+    # idle xdist workers (no tests assigned) produce no coverage data; expected when running a subset of files.
+    "ignore:No data was collected:coverage.exceptions.CoverageWarning",
 ]
 addopts = "-n 8 --dist=loadfile" # loadfile makes sure that tests are grouped by their containing file and distributed to available workers as whole units.
 
