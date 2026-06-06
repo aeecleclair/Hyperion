@@ -175,6 +175,27 @@ async def get_event_by_id(
     )
 
 
+async def get_event_remaining_quota(
+    db: AsyncSession,
+    event_id: UUID,
+) -> int | None:
+    """Get the remaining quota for an event."""
+
+    event = (
+        (
+            await db.execute(
+                select(models_ticketing.TicketingEvent.quota - models_ticketing.TicketingEvent.used_quota).where(
+                    models_ticketing.TicketingEvent.id == event_id,
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+
+    return event
+
+
 async def get_event_by_name(
     db: AsyncSession,
     name: str,
@@ -344,6 +365,27 @@ async def get_session_by_id(
     )
 
 
+async def get_session_remaining_quota(
+    db: AsyncSession,
+    session_id: UUID,
+) -> int | None:
+    """Get the remaining quota for a session."""
+
+    session = (
+        (
+            await db.execute(
+                select(models_ticketing.TicketingSession.quota - models_ticketing.TicketingSession.used_quota).where(
+                    models_ticketing.TicketingSession.id == session_id,
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+
+    return session
+
+
 async def get_sessions_by_ids(
     session_ids: list[UUID],
     db: AsyncSession,
@@ -480,6 +522,27 @@ async def get_category_by_id(
         if category
         else None
     )
+
+
+async def get_category_remaining_quota(
+    db: AsyncSession,
+    category_id: UUID,
+) -> int | None:
+    """Get the remaining quota for a category."""
+
+    category = (
+        (
+            await db.execute(
+                select(models_ticketing.TicketingCategory.quota - models_ticketing.TicketingCategory.used_quota).where(
+                    models_ticketing.TicketingCategory.id == category_id,
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+
+    return category
 
 
 async def get_categories_by_session_id(
