@@ -181,10 +181,13 @@ async def get_event_remaining_quota(
 ) -> int | None:
     """Get the remaining quota for an event."""
 
-    event = (
+    return (
         (
             await db.execute(
-                select(models_ticketing.TicketingEvent.quota - models_ticketing.TicketingEvent.used_quota).where(
+                select(
+                    models_ticketing.TicketingEvent.quota
+                    - models_ticketing.TicketingEvent.used_quota,
+                ).where(
                     models_ticketing.TicketingEvent.id == event_id,
                 ),
             )
@@ -192,8 +195,6 @@ async def get_event_remaining_quota(
         .scalars()
         .first()
     )
-
-    return event
 
 
 async def get_event_by_name(
@@ -371,10 +372,13 @@ async def get_session_remaining_quota(
 ) -> int | None:
     """Get the remaining quota for a session."""
 
-    session = (
+    return (
         (
             await db.execute(
-                select(models_ticketing.TicketingSession.quota - models_ticketing.TicketingSession.used_quota).where(
+                select(
+                    models_ticketing.TicketingSession.quota
+                    - models_ticketing.TicketingSession.used_quota,
+                ).where(
                     models_ticketing.TicketingSession.id == session_id,
                 ),
             )
@@ -382,8 +386,6 @@ async def get_session_remaining_quota(
         .scalars()
         .first()
     )
-
-    return session
 
 
 async def get_sessions_by_ids(
@@ -530,10 +532,13 @@ async def get_category_remaining_quota(
 ) -> int | None:
     """Get the remaining quota for a category."""
 
-    category = (
+    return (
         (
             await db.execute(
-                select(models_ticketing.TicketingCategory.quota - models_ticketing.TicketingCategory.used_quota).where(
+                select(
+                    models_ticketing.TicketingCategory.quota
+                    - models_ticketing.TicketingCategory.used_quota,
+                ).where(
                     models_ticketing.TicketingCategory.id == category_id,
                 ),
             )
@@ -541,8 +546,6 @@ async def get_category_remaining_quota(
         .scalars()
         .first()
     )
-
-    return category
 
 
 async def get_categories_by_session_id(
