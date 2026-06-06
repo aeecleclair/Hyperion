@@ -1279,7 +1279,7 @@ async def test_create_ticket_as_student_with_quota_exceeded(client: TestClient):
         "event_id": str(event1.id),
         "session_id": str(session1.id),
         "category_id": str(category_with_low_quota.id),
-        "total": 10, # price of the ticket
+        "total": 10,  # price of the ticket
     }
     response = client.post(
         "/ticketing/tickets",

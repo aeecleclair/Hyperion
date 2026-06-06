@@ -793,8 +793,6 @@ async def create_ticket(
             status_code=400,
             detail="Session is not available for category",
         )
-    
-
 
     # Check if the user has already reached the user quota for the event, category and session
     user_tickets = await cruds_ticketing.get_tickets_by_user_id(
@@ -804,26 +802,33 @@ async def create_ticket(
     user_event_tickets = [
         ticket for ticket in user_tickets if ticket.event_id == ticket_simple.event_id
     ]
-    print("user_event_tickets", len(user_event_tickets))
     user_category_tickets = [
-        ticket for ticket in user_tickets if ticket.category_id == ticket_simple.category_id
+        ticket
+        for ticket in user_tickets
+        if ticket.category_id == ticket_simple.category_id
     ]
-    print("user_category_tickets", len(user_category_tickets))
     user_session_tickets = [
-        ticket for ticket in user_tickets if ticket.session_id == ticket_simple.session_id
+        ticket
+        for ticket in user_tickets
+        if ticket.session_id == ticket_simple.session_id
     ]
-    print("user_session_tickets", len(user_session_tickets))
     if event.user_quota is not None and len(user_event_tickets) >= event.user_quota:
         raise HTTPException(
             status_code=400,
             detail="User event quota exceeded",
         )
-    if category.user_quota is not None and len(user_category_tickets) >= category.user_quota:
+    if (
+        category.user_quota is not None
+        and len(user_category_tickets) >= category.user_quota
+    ):
         raise HTTPException(
             status_code=400,
             detail="User category quota exceeded",
         )
-    if session.user_quota is not None and len(user_session_tickets) >= session.user_quota:
+    if (
+        session.user_quota is not None
+        and len(user_session_tickets) >= session.user_quota
+    ):
         raise HTTPException(
             status_code=400,
             detail="User session quota exceeded",
@@ -858,7 +863,7 @@ async def create_ticket(
 
     if ticket_complete is None:
         await db.rollback()
-        await cache_ticketing.update_cache_for_deleted_ticket(
+        await cache_ticketing.update_cache_for_new_ticket(
             redis=redis_client,
             event_id=ticket_simple.event_id,
             category_id=ticket_simple.category_id,
