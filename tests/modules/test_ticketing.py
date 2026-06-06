@@ -133,8 +133,8 @@ async def init_objects():
         open_date=datetime(2024, 1, 1, tzinfo=UTC),
         # Tests will not pass in 2200, will MyECLPay be still around ? :D
         close_date=datetime(2200, 12, 31, tzinfo=UTC),
-        quota=4,
-        user_quota=2,
+        quota=100,
+        user_quota=20,
         used_quota=1,
         disabled=False,
         creator_id=str(admin_user.id),
@@ -162,8 +162,8 @@ async def init_objects():
         id=uuid4(),
         event_id=event1.id,
         name="Session 1",
-        quota=2,
-        user_quota=1,
+        quota=100,
+        user_quota=20,
         used_quota=1,
         disabled=False,
         date=datetime(2024, 1, 1, tzinfo=UTC),
@@ -199,7 +199,7 @@ async def init_objects():
         event_id=event1.id,
         name="Category 1",
         quota=5,
-        user_quota=1,
+        user_quota=20,
         used_quota=2,
         disabled=False,
         required_mebership=None,
@@ -1260,13 +1260,34 @@ async def test_create_ticket_as_student_with_invalid_data(client: TestClient):
 
 async def test_create_ticket_as_student_with_quota_exceeded(client: TestClient):
     # Try to create a ticket with total exceeding the category quota, should fail
+    category_with_low_quota = models_ticketing.TicketingCategory(
+        id=uuid4(),
+        event_id=event1.id,
+        name="Low Quota Category",
+        quota=1,  # Only 1 ticket allowed for this category
+        user_quota=10,
+        used_quota=0,
+        disabled=False,
+        required_mebership=None,
+        price=50,
+    )
+    category_with_low_quota.sessions = [session1]  # Link it to session1
+    await add_object_to_db(category_with_low_quota)
+
     new_ticket_data = {
         "user_id": str(student_user.id),
         "event_id": str(event1.id),
         "session_id": str(session1.id),
-        "category_id": str(category1.id),
-        "total": 10,  # category1 has quota=5 and used_quota=2, so only 3 tickets left
+        "category_id": str(category_with_low_quota.id),
+        "total": 10, # price of the ticket
     }
+    response = client.post(
+        "/ticketing/tickets",
+        json=new_ticket_data,
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert response.status_code == 201
+
     response = client.post(
         "/ticketing/tickets",
         json=new_ticket_data,

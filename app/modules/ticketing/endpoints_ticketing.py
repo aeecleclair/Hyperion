@@ -106,6 +106,28 @@ async def get_events(
 
 
 @module.router.get(
+    "/ticketing/events/{event_id}/quota/",
+    summary="Get the remaining quota for an event",
+    response_model=int,
+    status_code=200,
+)
+async def get_event_remaining_quota(
+    event_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    redis: Redis | None = Depends(get_redis_client),
+) -> int:
+    """Get the remaining quota for an event."""
+    quota = await cache_ticketing.get_event_remaining_quota_with_cache(
+        redis=redis,
+        db=db,
+        event_id=event_id,
+    )
+    if quota is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+    return quota
+
+
+@module.router.get(
     "/ticketing/events/{event_id}",
     summary="Get an event by its ID",
     response_model=schemas_ticketing.EventComplete,
@@ -231,6 +253,28 @@ async def get_session_by_id(
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
     return session
+
+
+@module.router.get(
+    "/ticketing/sessions/{session_id}/quota/",
+    summary="Get the remaining quota for a session",
+    response_model=int,
+    status_code=200,
+)
+async def get_session_remaining_quota(
+    session_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    redis: Redis | None = Depends(get_redis_client),
+) -> int:
+    """Get the remaining quota for a session."""
+    quota = await cache_ticketing.get_session_remaining_quota_with_cache(
+        redis=redis,
+        db=db,
+        session_id=session_id,
+    )
+    if quota is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return quota
 
 
 @module.router.get(
@@ -386,6 +430,28 @@ async def get_category_by_id(
     if category is None:
         raise HTTPException(status_code=404, detail="Category not found")
     return category
+
+
+@module.router.get(
+    "/ticketing/categories/{category_id}/quota/",
+    summary="Get the remaining quota for a category",
+    response_model=int,
+    status_code=200,
+)
+async def get_category_remaining_quota(
+    category_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    redis: Redis | None = Depends(get_redis_client),
+) -> int:
+    """Get the remaining quota for a category."""
+    quota = await cache_ticketing.get_category_remaining_quota_with_cache(
+        redis=redis,
+        db=db,
+        category_id=category_id,
+    )
+    if quota is None:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return quota
 
 
 @module.router.get(
@@ -669,6 +735,29 @@ async def create_ticket(
         created_at=datetime.now(UTC),
     )
 
+    # Verify quota from cache given event_id, category_id and session_id to prevent overbooking in case of concurrent ticket purchases across multiple workers
+    event_quota = await cache_ticketing.get_event_remaining_quota_with_cache(
+        redis=redis_client,
+        db=db,
+        event_id=ticket_simple.event_id,
+    )
+    category_quota = await cache_ticketing.get_category_remaining_quota_with_cache(
+        redis=redis_client,
+        db=db,
+        category_id=ticket_simple.category_id,
+    )
+    session_quota = await cache_ticketing.get_session_remaining_quota_with_cache(
+        redis=redis_client,
+        db=db,
+        session_id=ticket_simple.session_id,
+    )
+    if event_quota is not None and event_quota <= 0:
+        raise HTTPException(status_code=400, detail="Event quota exceeded")
+    if category_quota is not None and category_quota <= 0:
+        raise HTTPException(status_code=400, detail="Category quota exceeded")
+    if session_quota is not None and session_quota <= 0:
+        raise HTTPException(status_code=400, detail="Session quota exceeded")
+
     # Verify that the event, category and session exist before creating the ticket to prevent creating tickets for non existing entities
     event = await cruds_ticketing.get_event_by_id(
         event_id=ticket_simple.event_id,
@@ -704,18 +793,41 @@ async def create_ticket(
             status_code=400,
             detail="Session is not available for category",
         )
+    
 
-    # TODO: Verify that the quota is not already full before creating the ticket to prevent overbooking in case of concurrent ticket purchases across multiple workers
-    # First with redis cache and then with database queries as fallback if redis is not available
-    if isinstance(redis_client, Redis):
-        pass
-    else:
-        if event.quota is not None and event.used_quota >= event.quota:
-            raise HTTPException(status_code=400, detail="Event quota exceeded")
-        if category.quota is not None and category.used_quota >= category.quota:
-            raise HTTPException(status_code=400, detail="Category quota exceeded")
-        if session.quota is not None and session.used_quota >= session.quota:
-            raise HTTPException(status_code=400, detail="Session quota exceeded")
+
+    # Check if the user has already reached the user quota for the event, category and session
+    user_tickets = await cruds_ticketing.get_tickets_by_user_id(
+        user_id=ticket_simple.user_id,
+        db=db,
+    )
+    user_event_tickets = [
+        ticket for ticket in user_tickets if ticket.event_id == ticket_simple.event_id
+    ]
+    print("user_event_tickets", len(user_event_tickets))
+    user_category_tickets = [
+        ticket for ticket in user_tickets if ticket.category_id == ticket_simple.category_id
+    ]
+    print("user_category_tickets", len(user_category_tickets))
+    user_session_tickets = [
+        ticket for ticket in user_tickets if ticket.session_id == ticket_simple.session_id
+    ]
+    print("user_session_tickets", len(user_session_tickets))
+    if event.user_quota is not None and len(user_event_tickets) >= event.user_quota:
+        raise HTTPException(
+            status_code=400,
+            detail="User event quota exceeded",
+        )
+    if category.user_quota is not None and len(user_category_tickets) >= category.user_quota:
+        raise HTTPException(
+            status_code=400,
+            detail="User category quota exceeded",
+        )
+    if session.user_quota is not None and len(user_session_tickets) >= session.user_quota:
+        raise HTTPException(
+            status_code=400,
+            detail="User session quota exceeded",
+        )
 
     await cruds_ticketing.create_ticket(ticket=ticket_simple, db=db)
 
@@ -746,6 +858,13 @@ async def create_ticket(
 
     if ticket_complete is None:
         await db.rollback()
+        await cache_ticketing.update_cache_for_deleted_ticket(
+            redis=redis_client,
+            event_id=ticket_simple.event_id,
+            category_id=ticket_simple.category_id,
+            session_id=ticket_simple.session_id,
+            amount=-1,
+        )
         raise HTTPException(status_code=500, detail="Ticket creation failed")
 
     # TODO: Init MyECLPay Transfer
