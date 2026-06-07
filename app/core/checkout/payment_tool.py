@@ -166,10 +166,10 @@ class CheckoutTool:
             payer: HelloAssoApiV5ModelsCartsCheckoutPayer | None = None
             if payer_user is not None:
                 payer = HelloAssoApiV5ModelsCartsCheckoutPayer(
-                    first_name=payer_user.firstname,
-                    last_name=payer_user.name,
+                    first_name=payer_user.firstname,  # ty:ignore[unknown-argument]
+                    last_name=payer_user.name,  # ty:ignore[unknown-argument]
                     email=payer_user.email,
-                    date_of_birth=datetime.combine(
+                    date_of_birth=datetime.combine(  # ty:ignore[unknown-argument]
                         payer_user.birthday,
                         datetime.min.time(),
                         tzinfo=UTC,

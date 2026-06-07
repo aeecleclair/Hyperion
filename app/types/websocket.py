@@ -96,7 +96,7 @@ class WebsocketConnectionManager:
             see incoming messages from other workers that need to be send over websocket
         """
         if room_id not in self.connections:
-            self.connections[room_id] = set({ws_connection})  # type: ignore[unreachable]
+            self.connections[room_id] = set({ws_connection})
 
             # This worker wasn't listening to this room over the broadcaster yet because it didn't had any open websocket connection for this room.
             # We will start to listen to the room over the broadcaster.

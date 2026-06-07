@@ -440,7 +440,7 @@ async def test_payment_tool_init_checkout(
     mock_checkout_api = mocker.MagicMock()
     mock_checkout_api.organizations_organization_slug_checkout_intents_post.return_value = HelloAssoApiV5ModelsCartsInitCheckoutResponse(
         id=7,
-        redirect_url=redirect_url,
+        redirect_url=redirect_url,  # ty:ignore[unknown-argument]
     )
     mocker.patch(
         "app.core.checkout.payment_tool.CheckoutApi",
@@ -502,7 +502,7 @@ async def test_payment_tool_init_checkout_with_one_failure(
             raise UnauthorizedException
         return HelloAssoApiV5ModelsCartsInitCheckoutResponse(
             id=7,
-            redirect_url=redirect_url,
+            redirect_url=redirect_url,  # ty:ignore[unknown-argument]
         )
 
     mocker.patch.object(

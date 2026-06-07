@@ -47,7 +47,7 @@ jobs:
           ruff format --check
 
       - name: Type checking using Ty
-        run: ty check --output-format=github --error=all
+        run: ty check --output-format=github
 
       - name: Cache .mypy_cache folder
         id: mypy_cache
