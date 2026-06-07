@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import os
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal
 
 from broadcaster import Broadcast
@@ -15,7 +15,7 @@ from app.types.scopes_type import ScopeType
 from app.utils.auth import auth_utils
 
 
-class HyperionWebsocketsRoom(str, Enum):
+class HyperionWebsocketsRoom(StrEnum):
     CDR = "5a816d32-8b5d-4c44-8a8d-18fd830ec5a8"
 
 
@@ -27,7 +27,7 @@ class WSMessageModel(BaseModel):
     data: Any
 
 
-class ConnectionWSMessageModelStatus(str, Enum):
+class ConnectionWSMessageModelStatus(StrEnum):
     connected = "connected"
     invalid = "invalid_token"
 

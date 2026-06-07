@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class DocumentType(str, Enum):
+class DocumentType(StrEnum):
     idCard = "idCard"  # the id card of the participant
     medicalCertificate = (
         "medicalCertificate"  # the medical certificate of the participant
@@ -11,7 +11,7 @@ class DocumentType(str, Enum):
     parentAuthorization = "parentAuthorization"  # the parent authorization
 
 
-class Size(str, Enum):  # for the T-shirt and the bike
+class Size(StrEnum):  # for the T-shirt and the bike
     XS = "XS"
     S = "S"
     M = "M"
@@ -20,26 +20,26 @@ class Size(str, Enum):  # for the T-shirt and the bike
     None_ = "None"
 
 
-class MeetingPlace(str, Enum):  # place of meeting for the raid
+class MeetingPlace(StrEnum):  # place of meeting for the raid
     centrale = "centrale"
     bellecour = "bellecour"
     anyway = "anyway"
 
 
-class Difficulty(str, Enum):  # the difficulty of the raid
+class Difficulty(StrEnum):  # the difficulty of the raid
     discovery = "discovery"
     sports = "sports"
     expert = "expert"
 
 
-class Situation(str, Enum):  # the situation of the participant
+class Situation(StrEnum):  # the situation of the participant
     centrale = "centrale"
     otherSchool = "otherSchool"
     corporatePartner = "corporatePartner"
     other = "other"
 
 
-class DocumentValidation(str, Enum):
+class DocumentValidation(StrEnum):
     pending = "pending"
     accepted = "accepted"
     refused = "refused"

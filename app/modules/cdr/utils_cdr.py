@@ -378,7 +378,7 @@ def build_data_rows(
         row: list[str | int] = [""] * col_idx
         row[0] = user.name
         row[1] = user.firstname
-        row[2] = user.nickname if user.nickname else ""
+        row[2] = user.nickname or ""
         row[3] = user.email
 
         answers = users_answers.get(user.id, [])
@@ -389,7 +389,7 @@ def build_data_rows(
 
         for prod_struct in product_structure:
             for vinfo in prod_struct["variants_info"]:
-                p = purchases_map.get(vinfo["variant"].id, None)
+                p = purchases_map.get(vinfo["variant"].id)
                 if p and p.quantity > 0:
                     row[vinfo["qty_col"]] = p.quantity
                     if (

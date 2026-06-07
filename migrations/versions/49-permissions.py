@@ -4,7 +4,7 @@ Create Date: 2025-03-10 21:30:48.890171
 """
 
 from collections.abc import Sequence
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -21,7 +21,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-class AccountType(str, Enum):
+class AccountType(StrEnum):
     """
     Various account types that can be created in Hyperion.
     Each account type is associated with a set of permissions.
