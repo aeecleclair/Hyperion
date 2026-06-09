@@ -4,6 +4,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.users import schemas_users
 from app.modules.ticketing import models_ticketing, schemas_ticketing
 
 
@@ -680,9 +681,21 @@ async def create_category(
 ) -> None:
     """Create a new category."""
     db.add(
-        models_ticketing.TicketingCategory(**category.model_dump(), used_quota=0),
+        models_ticketing.TicketingCategory(
+            **category.model_dump(exclude={"sessions"}),
+            used_quota=0,
+        ),
     )
     await db.flush()
+    if category.sessions:
+        for session_id in category.sessions:
+            db.add(
+                models_ticketing.CategorySessionAssociation(
+                    category_id=category.id,
+                    session_id=session_id,
+                ),
+            )
+        await db.flush()
 
 
 async def update_category(
@@ -751,6 +764,14 @@ async def get_tickets(
             created_at=ticket.created_at,
             status=ticket.status,
             nb_scan=ticket.nb_scan,
+            user=schemas_users.CoreUserSimple(
+                id=ticket.user.id,
+                name=ticket.user.name,
+                firstname=ticket.user.firstname,
+                nickname=ticket.user.nickname,
+                account_type=ticket.user.account_type,
+                school_id=ticket.user.school_id,
+            ),
         )
         for ticket in tickets.scalars().all()
     ]
@@ -778,6 +799,14 @@ async def get_tickets_by_event_id(
             created_at=ticket.created_at,
             status=ticket.status,
             nb_scan=ticket.nb_scan,
+            user=schemas_users.CoreUserSimple(
+                id=ticket.user.id,
+                name=ticket.user.name,
+                firstname=ticket.user.firstname,
+                nickname=ticket.user.nickname,
+                account_type=ticket.user.account_type,
+                school_id=ticket.user.school_id,
+            ),
         )
         for ticket in tickets.scalars().all()
     ]
@@ -804,6 +833,14 @@ async def get_tickets_by_category_id(
             created_at=ticket.created_at,
             status=ticket.status,
             nb_scan=ticket.nb_scan,
+            user=schemas_users.CoreUserSimple(
+                id=ticket.user.id,
+                name=ticket.user.name,
+                firstname=ticket.user.firstname,
+                nickname=ticket.user.nickname,
+                account_type=ticket.user.account_type,
+                school_id=ticket.user.school_id,
+            ),
         )
         for ticket in tickets.scalars().all()
     ]
@@ -831,6 +868,14 @@ async def get_tickets_by_session_id(
             created_at=ticket.created_at,
             status=ticket.status,
             nb_scan=ticket.nb_scan,
+            user=schemas_users.CoreUserSimple(
+                id=ticket.user.id,
+                name=ticket.user.name,
+                firstname=ticket.user.firstname,
+                nickname=ticket.user.nickname,
+                account_type=ticket.user.account_type,
+                school_id=ticket.user.school_id,
+            ),
         )
         for ticket in tickets.scalars().all()
     ]
@@ -858,6 +903,14 @@ async def get_tickets_by_user_id(
             created_at=ticket.created_at,
             status=ticket.status,
             nb_scan=ticket.nb_scan,
+            user=schemas_users.CoreUserSimple(
+                id=ticket.user.id,
+                name=ticket.user.name,
+                firstname=ticket.user.firstname,
+                nickname=ticket.user.nickname,
+                account_type=ticket.user.account_type,
+                school_id=ticket.user.school_id,
+            ),
         )
         for ticket in tickets.scalars().all()
     ]
@@ -890,6 +943,14 @@ async def get_ticket_by_id(
             session_id=ticket.session_id,
             total=ticket.total,
             created_at=ticket.created_at,
+            user=schemas_users.CoreUserSimple(
+                id=ticket.user.id,
+                name=ticket.user.name,
+                firstname=ticket.user.firstname,
+                nickname=ticket.user.nickname,
+                account_type=ticket.user.account_type,
+                school_id=ticket.user.school_id,
+            ),
             event=schemas_ticketing.EventSimple(
                 id=ticket.event.id,
                 organiser_id=ticket.event.organiser_id,
@@ -937,7 +998,7 @@ async def create_ticket(
     """Create a new ticket."""
 
     db.add(
-        models_ticketing.TicketingTicket(**ticket.model_dump()),
+        models_ticketing.TicketingTicket(**ticket.model_dump(exclude={"user"})),
     )
     await db.flush()
 
