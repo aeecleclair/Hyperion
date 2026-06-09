@@ -5,6 +5,7 @@ from uuid import UUID
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.users import models_users
 from app.types.sqlalchemy import Base, PrimaryKey
 
 if TYPE_CHECKING:
@@ -145,3 +146,9 @@ class TicketingTicket(Base):
     created_at: Mapped[datetime]
     status: Mapped[str]  # TODO: Enum
     nb_scan: Mapped[int]
+
+    user: Mapped[models_users.CoreUser] = relationship(
+        "CoreUser",
+        lazy="joined",
+        init=False,
+    )
