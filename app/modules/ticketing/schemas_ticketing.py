@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.users import schemas_users
+
 
 class OrganiserBase(BaseModel):
     name: str
@@ -99,13 +101,13 @@ class CategoryCreate(CategoryBase):
 class CategorySimple(CategoryBase):
     id: UUID
     disabled: bool
+    sessions: list[UUID] | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class CategoryComplete(CategorySimple):
     event: EventSimple
-    sessions: list[UUID] | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -133,6 +135,8 @@ class TicketSimple(TicketBase):
     created_at: datetime
     status: str
     nb_scan: int
+
+    user: schemas_users.CoreUserSimple
 
     model_config = ConfigDict(from_attributes=True)
 

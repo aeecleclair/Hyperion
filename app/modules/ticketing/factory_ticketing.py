@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.memberships.factory_memberships import CoreMembershipsFactory
 from app.core.mypayment.factory_mypayment import MyPaymentFactory
+from app.core.users import schemas_users
 from app.core.users.factory_users import CoreUsersFactory
 from app.core.utils.config import Settings
 from app.modules.ticketing import cruds_ticketing, schemas_ticketing
@@ -61,7 +62,6 @@ class TicketingFactory(Factory):
                 close_date=datetime.now(UTC) + timedelta(days=30),
                 quota=500,
                 user_quota=4,
-                used_quota=0,
                 disabled=False,
             ),
         )
@@ -78,7 +78,6 @@ class TicketingFactory(Factory):
                 name="TicketingSession du Samedi Soir",
                 quota=300,
                 user_quota=2,
-                used_quota=0,
                 disabled=False,
             ),
         )
@@ -91,7 +90,6 @@ class TicketingFactory(Factory):
                 name="TicketingSession du Dimanche Après-midi",
                 quota=200,
                 user_quota=2,
-                used_quota=0,
                 disabled=False,
             ),
         )
@@ -109,7 +107,6 @@ class TicketingFactory(Factory):
                 required_mebership=CoreMembershipsFactory.memberships_ids[0],
                 quota=150,
                 user_quota=2,
-                used_quota=0,
                 price=1500,
                 disabled=False,
             ),
@@ -124,7 +121,6 @@ class TicketingFactory(Factory):
                 required_mebership=CoreMembershipsFactory.memberships_ids[1],
                 quota=200,
                 user_quota=2,
-                used_quota=0,
                 price=2000,
                 disabled=False,
             ),
@@ -139,7 +135,6 @@ class TicketingFactory(Factory):
                 required_mebership=None,
                 quota=100,
                 user_quota=1,
-                used_quota=0,
                 price=3000,
                 disabled=False,
             ),
@@ -165,6 +160,13 @@ class TicketingFactory(Factory):
                     created_at=datetime.now(UTC),
                     nb_scan=0,
                     status="valid",
+                    user=schemas_users.CoreUserSimple(
+                        id=user_id,
+                        name=f"Raizor-{_i}",
+                        firstname=f"Raiz-{_i}",
+                        account_type=schemas_users.AccountType.student,
+                        school_id=CoreMembershipsFactory.memberships_ids[0],
+                    ),
                 ),
             )
 
