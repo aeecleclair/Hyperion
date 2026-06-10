@@ -163,11 +163,22 @@ async def delete_edition(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
 ):
+    # Cancelled records don't block deletion — the user already gave up their slot.
     participants = await cruds_raid.get_all_participants(edition_id, db)
-    if participants:
+    active_participants = [
+        p for p in participants if p.status != RaidRegistrationStatus.cancelled
+    ]
+    if active_participants:
         raise HTTPException(
             status_code=400,
             detail="Edition has participants; cannot delete",
+        )
+    volunteers = await cruds_raid.get_all_volunteers_by_edition(edition_id, db)
+    active_volunteers = [v for v in volunteers if not v.cancelled]
+    if active_volunteers:
+        raise HTTPException(
+            status_code=400,
+            detail="Edition has volunteers; cannot delete",
         )
     await cruds_raid.delete_edition(edition_id, db)
 
