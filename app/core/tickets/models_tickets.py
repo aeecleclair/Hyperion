@@ -141,3 +141,16 @@ class Checkout(Base):
     category: Mapped["Category"] = relationship(init=False)
     session: Mapped["EventSession"] = relationship(init=False)
     event: Mapped["TicketEvent"] = relationship(init=False)
+
+
+class TicketChangeOverInvitation(Base):
+    __tablename__ = "tickets_change_over_invitation"
+
+    ticket_id: Mapped[UUID] = mapped_column(
+        ForeignKey("tickets_checkout.id"),
+        primary_key=True,
+    )
+    new_user_id: Mapped[str] = mapped_column(
+        ForeignKey("core_user.id"),
+    )
+    token: Mapped[str]

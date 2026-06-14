@@ -5,13 +5,15 @@ from datetime import UTC, datetime
 from io import StringIO
 from uuid import UUID
 
+import calypsso
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     Depends,
     HTTPException,
     Response,
 )
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.feed import schemas_feed, utils_feed
@@ -22,17 +24,23 @@ from app.core.permissions.type_permissions import ModulePermissions
 from app.core.tickets import cruds_tickets, schemas_tickets, utils_tickets
 from app.core.tickets.factory_tickets import TicketsFactory
 from app.core.users import schemas_users
+from app.core.users.cruds_users import get_user_by_email
 from app.core.users.models_users import CoreUser
+from app.core.utils import security
+from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
+    get_mail_templates,
     get_mypayment_tool,
     get_notification_tool,
+    get_settings,
     is_user,
     is_user_allowed_to,
 )
 from app.types.exceptions import ObjectExpectedInDbNotFoundError
 from app.types.module import CoreModule
 from app.utils.communication.notifications import NotificationTool
+from app.utils.mail.mailworker import send_email
 
 router = APIRouter(tags=["Tickets"])
 
@@ -343,6 +351,136 @@ async def get_user_tickets(
     return await cruds_tickets.get_paid_tickets_by_user_id(
         user_id=user.id,
         db=db,
+    )
+
+
+@router.post(
+    "/tickets/user/me/tickets/change-over/request",
+    status_code=204,
+)
+async def ticket_request_change_over(
+    ticket_transfer: schemas_tickets.TicketChangeOverInvitation,
+    background_tasks: BackgroundTasks,
+    user: CoreUser = Depends(
+        is_user_allowed_to(
+            [TicketsPermissions.access_tickets],
+        ),
+    ),
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+    mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
+):
+    """
+    Give its ticket to another user. The other user will receive an email with a link to accept the transfer.
+
+    Using this endpoint will invalidate existing transfer invitations.
+    """
+    ticket = await cruds_tickets.get_ticket_by_id(
+        ticket_id=ticket_transfer.ticket_id,
+        db=db,
+    )
+
+    if ticket is None:
+        raise HTTPException(404, "Ticket not found")
+
+    if ticket.user_id != user.id:
+        raise HTTPException(403, "User is not the owner of the ticket")
+
+    event = await cruds_tickets.get_event_simple_by_id(
+        event_id=ticket.event_id,
+        db=db,
+    )
+
+    if event is None:
+        raise ObjectExpectedInDbNotFoundError(
+            object_name="Event",
+            object_id=ticket.event_id,
+        )
+
+    await cruds_tickets.delete_ticket_change_over_invitation(
+        ticket_id=ticket.id,
+        db=db,
+    )
+
+    receiver_user = await get_user_by_email(
+        email=ticket_transfer.email,
+        db=db,
+    )
+
+    token = security.generate_token()
+
+    if receiver_user is None:
+        mail = mail_templates.get_mail_ticket_change_over_account_does_not_exist(
+            event_name=event.name,
+            giver_name=user.full_name,
+        )
+
+    else:
+        await cruds_tickets.create_ticket_change_over_invitation(
+            ticket_id=ticket.id,
+            new_user_id=receiver_user.id,
+            token=token,
+            db=db,
+        )
+
+        confirmation_url = f"{settings.CLIENT_URL}tickets/user/me/tickets/change-over/accept?token={token}"
+
+        mail = mail_templates.get_mail_ticket_change_over(
+            event_name=event.name,
+            giver_name=user.full_name,
+            confirmation_url=confirmation_url,
+        )
+
+    background_tasks.add_task(
+        send_email,
+        recipient=ticket_transfer.email,
+        subject=f"{settings.school.application_name} - Ticket transfer for {event.name}",
+        content=mail,
+        settings=settings,
+    )
+
+
+@router.get(
+    "/tickets/user/me/tickets/change-over/accept",
+    status_code=200,
+)
+async def ticket_accept_change_over(
+    token: str,
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+):
+    """
+    Accept a ticket transfer invitation. The user will become the new owner of the ticket.
+    """
+    invitation = await cruds_tickets.get_ticket_change_over_invitation_by_token(
+        token=token,
+        db=db,
+    )
+
+    if invitation is None:
+        return RedirectResponse(
+            url=settings.CLIENT_URL
+            + calypsso.get_message_relative_url(
+                message_type=calypsso.TypeMessage.ticket_change_over_invalid,
+            ),
+        )
+
+    await cruds_tickets.delete_ticket_change_over_invitation(
+        ticket_id=invitation.ticket_id,
+        db=db,
+    )
+
+    await cruds_tickets.change_ticket_owner(
+        ticket_id=invitation.ticket_id,
+        new_user_id=invitation.new_user_id,
+        db=db,
+    )
+
+    return RedirectResponse(
+        url=settings.CLIENT_URL
+        + calypsso.get_message_relative_url(
+            message_type=calypsso.TypeMessage.ticket_change_over_success,
+        ),
     )
 
 

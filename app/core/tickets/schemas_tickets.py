@@ -245,14 +245,15 @@ class Answer(AnswerCreate):
 
 class Ticket(BaseModel):
     id: UUID
-    price: int
     user_id: str
+
+    price: int
+
+    scanned: bool
 
     event_id: UUID
     category_id: UUID
     session_id: UUID
-
-    scanned: bool
 
     category: Category
     session: Session
@@ -278,6 +279,12 @@ class CheckoutResponse(BaseModel):
     payment_url: str | None
 
 
-class TicketTransfer(BaseModel):
+class TicketChangeOverInvitation(BaseModel):
     ticket_id: UUID
     email: str
+
+
+class TicketChangeOverContent(BaseModel):
+    ticket_id: UUID
+    new_user_id: str
+    token: str

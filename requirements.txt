@@ -6,7 +6,7 @@ authlib==1.7.2
 bcrypt==5.0.0                       # password hashing
 boto3==1.43.24                      # S3 storage
 broadcaster==0.3.1                  # Working with websockets with multiple workers.
-calypsso==2.7.0
+calypsso-proximapp==2.8.0
 email-validator==2.3.0
 Faker==40.21.0
 fastapi[standard]==0.136.3

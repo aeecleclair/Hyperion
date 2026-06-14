@@ -6,7 +6,7 @@ from uuid import UUID
 from sqlalchemy import func, not_, or_, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
-from sqlalchemy.sql import select
+from sqlalchemy.sql import delete, select
 
 from app.core.tickets import models_tickets, schemas_tickets
 from app.core.users import schemas_users
@@ -654,6 +654,18 @@ async def mark_ticket_as_scanned(
     )
 
 
+async def change_ticket_owner(
+    ticket_id: UUID,
+    new_user_id: str,
+    db: AsyncSession,
+):
+    await db.execute(
+        update(models_tickets.Checkout)
+        .where(models_tickets.Checkout.id == ticket_id)
+        .values(user_id=new_user_id),
+    )
+
+
 async def count_tickets_by_event_id(
     event_id: UUID,
     db: AsyncSession,
@@ -868,4 +880,49 @@ async def update_question(
         update(models_tickets.Question)
         .where(models_tickets.Question.id == question_id)
         .values(**question_update.model_dump(exclude_unset=True)),
+    )
+
+
+async def delete_ticket_change_over_invitation(
+    ticket_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_tickets.TicketChangeOverInvitation).where(
+            models_tickets.TicketChangeOverInvitation.ticket_id == ticket_id,
+        ),
+    )
+
+
+async def create_ticket_change_over_invitation(
+    ticket_id: UUID,
+    new_user_id: str,
+    token: str,
+    db: AsyncSession,
+):
+    db_invitation = models_tickets.TicketChangeOverInvitation(
+        ticket_id=ticket_id,
+        new_user_id=new_user_id,
+        token=token,
+    )
+    db.add(db_invitation)
+
+
+async def get_ticket_change_over_invitation_by_token(
+    token: str,
+    db: AsyncSession,
+) -> schemas_tickets.TicketChangeOverContent | None:
+    result = await db.execute(
+        select(models_tickets.TicketChangeOverInvitation).where(
+            models_tickets.TicketChangeOverInvitation.token == token,
+        ),
+    )
+    invitation = result.scalars().first()
+    if invitation is None:
+        return None
+
+    return schemas_tickets.TicketChangeOverContent(
+        ticket_id=invitation.ticket_id,
+        new_user_id=invitation.new_user_id,
+        token=invitation.token,
     )
