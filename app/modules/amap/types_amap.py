@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class AmapSlotType(str, Enum):
+class AmapSlotType(StrEnum):
     midi = "midi"
     soir = "soir"
 
@@ -9,7 +9,7 @@ class AmapSlotType(str, Enum):
         return f"{self.name}<{self.value}"
 
 
-class DeliveryStatusType(str, Enum):
+class DeliveryStatusType(StrEnum):
     creation = "creation"  # Can edit date, add and remove products, no order possible
     orderable = "orderable"  # Ordering is possible, no edition possible
     locked = "locked"  # Can't order

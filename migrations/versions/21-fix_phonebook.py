@@ -50,7 +50,7 @@ def define_order_of_memberships(memberships: list[sa.Row[Any]]) -> list[list]:
     for membership in memberships:
         if membership[2]:
             tags = membership[2].split(";")
-            tags.sort(key=lambda x: member_order.index(x))
+            tags.sort(key=member_order.index)
         else:
             tags = ["Default"]
         memberships2.append(

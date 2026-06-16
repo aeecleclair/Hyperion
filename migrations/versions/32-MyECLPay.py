@@ -4,7 +4,7 @@ Create Date: 2024-10-30 11:24:47.348081
 """
 
 from collections.abc import Sequence
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -22,37 +22,37 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-class TransactionType(str, Enum):
+class TransactionType(StrEnum):
     DIRECT = "direct"
     REQUEST = "request"
     REFUND = "refund"
 
 
-class WalletType(str, Enum):
+class WalletType(StrEnum):
     USER = "user"
     STORE = "store"
 
 
-class TransferType(str, Enum):
+class TransferType(StrEnum):
     HELLO_ASSO = "hello_asso"
     CHECK = "check"
     CASH = "cash"
     BANK_TRANSFER = "bank_transfer"
 
 
-class WalletDeviceStatus(str, Enum):
+class WalletDeviceStatus(StrEnum):
     INACTIVE = "inactive"
     ACTIVE = "active"
     REVOKED = "revoked"
 
 
-class TransactionStatus(str, Enum):
+class TransactionStatus(StrEnum):
     CONFIRMED = "confirmed"
     CANCELED = "canceled"
     REFUNDED = "refunded"
 
 
-class RequestStatus(str, Enum):
+class RequestStatus(StrEnum):
     PROPOSED = "proposed"
     ACCEPTED = "accepted"
     REFUSED = "refused"

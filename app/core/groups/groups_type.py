@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class GroupType(str, Enum):
+class GroupType(StrEnum):
     """
     In Hyperion, each user may have multiple groups. Belonging to a group gives access to a set of specific permissions.
 
@@ -14,7 +14,7 @@ class GroupType(str, Enum):
     admin = "0a25cb76-4b63-4fd3-b939-da6d9feabf28"
 
 
-class AccountType(str, Enum):
+class AccountType(StrEnum):
     """
     Various account types that can be created in Hyperion.
     Each account type is associated with a set of permissions.

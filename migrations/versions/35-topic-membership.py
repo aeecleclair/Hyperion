@@ -5,7 +5,7 @@ Create Date: 2025-02-24 15:41:08.215026
 
 import uuid
 from collections.abc import Sequence
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
@@ -24,7 +24,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-class Topic(str, Enum):
+class Topic(StrEnum):
     cinema = "cinema"
     advert = "advert"
     amap = "amap"

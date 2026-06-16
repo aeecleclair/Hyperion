@@ -1,5 +1,5 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class ModulePermissions(str, Enum):
+class ModulePermissions(StrEnum):
     pass
