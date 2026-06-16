@@ -1,0 +1,82 @@
+{
+  "event": "DOCUMENT_CREATED",
+  "payload": {
+    "id": 10,
+    "externalId": null,
+    "userId": 1,
+    "authOptions": null,
+    "formValues": null,
+    "visibility": "EVERYONE",
+    "title": "documenso.pdf",
+    "status": "DRAFT",
+    "documentDataId": "hs8qz1ktr9204jn7mg6c5dxy0",
+    "createdAt": "2026-06-16T13:44:15.847Z",
+    "updatedAt": "2026-06-16T13:44:15.847Z",
+    "completedAt": null,
+    "deletedAt": null,
+    "teamId": null,
+    "templateId": null,
+    "source": "DOCUMENT",
+    "documentMeta": {
+      "id": "doc_meta_123",
+      "subject": "Please sign this document",
+      "message": "Hello, please review and sign this document.",
+      "timezone": "UTC",
+      "password": null,
+      "dateFormat": "MM/DD/YYYY",
+      "redirectUrl": null,
+      "signingOrder": "PARALLEL",
+      "allowDictateNextSigner": false,
+      "typedSignatureEnabled": true,
+      "uploadSignatureEnabled": true,
+      "drawSignatureEnabled": true,
+      "language": "en",
+      "distributionMethod": "EMAIL",
+      "emailSettings": null
+    },
+    "recipients": [
+      {
+        "id": 52,
+        "documentId": 10,
+        "templateId": null,
+        "email": "signer@documenso.com",
+        "name": "John Doe",
+        "token": "SIGNING_TOKEN",
+        "documentDeletedAt": null,
+        "expiresAt": null,
+        "expirationNotifiedAt": null,
+        "signedAt": null,
+        "authOptions": null,
+        "signingOrder": 1,
+        "rejectionReason": null,
+        "role": "SIGNER",
+        "readStatus": "NOT_OPENED",
+        "signingStatus": "NOT_SIGNED",
+        "sendStatus": "NOT_SENT"
+      }
+    ],
+    "Recipient": [
+      {
+        "id": 52,
+        "documentId": 10,
+        "templateId": null,
+        "email": "signer@documenso.com",
+        "name": "John Doe",
+        "token": "SIGNING_TOKEN",
+        "documentDeletedAt": null,
+        "expiresAt": null,
+        "expirationNotifiedAt": null,
+        "signedAt": null,
+        "authOptions": null,
+        "signingOrder": 1,
+        "rejectionReason": null,
+        "role": "SIGNER",
+        "readStatus": "NOT_OPENED",
+        "signingStatus": "NOT_SIGNED",
+        "sendStatus": "NOT_SENT"
+      }
+    ]
+  },
+  "createdAt": "2026-06-16T13:44:15.847Z",
+  "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd"
+}
