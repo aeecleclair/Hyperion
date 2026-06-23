@@ -9,13 +9,13 @@ assert the exact strings so they stay stable.
 
 # ruff: noqa: SLF001  # tests deliberately exercise private sub-checks
 
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
 
-from app.modules.raid import models_raid
+from app.modules.raid import cruds_raid, models_raid
 from app.modules.raid.raid_type import (
     Difficulty,
     DocumentValidation,
@@ -246,7 +246,6 @@ def test_check_all_documents_accepted_rejects_missing_id_card() -> None:
 
 @pytest.mark.asyncio
 async def test_full_participant_checker_passes_for_valid_data() -> None:
-    from unittest.mock import AsyncMock
 
     edition_id = uuid4()
     p = _make_validated_participant(edition_id=edition_id)
@@ -256,8 +255,6 @@ async def test_full_participant_checker_passes_for_valid_data() -> None:
         difficulty=Difficulty.sports,
         meeting_place=MeetingPlace.centrale,
     )
-
-    from app.modules.raid import cruds_raid
 
     original = cruds_raid.get_team_by_participant_id
     cruds_raid.get_team_by_participant_id = AsyncMock(return_value=team)  # type: ignore[assignment]
@@ -273,7 +270,6 @@ async def test_full_participant_checker_passes_for_valid_data() -> None:
 
 @pytest.mark.asyncio
 async def test_full_participant_checker_fails_when_team_incomplete() -> None:
-    from unittest.mock import AsyncMock
 
     edition_id = uuid4()
     p = _make_validated_participant(edition_id=edition_id)
@@ -283,8 +279,6 @@ async def test_full_participant_checker_fails_when_team_incomplete() -> None:
         difficulty=Difficulty.sports,
         meeting_place=MeetingPlace.centrale,
     )
-
-    from app.modules.raid import cruds_raid
 
     original = cruds_raid.get_team_by_participant_id
     cruds_raid.get_team_by_participant_id = AsyncMock(return_value=team_no_second)  # type: ignore[assignment]
@@ -302,12 +296,9 @@ async def test_full_participant_checker_fails_when_team_incomplete() -> None:
 
 @pytest.mark.asyncio
 async def test_full_participant_checker_fails_when_no_team() -> None:
-    from unittest.mock import AsyncMock
 
     edition_id = uuid4()
     p = _make_validated_participant(edition_id=edition_id)
-
-    from app.modules.raid import cruds_raid
 
     original = cruds_raid.get_team_by_participant_id
     cruds_raid.get_team_by_participant_id = AsyncMock(return_value=None)  # type: ignore[assignment]
@@ -328,7 +319,6 @@ async def test_full_participant_checker_fails_when_no_team() -> None:
 
 @pytest.mark.asyncio
 async def test_check_volunteer_rejects_wrong_edition() -> None:
-    from unittest.mock import AsyncMock
 
     v = Mock(
         spec=models_raid.RaidVolunteer,
@@ -348,7 +338,6 @@ async def test_check_volunteer_rejects_wrong_edition() -> None:
 
 @pytest.mark.asyncio
 async def test_check_volunteer_rejects_missing_phone() -> None:
-    from unittest.mock import AsyncMock
 
     eid = uuid4()
     v = Mock(
@@ -369,7 +358,6 @@ async def test_check_volunteer_rejects_missing_phone() -> None:
 
 @pytest.mark.asyncio
 async def test_check_volunteer_rejects_missing_emergency_contact() -> None:
-    from unittest.mock import AsyncMock
 
     eid = uuid4()
     v = Mock(
@@ -390,7 +378,6 @@ async def test_check_volunteer_rejects_missing_emergency_contact() -> None:
 
 @pytest.mark.asyncio
 async def test_check_volunteer_passes_for_complete_profile() -> None:
-    from unittest.mock import AsyncMock
 
     eid = uuid4()
     v = Mock(

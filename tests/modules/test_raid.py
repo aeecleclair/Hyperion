@@ -30,6 +30,7 @@ from app.modules.raid.raid_type import (
     Situation,
     Size,
 )
+from app.types.sqlalchemy import Base
 from tests.commons import (
     add_account_type_permission,
     add_coredata_to_db,
@@ -85,8 +86,6 @@ async def _ensure_tables_created() -> None:
     pytest process isn't selected as the "chosen worker" by psutil. Force
     table creation so init_objects never races with it.
     """
-    from app.types.sqlalchemy import Base
-
     session_local = get_TestingSessionLocal()
     async with session_local() as db:
         engine = db.bind

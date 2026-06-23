@@ -13,6 +13,8 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
+from app.core.groups.groups_type import AccountType
+from app.core.users.schemas_users import CoreUser
 from app.modules.raid import schemas_raid
 from app.modules.raid.raid_type import (
     Difficulty,
@@ -200,9 +202,6 @@ def test_team_preview_progress_with_filled_meta_only() -> None:
 
 
 def _dummy_core_user(uid: str):
-    from app.core.groups.groups_type import AccountType
-    from app.core.users.schemas_users import CoreUser
-
     return CoreUser(
         id=uid,
         email=f"{uid}@example.com",
