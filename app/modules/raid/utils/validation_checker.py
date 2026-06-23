@@ -5,19 +5,29 @@ passes; the same applies to volunteers (with a lighter gate). Each check
 raises a distinct HTTPException so the frontend can i18n cleanly.
 """
 
-from collections.abc import Callable
+from __future__ import annotations
+
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.raid import cruds_raid, schemas_raid
+from app.modules.raid import cruds_raid
 from app.modules.raid.raid_type import (
     DocumentValidation,
     RaidRegistrationStatus,
     Situation,
     Size,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    # `schemas_raid` is only used in annotations; importing it at runtime
+    # would create a cycle (schemas_raid -> validation_checker).
+    from app.modules.raid import schemas_raid
 
 
 async def check_participant_validation_consistency(

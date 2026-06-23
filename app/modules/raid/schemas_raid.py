@@ -19,6 +19,11 @@ from app.modules.raid.raid_type import (
     Situation,
     Size,
 )
+from app.modules.raid.utils.validation_checker import (
+    compute_participant_progress,
+    count_accepted_documents,
+    count_total_required_documents,
+)
 
 
 class DocumentBase(BaseModel):
@@ -138,28 +143,16 @@ class RaidParticipant(RaidParticipantPreview):
     @computed_field
     @property
     def validation_progress(self) -> float:
-        from app.modules.raid.utils.validation_checker import (
-            compute_participant_progress,
-        )
-
         return compute_participant_progress(self)
 
     @computed_field
     @property
     def number_of_document(self) -> int:
-        from app.modules.raid.utils.validation_checker import (
-            count_total_required_documents,
-        )
-
         return count_total_required_documents(self)
 
     @computed_field
     @property
     def number_of_validated_document(self) -> int:
-        from app.modules.raid.utils.validation_checker import (
-            count_accepted_documents,
-        )
-
         return count_accepted_documents(self)
 
 

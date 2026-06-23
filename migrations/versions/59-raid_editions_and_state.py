@@ -4,6 +4,7 @@ Create Date: 2026-04-21 00:00:00.000000
 """
 
 import contextlib
+import json
 import uuid
 from collections.abc import Sequence
 from enum import Enum
@@ -66,8 +67,6 @@ def upgrade() -> None:
         ),
     ).first()
     if raid_info_row is not None:
-        import json
-
         try:
             payload = json.loads(raid_info_row[0]) if raid_info_row[0] else {}
             raid_start_date = payload.get("raid_start_date")
