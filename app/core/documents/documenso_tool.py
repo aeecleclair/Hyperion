@@ -46,7 +46,7 @@ class DocumensoTool:
                 per_page=100,
             )
             all_folders.extend(response.data)
-            max_pages = response.total_pages
+            max_pages = int(response.total_pages)
             current_page += 1
         return all_folders
 
@@ -79,7 +79,7 @@ class DocumensoTool:
                 per_page=100,
             )
             all_documents.extend(response.data)
-            max_pages = response.total_pages
+            max_pages = int(response.total_pages)
             current_page += 1
         return all_documents
 
@@ -97,7 +97,7 @@ class DocumensoTool:
                 per_page=100,
             )
             all_templates.extend(response.data)
-            max_pages = response.total_pages
+            max_pages = int(response.total_pages)
             current_page += 1
         return all_templates
 

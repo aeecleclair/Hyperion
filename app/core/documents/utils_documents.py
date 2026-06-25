@@ -212,6 +212,7 @@ async def use_template_for_a_recipient(
         )
     except Exception as e:
         errors[recipient.email] = str(e)
+        return None
 
 
 async def handle_document_callback(

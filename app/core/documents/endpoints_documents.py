@@ -588,14 +588,14 @@ async def documenso_webhook(
 
     match webhook.event:
         case WebhookEvent.TEMPLATE_CREATED:
-            payload: TemplateCreatedPayload = webhook.payload
-            await handle_template_creation_webhook(payload=payload, db=db)
+            creation_payload: TemplateCreatedPayload = webhook.payload
+            await handle_template_creation_webhook(payload=creation_payload, db=db)
 
         case WebhookEvent.TEMPLATE_UPDATED:
-            payload: TemplateUpdatedPayload = webhook.payload
+            update_payload: TemplateUpdatedPayload = webhook.payload
             template = await cruds_documents.get_template_by_documenso_id(
                 db=db,
-                documenso_id=payload.id,
+                documenso_id=update_payload.id,
             )
             if template is None:
                 return
@@ -603,15 +603,15 @@ async def documenso_webhook(
                 db=db,
                 template_id=template.id,
                 template_update=schemas_documents.TemplateDocumensoUpdate(
-                    name=payload.title,
+                    name=update_payload.title,
                 ),
             )
 
         case WebhookEvent.TEMPLATE_DELETED:
-            payload: TemplateDeletedPayload = webhook.payload
+            deletion_payload: TemplateDeletedPayload = webhook.payload
             template = await cruds_documents.get_template_by_documenso_id(
                 db=db,
-                documenso_id=payload.id,
+                documenso_id=deletion_payload.id,
             )
             if template is None:
                 return
@@ -624,10 +624,10 @@ async def documenso_webhook(
             )
 
         case WebhookEvent.DOCUMENT_COMPLETED:
-            payload: DocumentCompletedPayload = webhook.payload
-            if payload.external_id is None:
+            completion_payload: DocumentCompletedPayload = webhook.payload
+            if completion_payload.external_id is None:
                 return
-            document_id = uuid.UUID(payload.external_id)
+            document_id = uuid.UUID(completion_payload.external_id)
             document = await cruds_documents.get_document_by_id(
                 db=db,
                 document_id=document_id,
@@ -651,10 +651,10 @@ async def documenso_webhook(
             )
 
         case WebhookEvent.DOCUMENT_REJECTED:
-            payload: DocumentRejectedPayload = webhook.payload
-            if payload.external_id is None:
+            rejection_payload: DocumentRejectedPayload = webhook.payload
+            if rejection_payload.external_id is None:
                 return
-            document_id = uuid.UUID(payload.external_id)
+            document_id = uuid.UUID(rejection_payload.external_id)
             document = await cruds_documents.get_document_by_id(
                 db=db,
                 document_id=document_id,
@@ -666,7 +666,7 @@ async def documenso_webhook(
 
             await cruds_documents.update_document(
                 db=db,
-                document_id=uuid.UUID(payload.external_id),
+                document_id=uuid.UUID(rejection_payload.external_id),
                 status=DocumentStatus.REJECTED,
             )
 

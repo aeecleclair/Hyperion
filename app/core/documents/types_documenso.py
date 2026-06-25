@@ -254,5 +254,5 @@ DocumensoWebhook = Annotated[
 
 
 def parse_webhook(data: dict) -> DocumensoWebhook:
-    adapter = TypeAdapter(DocumensoWebhook)
+    adapter: TypeAdapter[DocumensoWebhook] = TypeAdapter(DocumensoWebhook)
     return adapter.validate_python(data)
