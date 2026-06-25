@@ -6,7 +6,7 @@ from documenso_sdk import TemplateCreateDocumentFromTemplateRecipientRequest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.documents import cruds_documents, models_documents, schemas_documents
-from app.core.documents.documenso_tool import DocumensoTool
+from app.core.documents.documenso_api_wrapper import DocumensoAPIWrapper
 from app.core.documents.types_documenso import DocumentStatus, TemplateCreatedPayload
 from app.core.groups.schemas_groups import CoreGroup
 from app.core.users.schemas_users import CoreUser
@@ -157,7 +157,7 @@ async def use_template_for_a_recipient(
     recipient: CoreUser,
     template: schemas_documents.Template,
     destination_folder_id: str,
-    documenso: DocumensoTool,
+    documenso: DocumensoAPIWrapper,
     db: AsyncSession,
     module: str,
     errors: dict[str, str],

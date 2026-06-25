@@ -343,7 +343,7 @@ async def test_create_team(
     mocker: MockerFixture,
 ):
     mocker.patch(
-        "app.core.documents.documenso_tool.DocumensoTool.find_folders",
+        "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.find_folders",
         return_value=None,
     )
     response = client.post(
@@ -452,7 +452,7 @@ async def test_update_team(
     mocker: MockerFixture,
 ):
     mocker.patch(
-        "app.core.documents.documenso_tool.DocumensoTool.find_folders",
+        "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.find_folders",
         return_value=None,
     )
     response = client.patch(
@@ -694,7 +694,7 @@ def test_download_document_as_other_user(client: TestClient):
 
 def test_download_document_as_user(client: TestClient, mocker: MockerFixture):
     mocker.patch(
-        "app.core.documents.documenso_tool.DocumensoTool.download_document",
+        "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.download_document",
         return_value=DocumentDownloadResponse(
             headers={},
             result=b"PDF content",
@@ -711,7 +711,7 @@ def test_download_document_as_user(client: TestClient, mocker: MockerFixture):
 
 def test_download_document_as_group_admin(client: TestClient, mocker: MockerFixture):
     mocker.patch(
-        "app.core.documents.documenso_tool.DocumensoTool.download_document",
+        "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.download_document",
         return_value=DocumentDownloadResponse(
             headers={},
             result=b"PDF content",
@@ -831,7 +831,7 @@ async def test_use_template_for_a_recipient(
         return_value=mocked_id,
     )
     mocker.patch(
-        "app.core.documents.documenso_tool.DocumensoTool.use_template",
+        "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.use_template",
         return_value=MockedTemplateUseResponse(
             id=100,
             recipients=[MockedRecipientResponse(token="mocked_signing_token")],
