@@ -3,9 +3,18 @@ from uuid import UUID
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.documents import models_documents, schemas_documents
 from app.core.documents.types_documenso import DocumentStatus
+from app.core.documents.utils_documents import (
+    document_complete_model_to_schema,
+    document_model_to_schema,
+    team_complete_model_to_schema,
+    team_model_to_schema,
+    template_complete_model_to_schema,
+    template_model_to_schema,
+)
 
 # ---------------------------------------------------------------------------
 # Team
@@ -16,17 +25,7 @@ async def get_teams(db: AsyncSession) -> list[schemas_documents.Team]:
     """Return all document teams from database."""
 
     result = await db.execute(select(models_documents.DocumentTeam))
-    return [
-        schemas_documents.Team(
-            id=team.id,
-            team_id=team.team_id,
-            group_id=team.group_id,
-            name=team.name,
-            api_key=team.api_key,
-            documenso_url=team.documenso_url,
-        )
-        for team in result.scalars().all()
-    ]
+    return [team_model_to_schema(team) for team in result.scalars().all()]
 
 
 async def get_team_by_id(
@@ -46,18 +45,32 @@ async def get_team_by_id(
         .scalars()
         .first()
     )
-    return (
-        schemas_documents.Team(
-            id=result.id,
-            team_id=result.team_id,
-            group_id=result.group_id,
-            name=result.name,
-            api_key=result.api_key,
-            documenso_url=result.documenso_url,
+    return team_model_to_schema(result) if result else None
+
+
+async def get_team_by_group_ids(
+    db: AsyncSession,
+    group_ids: list[str],
+) -> list[schemas_documents.TeamComplete]:
+    """Return a document team by its internal id."""
+
+    result = (
+        (
+            await db.execute(
+                select(models_documents.DocumentTeam)
+                .where(
+                    models_documents.DocumentTeam.group_id.in_(group_ids),
+                )
+                .options(
+                    selectinload(models_documents.DocumentTeam.templates),
+                    selectinload(models_documents.DocumentTeam.group),
+                ),
+            )
         )
-        if result
-        else None
+        .scalars()
+        .all()
     )
+    return [team_complete_model_to_schema(team) for team in result]
 
 
 async def get_team_by_name(
@@ -77,18 +90,7 @@ async def get_team_by_name(
         .scalars()
         .first()
     )
-    return (
-        schemas_documents.Team(
-            id=result.id,
-            team_id=result.team_id,
-            group_id=result.group_id,
-            name=result.name,
-            api_key=result.api_key,
-            documenso_url=result.documenso_url,
-        )
-        if result
-        else None
-    )
+    return team_model_to_schema(result) if result else None
 
 
 async def get_team_by_group_id(
@@ -108,18 +110,7 @@ async def get_team_by_group_id(
         .scalars()
         .first()
     )
-    return (
-        schemas_documents.Team(
-            id=result.id,
-            team_id=result.team_id,
-            group_id=result.group_id,
-            name=result.name,
-            api_key=result.api_key,
-            documenso_url=result.documenso_url,
-        )
-        if result
-        else None
-    )
+    return team_model_to_schema(result) if result else None
 
 
 async def create_team(
@@ -135,7 +126,6 @@ async def create_team(
             group_id=team.group_id,
             name=team.name,
             api_key=team.api_key,
-            documenso_url=team.documenso_url,
         ),
     )
 
@@ -169,38 +159,24 @@ async def delete_team(db: AsyncSession, team_id: UUID) -> None:
 # ---------------------------------------------------------------------------
 
 
-async def get_templates(
+async def get_team_templates(
     db: AsyncSession,
-    team_id: UUID | None = None,
+    team_id: UUID,
 ) -> list[schemas_documents.Template]:
     """Return all templates, optionally filtered by team."""
 
-    query = select(models_documents.DocumentTemplate).where(
-        models_documents.DocumentTemplate.deleted == False,  # noqa: E712
+    result = await db.execute(
+        select(models_documents.DocumentTemplate).where(
+            models_documents.DocumentTemplate.team_id == team_id,
+        ),
     )
-    if team_id is not None:
-        query = query.where(models_documents.DocumentTemplate.team_id == team_id)
-
-    result = await db.execute(query)
-    return [
-        schemas_documents.Template(
-            id=template.id,
-            documenso_id=template.documenso_id,
-            name=template.name,
-            team_id=template.team_id,
-            deleted=template.deleted,
-            document_directory_id=template.document_directory_id,
-            created_at=template.created_at,
-            updated_at=template.updated_at,
-        )
-        for template in result.scalars().all()
-    ]
+    return [template_model_to_schema(template) for template in result.scalars().all()]
 
 
 async def get_template_by_id(
     db: AsyncSession,
     template_id: UUID,
-) -> schemas_documents.Template | None:
+) -> schemas_documents.TemplateComplete | None:
     """Return a template by its internal id."""
 
     result = (
@@ -214,26 +190,13 @@ async def get_template_by_id(
         .scalars()
         .first()
     )
-    return (
-        schemas_documents.Template(
-            id=result.id,
-            documenso_id=result.documenso_id,
-            name=result.name,
-            team_id=result.team_id,
-            deleted=result.deleted,
-            document_directory_id=result.document_directory_id,
-            created_at=result.created_at,
-            updated_at=result.updated_at,
-        )
-        if result
-        else None
-    )
+    return template_complete_model_to_schema(result) if result else None
 
 
 async def get_template_by_documenso_id(
     db: AsyncSession,
-    documenso_id: str,
-) -> schemas_documents.Template | None:
+    documenso_id: int,
+) -> schemas_documents.TemplateComplete | None:
     """Return a template by its Documenso id."""
 
     result = (
@@ -247,20 +210,7 @@ async def get_template_by_documenso_id(
         .scalars()
         .first()
     )
-    return (
-        schemas_documents.Template(
-            id=result.id,
-            documenso_id=result.documenso_id,
-            name=result.name,
-            team_id=result.team_id,
-            deleted=result.deleted,
-            document_directory_id=result.document_directory_id,
-            created_at=result.created_at,
-            updated_at=result.updated_at,
-        )
-        if result
-        else None
-    )
+    return template_complete_model_to_schema(result) if result else None
 
 
 async def create_template(
@@ -293,7 +243,27 @@ async def update_template(
     await db.execute(
         update(models_documents.DocumentTemplate)
         .where(models_documents.DocumentTemplate.id == template_id)
-        .values(**template_update.model_dump(exclude_none=True)),
+        .values(
+            **template_update.model_dump(exclude_unset=True),
+            updated_at=datetime.now(UTC),
+        ),
+    )
+
+
+async def update_template_by_documenso_id(
+    db: AsyncSession,
+    documenso_id: int,
+    template_update: schemas_documents.TemplateDocumensoUpdate,
+) -> None:
+    """Update a template name when Documenso reports an update."""
+
+    await db.execute(
+        update(models_documents.DocumentTemplate)
+        .where(models_documents.DocumentTemplate.documenso_id == documenso_id)
+        .values(
+            **template_update.model_dump(exclude_unset=True),
+            updated_at=datetime.now(UTC),
+        ),
     )
 
 
@@ -307,20 +277,6 @@ async def mark_template_deleted(
         update(models_documents.DocumentTemplate)
         .where(models_documents.DocumentTemplate.documenso_id == documenso_id)
         .values(deleted=True, updated_at=datetime.now(UTC)),
-    )
-
-
-async def update_template_name_by_documenso_id(
-    db: AsyncSession,
-    documenso_id: str,
-    name: str,
-) -> None:
-    """Update a template name when Documenso reports an update."""
-
-    await db.execute(
-        update(models_documents.DocumentTemplate)
-        .where(models_documents.DocumentTemplate.documenso_id == documenso_id)
-        .values(name=name, updated_at=datetime.now(UTC)),
     )
 
 
@@ -340,25 +296,13 @@ async def get_documents_by_user_id(
             models_documents.DocumentDocument.user_id == user_id,
         ),
     )
-    return [
-        schemas_documents.Document(
-            id=doc.id,
-            template_id=doc.template_id,
-            name=doc.name,
-            user_id=doc.user_id,
-            module=doc.module,
-            status=doc.status,
-            created_at=doc.created_at,
-            updated_at=doc.updated_at,
-        )
-        for doc in result.scalars().all()
-    ]
+    return [document_model_to_schema(doc) for doc in result.scalars().all()]
 
 
 async def get_documents_by_template_id(
     db: AsyncSession,
     template_id: UUID,
-) -> list[schemas_documents.Document]:
+) -> list[schemas_documents.DocumentComplete]:
     """Return all documents generated from a given template (admin view)."""
 
     result = await db.execute(
@@ -366,19 +310,7 @@ async def get_documents_by_template_id(
             models_documents.DocumentDocument.template_id == template_id,
         ),
     )
-    return [
-        schemas_documents.Document(
-            id=doc.id,
-            template_id=doc.template_id,
-            name=doc.name,
-            user_id=doc.user_id,
-            module=doc.module,
-            status=doc.status,
-            created_at=doc.created_at,
-            updated_at=doc.updated_at,
-        )
-        for doc in result.scalars().all()
-    ]
+    return [document_complete_model_to_schema(doc) for doc in result.scalars().all()]
 
 
 async def get_document_by_id(
@@ -398,11 +330,31 @@ async def get_document_by_id(
         .scalars()
         .first()
     )
+    return document_complete_model_to_schema(result) if result else None
+
+
+async def get_document_with_token_by_id(
+    db: AsyncSession,
+    document_id: UUID,
+) -> schemas_documents.DocumentWithToken | None:
+    """Return a single document with signing token only (for user view)."""
+
+    result = (
+        (
+            await db.execute(
+                select(models_documents.DocumentDocument).where(
+                    models_documents.DocumentDocument.id == document_id,
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
     return (
-        schemas_documents.DocumentComplete(
+        schemas_documents.DocumentWithToken(
             id=result.id,
-            template_id=result.template_id,
             name=result.name,
+            template_id=result.template_id,
             module=result.module,
             user_id=result.user_id,
             signing_token=result.signing_token,
@@ -416,7 +368,7 @@ async def get_document_by_id(
 
 
 async def create_document(
-    document: schemas_documents.DocumentComplete,
+    document: schemas_documents.DocumentWithToken,
     db: AsyncSession,
 ) -> None:
     """Persist a newly generated document."""
@@ -436,15 +388,28 @@ async def create_document(
     )
 
 
-async def update_document_status_by_signing_token(
+async def update_document(
     db: AsyncSession,
-    signing_token: str,
+    document_id: UUID,
     status: DocumentStatus,
 ) -> None:
     """Update document status identified by its signing token (called from webhook)."""
 
     await db.execute(
         update(models_documents.DocumentDocument)
-        .where(models_documents.DocumentDocument.signing_token == signing_token)
+        .where(models_documents.DocumentDocument.id == document_id)
         .values(status=status, updated_at=datetime.now(UTC)),
+    )
+
+
+async def delete_document_by_id(
+    db: AsyncSession,
+    document_id: UUID,
+) -> None:
+    """Delete a document from database by id."""
+
+    await db.execute(
+        delete(models_documents.DocumentDocument).where(
+            models_documents.DocumentDocument.id == document_id,
+        ),
     )

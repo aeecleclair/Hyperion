@@ -4,6 +4,8 @@ from uuid import UUID
 from pydantic import BaseModel
 
 from app.core.documents.types_documenso import DocumentStatus
+from app.core.groups.schemas_groups import CoreGroup
+from app.core.users.schemas_users import CoreUser
 
 # ---------------------------------------------------------------------------
 # DocumentTeam
@@ -11,22 +13,25 @@ from app.core.documents.types_documenso import DocumentStatus
 
 
 class TeamBase(BaseModel):
+    team_id: int
     group_id: str
     name: str
     api_key: str
-    documenso_url: str
 
 
 class Team(TeamBase):
     id: UUID
-    team_id: UUID
+
+
+class TeamComplete(Team):
+    templates: list["Template"]
+    group: CoreGroup
 
 
 class TeamUpdate(BaseModel):
     group_id: str | None = None
     name: str | None = None
     api_key: str | None = None
-    documenso_url: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -35,7 +40,7 @@ class TeamUpdate(BaseModel):
 
 
 class TemplateBase(BaseModel):
-    documenso_id: str
+    documenso_id: int
     name: str
     team_id: UUID
 
@@ -48,8 +53,22 @@ class Template(TemplateBase):
     updated_at: datetime
 
 
+class TemplateComplete(Template):
+    documents: list["Document"]
+    team: Team
+
+
 class TemplateUpdate(BaseModel):
     document_directory_id: str | None = None
+
+
+class TemplateDocumensoUpdate(BaseModel):
+    name: str | None = None
+
+
+class TemplateUseResponse(BaseModel):
+    errors: dict[str, str]
+    documents: list["Document"]
 
 
 # ---------------------------------------------------------------------------
@@ -71,5 +90,9 @@ class Document(DocumentBase):
     updated_at: datetime
 
 
-class DocumentComplete(Document):
+class DocumentWithToken(Document):
     signing_token: str
+
+
+class DocumentComplete(Document):
+    user: CoreUser

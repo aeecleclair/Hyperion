@@ -1,21 +1,33 @@
+import asyncio
 import uuid
-from datetime import UTC, datetime
 
-from documenso_sdk import TemplateCreateDocumentFromTemplateRecipientRequest
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.documents import cruds_documents, schemas_documents
 from app.core.documents.documenso_tool import DocumensoConfiguration, DocumensoTool
+from app.core.documents.exceptions_documents import ElementTeamNotFoundError
 from app.core.documents.types_documenso import (
+    DocumentCompletedPayload,
+    DocumentRejectedPayload,
     DocumentStatus,
+    TemplateCreatedPayload,
+    TemplateDeletedPayload,
+    TemplateUpdatedPayload,
     WebhookEvent,
     parse_webhook,
 )
+from app.core.documents.utils_documents import (
+    handle_document_callback,
+    handle_template_creation_webhook,
+    use_template_for_a_recipient,
+)
 from app.core.groups.groups_type import GroupType
-from app.core.users import cruds_users, schemas_users
+from app.core.users import schemas_users
+from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
+    get_settings,
     is_user,
     is_user_in,
 )
@@ -32,23 +44,24 @@ core_module = CoreModule(
 )
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _build_documenso_tool(team: schemas_documents.Team) -> DocumensoTool:
+def _build_documenso_tool(
+    team: schemas_documents.Team,
+    settings: Settings,
+) -> DocumensoTool:
+    if settings.DOCUMENSO_URL is None:
+        raise HTTPException(
+            status_code=500,
+            detail="Documenso URL is not configured in the application settings",
+        )
     return DocumensoTool(
         configuration=DocumensoConfiguration(
             api_key=team.api_key,
-            documenso_url=team.documenso_url,
+            documenso_url=settings.DOCUMENSO_URL,
         ),
     )
 
 
-# ---------------------------------------------------------------------------
-# Teams — CRUD
-# ---------------------------------------------------------------------------
+# region: Teams
 
 
 @router.get(
@@ -70,25 +83,24 @@ async def read_teams(
 
 
 @router.get(
-    "/documents/teams/{team_id}",
-    response_model=schemas_documents.Team,
+    "/documents/teams/me",
+    response_model=list[schemas_documents.TeamComplete],
     status_code=200,
 )
-async def read_team(
-    team_id: uuid.UUID,
+async def read_user_teams(
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: schemas_users.CoreUser = Depends(is_user()),
 ):
     """
-    Return a document team by id.
+    Return the document team associated with the current user's groups.
 
     **This endpoint is only usable by administrators**
     """
 
-    db_team = await cruds_documents.get_team_by_id(db=db, team_id=team_id)
-    if db_team is None:
-        raise HTTPException(status_code=404, detail="Team not found")
-    return db_team
+    return await cruds_documents.get_team_by_group_ids(
+        db=db,
+        group_ids=[g.id for g in user.groups],
+    )
 
 
 @router.post(
@@ -100,6 +112,7 @@ async def create_team(
     team_base: schemas_documents.TeamBase,
     db: AsyncSession = Depends(get_db),
     user: schemas_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Create a new document team.
@@ -112,15 +125,31 @@ async def create_team(
             status_code=400,
             detail=f"A team with the name {team_base.name} already exists",
         )
+    if (
+        await cruds_documents.get_team_by_group_id(db=db, group_id=team_base.group_id)
+        is not None
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=f"A team for the group {team_base.group_id} already exists",
+        )
 
     team = schemas_documents.Team(
         id=uuid.uuid4(),
-        team_id=uuid.uuid4(),
+        team_id=team_base.team_id,
         group_id=team_base.group_id,
         name=team_base.name,
         api_key=team_base.api_key,
-        documenso_url=team_base.documenso_url,
     )
+
+    documenso = _build_documenso_tool(team, settings)
+    try:
+        await documenso.find_folders()
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to connect to Documenso with the provided API key: {e}",
+        )
 
     await cruds_documents.create_team(team=team, db=db)
     return team
@@ -135,6 +164,7 @@ async def update_team(
     team_update: schemas_documents.TeamUpdate,
     db: AsyncSession = Depends(get_db),
     user: schemas_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Update a document team.
@@ -155,6 +185,27 @@ async def update_team(
                 status_code=400,
                 detail=f"A team with the name {team_update.name} already exists",
             )
+    if team_update.group_id and team_update.group_id != db_team.group_id:
+        if (
+            await cruds_documents.get_team_by_group_id(
+                db=db,
+                group_id=team_update.group_id,
+            )
+            is not None
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail=f"A team for the group {team_update.group_id} already exists",
+            )
+
+    documenso = _build_documenso_tool(db_team, settings)
+    try:
+        await documenso.find_folders()
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to connect to Documenso with the provided API key: {e}",
+        )
 
     await cruds_documents.update_team(db=db, team_id=team_id, team_update=team_update)
 
@@ -181,44 +232,51 @@ async def delete_team(
     await cruds_documents.delete_team(db=db, team_id=team_id)
 
 
-# ---------------------------------------------------------------------------
-# Templates — GET + PATCH (directory only)
-# ---------------------------------------------------------------------------
+# endregion: Teams
+# region: Templates
 
 
 @router.get(
-    "/documents/templates/",
+    "/documents/teams/{team_id}/templates/",
     response_model=list[schemas_documents.Template],
     status_code=200,
 )
-async def read_templates(
-    team_id: uuid.UUID | None = None,
+async def read_team_templates(
+    team_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: schemas_users.CoreUser = Depends(is_user()),
 ):
     """
-    Return all non-deleted templates, optionally filtered by team.
+    Return all templates for a given document team.
 
-    **This endpoint is only usable by administrators**
+    **This endpoint is only usable by the group that owns the team**
     """
+    team = await cruds_documents.get_team_by_id(db=db, team_id=team_id)
+    if team is None:
+        raise HTTPException(status_code=404, detail="Team not found")
+    if not is_user_member_of_any_group(user, [team.group_id]):
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to view templates for this team",
+        )
 
-    return await cruds_documents.get_templates(db=db, team_id=team_id)
+    return await cruds_documents.get_team_templates(db=db, team_id=team_id)
 
 
 @router.get(
     "/documents/templates/{template_id}",
-    response_model=schemas_documents.Template,
+    response_model=schemas_documents.TemplateComplete,
     status_code=200,
 )
 async def read_template(
     template_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: schemas_users.CoreUser = Depends(is_user()),
 ):
     """
     Return a single template by id.
 
-    **This endpoint is only usable by administrators**
+    **This endpoint is only usable by the group that owns the team linked to this template**
     """
 
     db_template = await cruds_documents.get_template_by_id(
@@ -227,6 +285,11 @@ async def read_template(
     )
     if db_template is None:
         raise HTTPException(status_code=404, detail="Template not found")
+    if not is_user_member_of_any_group(user, [db_template.team.group_id]):
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to view this template",
+        )
     return db_template
 
 
@@ -242,9 +305,8 @@ async def update_template(
 ):
     """
     Update the destination folder of a template.
-    Only the group that owns the team linked to this template may call this.
 
-    **This endpoint is only usable by group administrators**
+    **This endpoint is only usable by the group that owns the team linked to this template**
     """
 
     db_template = await cruds_documents.get_template_by_id(
@@ -256,7 +318,7 @@ async def update_template(
 
     db_team = await cruds_documents.get_team_by_id(db=db, team_id=db_template.team_id)
     if db_team is None:
-        raise HTTPException(status_code=404, detail="Team not found")
+        raise ElementTeamNotFoundError(team_id=db_template.team_id)
 
     # Ensure the caller belongs to the group that owns this team
     if not is_user_member_of_any_group(user, [db_team.group_id]):
@@ -272,9 +334,78 @@ async def update_template(
     )
 
 
-# ---------------------------------------------------------------------------
-# Documents — GET + POST (generate from template)
-# ---------------------------------------------------------------------------
+@router.post(
+    "/templates/{template_id}/documents/",
+    response_model=schemas_documents.Document,
+    status_code=201,
+)
+async def use_template(
+    template_id: uuid.UUID,
+    recipient_list: list[str],
+    db: AsyncSession = Depends(get_db),
+    user: schemas_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    settings: Settings = Depends(get_settings),
+):
+    """
+    Generate a new document from a template for a given user.
+    Uses the Documenso API to create the signing request and stores the signing token.
+
+    **This endpoint is only usable by group administrators**
+    """
+
+    db_template = await cruds_documents.get_template_by_id(
+        db=db,
+        template_id=template_id,
+    )
+    if db_template is None:
+        raise HTTPException(status_code=404, detail="Template not found")
+    if db_template.deleted:
+        raise HTTPException(status_code=400, detail="Template has been deleted")
+
+    db_team = await cruds_documents.get_team_by_id(db=db, team_id=db_template.team_id)
+    if db_team is None:
+        raise ElementTeamNotFoundError(team_id=db_template.team_id)
+
+    if not is_user_member_of_any_group(user, [db_team.group_id]):
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to generate a document from this template",
+        )
+
+    documenso = _build_documenso_tool(db_team, settings)
+
+    destination_folder_id = db_template.document_directory_id
+    if destination_folder_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="No destination folder configured for this template",
+        )
+
+    # Retrieve the target user to fill in the recipient fields
+    errors: dict[str, str] = {}
+    documents = await asyncio.gather(
+        *[
+            use_template_for_a_recipient(
+                recipient_email=recipient,
+                template=db_template,
+                destination_folder_id=destination_folder_id,
+                documenso=documenso,
+                db=db,
+                module="documents",
+                errors=errors,
+            )
+            for recipient in recipient_list
+        ],
+    )
+
+    return schemas_documents.TemplateUseResponse(
+        errors=errors,
+        documents=[doc for doc in documents if doc is not None],
+    )
+
+
+# endregion: Templates
+# region: Documents
 
 
 @router.get(
@@ -295,8 +426,8 @@ async def read_my_documents(
 
 
 @router.get(
-    "/documents/me/{document_id}/token",
-    response_model=schemas_documents.DocumentComplete,
+    "/documents/{document_id}/token",
+    response_model=schemas_documents.DocumentWithToken,
     status_code=200,
 )
 async def read_my_document_token(
@@ -309,30 +440,31 @@ async def read_my_document_token(
     Only the user the document is addressed to may retrieve it.
     """
 
-    db_document = await cruds_documents.get_document_by_id(
+    db_document = await cruds_documents.get_document_with_token_by_id(
         db=db,
         document_id=document_id,
     )
     if db_document is None:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    # Strict ownership check — no other user must see this token
     if db_document.user_id != user.id:
         raise HTTPException(status_code=403, detail="Access forbidden")
+
+    return db_document
 
 
 @router.get(
     "/documents/templates/{template_id}/documents/",
-    response_model=list[schemas_documents.Document],
+    response_model=list[schemas_documents.DocumentComplete],
     status_code=200,
 )
 async def read_template_documents(
     template_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: schemas_users.CoreUser = Depends(is_user()),
 ):
     """
-    Return all documents generated from a given template (admin monitoring view).
+    Return all documents generated from a given template
 
     **This endpoint is only usable by administrators**
     """
@@ -344,121 +476,23 @@ async def read_template_documents(
     if db_template is None:
         raise HTTPException(status_code=404, detail="Template not found")
 
+    db_team = await cruds_documents.get_team_by_id(db=db, team_id=db_template.team_id)
+    if db_team is None:
+        raise ElementTeamNotFoundError(team_id=db_template.team_id)
+    if not is_user_member_of_any_group(user, [db_team.group_id]):
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to view documents for this template",
+        )
+
     return await cruds_documents.get_documents_by_template_id(
         db=db,
         template_id=template_id,
     )
 
 
-class DocumentCreateRequest(schemas_documents.DocumentBase):
-    """Request body for document generation — wraps base fields."""
-
-
-@router.post(
-    "/documents/",
-    response_model=schemas_documents.Document,
-    status_code=201,
-)
-async def create_document(
-    document_request: DocumentCreateRequest,
-    db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user_in(GroupType.admin)),
-):
-    """
-    Generate a new document from a template for a given user.
-    Uses the Documenso API to create the signing request and stores the signing token.
-
-    **This endpoint is only usable by group administrators**
-    """
-
-    db_template = await cruds_documents.get_template_by_id(
-        db=db,
-        template_id=document_request.template_id,
-    )
-    if db_template is None:
-        raise HTTPException(status_code=404, detail="Template not found")
-    if db_template.deleted:
-        raise HTTPException(status_code=400, detail="Template has been deleted")
-
-    db_team = await cruds_documents.get_team_by_id(db=db, team_id=db_template.team_id)
-    if db_team is None:
-        raise HTTPException(status_code=404, detail="Team not found")
-
-    if not is_user_member_of_any_group(user, [db_team.group_id]):
-        raise HTTPException(
-            status_code=403,
-            detail="You do not have permission to generate a document from this template",
-        )
-
-    documenso = _build_documenso_tool(db_team)
-
-    destination_folder_id = db_template.document_directory_id
-    if destination_folder_id is None:
-        raise HTTPException(
-            status_code=400,
-            detail="No destination folder configured for this template",
-        )
-
-    # Retrieve the target user to fill in the recipient fields
-
-    target_user = await cruds_users.get_user_by_id(
-        db=db,
-        user_id=document_request.user_id,
-    )
-    if target_user is None:
-        raise HTTPException(status_code=404, detail="Target user not found")
-    document_id = uuid.uuid4()
-    documenso_response = await documenso.use_template(
-        template_id=float(db_template.documenso_id),
-        external_id=document_id,
-        recipients=[
-            TemplateCreateDocumentFromTemplateRecipientRequest(
-                id=1,
-                name=f"{target_user.firstname} {target_user.name}",
-                email=target_user.email,
-            ),
-        ],
-        destination_folder_id=destination_folder_id,
-    )
-
-    # Extract the signing token from the first (and only) recipient
-    if not documenso_response.recipients:
-        raise HTTPException(
-            status_code=502,
-            detail="Documenso did not return any recipient for the generated document",
-        )
-
-    signing_token = documenso_response.recipients[0].token
-
-    document = schemas_documents.DocumentComplete(
-        id=document_id,
-        template_id=document_request.template_id,
-        name=document_request.name,
-        module=document_request.module,
-        user_id=document_request.user_id,
-        signing_token=signing_token,
-        status=DocumentStatus.PENDING,
-        created_at=datetime.now(UTC),
-        updated_at=datetime.now(UTC),
-    )
-
-    await cruds_documents.create_document(document=document, db=db)
-
-    return schemas_documents.Document(
-        id=document.id,
-        template_id=document.template_id,
-        name=document.name,
-        user_id=document.user_id,
-        module=document.module,
-        status=document.status,
-        created_at=document.created_at,
-        updated_at=document.updated_at,
-    )
-
-
-# ---------------------------------------------------------------------------
-# Webhook — handles Documenso events
-# ---------------------------------------------------------------------------
+# endregion: Documents
+# region: Webhook
 
 
 @router.post(
@@ -468,12 +502,18 @@ async def create_document(
 async def documenso_webhook(
     request: Request,
     db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Webhook endpoint called by Documenso.
     Handles: TEMPLATE_CREATED, TEMPLATE_UPDATED, TEMPLATE_DELETED,
              DOCUMENT_COMPLETED, DOCUMENT_REJECTED.
     """
+    if settings.DOCUMENSO_SECRET:
+        headers = request.headers
+        documenso_secret = headers.get("X-Documenso-Secret")
+        if documenso_secret is None or documenso_secret != settings.DOCUMENSO_SECRET:
+            raise HTTPException(status_code=403, detail="Invalid Documenso signature")
 
     raw_body = await request.json()
 
@@ -484,70 +524,83 @@ async def documenso_webhook(
 
     match webhook.event:
         case WebhookEvent.TEMPLATE_CREATED:
-            payload = webhook.payload
-
-            # We need to identify which team owns this template via its Documenso team_id
-            if payload.team_id is None:
-                # Template not associated with any team — ignore
-                return
-
-            # Find the internal team whose documenso team_id matches
-            all_teams = await cruds_documents.get_teams(db=db)
-            owning_team = next(
-                (t for t in all_teams if str(t.team_id) == str(payload.team_id)),
-                None,
-            )
-            if owning_team is None:
-                # Unknown team — ignore silently
-                return
-
-            template = schemas_documents.Template(
-                id=uuid.uuid4(),
-                documenso_id=str(payload.id),
-                name=payload.title,
-                team_id=owning_team.id,
-                deleted=False,
-                document_directory_id=None,
-                created_at=payload.created_at,
-                updated_at=payload.updated_at,
-            )
-            await cruds_documents.create_template(template=template, db=db)
+            payload: TemplateCreatedPayload = webhook.payload
+            await handle_template_creation_webhook(payload=payload, db=db)
 
         case WebhookEvent.TEMPLATE_UPDATED:
-            payload = webhook.payload
-            await cruds_documents.update_template_name_by_documenso_id(
+            payload: TemplateUpdatedPayload = webhook.payload
+            template = await cruds_documents.get_template_by_documenso_id(
                 db=db,
-                documenso_id=str(payload.id),
-                name=payload.title,
+                documenso_id=payload.id,
+            )
+            if template is None:
+                return
+            await cruds_documents.update_template_by_documenso_id(
+                db=db,
+                documenso_id=payload.id,
+                template_update=schemas_documents.TemplateDocumensoUpdate(
+                    name=payload.title,
+                ),
             )
 
         case WebhookEvent.TEMPLATE_DELETED:
-            payload = webhook.payload
+            payload: TemplateDeletedPayload = webhook.payload
+            template = await cruds_documents.get_template_by_documenso_id(
+                db=db,
+                documenso_id=payload.id,
+            )
+            if template is None:
+                return
             await cruds_documents.mark_template_deleted(
                 db=db,
                 documenso_id=str(payload.id),
             )
 
         case WebhookEvent.DOCUMENT_COMPLETED:
-            payload = webhook.payload
-            if not payload.recipients:
-                return
-            signing_token = payload.recipients[0].token
-
-            await cruds_documents.update_document_status_by_signing_token(
+            payload: DocumentCompletedPayload = webhook.payload
+            document_id = uuid.UUID(payload.external_id)
+            document = await cruds_documents.get_document_by_id(
                 db=db,
-                signing_token=signing_token,
+                document_id=document_id,
+            )
+            if document is None:
+                return
+
+            await cruds_documents.update_document(
+                db=db,
+                document_id=document_id,
                 status=DocumentStatus.COMPLETED,
             )
 
-        case WebhookEvent.DOCUMENT_REJECTED:
-            payload = webhook.payload
-            if not payload.recipients:
-                return
-            signing_token = payload.recipients[0].token
-
-            await cruds_documents.update_document_status_by_signing_token(
+            await handle_document_callback(
+                document_module=document.module,
+                document_id=document_id,
+                status=DocumentStatus.COMPLETED,
                 db=db,
-                signing_token=signing_token,
+            )
+
+        case WebhookEvent.DOCUMENT_REJECTED:
+            payload: DocumentRejectedPayload = webhook.payload
+            document_id = uuid.UUID(payload.external_id)
+            document = await cruds_documents.get_document_by_id(
+                db=db,
+                document_id=document_id,
+            )
+            if document is None:
+                return
+
+            await cruds_documents.update_document(
+                db=db,
+                document_id=uuid.UUID(payload.external_id),
                 status=DocumentStatus.REJECTED,
             )
+
+            await handle_document_callback(
+                document_module=document.module,
+                document_id=document_id,
+                status=DocumentStatus.REJECTED,
+                db=db,
+            )
+
+
+# endregion: Webhook
