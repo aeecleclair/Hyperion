@@ -236,7 +236,8 @@ async def create_template(
 async def update_template(
     db: AsyncSession,
     template_id: UUID,
-    template_update: schemas_documents.TemplateUpdate,
+    template_update: schemas_documents.TemplateUpdate
+    | schemas_documents.TemplateDocumensoUpdate,
 ) -> None:
     """Update a document template (directory only, from the public API)."""
 
@@ -247,36 +248,6 @@ async def update_template(
             **template_update.model_dump(exclude_unset=True),
             updated_at=datetime.now(UTC),
         ),
-    )
-
-
-async def update_template_by_documenso_id(
-    db: AsyncSession,
-    documenso_id: int,
-    template_update: schemas_documents.TemplateDocumensoUpdate,
-) -> None:
-    """Update a template name when Documenso reports an update."""
-
-    await db.execute(
-        update(models_documents.DocumentTemplate)
-        .where(models_documents.DocumentTemplate.documenso_id == documenso_id)
-        .values(
-            **template_update.model_dump(exclude_unset=True),
-            updated_at=datetime.now(UTC),
-        ),
-    )
-
-
-async def mark_template_deleted(
-    db: AsyncSession,
-    documenso_id: str,
-) -> None:
-    """Soft-delete a template identified by its Documenso id."""
-
-    await db.execute(
-        update(models_documents.DocumentTemplate)
-        .where(models_documents.DocumentTemplate.documenso_id == documenso_id)
-        .values(deleted=True, updated_at=datetime.now(UTC)),
     )
 
 
@@ -353,6 +324,7 @@ async def get_document_with_token_by_id(
     return (
         schemas_documents.DocumentWithToken(
             id=result.id,
+            documenso_id=result.documenso_id,
             name=result.name,
             template_id=result.template_id,
             module=result.module,
@@ -376,6 +348,7 @@ async def create_document(
     db.add(
         models_documents.DocumentDocument(
             id=document.id,
+            documenso_id=document.documenso_id,
             name=document.name,
             template_id=document.template_id,
             module=document.module,

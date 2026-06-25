@@ -9,7 +9,6 @@ from app.core.documents import cruds_documents, models_documents, schemas_docume
 from app.core.documents.documenso_tool import DocumensoTool
 from app.core.documents.types_documenso import DocumentStatus, TemplateCreatedPayload
 from app.core.groups.schemas_groups import CoreGroup
-from app.core.users import cruds_users
 from app.core.users.schemas_users import CoreUser
 from app.module import all_modules
 
@@ -88,6 +87,7 @@ def document_model_to_schema(
     """Convert a DocumentDocument model to a Document schema."""
     return schemas_documents.Document(
         id=model.id,
+        documenso_id=model.documenso_id,
         name=model.name,
         template_id=model.template_id,
         module=model.module,
@@ -104,6 +104,7 @@ def document_complete_model_to_schema(
     """Convert a DocumentDocument model to a DocumentComplete schema."""
     return schemas_documents.DocumentComplete(
         id=model.id,
+        documenso_id=model.documenso_id,
         name=model.name,
         template_id=model.template_id,
         module=model.module,
@@ -153,7 +154,7 @@ async def handle_template_creation_webhook(
 
 
 async def use_template_for_a_recipient(
-    recipient_email: str,
+    recipient: CoreUser,
     template: schemas_documents.Template,
     destination_folder_id: str,
     documenso: DocumensoTool,
@@ -161,58 +162,56 @@ async def use_template_for_a_recipient(
     module: str,
     errors: dict[str, str],
 ) -> schemas_documents.Document | None:
-    target_user = await cruds_users.get_user_by_email(
-        db=db,
-        email=recipient_email,
-    )
-    if target_user is None:
-        errors[recipient_email] = "User not found"
-        return None
-    document_id = uuid.uuid4()
-    documenso_response = await documenso.use_template(
-        template_id=float(template.documenso_id),
-        external_id=document_id,
-        recipients=[
-            TemplateCreateDocumentFromTemplateRecipientRequest(
-                id=1,
-                name=f"{target_user.firstname} {target_user.name}",
-                email=target_user.email,
-            ),
-        ],
-        destination_folder_id=destination_folder_id,
-    )
+    try:
+        document_id = uuid.uuid4()
+        documenso_response = await documenso.use_template(
+            template_id=float(template.documenso_id),
+            external_id=document_id,
+            recipients=[
+                TemplateCreateDocumentFromTemplateRecipientRequest(
+                    id=1,
+                    name=f"{recipient.firstname} {recipient.name}",
+                    email=recipient.email,
+                ),
+            ],
+            destination_folder_id=destination_folder_id,
+        )
 
-    # Extract the signing token from the first (and only) recipient
-    if not documenso_response.recipients:
-        errors[recipient_email] = "No recipients found in Documenso response"
-        return None
+        # Extract the signing token from the first (and only) recipient
+        if not documenso_response.recipients:
+            errors[recipient.email] = "No recipients found in Documenso response"
+            return None
 
-    signing_token = documenso_response.recipients[0].token
+        signing_token = documenso_response.recipients[0].token
 
-    document = schemas_documents.DocumentWithToken(
-        id=document_id,
-        template_id=template.id,
-        name=documenso_response.title,
-        module=module,
-        user_id=target_user.id,
-        signing_token=signing_token,
-        status=DocumentStatus.PENDING,
-        created_at=datetime.now(UTC),
-        updated_at=datetime.now(UTC),
-    )
+        document = schemas_documents.DocumentWithToken(
+            id=document_id,
+            documenso_id=int(documenso_response.id),
+            template_id=template.id,
+            name=documenso_response.title,
+            module=module,
+            user_id=recipient.id,
+            signing_token=signing_token,
+            status=DocumentStatus.PENDING,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
 
-    await cruds_documents.create_document(document=document, db=db)
+        await cruds_documents.create_document(document=document, db=db)
 
-    return schemas_documents.Document(
-        id=document.id,
-        template_id=document.template_id,
-        name=document.name,
-        user_id=document.user_id,
-        module=document.module,
-        status=document.status,
-        created_at=document.created_at,
-        updated_at=document.updated_at,
-    )
+        return schemas_documents.Document(
+            id=document.id,
+            documenso_id=document.documenso_id,
+            template_id=document.template_id,
+            name=document.name,
+            user_id=document.user_id,
+            module=document.module,
+            status=document.status,
+            created_at=document.created_at,
+            updated_at=document.updated_at,
+        )
+    except Exception as e:
+        errors[recipient.email] = str(e)
 
 
 async def handle_document_callback(

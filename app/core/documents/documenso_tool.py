@@ -2,6 +2,7 @@ from uuid import UUID
 
 from documenso_sdk import (
     Documenso,
+    DocumentDownloadResponse,
     DocumentFindData,
     DocumentUpdateData,
     FolderFindFoldersData,
@@ -114,6 +115,9 @@ class DocumensoTool:
             distribute_document=True,
             external_id=str(external_id),
         )
+
+    async def download_document(self, document_id: float) -> DocumentDownloadResponse:
+        return await self.client.documents.download_async(document_id=document_id)
 
     async def move_document(
         self,

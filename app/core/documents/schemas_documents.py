@@ -7,10 +7,6 @@ from app.core.documents.types_documenso import DocumentStatus
 from app.core.groups.schemas_groups import CoreGroup
 from app.core.users.schemas_users import CoreUser
 
-# ---------------------------------------------------------------------------
-# DocumentTeam
-# ---------------------------------------------------------------------------
-
 
 class TeamBase(BaseModel):
     team_id: int
@@ -32,11 +28,6 @@ class TeamUpdate(BaseModel):
     group_id: str | None = None
     name: str | None = None
     api_key: str | None = None
-
-
-# ---------------------------------------------------------------------------
-# DocumentTemplate
-# ---------------------------------------------------------------------------
 
 
 class TemplateBase(BaseModel):
@@ -64,16 +55,16 @@ class TemplateUpdate(BaseModel):
 
 class TemplateDocumensoUpdate(BaseModel):
     name: str | None = None
+    deleted: bool | None = None
+
+
+class TemplateUse(BaseModel):
+    recipients: list[str]
 
 
 class TemplateUseResponse(BaseModel):
     errors: dict[str, str]
     documents: list["Document"]
-
-
-# ---------------------------------------------------------------------------
-# DocumentDocument
-# ---------------------------------------------------------------------------
 
 
 class DocumentBase(BaseModel):
@@ -85,6 +76,7 @@ class DocumentBase(BaseModel):
 
 class Document(DocumentBase):
     id: UUID
+    documenso_id: int
     status: DocumentStatus
     created_at: datetime
     updated_at: datetime

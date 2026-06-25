@@ -61,6 +61,7 @@ class DocumentDocument(Base):
     __tablename__ = "document_document"
 
     id: Mapped[PrimaryKey]
+    documenso_id: Mapped[int] = mapped_column(unique=True)
     name: Mapped[str]
     template_id: Mapped[UUID] = mapped_column(ForeignKey("document_template.id"))
     module: Mapped[str]

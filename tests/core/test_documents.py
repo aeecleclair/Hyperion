@@ -1,10 +1,13 @@
 from datetime import UTC, datetime
-from uuid import uuid4
+from unittest.mock import ANY
+from uuid import UUID, uuid4
 
 import pytest_asyncio
+from documenso_sdk import DocumentDownloadResponse
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 from pytest_mock import MockerFixture
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.documents.models_documents import (
     DocumentDocument,
@@ -15,12 +18,15 @@ from app.core.documents.types_documenso import DocumentStatus
 from app.core.groups.groups_type import GroupType
 from app.core.groups.models_groups import CoreGroup
 from app.core.users.models_users import CoreUser
+from app.types.module import Module
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
     create_groups_with_permissions,
     create_user_with_groups,
 )
+
+TEST_MODULE_ROOT = "Test"
 
 group1: CoreGroup
 group2: CoreGroup
@@ -50,6 +56,7 @@ documentDeleted: DocumentDocument
 documentRejected: DocumentDocument
 documentCompleted: DocumentDocument
 documentPending: DocumentDocument
+documentPending2: DocumentDocument
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -102,6 +109,7 @@ async def init_objects() -> None:
         created_at=datetime(2023, 1, 1, tzinfo=UTC),
         updated_at=datetime(2023, 1, 2, tzinfo=UTC),
         deleted=False,
+        document_directory_id="directory_id_1",
     )
     await add_object_to_db(templateTeam1)
 
@@ -133,13 +141,15 @@ async def init_objects() -> None:
         documentDeleted, \
         documentRejected, \
         documentCompleted, \
-        documentPending
+        documentPending, \
+        documentPending2
 
     documentTemplate1 = DocumentDocument(
         id=uuid4(),
+        documenso_id=1,
         name="Document 1",
         template_id=templateTeam1.id,
-        module="module1",
+        module=TEST_MODULE_ROOT,
         user_id=user_lambda.id,
         signing_token="signing_token_1",
         status=DocumentStatus.PENDING,
@@ -150,6 +160,7 @@ async def init_objects() -> None:
 
     documentTemplate2 = DocumentDocument(
         id=uuid4(),
+        documenso_id=2,
         name="Document 2",
         template_id=templateTeam2.id,
         module="module2",
@@ -163,9 +174,10 @@ async def init_objects() -> None:
 
     documentDeleted = DocumentDocument(
         id=uuid4(),
+        documenso_id=3,
         name="Document Deleted",
         template_id=templateTeam1.id,
-        module="module1",
+        module=TEST_MODULE_ROOT,
         user_id=user_lambda.id,
         signing_token="signing_token_deleted",
         status=DocumentStatus.PENDING,
@@ -176,9 +188,10 @@ async def init_objects() -> None:
 
     documentRejected = DocumentDocument(
         id=uuid4(),
+        documenso_id=4,
         name="Document Rejected",
         template_id=templateTeam1.id,
-        module="module1",
+        module=TEST_MODULE_ROOT,
         user_id=user_lambda.id,
         signing_token="signing_token_rejected",
         status=DocumentStatus.REJECTED,
@@ -189,9 +202,10 @@ async def init_objects() -> None:
 
     documentCompleted = DocumentDocument(
         id=uuid4(),
+        documenso_id=5,
         name="Document Completed",
         template_id=templateTeam1.id,
-        module="module1",
+        module=TEST_MODULE_ROOT,
         user_id=user_lambda.id,
         signing_token="signing_token_completed",
         status=DocumentStatus.COMPLETED,
@@ -202,9 +216,10 @@ async def init_objects() -> None:
 
     documentPending = DocumentDocument(
         id=uuid4(),
+        documenso_id=6,
         name="Document Pending",
         template_id=templateTeam1.id,
-        module="module1",
+        module=TEST_MODULE_ROOT,
         user_id=user_lambda.id,
         signing_token="signing_token_pending",
         status=DocumentStatus.PENDING,
@@ -212,6 +227,23 @@ async def init_objects() -> None:
         updated_at=datetime(2023, 1, 18, tzinfo=UTC),
     )
     await add_object_to_db(documentPending)
+
+    documentPending2 = DocumentDocument(
+        id=uuid4(),
+        documenso_id=7,
+        name="Document Pending 2",
+        template_id=templateTeam1.id,
+        module=TEST_MODULE_ROOT,
+        user_id=user_lambda.id,
+        signing_token="signing_token_pending_2",
+        status=DocumentStatus.PENDING,
+        created_at=datetime(2023, 1, 19, tzinfo=UTC),
+        updated_at=datetime(2023, 1, 20, tzinfo=UTC),
+    )
+    await add_object_to_db(documentPending2)
+
+
+# region: Team
 
 
 async def test_get_teams(client: TestClient):
@@ -273,6 +305,30 @@ async def test_create_team_existing_name(client: TestClient):
         headers={"Authorization": f"Bearer {user_admin_token}"},
     )
     assert response.status_code == 400
+
+    response = client.get(
+        "/documents/teams/",
+        headers={"Authorization": f"Bearer {user_admin_token}"},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+
+
+async def test_create_team_invalid_api_key(client: TestClient):
+    response = client.post(
+        "/documents/teams/",
+        json={
+            "team_id": 6,
+            "group_id": group3.id,
+            "name": "Team 6",
+            "api_key": "wrong_api_key",
+        },
+        headers={"Authorization": f"Bearer {user_admin_token}"},
+    )
+    assert response.status_code == 400
+    assert str(response.json()["detail"]).startswith(
+        "Failed to connect to Documenso with the provided API key:",
+    )
 
     response = client.get(
         "/documents/teams/",
@@ -367,6 +423,30 @@ async def test_update_team_existing_group(client: TestClient):
     assert team1_data["group_id"] == str(group1.id)
 
 
+async def test_update_team_invalid_api_key(client: TestClient):
+    response = client.patch(
+        f"/documents/teams/{team1.id}",
+        json={
+            "api_key": "wrong_api_key",
+        },
+        headers={"Authorization": f"Bearer {user_admin_token}"},
+    )
+    assert response.status_code == 400
+    assert str(response.json()["detail"]).startswith(
+        "Failed to connect to Documenso with the provided API key:",
+    )
+
+    response = client.get(
+        "/documents/teams",
+        headers={"Authorization": f"Bearer {user_admin_token}"},
+    )
+    assert response.status_code == 200
+    teams = response.json()
+    team1_data = next((t for t in teams if t["id"] == str(team1.id)), None)
+    assert team1_data is not None
+    assert team1_data["api_key"] == "api_key_1"
+
+
 async def test_update_team(
     client: TestClient,
     mocker: MockerFixture,
@@ -439,6 +519,10 @@ async def test_delete_team(client: TestClient):
     assert deleted_team is None
 
 
+# endregion: Team
+# region: Template
+
+
 async def test_get_team_templates(client: TestClient):
     response = client.get(
         f"/documents/teams/{team2.id}/templates",
@@ -487,7 +571,7 @@ async def test_get_template_as_team_member(client: TestClient):
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
     assert response.status_code == 200
-    assert len(response.json()["documents"]) == 5
+    assert len(response.json()["documents"]) == 6
 
 
 async def test_get_template_not_found(client: TestClient):
@@ -537,6 +621,10 @@ async def test_update_template_directory_as_lambda(client: TestClient):
     )
 
 
+# endregion: Template
+# region: Document
+
+
 def test_get_user_documents(client: TestClient):
     response = client.get(
         "/documents/me",
@@ -544,7 +632,7 @@ def test_get_user_documents(client: TestClient):
     )
     assert response.status_code == 200
     documents = response.json()
-    assert len(documents) == 6
+    assert len(documents) == 7
 
 
 def test_get_document_token(client: TestClient):
@@ -574,6 +662,70 @@ def test_get_document_token_as_other_user(client: TestClient):
     assert response.json()["detail"] == "Access forbidden"
 
 
+def test_download_document_unknown_document(client: TestClient):
+    response = client.get(
+        f"/documents/{uuid4()}/download",
+        headers={"Authorization": f"Bearer {user_lambda_token}"},
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Document not found"
+
+
+def test_download_document_not_completed(client: TestClient):
+    response = client.get(
+        f"/documents/{documentPending.id}/download",
+        headers={"Authorization": f"Bearer {user_lambda_token}"},
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Document is not completed and cannot be downloaded"
+    )
+
+
+def test_download_document_as_other_user(client: TestClient):
+    response = client.get(
+        f"/documents/{documentCompleted.id}/download",
+        headers={"Authorization": f"Bearer {user_team2_token}"},
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Access forbidden"
+
+
+def test_download_document_as_user(client: TestClient, mocker: MockerFixture):
+    mocker.patch(
+        "app.core.documents.documenso_tool.DocumensoTool.download_document",
+        return_value=DocumentDownloadResponse(
+            headers={},
+            result=b"PDF content",
+        ),
+    )
+
+    response = client.get(
+        f"/documents/{documentCompleted.id}/download",
+        headers={"Authorization": f"Bearer {user_lambda_token}"},
+    )
+    assert response.status_code == 200
+    assert response.content == b'"PDF content"'
+
+
+def test_download_document_as_group_admin(client: TestClient, mocker: MockerFixture):
+    mocker.patch(
+        "app.core.documents.documenso_tool.DocumensoTool.download_document",
+        return_value=DocumentDownloadResponse(
+            headers={},
+            result=b"PDF content",
+        ),
+    )
+
+    response = client.get(
+        f"/documents/{documentCompleted.id}/download",
+        headers={"Authorization": f"Bearer {user_team1_token}"},
+    )
+    assert response.status_code == 200
+    assert response.content == b'"PDF content"'
+
+
 def test_get_template_documents(client: TestClient):
     response = client.get(
         f"/documents/templates/{templateTeam1.id}/documents",
@@ -581,7 +733,7 @@ def test_get_template_documents(client: TestClient):
     )
     assert response.status_code == 200
     documents = response.json()
-    assert len(documents) == 5
+    assert len(documents) == 6
 
 
 def test_get_template_documents_not_found(client: TestClient):
@@ -609,8 +761,64 @@ class MockedRecipientResponse(BaseModel):
 
 
 class MockedTemplateUseResponse(BaseModel):
+    id: int
     recipients: list[MockedRecipientResponse]
     title: str
+
+
+async def test_use_template_not_found(
+    client: TestClient,
+):
+    response = client.post(
+        f"/documents/templates/{uuid4()}/documents/",
+        json={"recipients": [user_lambda.email]},
+        headers={"Authorization": f"Bearer {user_team1_token}"},
+    )
+    assert response.status_code == 404
+
+
+async def test_use_template_as_lambda(
+    client: TestClient,
+):
+    response = client.post(
+        f"/documents/templates/{templateTeam1.id}/documents/",
+        json={"recipients": [user_lambda.email]},
+        headers={"Authorization": f"Bearer {user_lambda_token}"},
+    )
+    assert response.status_code == 403
+    assert (
+        response.json()["detail"] == "You do not have permission to use this template"
+    )
+
+
+async def test_use_template_invalid_destination_folder(
+    client: TestClient,
+):
+    response = client.post(
+        f"/documents/templates/{templateTeam2.id}/documents/",
+        json={
+            "recipients": [user_lambda.email],
+        },
+        headers={"Authorization": f"Bearer {user_team2_token}"},
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "No destination folder configured for this template"
+    )
+
+
+async def test_use_template_for_a_recipient_user_not_found(
+    client: TestClient,
+):
+    response = client.post(
+        f"/documents/templates/{templateTeam1.id}/documents/",
+        json={"recipients": ["test@test.fr"]},
+        headers={"Authorization": f"Bearer {user_team1_token}"},
+    )
+    assert response.status_code == 201, response.text
+    assert len(response.json()["errors"]) == 1
+    assert response.json()["errors"]["test@test.fr"] == "User not found"
 
 
 async def test_use_template_for_a_recipient(
@@ -625,16 +833,17 @@ async def test_use_template_for_a_recipient(
     mocker.patch(
         "app.core.documents.documenso_tool.DocumensoTool.use_template",
         return_value=MockedTemplateUseResponse(
+            id=100,
             recipients=[MockedRecipientResponse(token="mocked_signing_token")],
             title="Mocked Document Title",
         ),
     )
     response = client.post(
         f"/documents/templates/{templateTeam1.id}/documents/",
-        json={"recipient_list": [user_lambda.email]},
+        json={"recipients": [user_lambda.email]},
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
-    assert response.status_code == 200, response.text
+    assert response.status_code == 201, response.text
     response_data = response.json()
     assert len(response_data["errors"]) == 0
     assert len(response_data["documents"]) == 1
@@ -645,3 +854,726 @@ async def test_use_template_for_a_recipient(
     )
     assert documents.status_code == 200
     assert any(doc["id"] == str(mocked_id) for doc in documents.json())
+
+
+# endregion: Document
+# region: Webhook
+async def test_webhook_template_creation_invalid_secret(
+    client: TestClient,
+):
+    json = {
+        "event": "TEMPLATE_CREATED",
+        "payload": {
+            "id": 10,
+            "externalId": None,
+            "title": "My Template",
+            "status": "DRAFT",
+            "teamId": 1,
+            "source": "TEMPLATE",
+            "recipients": [{"id": 52, "token": "SIGNING_TOKEN"}],
+            "createdAt": "2026-06-16T13:44:00.631Z",
+            "updatedAt": "2026-06-16T13:44:00.631Z",
+        },
+        "createdAt": "2026-06-16T13:44:00.631Z",
+        "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
+    }
+    response = client.post(
+        "/documents/webhook/",
+        json=json,
+        headers={
+            "Authorization": f"Bearer {user_admin_token}",
+            "X-Documenso-Secret": "invalidsecret",
+        },
+    )
+    assert response.status_code == 403
+
+
+async def test_webhook_template_creation_invalid_payload(
+    client: TestClient,
+):
+    json = {
+        "event": "TEMPLATE_CREATED",
+    }
+    response = client.post(
+        "/documents/webhook/",
+        json=json,
+        headers={
+            "Authorization": f"Bearer {user_admin_token}",
+            "X-Documenso-Secret": "somestrongsecret",
+        },
+    )
+    assert response.status_code == 422
+
+
+async def test_webhook_template_creation_unknown_team(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+
+    mocked_creation = mocker.patch(
+        "app.core.documents.utils_documents.cruds_documents.create_template",
+        return_value=None,
+    )
+    json = {
+        "event": "TEMPLATE_CREATED",
+        "payload": {
+            "id": 11,
+            "externalId": None,
+            "title": "My Template Unknown Team",
+            "status": "DRAFT",
+            "teamId": 9999,
+            "source": "TEMPLATE",
+            "recipients": [{"id": 53, "token": "SIGNING_TOKEN"}],
+            "createdAt": "2026-06-16T13:44:00.631Z",
+            "updatedAt": "2026-06-16T13:44:00.631Z",
+        },
+        "createdAt": "2026-06-16T13:44:00.631Z",
+        "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
+    }
+    response = client.post(
+        "/documents/webhook/",
+        json=json,
+        headers={
+            "Authorization": f"Bearer {user_admin_token}",
+            "X-Documenso-Secret": "somestrongsecret",
+        },
+    )
+    assert response.status_code == 200
+
+    mocked_creation.assert_not_called()
+
+
+async def test_webhook_template_creation_multiple_recipients(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    mocked_creation = mocker.patch(
+        "app.core.documents.utils_documents.cruds_documents.create_template",
+        return_value=None,
+    )
+    json = {
+        "event": "TEMPLATE_CREATED",
+        "payload": {
+            "id": 12,
+            "externalId": None,
+            "title": "My Template Multiple Recipients",
+            "status": "DRAFT",
+            "teamId": 1,
+            "source": "TEMPLATE",
+            "recipients": [
+                {"id": 54, "token": "SIGNING_TOKEN_1"},
+                {"id": 55, "token": "SIGNING_TOKEN_2"},
+            ],
+            "createdAt": "2026-06-16T13:44:00.631Z",
+            "updatedAt": "2026-06-16T13:44:00.631Z",
+        },
+        "createdAt": "2026-06-16T13:44:00.631Z",
+        "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
+    }
+    response = client.post(
+        "/documents/webhook/",
+        json=json,
+        headers={
+            "Authorization": f"Bearer {user_admin_token}",
+            "X-Documenso-Secret": "somestrongsecret",
+        },
+    )
+    assert response.status_code == 200
+
+    mocked_creation.assert_not_called()
+
+
+async def test_webhook_template_creation_missing_team(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    mocked_creation = mocker.patch(
+        "app.core.documents.utils_documents.cruds_documents.create_template",
+        return_value=None,
+    )
+    json = {
+        "event": "TEMPLATE_CREATED",
+        "payload": {
+            "id": 13,
+            "externalId": None,
+            "title": "My Template Missing Team",
+            "status": "DRAFT",
+            "teamId": None,
+            "source": "TEMPLATE",
+            "recipients": [{"id": 56, "token": "SIGNING_TOKEN"}],
+            "createdAt": "2026-06-16T13:44:00.631Z",
+            "updatedAt": "2026-06-16T13:44:00.631Z",
+        },
+        "createdAt": "2026-06-16T13:44:00.631Z",
+        "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
+    }
+    response = client.post(
+        "/documents/webhook/",
+        json=json,
+        headers={
+            "Authorization": f"Bearer {user_admin_token}",
+            "X-Documenso-Secret": "somestrongsecret",
+        },
+    )
+    assert response.status_code == 200
+
+    mocked_creation.assert_not_called()
+
+
+async def test_webhook_template_creation(
+    client: TestClient,
+):
+    json = {
+        "event": "TEMPLATE_CREATED",
+        "payload": {
+            "id": 10,
+            "externalId": None,
+            "title": "My Template",
+            "status": "DRAFT",
+            "teamId": 1,
+            "source": "TEMPLATE",
+            "recipients": [{"id": 52, "token": "SIGNING_TOKEN"}],
+            "createdAt": "2026-06-16T13:44:00.631Z",
+            "updatedAt": "2026-06-16T13:44:00.631Z",
+        },
+        "createdAt": "2026-06-16T13:44:00.631Z",
+        "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
+    }
+    response = client.post(
+        "/documents/webhook/",
+        json=json,
+        headers={
+            "Authorization": f"Bearer {user_admin_token}",
+            "X-Documenso-Secret": "somestrongsecret",
+        },
+    )
+    assert response.status_code == 200
+
+    templates = client.get(
+        f"/documents/teams/{team1.id}/templates",
+        headers={"Authorization": f"Bearer {user_team1_token}"},
+    )
+    assert templates.status_code == 200
+    template = next((t for t in templates.json() if t["documenso_id"] == 10), None)
+    assert template is not None
+    assert template["name"] == "My Template"
+
+
+async def test_webhook_template_update_unknown_template(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    mocked_update = mocker.patch(
+        "app.core.documents.endpoints_documents.cruds_documents.update_template",
+        return_value=None,
+    )
+    json = {
+        "event": "TEMPLATE_UPDATED",
+        "payload": {
+            "id": 9999,
+            "externalId": None,
+            "title": "My Updated Template",
+            "status": "DRAFT",
+            "teamId": 1,
+            "source": "TEMPLATE",
+            "recipients": [{"id": 52, "token": "SIGNING_TOKEN"}],
+            "createdAt": "2026-06-16T13:44:05.967Z",
+            "updatedAt": "2026-06-16T13:44:05.967Z",
+        },
+        "createdAt": "2026-06-16T13:44:05.967Z",
+        "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
+    }
+    response = client.post(
+        "/documents/webhook/",
+        json=json,
+        headers={
+            "Authorization": f"Bearer {user_admin_token}",
+            "X-Documenso-Secret": "somestrongsecret",
+        },
+    )
+    assert response.status_code == 200
+
+    mocked_update.assert_not_called()
+
+
+async def test_webhook_template_update(
+    client: TestClient,
+):
+    template = DocumentTemplate(
+        id=uuid4(),
+        documenso_id=11,
+        name="My Template",
+        team_id=team1.id,
+        created_at=datetime(2023, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2023, 1, 2, tzinfo=UTC),
+        deleted=False,
+    )
+    await add_object_to_db(template)
+
+    json = {
+        "event": "TEMPLATE_UPDATED",
+        "payload": {
+            "id": 11,
+            "externalId": None,
+            "title": "My Updated Template",
+            "status": "DRAFT",
+            "teamId": 1,
+            "source": "TEMPLATE",
+            "recipients": [{"id": 52, "token": "SIGNING_TOKEN"}],
+            "createdAt": "2026-06-16T13:44:05.967Z",
+            "updatedAt": "2026-06-16T13:44:05.967Z",
+        },
+        "createdAt": "2026-06-16T13:44:05.967Z",
+        "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
+    }
+    response = client.post(
+        "/documents/webhook/",
+        json=json,
+        headers={
+            "Authorization": f"Bearer {user_admin_token}",
+            "X-Documenso-Secret": "somestrongsecret",
+        },
+    )
+    assert response.status_code == 200
+
+    templates = client.get(
+        f"/documents/teams/{team1.id}/templates",
+        headers={"Authorization": f"Bearer {user_team1_token}"},
+    )
+    assert templates.status_code == 200
+    db_template = next(
+        (t for t in templates.json() if t["id"] == str(template.id)),
+        None,
+    )
+    assert db_template is not None
+    assert db_template["name"] == "My Updated Template"
+
+
+async def test_webhook_template_deletion_unknown_template(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    mocked_deletion = mocker.patch(
+        "app.core.documents.endpoints_documents.cruds_documents.update_template",
+        return_value=None,
+    )
+    json = {
+        "event": "TEMPLATE_DELETED",
+        "payload": {
+            "id": 9999,
+            "externalId": None,
+            "title": "Deleted Template",
+            "status": "DRAFT",
+            "teamId": 1,
+            "source": "TEMPLATE",
+            "recipients": [{"id": 52, "token": "SIGNING_TOKEN"}],
+            "createdAt": "2026-06-16T13:44:09.725Z",
+            "updatedAt": "2026-06-16T13:44:09.725Z",
+        },
+        "createdAt": "2026-06-16T13:44:09.725Z",
+        "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
+    }
+    response = client.post(
+        "/documents/webhook/",
+        json=json,
+        headers={
+            "Authorization": f"Bearer {user_admin_token}",
+            "X-Documenso-Secret": "somestrongsecret",
+        },
+    )
+    assert response.status_code == 200
+
+    mocked_deletion.assert_not_called()
+
+
+async def test_webhook_template_deletion(
+    client: TestClient,
+):
+    template = DocumentTemplate(
+        id=uuid4(),
+        documenso_id=12,
+        name="My Template",
+        team_id=team1.id,
+        created_at=datetime(2023, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2023, 1, 2, tzinfo=UTC),
+        deleted=False,
+    )
+    await add_object_to_db(template)
+
+    json = {
+        "event": "TEMPLATE_DELETED",
+        "payload": {
+            "id": 12,
+            "externalId": None,
+            "title": "Deleted Template",
+            "status": "DRAFT",
+            "teamId": 1,
+            "source": "TEMPLATE",
+            "recipients": [{"id": 52, "token": "SIGNING_TOKEN"}],
+            "createdAt": "2026-06-16T13:44:09.725Z",
+            "updatedAt": "2026-06-16T13:44:09.725Z",
+        },
+        "createdAt": "2026-06-16T13:44:09.725Z",
+        "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
+    }
+    response = client.post(
+        "/documents/webhook/",
+        json=json,
+        headers={
+            "Authorization": f"Bearer {user_admin_token}",
+            "X-Documenso-Secret": "somestrongsecret",
+        },
+    )
+    assert response.status_code == 200
+
+    templates = client.get(
+        f"/documents/teams/{team1.id}/templates",
+        headers={"Authorization": f"Bearer {user_team1_token}"},
+    )
+    assert templates.status_code == 200
+    db_template = next(
+        (t for t in templates.json() if t["id"] == str(template.id)),
+        None,
+    )
+    assert db_template is not None
+    assert db_template["deleted"] is True
+
+
+async def callback(
+    document_id: UUID,
+    status: DocumentStatus,
+    db: AsyncSession,
+) -> None:
+    pass
+
+
+async def test_webhook_document_completed_empty_external_id(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    mocked_update = mocker.patch(
+        "app.core.documents.endpoints_documents.cruds_documents.update_document",
+        return_value=None,
+    )
+    json = {
+        "event": "DOCUMENT_COMPLETED",
+        "payload": {
+            "id": 9999,
+            "externalId": None,
+            "title": "documenso.pdf",
+            "status": "COMPLETED",
+            "teamId": 1,
+            "source": "DOCUMENT",
+            "recipients": [{"id": 50, "token": "SIGNING_TOKEN"}],
+            "createdAt": "2026-06-16T13:44:25.475Z",
+            "updatedAt": "2026-06-16T13:44:25.475Z",
+            "completedAt": "2026-06-16T13:44:25.475Z",
+        },
+        "createdAt": "2026-06-16T13:44:25.475Z",
+        "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
+    }
+    response = client.post(
+        "/documents/webhook/",
+        json=json,
+        headers={
+            "Authorization": f"Bearer {user_admin_token}",
+            "X-Documenso-Secret": "somestrongsecret",
+        },
+    )
+    assert response.status_code == 200
+
+    mocked_update.assert_not_called()
+
+
+async def test_webhook_document_completed_unknown_document(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    mocked_update = mocker.patch(
+        "app.core.documents.endpoints_documents.cruds_documents.update_document",
+        return_value=None,
+    )
+    json = {
+        "event": "DOCUMENT_COMPLETED",
+        "payload": {
+            "id": 9999,
+            "externalId": str(uuid4()),
+            "title": "documenso.pdf",
+            "status": "COMPLETED",
+            "teamId": 1,
+            "source": "DOCUMENT",
+            "recipients": [{"id": 50, "token": "SIGNING_TOKEN"}],
+            "createdAt": "2026-06-16T13:44:25.475Z",
+            "updatedAt": "2026-06-16T13:44:25.475Z",
+            "completedAt": "2026-06-16T13:44:25.475Z",
+        },
+        "createdAt": "2026-06-16T13:44:25.475Z",
+        "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
+    }
+    response = client.post(
+        "/documents/webhook/",
+        json=json,
+        headers={
+            "Authorization": f"Bearer {user_admin_token}",
+            "X-Documenso-Secret": "somestrongsecret",
+        },
+    )
+    assert response.status_code == 200
+
+    mocked_update.assert_not_called()
+
+
+async def test_webhook_document_completed_already_completed(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+
+    mocked_update = mocker.patch(
+        "app.core.documents.endpoints_documents.cruds_documents.update_document",
+        return_value=None,
+    )
+    json = {
+        "event": "DOCUMENT_COMPLETED",
+        "payload": {
+            "id": 20,
+            "externalId": str(documentCompleted.id),
+            "title": "documenso.pdf",
+            "status": "COMPLETED",
+            "teamId": 1,
+            "source": "DOCUMENT",
+            "recipients": [{"id": 50, "token": "SIGNING_TOKEN"}],
+            "createdAt": "2026-06-16T13:44:25.475Z",
+            "updatedAt": "2026-06-16T13:44:25.475Z",
+            "completedAt": "2026-06-16T13:44:25.475Z",
+        },
+        "createdAt": "2026-06-16T13:44:25.475Z",
+        "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
+    }
+    response = client.post(
+        "/documents/webhook/",
+        json=json,
+        headers={
+            "Authorization": f"Bearer {user_admin_token}",
+            "X-Documenso-Secret": "somestrongsecret",
+        },
+    )
+    assert response.status_code == 200
+
+    mocked_update.assert_not_called()
+
+
+async def test_webhook_document_completed(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    mocked_callback = mocker.patch(
+        "tests.core.test_documents.callback",
+    )
+    test_module = Module(
+        root=TEST_MODULE_ROOT,
+        tag="Tests",
+        default_allowed_groups_ids=[],
+        document_callback=callback,
+        factory=None,
+        permissions=None,
+    )
+    mocker.patch(
+        "app.core.documents.utils_documents.all_modules",
+        [test_module],
+    )
+
+    json = {
+        "event": "DOCUMENT_COMPLETED",
+        "payload": {
+            "id": 21,
+            "externalId": str(documentPending.id),
+            "title": "documenso.pdf",
+            "status": "COMPLETED",
+            "teamId": 1,
+            "source": "DOCUMENT",
+            "recipients": [{"id": 50, "token": "SIGNING_TOKEN"}],
+            "createdAt": "2026-06-16T13:44:25.475Z",
+            "updatedAt": "2026-06-16T13:44:25.475Z",
+            "completedAt": "2026-06-16T13:44:25.475Z",
+        },
+        "createdAt": "2026-06-16T13:44:25.475Z",
+        "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
+    }
+    response = client.post(
+        "/documents/webhook/",
+        json=json,
+        headers={
+            "Authorization": f"Bearer {user_admin_token}",
+            "X-Documenso-Secret": "somestrongsecret",
+        },
+    )
+    assert response.status_code == 200
+    mocked_callback.assert_called_once_with(
+        documentPending.id,
+        DocumentStatus.COMPLETED,
+        ANY,
+    )
+
+
+async def test_webhook_document_rejected_empty_external_id(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    mocked_update = mocker.patch(
+        "app.core.documents.endpoints_documents.cruds_documents.update_document",
+        return_value=None,
+    )
+    json = {
+        "event": "DOCUMENT_REJECTED",
+        "payload": {
+            "id": 10,
+            "externalId": None,
+            "title": "documenso.pdf",
+            "status": "PENDING",
+            "teamId": 1,
+            "source": "DOCUMENT",
+            "recipients": [{"id": 52, "token": "SIGNING_TOKEN"}],
+            "createdAt": "2026-06-16T13:44:33.055Z",
+            "updatedAt": "2026-06-16T13:44:33.055Z",
+        },
+        "createdAt": "2026-06-16T13:44:33.055Z",
+        "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
+    }
+    response = client.post(
+        "/documents/webhook/",
+        json=json,
+        headers={
+            "Authorization": f"Bearer {user_admin_token}",
+            "X-Documenso-Secret": "somestrongsecret",
+        },
+    )
+    assert response.status_code == 200
+
+    mocked_update.assert_not_called()
+
+
+async def test_webhook_document_rejected_unknown_document(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    mocked_update = mocker.patch(
+        "app.core.documents.endpoints_documents.cruds_documents.update_document",
+        return_value=None,
+    )
+    json = {
+        "event": "DOCUMENT_REJECTED",
+        "payload": {
+            "id": 10,
+            "externalId": str(uuid4()),
+            "title": "documenso.pdf",
+            "status": "PENDING",
+            "teamId": 1,
+            "source": "DOCUMENT",
+            "recipients": [{"id": 52, "token": "SIGNING_TOKEN"}],
+            "createdAt": "2026-06-16T13:44:33.055Z",
+            "updatedAt": "2026-06-16T13:44:33.055Z",
+        },
+        "createdAt": "2026-06-16T13:44:33.055Z",
+        "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
+    }
+    response = client.post(
+        "/documents/webhook/",
+        json=json,
+        headers={
+            "Authorization": f"Bearer {user_admin_token}",
+            "X-Documenso-Secret": "somestrongsecret",
+        },
+    )
+    assert response.status_code == 200
+
+    mocked_update.assert_not_called()
+
+
+async def test_webhook_document_rejected_already_rejected(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    mocked_update = mocker.patch(
+        "app.core.documents.endpoints_documents.cruds_documents.update_document",
+        return_value=None,
+    )
+    json = {
+        "event": "DOCUMENT_REJECTED",
+        "payload": {
+            "id": 10,
+            "externalId": str(documentRejected.id),
+            "title": "documenso.pdf",
+            "status": "PENDING",
+            "teamId": 1,
+            "source": "DOCUMENT",
+            "recipients": [{"id": 52, "token": "SIGNING_TOKEN"}],
+            "createdAt": "2026-06-16T13:44:33.055Z",
+            "updatedAt": "2026-06-16T13:44:33.055Z",
+        },
+        "createdAt": "2026-06-16T13:44:33.055Z",
+        "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
+    }
+    response = client.post(
+        "/documents/webhook/",
+        json=json,
+        headers={
+            "Authorization": f"Bearer {user_admin_token}",
+            "X-Documenso-Secret": "somestrongsecret",
+        },
+    )
+    assert response.status_code == 200
+
+    mocked_update.assert_not_called()
+
+
+async def test_webhook_document_rejected(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+
+    mocked_callback = mocker.patch(
+        "tests.core.test_documents.callback",
+    )
+    test_module = Module(
+        root=TEST_MODULE_ROOT,
+        tag="Tests",
+        default_allowed_groups_ids=[],
+        document_callback=callback,
+        factory=None,
+        permissions=None,
+    )
+    mocker.patch(
+        "app.core.documents.utils_documents.all_modules",
+        [test_module],
+    )
+
+    json = {
+        "event": "DOCUMENT_REJECTED",
+        "payload": {
+            "id": 10,
+            "externalId": str(documentPending2.id),
+            "title": "documenso.pdf",
+            "status": "PENDING",
+            "teamId": 1,
+            "source": "DOCUMENT",
+            "recipients": [{"id": 52, "token": "SIGNING_TOKEN"}],
+            "createdAt": "2026-06-16T13:44:33.055Z",
+            "updatedAt": "2026-06-16T13:44:33.055Z",
+        },
+        "createdAt": "2026-06-16T13:44:33.055Z",
+        "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
+    }
+    response = client.post(
+        "/documents/webhook/",
+        json=json,
+        headers={
+            "Authorization": f"Bearer {user_admin_token}",
+            "X-Documenso-Secret": "somestrongsecret",
+        },
+    )
+    assert response.status_code == 200
+    mocked_callback.assert_called_once_with(
+        documentPending2.id,
+        DocumentStatus.REJECTED,
+        ANY,
+    )

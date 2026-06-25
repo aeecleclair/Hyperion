@@ -6,7 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.documents import cruds_documents, schemas_documents
 from app.core.documents.documenso_tool import DocumensoConfiguration, DocumensoTool
-from app.core.documents.exceptions_documents import ElementTeamNotFoundError
+from app.core.documents.exceptions_documents import (
+    ElementTeamNotFoundError,
+    ElementTemplateNotFoundError,
+)
 from app.core.documents.types_documenso import (
     DocumentCompletedPayload,
     DocumentRejectedPayload,
@@ -23,7 +26,7 @@ from app.core.documents.utils_documents import (
     use_template_for_a_recipient,
 )
 from app.core.groups.groups_type import GroupType
-from app.core.users import schemas_users
+from app.core.users import cruds_users, schemas_users
 from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
@@ -335,15 +338,15 @@ async def update_template(
 
 
 @router.post(
-    "/templates/{template_id}/documents/",
-    response_model=schemas_documents.Document,
+    "/documents/templates/{template_id}/documents/",
+    response_model=schemas_documents.TemplateUseResponse,
     status_code=201,
 )
 async def use_template(
     template_id: uuid.UUID,
-    recipient_list: list[str],
+    recipient_list: schemas_documents.TemplateUse,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: schemas_users.CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -369,7 +372,7 @@ async def use_template(
     if not is_user_member_of_any_group(user, [db_team.group_id]):
         raise HTTPException(
             status_code=403,
-            detail="You do not have permission to generate a document from this template",
+            detail="You do not have permission to use this template",
         )
 
     documenso = _build_documenso_tool(db_team, settings)
@@ -381,12 +384,21 @@ async def use_template(
             detail="No destination folder configured for this template",
         )
 
-    # Retrieve the target user to fill in the recipient fields
     errors: dict[str, str] = {}
+    users = await cruds_users.get_users_by_emails(
+        db=db,
+        emails=recipient_list.recipients,
+    )
+    found_emails = [user.email for user in users]
+    for email in recipient_list.recipients:
+        if email not in found_emails:
+            errors[email] = "User not found"
+
+    # Retrieve the target user to fill in the recipient fields
     documents = await asyncio.gather(
         *[
             use_template_for_a_recipient(
-                recipient_email=recipient,
+                recipient=user,
                 template=db_template,
                 destination_folder_id=destination_folder_id,
                 documenso=documenso,
@@ -394,7 +406,7 @@ async def use_template(
                 module="documents",
                 errors=errors,
             )
-            for recipient in recipient_list
+            for user in users
         ],
     )
 
@@ -454,6 +466,58 @@ async def read_my_document_token(
 
 
 @router.get(
+    "/documents/{document_id}/download",
+    status_code=200,
+    response_model=bytes,
+)
+async def download_document_file(
+    document_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: schemas_users.CoreUser = Depends(is_user()),
+    settings: Settings = Depends(get_settings),
+):
+    """
+    Download the file of a specific document.
+    Only the user the document is addressed or a group administrator may download it.
+    """
+
+    db_document = await cruds_documents.get_document_by_id(
+        db=db,
+        document_id=document_id,
+    )
+    if db_document is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if db_document.status != DocumentStatus.COMPLETED:
+        raise HTTPException(
+            status_code=400,
+            detail="Document is not completed and cannot be downloaded",
+        )
+    db_template = await cruds_documents.get_template_by_id(
+        db=db,
+        template_id=db_document.template_id,
+    )
+    if db_template is None:
+        raise ElementTemplateNotFoundError(template_id=db_document.template_id)
+
+    db_team = await cruds_documents.get_team_by_id(db=db, team_id=db_template.team_id)
+    if db_team is None:
+        raise ElementTeamNotFoundError(team_id=db_template.team_id)
+
+    if db_document.user_id != user.id and not is_user_member_of_any_group(
+        user,
+        [db_team.group_id],
+    ):
+        raise HTTPException(status_code=403, detail="Access forbidden")
+
+    documenso = _build_documenso_tool(db_team, settings=settings)
+    file_content = await documenso.download_document(
+        document_id=db_document.documenso_id,
+    )
+
+    return file_content.result
+
+
+@router.get(
     "/documents/templates/{template_id}/documents/",
     response_model=list[schemas_documents.DocumentComplete],
     status_code=200,
@@ -497,7 +561,7 @@ async def read_template_documents(
 
 @router.post(
     "/documents/webhook/",
-    status_code=204,
+    status_code=200,
 )
 async def documenso_webhook(
     request: Request,
@@ -535,9 +599,9 @@ async def documenso_webhook(
             )
             if template is None:
                 return
-            await cruds_documents.update_template_by_documenso_id(
+            await cruds_documents.update_template(
                 db=db,
-                documenso_id=payload.id,
+                template_id=template.id,
                 template_update=schemas_documents.TemplateDocumensoUpdate(
                     name=payload.title,
                 ),
@@ -551,19 +615,26 @@ async def documenso_webhook(
             )
             if template is None:
                 return
-            await cruds_documents.mark_template_deleted(
+            await cruds_documents.update_template(
                 db=db,
-                documenso_id=str(payload.id),
+                template_id=template.id,
+                template_update=schemas_documents.TemplateDocumensoUpdate(
+                    deleted=True,
+                ),
             )
 
         case WebhookEvent.DOCUMENT_COMPLETED:
             payload: DocumentCompletedPayload = webhook.payload
+            if payload.external_id is None:
+                return
             document_id = uuid.UUID(payload.external_id)
             document = await cruds_documents.get_document_by_id(
                 db=db,
                 document_id=document_id,
             )
             if document is None:
+                return
+            if document.status != DocumentStatus.PENDING:
                 return
 
             await cruds_documents.update_document(
@@ -581,12 +652,16 @@ async def documenso_webhook(
 
         case WebhookEvent.DOCUMENT_REJECTED:
             payload: DocumentRejectedPayload = webhook.payload
+            if payload.external_id is None:
+                return
             document_id = uuid.UUID(payload.external_id)
             document = await cruds_documents.get_document_by_id(
                 db=db,
                 document_id=document_id,
             )
             if document is None:
+                return
+            if document.status != DocumentStatus.PENDING:
                 return
 
             await cruds_documents.update_document(
