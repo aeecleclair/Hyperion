@@ -16,9 +16,7 @@ from app.core.documents.utils_documents import (
     template_model_to_schema,
 )
 
-# ---------------------------------------------------------------------------
-# Team
-# ---------------------------------------------------------------------------
+# region Team
 
 
 async def get_teams(db: AsyncSession) -> list[schemas_documents.Team]:
@@ -154,9 +152,8 @@ async def delete_team(db: AsyncSession, team_id: UUID) -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# Template
-# ---------------------------------------------------------------------------
+# endregion Team
+# region Template
 
 
 async def get_team_templates(
@@ -251,9 +248,8 @@ async def update_template(
     )
 
 
-# ---------------------------------------------------------------------------
-# Document
-# ---------------------------------------------------------------------------
+# endregion Template
+# region Document
 
 
 async def get_documents_by_user_id(
@@ -386,3 +382,6 @@ async def delete_document_by_id(
             models_documents.DocumentDocument.id == document_id,
         ),
     )
+
+
+# endregion Document
