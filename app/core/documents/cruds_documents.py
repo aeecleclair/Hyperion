@@ -20,7 +20,7 @@ from app.core.documents.utils_documents import (
 
 
 async def get_teams(db: AsyncSession) -> list[schemas_documents.Team]:
-    """Return all document teams from database."""
+    """Return all teams from database."""
 
     result = await db.execute(select(models_documents.DocumentTeam))
     return [team_model_to_schema(team) for team in result.scalars().all()]
@@ -30,7 +30,7 @@ async def get_team_by_id(
     db: AsyncSession,
     team_id: UUID,
 ) -> schemas_documents.Team | None:
-    """Return a document team by its internal id."""
+    """Return a team by its internal id."""
 
     result = (
         (
@@ -46,11 +46,11 @@ async def get_team_by_id(
     return team_model_to_schema(result) if result else None
 
 
-async def get_team_by_group_ids(
+async def get_teams_by_group_ids(
     db: AsyncSession,
     group_ids: list[str],
 ) -> list[schemas_documents.TeamComplete]:
-    """Return a document team by its internal id."""
+    """Return a team by its internal id."""
 
     result = (
         (
@@ -75,7 +75,7 @@ async def get_team_by_name(
     db: AsyncSession,
     name: str,
 ) -> schemas_documents.Team | None:
-    """Return a document team by its name."""
+    """Return a team by its name."""
 
     result = (
         (
@@ -95,7 +95,7 @@ async def get_team_by_group_id(
     db: AsyncSession,
     group_id: str,
 ) -> schemas_documents.Team | None:
-    """Return a document team by its linked MyECL group id."""
+    """Return a team by its linked group id."""
 
     result = (
         (
@@ -115,7 +115,7 @@ async def create_team(
     team: schemas_documents.Team,
     db: AsyncSession,
 ) -> None:
-    """Create a new document team in database."""
+    """Create a new team in database."""
 
     db.add(
         models_documents.DocumentTeam(
@@ -133,7 +133,7 @@ async def update_team(
     team_id: UUID,
     team_update: schemas_documents.TeamUpdate,
 ) -> None:
-    """Update an existing document team."""
+    """Update an existing team."""
 
     await db.execute(
         update(models_documents.DocumentTeam)
@@ -143,7 +143,7 @@ async def update_team(
 
 
 async def delete_team(db: AsyncSession, team_id: UUID) -> None:
-    """Delete a document team from database by id."""
+    """Delete a team from database by id."""
 
     await db.execute(
         delete(models_documents.DocumentTeam).where(
@@ -160,7 +160,7 @@ async def get_team_templates(
     db: AsyncSession,
     team_id: UUID,
 ) -> list[schemas_documents.Template]:
-    """Return all templates, optionally filtered by team."""
+    """Return all templates filtered by team."""
 
     result = await db.execute(
         select(models_documents.DocumentTemplate).where(
@@ -214,7 +214,7 @@ async def create_template(
     template: schemas_documents.Template,
     db: AsyncSession,
 ) -> None:
-    """Create a new document template in database."""
+    """Create a new template in database."""
 
     db.add(
         models_documents.DocumentTemplate(
@@ -236,7 +236,7 @@ async def update_template(
     template_update: schemas_documents.TemplateUpdate
     | schemas_documents.TemplateDocumensoUpdate,
 ) -> None:
-    """Update a document template (directory only, from the public API)."""
+    """Update a template"""
 
     await db.execute(
         update(models_documents.DocumentTemplate)
@@ -256,7 +256,7 @@ async def get_documents_by_user_id(
     db: AsyncSession,
     user_id: str,
 ) -> list[schemas_documents.Document]:
-    """Return all documents assigned to a user (without signing token)."""
+    """Return all documents assigned to a user (without signing token)"""
 
     result = await db.execute(
         select(models_documents.DocumentDocument).where(
@@ -270,7 +270,7 @@ async def get_documents_by_template_id(
     db: AsyncSession,
     template_id: UUID,
 ) -> list[schemas_documents.DocumentComplete]:
-    """Return all documents generated from a given template (admin view)."""
+    """Return all documents generated from a given template"""
 
     result = await db.execute(
         select(models_documents.DocumentDocument).where(
@@ -283,8 +283,8 @@ async def get_documents_by_template_id(
 async def get_document_by_id(
     db: AsyncSession,
     document_id: UUID,
-) -> schemas_documents.DocumentComplete | None:
-    """Return a single document with all fields (including signing token)."""
+) -> schemas_documents.Document | None:
+    """Return a single document with all fields"""
 
     result = (
         (
@@ -297,14 +297,14 @@ async def get_document_by_id(
         .scalars()
         .first()
     )
-    return document_complete_model_to_schema(result) if result else None
+    return document_model_to_schema(result) if result else None
 
 
 async def get_document_with_token_by_id(
     db: AsyncSession,
     document_id: UUID,
 ) -> schemas_documents.DocumentWithToken | None:
-    """Return a single document with signing token only (for user view)."""
+    """Return a single document with signing token only"""
 
     result = (
         (
@@ -362,7 +362,7 @@ async def update_document(
     document_id: UUID,
     status: DocumentStatus,
 ) -> None:
-    """Update document status identified by its signing token (called from webhook)."""
+    """Update document status"""
 
     await db.execute(
         update(models_documents.DocumentDocument)
@@ -375,7 +375,7 @@ async def delete_document_by_id(
     db: AsyncSession,
     document_id: UUID,
 ) -> None:
-    """Delete a document from database by id."""
+    """Delete a document from database by id"""
 
     await db.execute(
         delete(models_documents.DocumentDocument).where(

@@ -9,6 +9,7 @@ from app.core.documents.documenso_tool import DocumensoConfiguration, DocumensoT
 from app.core.documents.exceptions_documents import (
     ElementTeamNotFoundError,
     ElementTemplateNotFoundError,
+    MissingDocumensoURLError,
 )
 from app.core.documents.types_documenso import (
     DocumentCompletedPayload,
@@ -52,10 +53,7 @@ def _build_documenso_tool(
     settings: Settings,
 ) -> DocumensoTool:
     if settings.DOCUMENSO_URL is None:
-        raise HTTPException(
-            status_code=500,
-            detail="Documenso URL is not configured in the application settings",
-        )
+        raise MissingDocumensoURLError()
     return DocumensoTool(
         configuration=DocumensoConfiguration(
             api_key=team.api_key,
@@ -95,12 +93,12 @@ async def read_user_teams(
     user: schemas_users.CoreUser = Depends(is_user()),
 ):
     """
-    Return the document team associated with the current user's groups.
+    Return the document teams associated with the current user's groups.
 
     **This endpoint is only usable by administrators**
     """
 
-    return await cruds_documents.get_team_by_group_ids(
+    return await cruds_documents.get_teams_by_group_ids(
         db=db,
         group_ids=[g.id for g in user.groups],
     )
@@ -448,7 +446,7 @@ async def read_my_document_token(
     user: schemas_users.CoreUser = Depends(is_user()),
 ):
     """
-    Return the signing token for a specific document.
+    Return the document with the signing token for a specific document.
     Only the user the document is addressed to may retrieve it.
     """
 
@@ -530,7 +528,7 @@ async def read_template_documents(
     """
     Return all documents generated from a given template
 
-    **This endpoint is only usable by administrators**
+    **This endpoint is only usable by the group that owns the team linked to this template**
     """
 
     db_template = await cruds_documents.get_template_by_id(

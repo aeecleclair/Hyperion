@@ -301,6 +301,7 @@ class Settings(BaseSettings):
     # Documenso configuration #
     ###########################
     DOCUMENSO_URL: str | None = None
+    # Random string given to Documenso to sign the webhook requests
     DOCUMENSO_SECRET: str | None = None
 
     ##############
