@@ -20,7 +20,7 @@ class DocumensoConfiguration(BaseModel):
     documenso_url: str
 
 
-class DocumensoTool:
+class DocumensoAPIWrapper:
     def __init__(
         self,
         configuration: DocumensoConfiguration,

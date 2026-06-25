@@ -5,7 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.documents import cruds_documents, schemas_documents
-from app.core.documents.documenso_tool import DocumensoConfiguration, DocumensoTool
+from app.core.documents.documenso_api_wrapper import (
+    DocumensoAPIWrapper,
+    DocumensoConfiguration,
+)
 from app.core.documents.exceptions_documents import (
     ElementTeamNotFoundError,
     ElementTemplateNotFoundError,
@@ -48,13 +51,13 @@ core_module = CoreModule(
 )
 
 
-def _build_documenso_tool(
+def _configure_documenso_api_wrapper(
     team: schemas_documents.Team,
     settings: Settings,
-) -> DocumensoTool:
+) -> DocumensoAPIWrapper:
     if settings.DOCUMENSO_URL is None:
         raise MissingDocumensoURLError()
-    return DocumensoTool(
+    return DocumensoAPIWrapper(
         configuration=DocumensoConfiguration(
             api_key=team.api_key,
             documenso_url=settings.DOCUMENSO_URL,
@@ -143,7 +146,7 @@ async def create_team(
         api_key=team_base.api_key,
     )
 
-    documenso = _build_documenso_tool(team, settings)
+    documenso = _configure_documenso_api_wrapper(team, settings)
     try:
         await documenso.find_folders()
     except Exception as e:
@@ -199,7 +202,7 @@ async def update_team(
                 detail=f"A team for the group {team_update.group_id} already exists",
             )
 
-    documenso = _build_documenso_tool(db_team, settings)
+    documenso = _configure_documenso_api_wrapper(db_team, settings)
     try:
         await documenso.find_folders()
     except Exception as e:
@@ -373,7 +376,7 @@ async def use_template(
             detail="You do not have permission to use this template",
         )
 
-    documenso = _build_documenso_tool(db_team, settings)
+    documenso = _configure_documenso_api_wrapper(db_team, settings)
 
     destination_folder_id = db_template.document_directory_id
     if destination_folder_id is None:
@@ -507,7 +510,7 @@ async def download_document_file(
     ):
         raise HTTPException(status_code=403, detail="Access forbidden")
 
-    documenso = _build_documenso_tool(db_team, settings=settings)
+    documenso = _configure_documenso_api_wrapper(db_team, settings=settings)
     file_content = await documenso.download_document(
         document_id=db_document.documenso_id,
     )
