@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from documenso_sdk import (
     Documenso,
     DocumentFindData,
@@ -101,6 +103,7 @@ class DocumensoTool:
     async def use_template(
         self,
         template_id: float,
+        external_id: UUID,
         recipients: list[TemplateCreateDocumentFromTemplateRecipientRequest],
         destination_folder_id: str,
     ) -> TemplateCreateDocumentFromTemplateResponse:
@@ -109,6 +112,7 @@ class DocumensoTool:
             recipients=recipients,
             folder_id=destination_folder_id,
             distribute_document=True,
+            external_id=str(external_id),
         )
 
     async def move_document(
