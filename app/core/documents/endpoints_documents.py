@@ -354,7 +354,7 @@ async def use_template(
     Generate a new document from a template for a given user.
     Uses the Documenso API to create the signing request and stores the signing token.
 
-    **This endpoint is only usable by group administrators**
+    **This endpoint is only usable by members of the group that owns the team linked to this template**
     """
 
     db_template = await cruds_documents.get_template_by_id(
@@ -479,7 +479,7 @@ async def download_document_file(
 ):
     """
     Download the file of a specific document.
-    Only the user the document is addressed or a group administrator may download it.
+    Only the user the document is addressed to or a group administrator may download it.
     """
 
     db_document = await cruds_documents.get_document_by_id(
