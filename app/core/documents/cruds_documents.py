@@ -179,8 +179,12 @@ async def get_template_by_id(
     result = (
         (
             await db.execute(
-                select(models_documents.DocumentTemplate).where(
+                select(models_documents.DocumentTemplate)
+                .where(
                     models_documents.DocumentTemplate.id == template_id,
+                )
+                .options(
+                    selectinload(models_documents.DocumentTemplate.documents),
                 ),
             )
         )

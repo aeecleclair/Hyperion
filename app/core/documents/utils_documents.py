@@ -57,7 +57,9 @@ def template_complete_model_to_schema(
         updated_at=model.updated_at,
         deleted=model.deleted,
         document_directory_id=model.document_directory_id,
-        documents=[document_model_to_schema(document) for document in model.documents],
+        documents=[
+            document_complete_model_to_schema(document) for document in model.documents
+        ],
         team=team_model_to_schema(model.team),
     )
 

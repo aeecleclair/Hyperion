@@ -45,7 +45,7 @@ class Template(TemplateBase):
 
 
 class TemplateComplete(Template):
-    documents: list["Document"]
+    documents: list["DocumentComplete"]
     team: Team
 
 

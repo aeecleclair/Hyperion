@@ -1,6 +1,6 @@
 """
-Schémas Pydantic pour les webhooks Documenso.
-Couvre les événements : DOCUMENT_CREATED, DOCUMENT_COMPLETED, DOCUMENT_REJECTED,
+Pydantic models for Documenso webhook payloads.
+Covers : DOCUMENT_CREATED, DOCUMENT_COMPLETED, DOCUMENT_REJECTED,
 TEMPLATE_CREATED, TEMPLATE_UPDATED, TEMPLATE_DELETED.
 """
 
