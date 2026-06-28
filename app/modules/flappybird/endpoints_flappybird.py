@@ -95,7 +95,7 @@ async def get_current_user_flappybird_personal_best(
 
 @module.router.post(
     "/flappybird/scores",
-    response_model=schemas_flappybird.FlappyBirdScoreBase,
+    response_model=schemas_flappybird.FlappyBirdScoreInDB,
     status_code=201,
 )
 async def create_flappybird_score(
@@ -135,6 +135,7 @@ async def create_flappybird_score(
             db=db,
         )
 
+    db_flappybird_best_score.user = user
     return db_flappybird_best_score
 
 

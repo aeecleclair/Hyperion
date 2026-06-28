@@ -294,7 +294,7 @@ async def get_plant_by_id(
 
 @module.router.post(
     "/seed_library/plants/",
-    response_model=schemas_seed_library.PlantComplete,
+    response_model=schemas_seed_library.PlantSimple,
     status_code=201,
 )
 async def create_plant(

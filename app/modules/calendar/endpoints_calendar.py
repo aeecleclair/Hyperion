@@ -63,7 +63,7 @@ module = Module(
 
 @module.router.get(
     "/calendar/events/",
-    response_model=list[schemas_calendar.EventComplete],
+    response_model=list[schemas_calendar.EventCompleteTicketUrl],
     status_code=200,
 )
 async def get_events(
@@ -78,7 +78,7 @@ async def get_events(
 
 @module.router.get(
     "/calendar/events/confirmed",
-    response_model=list[schemas_calendar.EventComplete],
+    response_model=list[schemas_calendar.EventCompleteTicketUrl],
     status_code=200,
 )
 async def get_confirmed_events(
