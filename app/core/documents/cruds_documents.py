@@ -138,7 +138,7 @@ async def update_team(
     await db.execute(
         update(models_documents.DocumentTeam)
         .where(models_documents.DocumentTeam.id == team_id)
-        .values(**team_update.model_dump(exclude_none=True)),
+        .values(**team_update.model_dump(exclude_unset=True)),
     )
 
 
