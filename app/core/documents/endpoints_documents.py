@@ -592,8 +592,11 @@ async def documenso_webhook(
     try:
         adapter: TypeAdapter[DocumensoWebhook] = TypeAdapter(DocumensoWebhook)
         webhook = adapter.validate_python(raw_body)
-    except Exception:
-        raise HTTPException(status_code=422, detail="Invalid Documenso webhook payload")
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error parsing payload: {e}.\nBody: {raw_body}",
+        )
 
     match webhook.event:
         case WebhookEvent.TEMPLATE_CREATED:
