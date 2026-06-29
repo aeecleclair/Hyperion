@@ -706,7 +706,7 @@ def test_download_document_as_user(client: TestClient, mocker: MockerFixture):
         headers={"Authorization": f"Bearer {user_lambda_token}"},
     )
     assert response.status_code == 200
-    assert response.content == b'"PDF content"'
+    assert response.content == b"PDF content"
 
 
 def test_download_document_as_group_admin(client: TestClient, mocker: MockerFixture):
@@ -723,7 +723,7 @@ def test_download_document_as_group_admin(client: TestClient, mocker: MockerFixt
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
     assert response.status_code == 200
-    assert response.content == b'"PDF content"'
+    assert response.content == b"PDF content"
 
 
 def test_get_template_documents(client: TestClient):

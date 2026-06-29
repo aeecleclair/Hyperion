@@ -1,7 +1,10 @@
 import asyncio
 import uuid
+from io import BytesIO
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import StreamingResponse
+from pydantic import TypeAdapter
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.documents import cruds_documents, schemas_documents
@@ -15,6 +18,7 @@ from app.core.documents.exceptions_documents import (
     MissingDocumensoURLError,
 )
 from app.core.documents.types_documenso import (
+    DocumensoWebhook,
     DocumentCompletedPayload,
     DocumentRejectedPayload,
     DocumentStatus,
@@ -22,7 +26,6 @@ from app.core.documents.types_documenso import (
     TemplateDeletedPayload,
     TemplateUpdatedPayload,
     WebhookEvent,
-    parse_webhook,
 )
 from app.core.documents.utils_documents import (
     handle_document_callback,
@@ -97,8 +100,6 @@ async def read_user_teams(
 ):
     """
     Return the document teams associated with the current user's groups.
-
-    **This endpoint is only usable by administrators**
     """
 
     return await cruds_documents.get_teams_by_group_ids(
@@ -469,7 +470,7 @@ async def read_my_document_token(
 @router.get(
     "/documents/{document_id}/download",
     status_code=200,
-    response_model=bytes,
+    response_class=StreamingResponse,
 )
 async def download_document_file(
     document_id: uuid.UUID,
@@ -515,7 +516,13 @@ async def download_document_file(
         document_id=db_document.documenso_id,
     )
 
-    return file_content.result
+    return StreamingResponse(
+        BytesIO(file_content.result),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename={db_document.name}.pdf",
+        },
+    )
 
 
 @router.get(
@@ -583,7 +590,8 @@ async def documenso_webhook(
     raw_body = await request.json()
 
     try:
-        webhook = parse_webhook(raw_body)
+        adapter: TypeAdapter[DocumensoWebhook] = TypeAdapter(DocumensoWebhook)
+        webhook = adapter.validate_python(raw_body)
     except Exception:
         raise HTTPException(status_code=422, detail="Invalid Documenso webhook payload")
 

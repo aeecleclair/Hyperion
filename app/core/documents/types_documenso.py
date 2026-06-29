@@ -8,7 +8,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, TypeAdapter
+from pydantic import BaseModel, Field
 
 
 class DocumentStatus(StrEnum):
@@ -251,8 +251,3 @@ DocumensoWebhook = Annotated[
     | TemplateDeletedWebhook,
     Field(discriminator="event"),
 ]
-
-
-def parse_webhook(data: dict) -> DocumensoWebhook:
-    adapter: TypeAdapter[DocumensoWebhook] = TypeAdapter(DocumensoWebhook)
-    return adapter.validate_python(data)
