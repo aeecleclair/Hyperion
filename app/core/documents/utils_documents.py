@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.documents import cruds_documents, models_documents, schemas_documents
 from app.core.documents.documenso_api_wrapper import DocumensoAPIWrapper
+from app.core.documents.exceptions_documents import DocumensoAPIError
 from app.core.documents.types_documenso import DocumentStatus, TemplateCreatedPayload
 from app.core.groups.schemas_groups import CoreGroup
 from app.core.users.schemas_users import CoreUser
@@ -162,10 +163,9 @@ async def use_template_for_a_recipient(
     documenso: DocumensoAPIWrapper,
     db: AsyncSession,
     module: str,
-    errors: dict[str, str],
 ) -> schemas_documents.Document | None:
+    document_id = uuid.uuid4()
     try:
-        document_id = uuid.uuid4()
         documenso_response = await documenso.use_template(
             template_id=float(template.documenso_id),
             external_id=document_id,
@@ -178,43 +178,46 @@ async def use_template_for_a_recipient(
             ],
             destination_folder_id=destination_folder_id,
         )
-
-        # Extract the signing token from the first (and only) recipient
-        if not documenso_response.recipients:
-            errors[recipient.email] = "No recipients found in Documenso response"
-            return None
-
-        signing_token = documenso_response.recipients[0].token
-
-        document = schemas_documents.DocumentWithToken(
-            id=document_id,
-            documenso_id=int(documenso_response.id),
-            template_id=template.id,
-            name=documenso_response.title,
-            module=module,
-            user_id=recipient.id,
-            signing_token=signing_token,
-            status=DocumentStatus.PENDING,
-            created_at=datetime.now(UTC),
-            updated_at=datetime.now(UTC),
-        )
-
-        await cruds_documents.create_document(document=document, db=db)
-
-        return schemas_documents.Document(
-            id=document.id,
-            documenso_id=document.documenso_id,
-            template_id=document.template_id,
-            name=document.name,
-            user_id=document.user_id,
-            module=document.module,
-            status=document.status,
-            created_at=document.created_at,
-            updated_at=document.updated_at,
-        )
     except Exception as e:
-        errors[recipient.email] = str(e)
-        return None
+        raise DocumensoAPIError(
+            user_email=recipient.email,
+            message=str(e),
+        ) from e
+    # Extract the signing token from the first (and only) recipient
+    if not documenso_response.recipients:
+        raise DocumensoAPIError(
+            recipient.email,
+            "No recipients returned from Documenso API",
+        )
+
+    signing_token = documenso_response.recipients[0].token
+
+    document = schemas_documents.DocumentWithToken(
+        id=document_id,
+        documenso_id=int(documenso_response.id),
+        template_id=template.id,
+        name=documenso_response.title,
+        module=module,
+        user_id=recipient.id,
+        signing_token=signing_token,
+        status=DocumentStatus.PENDING,
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+
+    await cruds_documents.create_document(document=document, db=db)
+
+    return schemas_documents.Document(
+        id=document.id,
+        documenso_id=document.documenso_id,
+        template_id=document.template_id,
+        name=document.name,
+        user_id=document.user_id,
+        module=document.module,
+        status=document.status,
+        created_at=document.created_at,
+        updated_at=document.updated_at,
+    )
 
 
 async def handle_document_callback(

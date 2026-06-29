@@ -903,7 +903,6 @@ async def test_webhook_template_creation_invalid_payload(
         },
     )
     assert response.status_code == 500
-    assert str(response.json()["detail"]).startswith("Error parsing payload: ")
 
 
 async def test_webhook_template_creation_unknown_team(

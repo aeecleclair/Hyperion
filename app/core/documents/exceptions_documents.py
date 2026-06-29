@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import UUID
 
 
@@ -22,3 +23,21 @@ class MissingDocumensoURLError(Exception):
 
     def __init__(self):
         super().__init__("Missing documenso URL in the configuration.")
+
+
+class PayloadParsingError(Exception):
+    """Raised when there is an error parsing the payload."""
+
+    def __init__(self, body: Any, error: Exception):
+        self.body = body
+        self.error = error
+        super().__init__(f"Error parsing payload: {error}.\nBody: {body}")
+
+
+class DocumensoAPIError(Exception):
+    """Raised when there is an error with the Documenso API."""
+
+    def __init__(self, user_email: str, message: str):
+        self.message = message
+        self.user_email = user_email
+        super().__init__(f"Documenso API error for user {user_email}: {message}")

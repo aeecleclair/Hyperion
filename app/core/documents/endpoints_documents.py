@@ -13,9 +13,11 @@ from app.core.documents.documenso_api_wrapper import (
     DocumensoConfiguration,
 )
 from app.core.documents.exceptions_documents import (
+    DocumensoAPIError,
     ElementTeamNotFoundError,
     ElementTemplateNotFoundError,
     MissingDocumensoURLError,
+    PayloadParsingError,
 )
 from app.core.documents.types_documenso import (
     DocumensoWebhook,
@@ -406,15 +408,22 @@ async def use_template(
                 documenso=documenso,
                 db=db,
                 module="documents",
-                errors=errors,
             )
             for user in users
         ],
+        return_exceptions=True,
     )
+    for res in documents:
+        if isinstance(res, DocumensoAPIError):
+            errors[res.user_email] = res.message
 
     return schemas_documents.TemplateUseResponse(
         errors=errors,
-        documents=[doc for doc in documents if doc is not None],
+        documents=[
+            doc
+            for doc in documents
+            if doc is not None and not isinstance(doc, BaseException)
+        ],
     )
 
 
@@ -593,10 +602,7 @@ async def documenso_webhook(
         adapter: TypeAdapter[DocumensoWebhook] = TypeAdapter(DocumensoWebhook)
         webhook = adapter.validate_python(raw_body)
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error parsing payload: {e}.\nBody: {raw_body}",
-        )
+        raise PayloadParsingError(body=raw_body, error=e)
 
     match webhook.event:
         case WebhookEvent.TEMPLATE_CREATED:
