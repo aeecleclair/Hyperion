@@ -23,7 +23,7 @@ core_module = CoreModule(
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
-@router.get("/google-api/oauth2callback", status_code=200)
+@router.get("/google-api/oauth2callback", response_model=str, status_code=200)
 async def google_api_callback(
     request: Request,
     db: AsyncSession = Depends(get_db),

@@ -521,7 +521,7 @@ async def delete_user_membership(
 
 @router.post(
     "/memberships/{membership_id}/group/{group_id}/synchronize",
-    status_code=201,
+    status_code=204,
 )
 async def synchronize_membership_with_group(
     membership_id: uuid.UUID,

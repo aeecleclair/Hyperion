@@ -42,6 +42,7 @@ async def read_information(
 
 @router.get(
     "/privacy",
+    response_model=str,
     status_code=200,
 )
 async def read_privacy(settings: Settings = Depends(get_settings)):
@@ -57,6 +58,7 @@ async def read_privacy(settings: Settings = Depends(get_settings)):
 
 @router.get(
     "/terms-and-conditions",
+    response_model=str,
     status_code=200,
 )
 async def read_terms_and_conditions(settings: Settings = Depends(get_settings)):
@@ -72,6 +74,7 @@ async def read_terms_and_conditions(settings: Settings = Depends(get_settings)):
 
 @router.get(
     "/mypayment-terms-of-service",
+    response_model=str,
     status_code=200,
 )
 async def read_mypayment_tos(settings: Settings = Depends(get_settings)):
@@ -86,6 +89,7 @@ async def read_mypayment_tos(settings: Settings = Depends(get_settings)):
 
 @router.get(
     "/support",
+    response_model=str,
     status_code=200,
 )
 async def read_support(settings: Settings = Depends(get_settings)):
@@ -101,6 +105,7 @@ async def read_support(settings: Settings = Depends(get_settings)):
 
 @router.get(
     "/security.txt",
+    response_model=str,
     status_code=200,
 )
 async def read_security_txt(settings: Settings = Depends(get_settings)):
@@ -115,6 +120,7 @@ async def read_security_txt(settings: Settings = Depends(get_settings)):
 
 @router.get(
     "/.well-known/security.txt",
+    response_model=str,
     status_code=200,
 )
 async def read_wellknown_security_txt(settings: Settings = Depends(get_settings)):
@@ -130,6 +136,7 @@ async def read_wellknown_security_txt(settings: Settings = Depends(get_settings)
 
 @router.get(
     "/robots.txt",
+    response_model=str,
     status_code=200,
 )
 async def read_robots_txt(settings: Settings = Depends(get_settings)):
@@ -145,6 +152,7 @@ async def read_robots_txt(settings: Settings = Depends(get_settings)):
 
 @router.get(
     "/account-deletion",
+    response_model=str,
     status_code=200,
 )
 async def read_account_deletion(settings: Settings = Depends(get_settings)):

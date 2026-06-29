@@ -253,7 +253,7 @@ async def send_notification(
 
 @router.post(
     "/notification/test/send",
-    status_code=201,
+    status_code=204,
 )
 async def send_test_notification(
     user_id: str | None = None,

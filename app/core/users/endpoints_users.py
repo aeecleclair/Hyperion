@@ -567,7 +567,7 @@ async def activate_user(
 
 @router.post(
     "/users/s3-init",
-    status_code=201,
+    status_code=204,
 )
 async def init_s3_for_users(
     db: AsyncSession = Depends(get_db),
@@ -805,6 +805,7 @@ async def migrate_mail(
 
 @router.get(
     "/users/migrate-mail-confirm",
+    response_model=str,
     status_code=200,
 )
 async def migrate_mail_confirm(

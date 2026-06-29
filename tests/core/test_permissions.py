@@ -82,7 +82,7 @@ def test_create_permission(client: TestClient) -> None:
         },
         headers={"Authorization": f"Bearer {admin_token}"},
     )
-    assert response.status_code == 201
+    assert response.status_code == 204
 
     response = client.get(
         f"/permissions/{BookingPermissions.manage_managers.value}",

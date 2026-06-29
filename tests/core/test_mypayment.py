@@ -966,7 +966,7 @@ async def test_transfer_structure_manager_as_manager(
             "new_manager_user_id": ecl_user2.id,
         },
     )
-    assert response.status_code == 201
+    assert response.status_code == 204
 
     response = client.get(
         "/mypayment/structures/confirm-manager-transfer",

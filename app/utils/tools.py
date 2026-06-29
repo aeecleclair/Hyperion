@@ -812,7 +812,7 @@ async def execute_async_or_sync_method(
 def patch_identity_in_text(
     text: str,
     settings: "Settings",
-):
+) -> str:
     """
     Patch the given text with the identity of the school.
     This is used to replace the identity placeholders in the legal texts with the values defined in the settings.

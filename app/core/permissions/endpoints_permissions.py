@@ -98,7 +98,7 @@ async def read_permission(
 
 @router.post(
     "/permissions/",
-    status_code=201,
+    status_code=204,
 )
 async def create_permission(
     permission: schemas_permissions.CoreGroupPermission
@@ -124,7 +124,6 @@ async def create_permission(
         await cruds_permissions.create_group_permission(permission, db)
     else:
         await cruds_permissions.create_account_type_permission(permission, db)
-    return {"message": "Permission created successfully"}
 
 
 @router.delete(

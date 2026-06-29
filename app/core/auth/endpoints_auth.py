@@ -3,6 +3,7 @@ import hashlib
 import logging
 import urllib.parse
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import calypsso
 import jwt
@@ -1046,6 +1047,7 @@ async def introspect_refresh_token(
 
 @router.get(
     "/auth/userinfo",
+    response_model=dict[str, Any],
     status_code=200,
 )
 async def auth_get_userinfo(
