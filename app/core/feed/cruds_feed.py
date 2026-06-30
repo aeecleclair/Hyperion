@@ -92,3 +92,17 @@ async def edit_news_by_module_object_id(
         )
         .values(**news_edit.model_dump(exclude_unset=True)),
     )
+
+
+async def get_news_by_module_object_id(
+    module: str,
+    module_object_id: UUID,
+    db: AsyncSession,
+) -> models_feed.News | None:
+    result = await db.execute(
+        select(models_feed.News).where(
+            models_feed.News.module == module,
+            models_feed.News.module_object_id == module_object_id,
+        ),
+    )
+    return result.scalars().first()

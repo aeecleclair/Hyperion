@@ -425,3 +425,18 @@ async def can_user_manage_events(
         db=db,
     )
     return seller is not None and seller.can_manage_events
+
+
+async def ensure_user_can_manage_events(
+    user_id: str,
+    store_id: UUID,
+    db: AsyncSession,
+):
+    """
+    Will raise a 403 HTTPException if the user is not authorized to manage events for the store.
+    """
+    if not await can_user_manage_events(user_id, store_id, db):
+        raise HTTPException(
+            403,
+            detail="User is not authorized to manage store's events",
+        )

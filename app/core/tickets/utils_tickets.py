@@ -159,15 +159,11 @@ async def get_events_from_store(
     user_id: str,
     db: AsyncSession,
 ) -> Sequence[schemas_tickets.EventSimple]:
-    if not await utils_mypayment.can_user_manage_events(
+    await utils_mypayment.ensure_user_can_manage_events(
         user_id=user_id,
         store_id=store_id,
         db=db,
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="User is not authorized to manage store events",
-        )
+    )
 
     return await cruds_tickets.get_events_by_store_id(
         store_id=store_id,

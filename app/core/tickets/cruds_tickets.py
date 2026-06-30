@@ -345,6 +345,24 @@ async def create_event_category(
     db.add(db_category)
 
 
+async def create_event_question(
+    question_id: UUID,
+    event_id: UUID,
+    question: schemas_tickets.QuestionCreate,
+    db: AsyncSession,
+):
+    db_question = models_tickets.Question(
+        id=question_id,
+        event_id=event_id,
+        question=question.question,
+        answer_type=question.answer_type,
+        price=question.price,
+        required=question.required,
+        disabled=False,
+    )
+    db.add(db_question)
+
+
 async def get_category_by_id(
     category_id: UUID,
     db: AsyncSession,
@@ -726,42 +744,6 @@ async def count_valid_checkouts_by_event_id(
     return result.scalar() or 0
 
 
-async def count_valid_checkouts_by_category_id(
-    category_id: UUID,
-    db: AsyncSession,
-) -> int:
-    """
-    Count only unpaid checkouts that are not expired
-    """
-    result = await db.execute(
-        select(func.count()).where(
-            models_tickets.Checkout.category_id == category_id,
-            models_tickets.Checkout.expiration >= datetime.now(UTC),
-            not_(models_tickets.Checkout.paid),
-        ),
-    )
-
-    return result.scalar() or 0
-
-
-async def count_valid_checkouts_by_session_id(
-    session_id: UUID,
-    db: AsyncSession,
-) -> int:
-    """
-    Count only unpaid checkouts that are not expired
-    """
-    result = await db.execute(
-        select(func.count()).where(
-            models_tickets.Checkout.session_id == session_id,
-            models_tickets.Checkout.expiration >= datetime.now(UTC),
-            not_(models_tickets.Checkout.paid),
-        ),
-    )
-
-    return result.scalar() or 0
-
-
 async def count_valid_checkouts_and_tickets_by_event_id(
     event_id: UUID,
     db: AsyncSession,
@@ -772,6 +754,26 @@ async def count_valid_checkouts_and_tickets_by_event_id(
     result = await db.execute(
         select(func.count()).where(
             models_tickets.Checkout.event_id == event_id,
+            or_(
+                models_tickets.Checkout.paid,
+                models_tickets.Checkout.expiration >= datetime.now(UTC),
+            ),
+        ),
+    )
+
+    return result.scalar() or 0
+
+
+async def count_valid_checkouts_and_tickets_by_session_id(
+    session_id: UUID,
+    db: AsyncSession,
+) -> int:
+    """
+    Count unpaid checkouts that are not expired and paid tickets
+    """
+    result = await db.execute(
+        select(func.count()).where(
+            models_tickets.Checkout.session_id == session_id,
             or_(
                 models_tickets.Checkout.paid,
                 models_tickets.Checkout.expiration >= datetime.now(UTC),
@@ -802,20 +804,36 @@ async def count_valid_checkouts_and_tickets_by_category_id(
     return result.scalar() or 0
 
 
-async def count_valid_checkouts_and_tickets_by_session_id(
+async def count_valid_checkouts_by_category_id(
+    category_id: UUID,
+    db: AsyncSession,
+) -> int:
+    """
+    Count only unpaid checkouts that are not expired
+    """
+    result = await db.execute(
+        select(func.count()).where(
+            models_tickets.Checkout.category_id == category_id,
+            models_tickets.Checkout.expiration >= datetime.now(UTC),
+            not_(models_tickets.Checkout.paid),
+        ),
+    )
+
+    return result.scalar() or 0
+
+
+async def count_valid_checkouts_by_session_id(
     session_id: UUID,
     db: AsyncSession,
 ) -> int:
     """
-    Count unpaid checkouts that are not expired and paid tickets
+    Count only unpaid checkouts that are not expired
     """
     result = await db.execute(
         select(func.count()).where(
             models_tickets.Checkout.session_id == session_id,
-            or_(
-                models_tickets.Checkout.paid,
-                models_tickets.Checkout.expiration >= datetime.now(UTC),
-            ),
+            models_tickets.Checkout.expiration >= datetime.now(UTC),
+            not_(models_tickets.Checkout.paid),
         ),
     )
 
@@ -925,4 +943,90 @@ async def get_ticket_change_over_invitation_by_token(
         ticket_id=invitation.ticket_id,
         new_user_id=invitation.new_user_id,
         token=invitation.token,
+    )
+
+
+async def delete_question(
+    question_id: UUID,
+    db: AsyncSession,
+):
+    await db.execute(
+        delete(models_tickets.Question).where(
+            models_tickets.Question.id == question_id,
+        ),
+    )
+
+
+async def delete_session(
+    session_id: UUID,
+    db: AsyncSession,
+):
+    # Delete all expired unpaid checkouts for the session before deleting the session itself
+    await db.execute(
+        delete(models_tickets.Checkout).where(
+            models_tickets.Checkout.session_id == session_id,
+            not_(models_tickets.Checkout.paid),
+            models_tickets.Checkout.expiration < datetime.now(UTC),
+        ),
+    )
+
+    await db.execute(
+        delete(models_tickets.EventSession).where(
+            models_tickets.EventSession.id == session_id,
+        ),
+    )
+
+
+async def delete_category(
+    category_id: UUID,
+    db: AsyncSession,
+):
+    # Delete all expired unpaid checkouts for the category before deleting the category itself
+    await db.execute(
+        delete(models_tickets.Checkout).where(
+            models_tickets.Checkout.category_id == category_id,
+            not_(models_tickets.Checkout.paid),
+            models_tickets.Checkout.expiration < datetime.now(UTC),
+        ),
+    )
+
+    await db.execute(
+        delete(models_tickets.Category).where(
+            models_tickets.Category.id == category_id,
+        ),
+    )
+
+
+async def delete_event(
+    event_id: UUID,
+    db: AsyncSession,
+):
+    # Delete all expired unpaid checkouts for the event before deleting the event itself
+    await db.execute(
+        delete(models_tickets.Checkout).where(
+            models_tickets.Checkout.event_id == event_id,
+            not_(models_tickets.Checkout.paid),
+            models_tickets.Checkout.expiration < datetime.now(UTC),
+        ),
+    )
+
+    await db.execute(
+        delete(models_tickets.Question).where(
+            models_tickets.Question.event_id == event_id,
+        ),
+    )
+    await db.execute(
+        delete(models_tickets.EventSession).where(
+            models_tickets.EventSession.event_id == event_id,
+        ),
+    )
+    await db.execute(
+        delete(models_tickets.Category).where(
+            models_tickets.Category.event_id == event_id,
+        ),
+    )
+    await db.execute(
+        delete(models_tickets.TicketEvent).where(
+            models_tickets.TicketEvent.id == event_id,
+        ),
     )

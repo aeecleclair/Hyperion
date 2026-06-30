@@ -123,3 +123,16 @@ async def edit_feed_news(
                 group_id=group,
                 message=message,
             )
+
+
+async def check_if_module_object_id_is_linked_to_feed(
+    module: str,
+    module_object_id: uuid.UUID,
+    db: AsyncSession,
+) -> bool:
+    result = await cruds_feed.get_news_by_module_object_id(
+        module=module,
+        module_object_id=module_object_id,
+        db=db,
+    )
+    return result is not None

@@ -3,8 +3,10 @@ from datetime import UTC, datetime, timedelta
 
 import pytest_asyncio
 from fastapi.testclient import TestClient
+from pytest_mock import MockerFixture
 
 from app.core.associations.models_associations import CoreAssociation
+from app.core.feed import models_feed, types_feed
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import models_memberships
 from app.core.mypayment import models_mypayment
@@ -54,6 +56,8 @@ category_sold_out_event: models_tickets.Category
 ticket_sold_out_event: models_tickets.Checkout
 
 ticket_for_user_with_answer: models_tickets.Checkout
+
+event_linked_to_feed: models_tickets.TicketEvent
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -339,6 +343,36 @@ async def init_objects() -> None:
         ],
     )
     await add_object_to_db(ticket_for_user_with_answer)
+
+    global event_linked_to_feed
+    event_linked_to_feed = models_tickets.TicketEvent(
+        id=uuid.uuid4(),
+        store_id=store.id,
+        name="Test Event Linked to Feed",
+        open_datetime=datetime.now(tz=UTC) - timedelta(days=1),
+        close_datetime=datetime.now(tz=UTC) + timedelta(days=1),
+        quota=10,
+        disabled=False,
+        sessions=[],
+        categories=[],
+        questions=[],
+    )
+    await add_object_to_db(event_linked_to_feed)
+    feed = models_feed.News(
+        id=uuid.uuid4(),
+        title="Test Feed News",
+        module="tickets",
+        module_object_id=event_linked_to_feed.id,
+        start=datetime.now(tz=UTC) - timedelta(days=1),
+        end=datetime.now(tz=UTC) + timedelta(days=1),
+        entity="Test Entity",
+        location="Test Location",
+        action_start=datetime.now(tz=UTC) - timedelta(days=1),
+        image_directory="test_directory",
+        image_id=uuid.uuid4(),
+        status=types_feed.NewsStatus.PUBLISHED,
+    )
+    await add_object_to_db(feed)
 
 
 async def test_payment_callback(client: TestClient):
@@ -1011,6 +1045,106 @@ def test_get_user_tickets(client: TestClient):
     assert len(ticket["answers"]) > 0
 
 
+# ticket_request_change_over
+
+
+async def test_ticket_request_change_over_for_non_existing_ticket(client: TestClient):
+    response = client.post(
+        "/tickets/user/me/tickets/change-over/request",
+        headers={"Authorization": f"Bearer {user_token}"},
+        json={
+            "ticket_id": str(uuid.uuid4()),
+            "email": "test@test.fr",
+        },
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Ticket not found"
+
+
+async def test_ticket_request_change_over_for_ticket_from_different_user(
+    client: TestClient,
+):
+    response = client.post(
+        "/tickets/user/me/tickets/change-over/request",
+        headers={"Authorization": f"Bearer {user_token}"},
+        json={
+            "ticket_id": str(ticket_sold_out_event.id),
+            "email": "test@test.fr",
+        },
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "User is not the owner of the ticket"
+
+
+async def test_ticket_request_change_over_for_ticket_for_non_existing_user_email(
+    client: TestClient,
+):
+    response = client.post(
+        "/tickets/user/me/tickets/change-over/request",
+        headers={"Authorization": f"Bearer {user_token}"},
+        json={
+            "ticket_id": str(ticket_for_user_with_answer.id),
+            "email": "non-existing@test.fr",
+        },
+    )
+    assert response.status_code == 204
+
+
+async def test_ticket_request_change_over(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    ticket_to_transfer = models_tickets.Checkout(
+        id=uuid.uuid4(),
+        category_id=event_category.id,
+        session_id=event_session.id,
+        event_id=global_event.id,
+        user_id=user.id,
+        price=10,
+        scanned=False,
+        paid=True,
+        expiration=datetime.now(tz=UTC) + timedelta(hours=1),
+        answers=[],
+    )
+    await add_object_to_db(ticket_to_transfer)
+
+    generate_token_patch = mocker.patch(
+        "app.core.tickets.endpoints_tickets.security.generate_token",
+        return_value="token",
+    )
+
+    response = client.post(
+        "/tickets/user/me/tickets/change-over/request",
+        headers={"Authorization": f"Bearer {user_token}"},
+        json={
+            "ticket_id": str(ticket_to_transfer.id),
+            "email": seller_can_manage_event_user.email,
+        },
+    )
+    assert response.status_code == 204
+    generate_token_patch.assert_called()
+
+    response = client.get(
+        "/tickets/user/me/tickets/change-over/accept?token=token",
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 307
+    assert "message?type=ticket_change_over_success" in response.headers["location"]
+
+
+# ticket_accept_change_over
+
+
+def test_ticket_accept_change_over_with_invalid_token(client: TestClient):
+    response = client.get(
+        "/tickets/user/me/tickets/change-over/accept?token=invalid_token",
+        follow_redirects=False,
+    )
+    assert response.status_code == 307
+    assert "message?type=ticket_change_over_invalid" in response.headers["location"]
+
+
 # get_event_admin
 
 
@@ -1029,7 +1163,9 @@ def test_get_event_admin_as_non_authorised_seller(client: TestClient):
         headers={"Authorization": f"Bearer {user_token}"},
     )
     assert response.status_code == 403
-    assert response.json()["detail"] == "User is not authorized to manage store events"
+    assert (
+        response.json()["detail"] == "User is not authorized to manage store's events"
+    )
 
 
 def test_get_event_admin(client: TestClient):
@@ -1065,7 +1201,9 @@ def test_create_event_as_non_authorised_seller(client: TestClient):
         },
     )
     assert response.status_code == 403
-    assert response.json()["detail"] == "User is not authorized to manage store events"
+    assert (
+        response.json()["detail"] == "User is not authorized to manage store's events"
+    )
 
 
 def test_create_event_without_sessions(client: TestClient):
@@ -1222,6 +1360,70 @@ def test_update_event(client: TestClient):
     assert response.status_code == 204
 
 
+def test_update_event_disable(client: TestClient):
+    create_response = client.post(
+        "/tickets/admin/events/",
+        headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
+        json={
+            "store_id": str(store.id),
+            "name": "Test Event To Disable",
+            "open_datetime": (datetime.now(tz=UTC) - timedelta(days=1)).isoformat(),
+            "close_datetime": (datetime.now(tz=UTC) + timedelta(days=2)).isoformat(),
+            "quota": 10,
+            "sessions": [
+                {
+                    "name": "Test Session",
+                    "start_datetime": (
+                        datetime.now(tz=UTC) + timedelta(days=1)
+                    ).isoformat(),
+                    "quota": 10,
+                },
+            ],
+            "categories": [
+                {
+                    "name": "Test Category",
+                    "price": 1000,
+                    "quota": 10,
+                    "required_membership": None,
+                },
+            ],
+            "questions": [],
+        },
+    )
+    assert create_response.status_code == 201
+    event_id = create_response.json()["id"]
+
+    response = client.patch(
+        f"/tickets/admin/events/{event_id}",
+        headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
+        json={
+            "disabled": True,
+        },
+    )
+    assert response.status_code == 204
+
+    admin_response = client.get(
+        f"/tickets/admin/events/{event_id}",
+        headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
+    )
+    assert admin_response.status_code == 200
+    assert admin_response.json()["disabled"] is True
+
+    public_response = client.get(
+        f"/tickets/events/{event_id}",
+        headers={"Authorization": f"Bearer {user_token}"},
+    )
+    assert public_response.status_code == 400
+    assert public_response.json()["detail"] == "Event is disabled"
+
+    open_events_response = client.get(
+        "/tickets/events",
+        headers={"Authorization": f"Bearer {user_token}"},
+    )
+    assert open_events_response.status_code == 200
+    assert event_id not in {event["id"] for event in open_events_response.json()}
+
+
 # create_session
 
 
@@ -1313,20 +1515,6 @@ def test_update_session_with_non_existing_session(client: TestClient):
     assert response.json()["detail"] == "Session not found"
 
 
-def test_update_session_with_existing_tickets(client: TestClient):
-    response = client.patch(
-        f"/tickets/admin/events/{global_event.id}/sessions/{event_session.id}",
-        headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
-        json={
-            "name": "Updated Test Session",
-        },
-    )
-    assert response.status_code == 400
-    assert (
-        response.json()["detail"] == "Cannot update session with checkouts or tickets"
-    )
-
-
 async def test_update_session(client: TestClient):
     session_without_tickets = models_tickets.EventSession(
         id=uuid.uuid4(),
@@ -1334,7 +1522,7 @@ async def test_update_session(client: TestClient):
         name="Test Session without tickets",
         start_datetime=datetime.now(tz=UTC) - timedelta(days=1),
         quota=None,
-        disabled=False,
+        disabled=True,
     )
     await add_object_to_db(session_without_tickets)
     response = client.patch(
@@ -1342,6 +1530,7 @@ async def test_update_session(client: TestClient):
         headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
         json={
             "name": "Updated Test Session",
+            "disabled": True,
         },
     )
     assert response.status_code == 204
@@ -1418,6 +1607,62 @@ def test_create_category(client: TestClient):
     assert category["quota"] == 10
 
 
+# create_question
+
+
+def test_create_question_with_non_existing_event(client: TestClient):
+    response = client.post(
+        f"/tickets/admin/events/{uuid.uuid4()}/questions/",
+        headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
+        json={
+            "question": "Test Question",
+            "answer_type": "text",
+            "price": 100,
+            "required": False,
+        },
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Event not found"
+
+
+def test_create_question_as_non_authorised_seller(client: TestClient):
+    response = client.post(
+        f"/tickets/admin/events/{global_event.id}/questions/",
+        headers={"Authorization": f"Bearer {user_token}"},
+        json={
+            "question": "Test Question",
+            "answer_type": "text",
+            "price": 100,
+            "required": False,
+        },
+    )
+    assert response.status_code == 403
+    assert (
+        response.json()["detail"] == "User is not authorized to manage store's events"
+    )
+
+
+def test_create_question(client: TestClient):
+    response = client.post(
+        f"/tickets/admin/events/{global_event.id}/questions/",
+        headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
+        json={
+            "question": "New Test Question",
+            "answer_type": "text",
+            "price": 100,
+            "required": True,
+        },
+    )
+    assert response.status_code == 201
+    question = response.json()
+    assert question["question"] == "New Test Question"
+    assert question["answer_type"] == "text"
+    assert question["price"] == 100
+    assert question["required"] is True
+    assert question["disabled"] is False
+    assert question["event_id"] == str(global_event.id)
+
+
 # update_category
 
 
@@ -1459,17 +1704,19 @@ def test_update_category_with_non_existing_category(client: TestClient):
     assert response.json()["detail"] == "Category not found"
 
 
-def test_update_category_with_existing_tickets(client: TestClient):
+def test_update_category_price_with_existing_tickets(client: TestClient):
     response = client.patch(
         f"/tickets/admin/events/{global_event.id}/categories/{event_category.id}",
         headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
         json={
             "name": "Updated Test Category",
+            "price": 2000,
         },
     )
     assert response.status_code == 400
     assert (
-        response.json()["detail"] == "Cannot update category with checkouts or tickets"
+        response.json()["detail"]
+        == "Cannot update category price or required_membership with checkouts or tickets"
     )
 
 
@@ -1505,6 +1752,7 @@ async def test_update_category(client: TestClient):
         headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
         json={
             "name": "Updated Test Category",
+            "disabled": True,
         },
     )
     assert response.status_code == 204
@@ -1551,16 +1799,73 @@ def test_update_question_with_non_existing_question(client: TestClient):
     assert response.json()["detail"] == "Question not found"
 
 
-async def test_update_question_with_answer(client: TestClient):
+async def test_update_question_answer_type_with_answer(client: TestClient):
     response = client.patch(
         f"/tickets/admin/events/{global_event.id}/questions/{global_event_optionnal_question_id}",
         headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
         json={
             "question": "Updated Test Question",
+            "answer_type": "number",
         },
     )
     assert response.status_code == 400
-    assert response.json()["detail"] == "Cannot update question with answers"
+    assert (
+        response.json()["detail"]
+        == "Cannot update answer_type or price for question with answers"
+    )
+
+
+async def test_update_question_price_with_answer(client: TestClient):
+    response = client.patch(
+        f"/tickets/admin/events/{global_event.id}/questions/{global_event_optionnal_question_id}",
+        headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
+        json={
+            "question": "Updated Test Question",
+            "price": 100,
+        },
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Cannot update answer_type or price for question with answers"
+    )
+
+
+def test_update_question_disable_with_answers(client: TestClient):
+    response = client.patch(
+        f"/tickets/admin/events/{global_event.id}/questions/{global_event_optionnal_question_id}",
+        headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
+        json={
+            "disabled": True,
+            "question": "Updated Test Question",
+        },
+    )
+    assert response.status_code == 204
+
+    checkout_response = client.post(
+        f"/tickets/events/{global_event.id}/checkout",
+        headers={"Authorization": f"Bearer {user_token}"},
+        json={
+            "category_id": str(free_event_category.id),
+            "session_id": str(event_session.id),
+            "answers": [
+                {
+                    "question_id": str(global_event_optionnal_question_id),
+                    "answer": {
+                        "answer_type": "text",
+                        "answer": "Test Answer",
+                    },
+                },
+            ],
+            "mypayment_request_method": "transfer_request",
+            "mypayment_transfer_redirect_url": "http://localhost:3000/payment_callback",
+        },
+    )
+    assert checkout_response.status_code == 400
+    assert (
+        checkout_response.json()["detail"]
+        == f"Question with id {global_event_optionnal_question_id} is disabled"
+    )
 
 
 async def test_update_question(client: TestClient):
@@ -1584,6 +1889,213 @@ async def test_update_question(client: TestClient):
     assert response.status_code == 204
 
 
+# delete_event
+
+
+def test_delete_event_not_found(client: TestClient):
+    response = client.delete(
+        f"/tickets/admin/events/{uuid.uuid4()}",
+        headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Event not found"
+
+
+def test_delete_event_as_non_authorised_seller(client: TestClient):
+    response = client.delete(
+        f"/tickets/admin/events/{global_event.id}",
+        headers={"Authorization": f"Bearer {user_token}"},
+    )
+    assert response.status_code == 403
+    assert (
+        response.json()["detail"] == "User is not authorized to manage store's events"
+    )
+
+
+def test_delete_event_with_checkouts_or_tickets(client: TestClient):
+    response = client.delete(
+        f"/tickets/admin/events/{global_event.id}",
+        headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Cannot delete event with checkouts or tickets"
+
+
+def test_delete_event_linked_to_feed(client: TestClient):
+    response = client.delete(
+        f"/tickets/admin/events/{event_linked_to_feed.id}",
+        headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Cannot delete event linked to the feed"
+
+
+def test_delete_event(client: TestClient):
+    create_response = client.post(
+        "/tickets/admin/events/",
+        headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
+        json={
+            "store_id": str(store.id),
+            "name": "Test Event To Delete",
+            "open_datetime": (datetime.now(tz=UTC) + timedelta(days=1)).isoformat(),
+            "close_datetime": (datetime.now(tz=UTC) + timedelta(days=2)).isoformat(),
+            "quota": 10,
+            "sessions": [
+                {
+                    "name": "Test Session",
+                    "start_datetime": (
+                        datetime.now(tz=UTC) + timedelta(days=1)
+                    ).isoformat(),
+                    "quota": 10,
+                },
+            ],
+            "categories": [
+                {
+                    "name": "Test Category",
+                    "price": 1000,
+                    "quota": 10,
+                    "required_membership": None,
+                },
+            ],
+            "questions": [],
+        },
+    )
+    assert create_response.status_code == 201
+    event_id = create_response.json()["id"]
+
+    response = client.delete(
+        f"/tickets/admin/events/{event_id}",
+        headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
+    )
+    assert response.status_code == 204
+
+    admin_response = client.get(
+        f"/tickets/admin/events/{event_id}",
+        headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
+    )
+    assert admin_response.status_code == 404
+
+
+# delete_session
+
+
+def test_delete_session_with_checkouts_or_tickets(client: TestClient):
+    response = client.delete(
+        f"/tickets/admin/events/{global_event.id}/sessions/{event_session.id}",
+        headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"] == "Cannot delete session with checkouts or tickets"
+    )
+
+
+async def test_delete_session(client: TestClient):
+    session_without_tickets = models_tickets.EventSession(
+        id=uuid.uuid4(),
+        event_id=global_event.id,
+        name="Test Session to delete",
+        start_datetime=datetime.now(tz=UTC) - timedelta(days=1),
+        quota=None,
+        disabled=False,
+    )
+    await add_object_to_db(session_without_tickets)
+
+    response = client.delete(
+        f"/tickets/admin/events/{global_event.id}/sessions/{session_without_tickets.id}",
+        headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
+    )
+    assert response.status_code == 204
+
+    admin_response = client.get(
+        f"/tickets/admin/events/{global_event.id}",
+        headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
+    )
+    assert admin_response.status_code == 200
+    session_ids = {session["id"] for session in admin_response.json()["sessions"]}
+    assert str(session_without_tickets.id) not in session_ids
+
+
+# delete_category
+
+
+def test_delete_category_with_checkouts_or_tickets(client: TestClient):
+    response = client.delete(
+        f"/tickets/admin/events/{global_event.id}/categories/{event_category.id}",
+        headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"] == "Cannot delete category with checkouts or tickets"
+    )
+
+
+async def test_delete_category(client: TestClient):
+    category_without_tickets = models_tickets.Category(
+        id=uuid.uuid4(),
+        event_id=global_event.id,
+        name="Test Category to delete",
+        quota=None,
+        disabled=False,
+        price=1000,
+        required_membership=None,
+    )
+    await add_object_to_db(category_without_tickets)
+
+    response = client.delete(
+        f"/tickets/admin/events/{global_event.id}/categories/{category_without_tickets.id}",
+        headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
+    )
+    assert response.status_code == 204
+
+    admin_response = client.get(
+        f"/tickets/admin/events/{global_event.id}",
+        headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
+    )
+    assert admin_response.status_code == 200
+    category_ids = {category["id"] for category in admin_response.json()["categories"]}
+    assert str(category_without_tickets.id) not in category_ids
+
+
+# delete_question
+
+
+def test_delete_question_with_answers(client: TestClient):
+    response = client.delete(
+        f"/tickets/admin/events/{global_event.id}/questions/{global_event_optionnal_question_id}",
+        headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Cannot delete question with answers"
+
+
+async def test_delete_question(client: TestClient):
+    question_without_answers = models_tickets.Question(
+        id=uuid.uuid4(),
+        event_id=global_event.id,
+        question="Test Question to delete",
+        answer_type=AnswerType.TEXT,
+        price=None,
+        required=False,
+        disabled=False,
+    )
+    await add_object_to_db(question_without_answers)
+
+    response = client.delete(
+        f"/tickets/admin/events/{global_event.id}/questions/{question_without_answers.id}",
+        headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
+    )
+    assert response.status_code == 204
+
+    admin_response = client.get(
+        f"/tickets/admin/events/{global_event.id}",
+        headers={"Authorization": f"Bearer {seller_can_manage_event_user_token}"},
+    )
+    assert admin_response.status_code == 200
+    question_ids = {question["id"] for question in admin_response.json()["questions"]}
+    assert str(question_without_answers.id) not in question_ids
+
+
 # get_event_tickets
 
 
@@ -1602,7 +2114,9 @@ def test_get_event_tickets_as_non_authorised_seller(client: TestClient):
         headers={"Authorization": f"Bearer {user_token}"},
     )
     assert response.status_code == 403
-    assert response.json()["detail"] == "User is not authorized to manage store events"
+    assert (
+        response.json()["detail"] == "User is not authorized to manage store's events"
+    )
 
 
 def test_get_event_tickets(client: TestClient):
@@ -1634,7 +2148,9 @@ def test_get_event_tickets_csv_as_non_authorised_seller(client: TestClient):
         headers={"Authorization": f"Bearer {user_token}"},
     )
     assert response.status_code == 403
-    assert response.json()["detail"] == "User is not authorized to manage store events"
+    assert (
+        response.json()["detail"] == "User is not authorized to manage store's events"
+    )
 
 
 def test_get_event_tickets_csv(client: TestClient):
@@ -1663,7 +2179,9 @@ def test_check_ticket_as_non_authorised_seller(client: TestClient):
         headers={"Authorization": f"Bearer {user_token}"},
     )
     assert response.status_code == 403
-    assert response.json()["detail"] == "User is not authorized to manage store events"
+    assert (
+        response.json()["detail"] == "User is not authorized to manage store's events"
+    )
 
 
 def test_check_ticket(client: TestClient):
@@ -1695,7 +2213,9 @@ def test_scan_ticket_as_non_authorised_seller(client: TestClient):
         headers={"Authorization": f"Bearer {user_token}"},
     )
     assert response.status_code == 403
-    assert response.json()["detail"] == "User is not authorized to manage store events"
+    assert (
+        response.json()["detail"] == "User is not authorized to manage store's events"
+    )
 
 
 def test_scan_ticket(client: TestClient):
@@ -1758,7 +2278,9 @@ def test_get_events_by_association_as_non_authorised_seller(client: TestClient):
         headers={"Authorization": f"Bearer {user_token}"},
     )
     assert response.status_code == 403
-    assert response.json()["detail"] == "User is not authorized to manage store events"
+    assert (
+        response.json()["detail"] == "User is not authorized to manage store's events"
+    )
 
 
 def test_get_events_by_association(client: TestClient):

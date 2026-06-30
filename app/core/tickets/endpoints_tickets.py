@@ -415,6 +415,8 @@ async def ticket_request_change_over(
             giver_name=user.full_name,
         )
 
+        confirmation_url = "No account exists for this email"
+
     else:
         await cruds_tickets.create_ticket_change_over_invitation(
             ticket_id=ticket.id,
@@ -431,18 +433,23 @@ async def ticket_request_change_over(
             confirmation_url=confirmation_url,
         )
 
-    background_tasks.add_task(
-        send_email,
-        recipient=ticket_transfer.email,
-        subject=f"{settings.school.application_name} - Ticket transfer for {event.name}",
-        content=mail,
-        settings=settings,
-    )
+    if settings.SMTP_ACTIVE:
+        background_tasks.add_task(
+            send_email,
+            recipient=ticket_transfer.email,
+            subject=f"{settings.school.application_name} - Ticket transfer for {event.name}",
+            content=mail,
+            settings=settings,
+        )
+    else:
+        hyperion_security_logger.info(
+            f"You can confirm the transfer by clicking the following link: {confirmation_url}",
+        )
 
 
 @router.get(
     "/tickets/user/me/tickets/change-over/accept",
-    status_code=200,
+    status_code=307,
 )
 async def ticket_accept_change_over(
     token: str,
@@ -505,15 +512,11 @@ async def get_event_admin(
     if event is None:
         raise HTTPException(404, "Event not found")
 
-    if not await utils_mypayment.can_user_manage_events(
+    await utils_mypayment.ensure_user_can_manage_events(
         user_id=user.id,
         store_id=event.store_id,
         db=db,
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="User is not authorized to manage store events",
-        )
+    )
 
     return await utils_tickets.convert_to_event_admin(
         event=event,
@@ -538,15 +541,11 @@ async def create_event(
 
     **The user should have the right to manage the event seller**
     """
-    if not await utils_mypayment.can_user_manage_events(
+    await utils_mypayment.ensure_user_can_manage_events(
         user_id=user.id,
         store_id=event_create.store_id,
         db=db,
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="User is not authorized to manage store events",
-        )
+    )
 
     if len(event_create.sessions) == 0 or len(event_create.categories) == 0:
         raise HTTPException(
@@ -597,15 +596,11 @@ async def update_event(
     if event is None:
         raise HTTPException(404, "Event not found")
 
-    if not await utils_mypayment.can_user_manage_events(
+    await utils_mypayment.ensure_user_can_manage_events(
         user_id=user.id,
         store_id=event.store_id,
         db=db,
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="User is not authorized to manage store's events",
-        )
+    )
 
     if event_update.open_datetime is not None:
         # We want to update the datetime in the feed
@@ -623,6 +618,59 @@ async def update_event(
     await cruds_tickets.update_event(
         event_id=event_id,
         event_update=event_update,
+        db=db,
+    )
+
+
+@router.delete(
+    "/tickets/admin/events/{event_id}",
+    status_code=204,
+)
+async def delete_event(
+    event_id: UUID,
+    user: CoreUser = Depends(
+        is_user(),
+    ),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Delete one event for admin
+    """
+    event = await cruds_tickets.get_event_simple_by_id(event_id=event_id, db=db)
+    if event is None:
+        raise HTTPException(404, "Event not found")
+
+    await utils_mypayment.ensure_user_can_manage_events(
+        user_id=user.id,
+        store_id=event.store_id,
+        db=db,
+    )
+
+    nb_checkouts_and_tickets = (
+        await cruds_tickets.count_valid_checkouts_and_tickets_by_event_id(
+            event_id=event_id,
+            db=db,
+        )
+    )
+    if nb_checkouts_and_tickets > 0:
+        raise HTTPException(
+            400,
+            "Cannot delete event with checkouts or tickets",
+        )
+
+    # We want to check if the event is linked to the feed
+    if await utils_feed.check_if_module_object_id_is_linked_to_feed(
+        module=core_module.root,
+        module_object_id=event.id,
+        db=db,
+    ):
+        raise HTTPException(
+            400,
+            "Cannot delete event linked to the feed",
+        )
+
+    await cruds_tickets.delete_event(
+        event_id=event_id,
         db=db,
     )
 
@@ -649,15 +697,11 @@ async def create_session(
     if event is None:
         raise HTTPException(404, "Event not found")
 
-    if not await utils_mypayment.can_user_manage_events(
+    await utils_mypayment.ensure_user_can_manage_events(
         user_id=user.id,
         store_id=event.store_id,
         db=db,
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="User is not authorized to manage store's events",
-        )
+    )
 
     session_id = uuid.uuid4()
 
@@ -694,37 +738,66 @@ async def update_session(
     if event is None:
         raise HTTPException(404, "Event not found")
 
-    if not await utils_mypayment.can_user_manage_events(
+    await utils_mypayment.ensure_user_can_manage_events(
         user_id=user.id,
         store_id=event.store_id,
         db=db,
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="User is not authorized to manage store's events",
-        )
+    )
 
     session = await cruds_tickets.get_session_by_id(session_id=session_id, db=db)
     if session is None or session.event_id != event_id:
         raise HTTPException(404, "Session not found")
 
-    nb_checkouts = await cruds_tickets.count_valid_checkouts_by_session_id(
-        session_id=session_id,
-        db=db,
-    )
-    nb_tickets = await cruds_tickets.count_tickets_by_session_id(
-        session_id=session_id,
-        db=db,
-    )
-    if nb_checkouts + nb_tickets > 0:
-        raise HTTPException(
-            400,
-            "Cannot update session with checkouts or tickets",
-        )
-
     await cruds_tickets.update_session(
         session_id=session_id,
         session_update=session_update,
+        db=db,
+    )
+
+
+@router.delete(
+    "/tickets/admin/events/{event_id}/sessions/{session_id}",
+    status_code=204,
+)
+async def delete_session(
+    event_id: UUID,
+    session_id: UUID,
+    user: CoreUser = Depends(
+        is_user(),
+    ),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Delete one session for admin
+    """
+    event = await cruds_tickets.get_event_simple_by_id(event_id=event_id, db=db)
+    if event is None:
+        raise HTTPException(404, "Event not found")
+
+    await utils_mypayment.ensure_user_can_manage_events(
+        user_id=user.id,
+        store_id=event.store_id,
+        db=db,
+    )
+
+    session = await cruds_tickets.get_session_by_id(session_id=session_id, db=db)
+    if session is None or session.event_id != event_id:
+        raise HTTPException(404, "Session not found")
+
+    nb_checkouts_and_tickets = (
+        await cruds_tickets.count_valid_checkouts_and_tickets_by_session_id(
+            session_id=session_id,
+            db=db,
+        )
+    )
+    if nb_checkouts_and_tickets > 0:
+        raise HTTPException(
+            400,
+            "Cannot delete session with checkouts or tickets",
+        )
+
+    await cruds_tickets.delete_session(
+        session_id=session_id,
         db=db,
     )
 
@@ -751,15 +824,11 @@ async def create_category(
     if event is None:
         raise HTTPException(404, "Event not found")
 
-    if not await utils_mypayment.can_user_manage_events(
+    await utils_mypayment.ensure_user_can_manage_events(
         user_id=user.id,
         store_id=event.store_id,
         db=db,
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="User is not authorized to manage store's events",
-        )
+    )
 
     category_id = uuid.uuid4()
 
@@ -796,39 +865,132 @@ async def update_category(
     if event is None:
         raise HTTPException(404, "Event not found")
 
-    if not await utils_mypayment.can_user_manage_events(
+    await utils_mypayment.ensure_user_can_manage_events(
         user_id=user.id,
         store_id=event.store_id,
         db=db,
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="User is not authorized to manage store's events",
-        )
+    )
 
     category = await cruds_tickets.get_category_by_id(category_id=category_id, db=db)
     if category is None or category.event_id != event_id:
         raise HTTPException(404, "Category not found")
 
-    nb_checkouts = await cruds_tickets.count_valid_checkouts_by_category_id(
-        category_id=category_id,
-        db=db,
-    )
-    nb_tickets = await cruds_tickets.count_tickets_by_category_id(
-        category_id=category_id,
-        db=db,
-    )
-    if nb_checkouts + nb_tickets > 0:
-        raise HTTPException(
-            400,
-            "Cannot update category with checkouts or tickets",
+    # Some fields cannot be updated if the category has checkouts or tickets
+    fields_to_update = category_update.model_dump(exclude_unset=True).keys()
+    if "price" in fields_to_update:
+        nb_checkouts_and_tickets = (
+            await cruds_tickets.count_valid_checkouts_and_tickets_by_category_id(
+                category_id=category_id,
+                db=db,
+            )
         )
+        if nb_checkouts_and_tickets > 0:
+            raise HTTPException(
+                400,
+                "Cannot update category price or required_membership with checkouts or tickets",
+            )
 
     await cruds_tickets.update_category(
         category_id=category_id,
         category_update=category_update,
         db=db,
     )
+
+
+@router.delete(
+    "/tickets/admin/events/{event_id}/categories/{category_id}",
+    status_code=204,
+)
+async def delete_category(
+    event_id: UUID,
+    category_id: UUID,
+    user: CoreUser = Depends(
+        is_user(),
+    ),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Delete one category for admin
+    """
+    event = await cruds_tickets.get_event_simple_by_id(event_id=event_id, db=db)
+    if event is None:
+        raise HTTPException(404, "Event not found")
+
+    await utils_mypayment.ensure_user_can_manage_events(
+        user_id=user.id,
+        store_id=event.store_id,
+        db=db,
+    )
+
+    category = await cruds_tickets.get_category_by_id(category_id=category_id, db=db)
+    if category is None or category.event_id != event_id:
+        raise HTTPException(404, "Category not found")
+
+    nb_checkouts_and_tickets = (
+        await cruds_tickets.count_valid_checkouts_and_tickets_by_category_id(
+            category_id=category_id,
+            db=db,
+        )
+    )
+    if nb_checkouts_and_tickets > 0:
+        raise HTTPException(
+            400,
+            "Cannot delete category with checkouts or tickets",
+        )
+
+    await cruds_tickets.delete_category(
+        category_id=category_id,
+        db=db,
+    )
+
+
+@router.post(
+    "/tickets/admin/events/{event_id}/questions",
+    response_model=schemas_tickets.Question,
+    status_code=201,
+)
+async def create_question(
+    event_id: UUID,
+    question_create: schemas_tickets.QuestionCreate,
+    user: CoreUser = Depends(
+        is_user(),
+    ),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Create a question for an event
+
+    **The user should have the right to manage the event seller**
+    """
+    event = await cruds_tickets.get_event_simple_by_id(event_id=event_id, db=db)
+    if event is None:
+        raise HTTPException(404, "Event not found")
+
+    await utils_mypayment.ensure_user_can_manage_events(
+        user_id=user.id,
+        store_id=event.store_id,
+        db=db,
+    )
+
+    question_id = uuid.uuid4()
+
+    await cruds_tickets.create_event_question(
+        question_id=question_id,
+        event_id=event_id,
+        question=question_create,
+        db=db,
+    )
+
+    question = await cruds_tickets.get_question_by_id(
+        question_id=question_id,
+        db=db,
+    )
+    if question is None:
+        raise ObjectExpectedInDbNotFoundError(
+            object_name="Question",
+            object_id=question_id,
+        )
+    return question
 
 
 @router.patch(
@@ -851,15 +1013,60 @@ async def update_question(
     if event is None:
         raise HTTPException(404, "Event not found")
 
-    if not await utils_mypayment.can_user_manage_events(
+    await utils_mypayment.ensure_user_can_manage_events(
         user_id=user.id,
         store_id=event.store_id,
         db=db,
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="User is not authorized to manage store's events",
+    )
+
+    question = await cruds_tickets.get_question_by_id(question_id=question_id, db=db)
+    if question is None or question.event_id != event_id:
+        raise HTTPException(404, "Question not found")
+
+    # Some fields cannot be updated if the question has answers
+    fields_to_update = question_update.model_dump(exclude_unset=True).keys()
+    if any(field in fields_to_update for field in ["answer_type", "price"]):
+        nb_answers = await cruds_tickets.count_answers_by_question_id(
+            question_id=question_id,
+            db=db,
         )
+        if nb_answers > 0:
+            raise HTTPException(
+                400,
+                "Cannot update answer_type or price for question with answers",
+            )
+
+    await cruds_tickets.update_question(
+        question_id=question_id,
+        question_update=question_update,
+        db=db,
+    )
+
+
+@router.delete(
+    "/tickets/admin/events/{event_id}/questions/{question_id}",
+    status_code=204,
+)
+async def delete_question(
+    event_id: UUID,
+    question_id: UUID,
+    user: CoreUser = Depends(
+        is_user(),
+    ),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Delete one question for admin
+    """
+    event = await cruds_tickets.get_event_simple_by_id(event_id=event_id, db=db)
+    if event is None:
+        raise HTTPException(404, "Event not found")
+
+    await utils_mypayment.ensure_user_can_manage_events(
+        user_id=user.id,
+        store_id=event.store_id,
+        db=db,
+    )
 
     question = await cruds_tickets.get_question_by_id(question_id=question_id, db=db)
     if question is None or question.event_id != event_id:
@@ -872,12 +1079,11 @@ async def update_question(
     if nb_answers > 0:
         raise HTTPException(
             400,
-            "Cannot update question with answers",
+            "Cannot delete question with answers",
         )
 
-    await cruds_tickets.update_question(
+    await cruds_tickets.delete_question(
         question_id=question_id,
-        question_update=question_update,
         db=db,
     )
 
@@ -903,15 +1109,11 @@ async def get_event_tickets(
     if event is None:
         raise HTTPException(404, "Event not found")
 
-    if not await utils_mypayment.can_user_manage_events(
+    await utils_mypayment.ensure_user_can_manage_events(
         user_id=user.id,
         store_id=event.store_id,
         db=db,
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="User is not authorized to manage store events",
-        )
+    )
 
     return await cruds_tickets.get_paid_tickets_by_event_id(event_id=event_id, db=db)
 
@@ -937,15 +1139,11 @@ async def get_event_tickets_csv(
     if event is None:
         raise HTTPException(404, "Event not found")
 
-    if not await utils_mypayment.can_user_manage_events(
+    await utils_mypayment.ensure_user_can_manage_events(
         user_id=user.id,
         store_id=event.store_id,
         db=db,
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="User is not authorized to manage store events",
-        )
+    )
 
     csv_io = StringIO()
 
@@ -1050,15 +1248,11 @@ async def check_ticket(
             object_id=ticket.event_id,
         )
 
-    if not await utils_mypayment.can_user_manage_events(
+    await utils_mypayment.ensure_user_can_manage_events(
         user_id=user.id,
         store_id=event.store_id,
         db=db,
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="User is not authorized to manage store events",
-        )
+    )
 
     return ticket
 
@@ -1091,15 +1285,11 @@ async def scan_ticket(
             object_id=ticket.event_id,
         )
 
-    if not await utils_mypayment.can_user_manage_events(
+    await utils_mypayment.ensure_user_can_manage_events(
         user_id=user.id,
         store_id=event.store_id,
         db=db,
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="User is not authorized to manage store events",
-        )
+    )
 
     if ticket.scanned:
         raise HTTPException(
