@@ -34,7 +34,7 @@ class PayloadParsingError(Exception):
         super().__init__(f"Error parsing payload: {error}.\nBody: {body}")
 
 
-class DocumensoAPIError(Exception):
+class DocumentCreationError(Exception):
     """Raised when there is an error with the Documenso API."""
 
     def __init__(self, user_email: str, message: str):

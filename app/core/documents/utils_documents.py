@@ -6,11 +6,18 @@ from documenso_sdk import TemplateCreateDocumentFromTemplateRecipientRequest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.documents import cruds_documents, models_documents, schemas_documents
-from app.core.documents.documenso_api_wrapper import DocumensoAPIWrapper
-from app.core.documents.exceptions_documents import DocumensoAPIError
+from app.core.documents.documenso_api_wrapper import (
+    DocumensoAPIWrapper,
+    DocumensoConfiguration,
+)
+from app.core.documents.exceptions_documents import (
+    DocumentCreationError,
+    MissingDocumensoURLError,
+)
 from app.core.documents.types_documenso import DocumentStatus, TemplateCreatedPayload
 from app.core.groups.schemas_groups import CoreGroup
 from app.core.users.schemas_users import CoreUser
+from app.core.utils.config import Settings
 from app.module import all_modules
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -126,6 +133,20 @@ def document_complete_model_to_schema(
     )
 
 
+def _configure_documenso_api_wrapper(
+    team: schemas_documents.Team,
+    settings: Settings,
+) -> DocumensoAPIWrapper:
+    if settings.DOCUMENSO_URL is None:
+        raise MissingDocumensoURLError()
+    return DocumensoAPIWrapper(
+        configuration=DocumensoConfiguration(
+            api_key=team.api_key,
+            documenso_url=settings.DOCUMENSO_URL,
+        ),
+    )
+
+
 async def handle_template_creation_webhook(
     payload: TemplateCreatedPayload,
     db: AsyncSession,
@@ -156,14 +177,18 @@ async def handle_template_creation_webhook(
     await cruds_documents.create_template(template=template, db=db)
 
 
-async def use_template_for_a_recipient(
-    recipient: CoreUser,
+async def use_template_for_user(
+    user: CoreUser,
     template: schemas_documents.Template,
-    destination_folder_id: str,
     documenso: DocumensoAPIWrapper,
     db: AsyncSession,
     module: str,
-) -> schemas_documents.Document | None:
+) -> schemas_documents.Document:
+    if template.document_directory_id is None:
+        raise DocumentCreationError(
+            user_email=user.email,
+            message="Template does not have a document directory ID",
+        )
     document_id = uuid.uuid4()
     try:
         documenso_response = await documenso.use_template(
@@ -172,21 +197,21 @@ async def use_template_for_a_recipient(
             recipients=[
                 TemplateCreateDocumentFromTemplateRecipientRequest(
                     id=1,
-                    name=f"{recipient.firstname} {recipient.name}",
-                    email=recipient.email,
+                    name=f"{user.firstname} {user.name}",
+                    email=user.email,
                 ),
             ],
-            destination_folder_id=destination_folder_id,
+            destination_folder_id=template.document_directory_id,
         )
     except Exception as e:
-        raise DocumensoAPIError(
-            user_email=recipient.email,
+        raise DocumentCreationError(
+            user_email=user.email,
             message=str(e),
         ) from e
     # Extract the signing token from the first (and only) recipient
     if not documenso_response.recipients:
-        raise DocumensoAPIError(
-            recipient.email,
+        raise DocumentCreationError(
+            user.email,
             "No recipients returned from Documenso API",
         )
 
@@ -198,7 +223,7 @@ async def use_template_for_a_recipient(
         template_id=template.id,
         name=documenso_response.title,
         module=module,
-        user_id=recipient.id,
+        user_id=user.id,
         signing_token=signing_token,
         status=DocumentStatus.PENDING,
         created_at=datetime.now(UTC),

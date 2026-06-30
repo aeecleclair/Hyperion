@@ -8,15 +8,10 @@ from pydantic import TypeAdapter
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.documents import cruds_documents, schemas_documents
-from app.core.documents.documenso_api_wrapper import (
-    DocumensoAPIWrapper,
-    DocumensoConfiguration,
-)
 from app.core.documents.exceptions_documents import (
-    DocumensoAPIError,
+    DocumentCreationError,
     ElementTeamNotFoundError,
     ElementTemplateNotFoundError,
-    MissingDocumensoURLError,
     PayloadParsingError,
 )
 from app.core.documents.types_documenso import (
@@ -30,9 +25,10 @@ from app.core.documents.types_documenso import (
     WebhookEvent,
 )
 from app.core.documents.utils_documents import (
+    _configure_documenso_api_wrapper,
     handle_document_callback,
     handle_template_creation_webhook,
-    use_template_for_a_recipient,
+    use_template_for_user,
 )
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users, schemas_users
@@ -54,20 +50,6 @@ core_module = CoreModule(
     router=router,
     factory=None,
 )
-
-
-def _configure_documenso_api_wrapper(
-    team: schemas_documents.Team,
-    settings: Settings,
-) -> DocumensoAPIWrapper:
-    if settings.DOCUMENSO_URL is None:
-        raise MissingDocumensoURLError()
-    return DocumensoAPIWrapper(
-        configuration=DocumensoConfiguration(
-            api_key=team.api_key,
-            documenso_url=settings.DOCUMENSO_URL,
-        ),
-    )
 
 
 # region: Teams
@@ -401,10 +383,9 @@ async def use_template(
     # Retrieve the target user to fill in the recipient fields
     documents = await asyncio.gather(
         *[
-            use_template_for_a_recipient(
-                recipient=user,
+            use_template_for_user(
+                user=user,
                 template=db_template,
-                destination_folder_id=destination_folder_id,
                 documenso=documenso,
                 db=db,
                 module="documents",
@@ -414,15 +395,13 @@ async def use_template(
         return_exceptions=True,
     )
     for res in documents:
-        if isinstance(res, DocumensoAPIError):
+        if isinstance(res, DocumentCreationError):
             errors[res.user_email] = res.message
 
     return schemas_documents.TemplateUseResponse(
         errors=errors,
         documents=[
-            doc
-            for doc in documents
-            if doc is not None and not isinstance(doc, BaseException)
+            doc for doc in documents if isinstance(doc, schemas_documents.Document)
         ],
     )
 
