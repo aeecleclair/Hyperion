@@ -66,6 +66,7 @@ class CoreMembershipsFactory(Factory):
                             random.randint(1, 28),  # noqa: S311
                             tzinfo=datetime.UTC,
                         ),
+                        valid=True,
                     ),
                 )
         await db.commit()

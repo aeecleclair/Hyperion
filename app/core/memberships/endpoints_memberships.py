@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import uuid
 from datetime import UTC, date, datetime
@@ -5,6 +6,11 @@ from datetime import UTC, date, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.documents import cruds_documents
+from app.core.documents.exceptions_documents import (
+    DocumentCreationError,
+    ElementTeamNotFoundError,
+)
 from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import (
@@ -12,10 +18,17 @@ from app.core.memberships import (
     schemas_memberships,
 )
 from app.core.memberships.factory_memberships import CoreMembershipsFactory
-from app.core.memberships.utils_memberships import validate_user_new_membership
-from app.core.users import cruds_users, models_users, schemas_users
+from app.core.memberships.utils_memberships import (
+    MODULE_ROOT,
+    add_membership_to_user,
+    renew_membership_documents,
+    validate_user_new_membership,
+)
+from app.core.users import cruds_users, models_users
+from app.core.users.utils_users import user_model_to_schema
 from app.dependencies import (
     get_db,
+    get_settings,
     is_user,
     is_user_in,
 )
@@ -27,7 +40,7 @@ router = APIRouter(tags=["Memberships"])
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 core_module = CoreModule(
-    root="memberships",
+    root=MODULE_ROOT,
     tag="Memberships",
     router=router,
     factory=CoreMembershipsFactory(),
@@ -48,6 +61,44 @@ async def read_associations_memberships(
     """
 
     return await cruds_memberships.get_association_memberships(db)
+
+
+@router.get(
+    "/memberships/{association_membership_id}",
+    response_model=schemas_memberships.MembershipComplete,
+    status_code=200,
+)
+async def read_association_membership_by_id(
+    association_membership_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
+):
+    """
+    Return membership with the given ID.
+
+    **This endpoint is only usable by the membership owner**
+    """
+    db_association_membership = (
+        await cruds_memberships.get_association_membership_by_id(
+            db=db,
+            membership_id=association_membership_id,
+        )
+    )
+    if db_association_membership is None:
+        raise HTTPException(status_code=404, detail="Association Membership not found")
+
+    if not is_user_member_of_any_group(
+        user,
+        [
+            db_association_membership.manager_group_id,
+            GroupType.admin,
+        ],
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="User is not allowed to access this membership",
+        )
+    return db_association_membership
 
 
 @router.get(
@@ -142,7 +193,6 @@ async def create_association_membership(
         db=db,
         membership=db_association_membership,
     )
-    await db.flush()
     return db_association_membership
 
 
@@ -152,7 +202,7 @@ async def create_association_membership(
 )
 async def update_association_membership(
     association_membership_id: uuid.UUID,
-    membership: schemas_memberships.MembershipBase,
+    membership: schemas_memberships.MembershipEdit,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
 ):
@@ -176,7 +226,83 @@ async def update_association_membership(
         membership=membership,
     )
 
-    await db.flush()
+
+@router.post(
+    "/memberships/{membership_id}/renew-documents",
+    status_code=201,
+    response_model=schemas_memberships.MembershipRenewalErrors,
+)
+async def renew_users_membership_document(
+    renewal_criterion: schemas_memberships.MembershipRenewalCriterion,
+    membership_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
+    settings=Depends(get_settings),
+):
+    """
+    Renew the documents of the memberships of the given users for a specific association membership.
+
+    **This endpoint is only usable by administrators and membership managers**
+    """
+    db_association_membership = (
+        await cruds_memberships.get_association_membership_by_id(
+            db=db,
+            membership_id=membership_id,
+        )
+    )
+    if db_association_membership is None:
+        raise HTTPException(status_code=404, detail="Association Membership not found")
+
+    if not is_user_member_of_any_group(
+        user,
+        [
+            GroupType.admin,
+            db_association_membership.manager_group_id,
+        ],
+    ):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    if db_association_membership.template is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Association Membership has no template associated",
+        )
+    team = await cruds_documents.get_team_by_id(
+        db=db,
+        team_id=db_association_membership.template.team_id,
+    )
+    if team is None:
+        raise ElementTeamNotFoundError(
+            team_id=db_association_membership.template.team_id,
+        )
+
+    renewal_targets = (
+        await cruds_memberships.get_user_memberships_by_association_membership_id(
+            db=db,
+            association_membership_id=membership_id,
+            maximal_start_date=renewal_criterion.active_date,
+            minimal_end_date=renewal_criterion.active_date,
+        )
+    )
+
+    results: list[None | BaseException] = await asyncio.gather(
+        *[
+            renew_membership_documents(
+                association_membership=db_association_membership,
+                team=team,
+                user_membership=user_membership,
+                db=db,
+                settings=settings,
+            )
+            for user_membership in renewal_targets
+        ],
+        return_exceptions=True,
+    )
+    errors: dict[str, str] = {}
+    for res in results:
+        if isinstance(res, DocumentCreationError):
+            errors[res.user_email] = res.message
+    return schemas_memberships.MembershipRenewalErrors(errors=errors)
 
 
 @router.delete(
@@ -298,6 +424,7 @@ async def create_user_membership(
     user_membership: schemas_memberships.UserMembershipBase,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    settings=Depends(get_settings),
 ):
     """
     Create a new user membership.
@@ -335,26 +462,14 @@ async def create_user_membership(
         association_membership_id=user_membership.association_membership_id,
         start_date=user_membership.start_date,
         end_date=user_membership.end_date,
+        valid=True,
     )
-    await validate_user_new_membership(db_user_membership, db)
-
-    await cruds_memberships.create_user_membership(
-        db=db,
+    return await add_membership_to_user(
+        user=user_model_to_schema(db_user),
+        association_membership=db_association_membership,
         user_membership=db_user_membership,
-    )
-
-    await db.flush()
-
-    return schemas_memberships.UserMembershipComplete(
-        **db_user_membership.__dict__,
-        user=schemas_users.CoreUserSimple(
-            name=db_user.name,
-            id=db_user.id,
-            firstname=db_user.firstname,
-            nickname=db_user.nickname,
-            account_type=db_user.account_type,
-            school_id=db_user.school_id,
-        ),
+        db=db,
+        settings=settings,
     )
 
 
@@ -368,6 +483,7 @@ async def add_batch_membership(
     memberships_details: list[schemas_memberships.MembershipUserMappingEmail],
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    settings=Depends(get_settings),
 ):
     """
     Add a batch of user to a membership.
@@ -414,16 +530,23 @@ async def add_batch_membership(
             end_date=detail.end_date,
         )
         if len(stored_memberships) == 0:
-            await cruds_memberships.create_user_membership(
-                db=db,
-                user_membership=schemas_memberships.UserMembershipSimple(
-                    id=uuid.uuid4(),
-                    user_id=detail_user.id,
-                    association_membership_id=association_membership_id,
-                    start_date=detail.start_date,
-                    end_date=detail.end_date,
-                ),
-            )
+            try:
+                await add_membership_to_user(
+                    user=user_model_to_schema(detail_user),
+                    association_membership=db_association_membership,
+                    user_membership=schemas_memberships.UserMembershipSimple(
+                        id=uuid.uuid4(),
+                        user_id=detail_user.id,
+                        association_membership_id=association_membership_id,
+                        start_date=detail.start_date,
+                        end_date=detail.end_date,
+                        valid=True,
+                    ),
+                    db=db,
+                    settings=settings,
+                )
+            except HTTPException:
+                pass
     await db.flush()
     return unknown_users
 
@@ -450,16 +573,10 @@ async def update_user_membership(
     )
     if db_user_membership is None:
         raise HTTPException(status_code=404, detail="User membership not found")
-    db_membership = await cruds_memberships.get_association_membership_by_id(
-        db,
-        db_user_membership.association_membership_id,
-    )
-    if db_membership is None:
-        raise ValueError
 
     if not is_user_member_of_any_group(
         user,
-        [GroupType.admin, db_membership.manager_group_id],
+        [GroupType.admin, db_user_membership.association_membership.manager_group_id],
     ):
         raise HTTPException(status_code=403, detail="Unauthorized")
 
@@ -469,6 +586,7 @@ async def update_user_membership(
         association_membership_id=db_user_membership.association_membership_id,
         start_date=user_membership.start_date or db_user_membership.start_date,
         end_date=user_membership.end_date or db_user_membership.end_date,
+        valid=db_user_membership.valid,
     )
 
     await validate_user_new_membership(new_membership, db)
@@ -478,8 +596,6 @@ async def update_user_membership(
         user_membership_id=membership_id,
         user_membership_edit=user_membership,
     )
-
-    await db.flush()
 
 
 @router.delete(

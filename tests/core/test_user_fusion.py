@@ -7,9 +7,11 @@ from fastapi.testclient import TestClient
 from app.core.groups import models_groups
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import models_memberships
+from app.core.memberships.schemas_memberships import UserMembershipComplete
 from app.core.mypayment import models_mypayment
 from app.core.mypayment.types_mypayment import WalletType
 from app.core.users import models_users
+from app.core.users.utils_users import user_model_to_schema
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
@@ -185,20 +187,30 @@ def test_fusion_users(client: TestClient) -> None:
     assert response.status_code == 200
     memberships = response.json()
     assert len(memberships) == 2
-    user_kept_membership_aeecl_json = {
-        "id": str(core_association_membership_user_kept.id),
-        "user_id": str(student_user_to_keep.id),
-        "association_membership_id": str(core_association_membership.id),
-        "start_date": core_association_membership_user_kept.start_date.isoformat(),
-        "end_date": core_association_membership_user_kept.end_date.isoformat(),
-    }
-    user_del_membership_aeecl_json = {
-        "id": str(core_association_membership_user_del.id),
-        "user_id": str(student_user_to_keep.id),
-        "association_membership_id": str(core_association_membership.id),
-        "start_date": core_association_membership_user_del.start_date.isoformat(),
-        "end_date": core_association_membership_user_del.end_date.isoformat(),
-    }
+    user_kept_membership_aeecl_json: dict = UserMembershipComplete(
+        id=core_association_membership_user_kept.id,
+        user_id=student_user_to_keep.id,
+        association_membership_id=core_association_membership.id,
+        start_date=core_association_membership_user_kept.start_date,
+        end_date=core_association_membership_user_kept.end_date,
+        document_id=None,
+        document_status=None,
+        valid=core_association_membership_user_kept.valid,
+        user=user_model_to_schema(student_user_to_keep),
+    ).model_dump(mode="json")
+    user_kept_membership_aeecl_json.pop("user")
+    user_del_membership_aeecl_json: dict = UserMembershipComplete(
+        id=core_association_membership_user_del.id,
+        user_id=student_user_to_keep.id,
+        association_membership_id=core_association_membership.id,
+        start_date=core_association_membership_user_del.start_date,
+        end_date=core_association_membership_user_del.end_date,
+        document_id=None,
+        document_status=None,
+        valid=core_association_membership_user_del.valid,
+        user=user_model_to_schema(student_user_to_keep),
+    ).model_dump(mode="json")
+    user_del_membership_aeecl_json.pop("user")
     simple_memberships = []
     for membership in memberships:
         membership.pop("user")
