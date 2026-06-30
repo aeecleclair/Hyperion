@@ -1,3 +1,5 @@
+from app.core.groups import schemas_groups
+from app.core.schools import schemas_schools
 from app.core.users import models_users, schemas_users
 
 
@@ -33,10 +35,10 @@ def user_model_to_schema(
         phone=model.phone,
         created_on=model.created_on,
         groups=[
-            schemas_users.CoreGroupSimple(id=group.id, name=group.name)
+            schemas_groups.CoreGroupSimple(id=group.id, name=group.name)
             for group in model.groups
         ],
-        school=schemas_users.CoreSchool(
+        school=schemas_schools.CoreSchool(
             id=model.school.id,
             name=model.school.name,
             email_regex=model.school.email_regex,

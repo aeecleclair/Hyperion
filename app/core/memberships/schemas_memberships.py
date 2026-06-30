@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 from app.core.documents import schemas_documents
+from app.core.documents.types_documenso import DocumentStatus
 from app.core.users import schemas_users
 
 
@@ -53,7 +54,7 @@ class UserMembershipSimple(UserMembershipBase):
     id: UUID
     user_id: str
     document_id: UUID | None = None
-    document_status: schemas_documents.DocumentStatus | None = None
+    document_status: DocumentStatus | None = None
     valid: bool
 
     model_config = ConfigDict(from_attributes=True)
@@ -75,7 +76,7 @@ class UserMembershipWithAssociation(UserMembershipComplete):
 class UserMembershipEdit(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
-    document_status: schemas_documents.DocumentStatus | None = None
+    document_status: DocumentStatus | None = None
 
 
 class MembershipUserMappingEmail(BaseModel):
