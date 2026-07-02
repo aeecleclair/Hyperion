@@ -12,6 +12,22 @@ from app.core.tickets import models_tickets, schemas_tickets
 from app.core.users import schemas_users
 
 
+async def get_all_events(db: AsyncSession) -> Sequence[schemas_tickets.EventSimple]:
+    """Return all events from database"""
+    result = await db.execute(select(models_tickets.TicketEvent))
+    return [
+        schemas_tickets.EventSimple(
+            id=association.id,
+            name=association.name,
+            store_id=association.store_id,
+            open_datetime=association.open_datetime,
+            close_datetime=association.close_datetime,
+            disabled=association.disabled,
+        )
+        for association in result.scalars().all()
+    ]
+
+
 async def get_open_and_enabled_events(
     db: AsyncSession,
 ) -> Sequence[schemas_tickets.EventSimple]:
