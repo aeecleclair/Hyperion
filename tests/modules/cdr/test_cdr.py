@@ -3,8 +3,10 @@ from datetime import UTC, date, datetime, timedelta
 
 import pytest_asyncio
 from fastapi.testclient import TestClient
+from pydantic import BaseModel
 from pytest_mock import MockerFixture
 
+from app.core.documents import models_documents
 from app.core.groups import models_groups
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import models_memberships
@@ -74,6 +76,8 @@ signature_admin: models_cdr.Signature
 
 payment: models_cdr.Payment
 
+document_team: models_documents.DocumentTeam
+template: models_documents.DocumentTemplate
 
 association_membership: models_memberships.CoreAssociationMembership
 user_membership: models_memberships.CoreAssociationUserMembership
@@ -350,11 +354,34 @@ async def init_objects():
     )
     await add_object_to_db(payment)
 
+    global document_team, template
+    document_team = models_documents.DocumentTeam(
+        id=uuid.uuid4(),
+        team_id=1,
+        group_id=admin_group.id,
+        name="Team",
+        api_key="team",
+    )
+    await add_object_to_db(document_team)
+
+    template = models_documents.DocumentTemplate(
+        id=uuid.uuid4(),
+        documenso_id=1,
+        name="Template",
+        team_id=document_team.id,
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+        deleted=False,
+        document_directory_id="1",
+    )
+    await add_object_to_db(template)
+
     global association_membership
     association_membership = models_memberships.CoreAssociationMembership(
         id=uuid.uuid4(),
         name="AEECL",
         manager_group_id=admin_group.id,
+        template_id=template.id,
     )
     await add_object_to_db(association_membership)
 
@@ -521,6 +548,31 @@ def test_get_cdr_user(client: TestClient):
     response = client.get(
         f"/cdr/users/{user.id}",
         headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 200
+    assert str(user.id) == response.json()["id"]
+
+
+def test_get_cdr_user_not_found(client: TestClient):
+    response = client.get(
+        f"/cdr/users/{uuid.uuid4()}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 404
+
+
+def test_get_cdr_user_forbidden(client: TestClient):
+    response = client.get(
+        f"/cdr/users/{user_admin.id}",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
+
+def test_get_cdr_user_admin(client: TestClient):
+    response = client.get(
+        f"/cdr/users/{user.id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
     assert str(user.id) == response.json()["id"]
@@ -2491,7 +2543,17 @@ def test_get_ticket_list(client: TestClient):
     assert str(user.id) in [user["id"] for user in response.json()]
 
 
-async def test_validate_purchase(client: TestClient):
+class MockedRecipientResponse(BaseModel):
+    token: str
+
+
+class MockedTemplateUseResponse(BaseModel):
+    id: int
+    recipients: list[MockedRecipientResponse]
+    title: str
+
+
+async def test_validate_purchase(client: TestClient, mocker: MockerFixture):
     product_membership = models_cdr.CdrProduct(
         id=uuid.uuid4(),
         seller_id=seller.id,
@@ -2533,6 +2595,7 @@ async def test_validate_purchase(client: TestClient):
         unique=False,
         enabled=True,
         year=year,
+        related_membership_added_duration=timedelta(days=365),
     )
     await add_object_to_db(variant_to_validate)
     variant_purchased = models_cdr.ProductVariant(
@@ -2576,29 +2639,43 @@ async def test_validate_purchase(client: TestClient):
     )
     await add_object_to_db(membership)
 
+    mocked_id = uuid.uuid4()
+    mocker.patch(
+        "app.core.documents.utils_documents.uuid.uuid4",
+        return_value=mocked_id,
+    )
+    mocker.patch(
+        "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.use_template",
+        return_value=MockedTemplateUseResponse(
+            id=100,
+            recipients=[MockedRecipientResponse(token="mocked_signing_token")],
+            title="Mocked Document Title",
+        ),
+    )
+
     response = client.patch(
         f"/cdr/users/{user.id}/purchases/{variant_to_validate.id}/validated/?validated=True",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
-    assert response.status_code == 204
+    assert response.status_code == 204, response.text
 
     response = client.delete(
         f"/cdr/users/{user.id}/purchases/{variant_purchased.id}/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
-    assert response.status_code == 403
+    assert response.status_code == 403, response.text
 
     response = client.patch(
         f"/cdr/users/{user.id}/purchases/{variant_to_validate.id}/validated/?validated=False",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
-    assert response.status_code == 204
+    assert response.status_code == 204, response.text
 
     response = client.delete(
         f"/cdr/users/{user.id}/purchases/{variant_purchased.id}/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
-    assert response.status_code == 204
+    assert response.status_code == 204, response.text
 
 
 def test_create_customdata_field(client: TestClient):

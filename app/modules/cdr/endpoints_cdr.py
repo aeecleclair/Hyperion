@@ -1,7 +1,7 @@
 import logging
 import re
 from collections.abc import Sequence
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from io import BytesIO
 from uuid import UUID, uuid4
 
@@ -18,11 +18,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.groups import cruds_groups, schemas_groups
 from app.core.groups.groups_type import AccountType
 from app.core.memberships import cruds_memberships, schemas_memberships
+from app.core.memberships.utils_memberships import (
+    add_membership_to_user,
+    remove_membership_from_user,
+)
 from app.core.payment.payment_tool import PaymentTool
 from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users, models_users, schemas_users
 from app.core.users.cruds_users import get_user_by_id, get_users
+from app.core.users.utils_users import user_model_to_schema
 from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
@@ -35,6 +40,10 @@ from app.dependencies import (
 )
 from app.modules.cdr import coredata_cdr, cruds_cdr, models_cdr, schemas_cdr
 from app.modules.cdr.dependencies_cdr import get_current_cdr_year
+from app.modules.cdr.exception_cdr import (
+    ProductAssociationMembershipNotFoundError,
+    PurchaseUserNotFoundError,
+)
 from app.modules.cdr.types_cdr import (
     CdrLogActionType,
     CdrStatus,
@@ -1764,6 +1773,7 @@ async def remove_existing_membership(
     existing_membership: schemas_memberships.UserMembershipComplete,
     product_variant: models_cdr.ProductVariant,
     db: AsyncSession,
+    settings: Settings,
 ):
     if product_variant.related_membership_added_duration:
         if (
@@ -1771,9 +1781,10 @@ async def remove_existing_membership(
             - product_variant.related_membership_added_duration
             <= existing_membership.start_date
         ):
-            await cruds_memberships.delete_user_membership(
+            await remove_membership_from_user(
+                user_membership=existing_membership,
                 db=db,
-                user_membership_id=existing_membership.id,
+                settings=settings,
             )
         else:
             await cruds_memberships.update_user_membership(
@@ -1792,6 +1803,7 @@ async def add_membership(
     product_related_membership_id: UUID,
     product_variant: models_cdr.ProductVariant,
     db: AsyncSession,
+    settings: Settings,
 ):
     if product_variant.related_membership_added_duration:
         existing_membership = next(
@@ -1802,27 +1814,40 @@ async def add_membership(
             ),
             None,
         )
+        start_date = date(datetime.now(tz=UTC).date().year, 9, 1)
+        end_date = start_date + product_variant.related_membership_added_duration
         if existing_membership:
-            await cruds_memberships.update_user_membership(
-                db=db,
-                user_membership_id=existing_membership.id,
-                user_membership_edit=schemas_memberships.UserMembershipEdit(
-                    end_date=existing_membership.end_date
-                    + product_variant.related_membership_added_duration,
-                ),
+            start_date = max(
+                existing_membership.end_date + timedelta(days=1),
+                start_date,
             )
-        else:
-            await cruds_memberships.create_user_membership(
+        user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
+        if not user:
+            raise PurchaseUserNotFoundError(user_id)
+        association_membership = (
+            await cruds_memberships.get_association_membership_by_id(
                 db=db,
-                user_membership=schemas_memberships.UserMembershipSimple(
-                    id=uuid4(),
-                    user_id=user_id,
-                    association_membership_id=product_related_membership_id,
-                    start_date=date(datetime.now(tz=UTC).date().year, 9, 1),
-                    end_date=date(datetime.now(tz=UTC).date().year, 9, 1)
-                    + product_variant.related_membership_added_duration,
-                ),
+                membership_id=product_related_membership_id,
             )
+        )
+        if not association_membership:
+            raise ProductAssociationMembershipNotFoundError(
+                product_variant.product_id,
+            )
+        await add_membership_to_user(
+            user=user_model_to_schema(user),
+            association_membership=association_membership,
+            db=db,
+            user_membership=schemas_memberships.UserMembershipSimple(
+                id=uuid4(),
+                user_id=user_id,
+                association_membership_id=product_related_membership_id,
+                start_date=start_date,
+                end_date=end_date,
+                valid=True,
+            ),
+            settings=settings,
+        )
 
 
 @module.router.patch(
@@ -1837,6 +1862,7 @@ async def mark_purchase_as_validated(
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([CdrPermissions.manage_cdr]),
     ),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Validate a purchase.
@@ -1918,6 +1944,7 @@ async def mark_purchase_as_validated(
                 product_related_membership_id=product.related_membership.id,
                 product_variant=product_variant,
                 db=db,
+                settings=settings,
             )
         for ticketgen in product.tickets:
             ticket = models_cdr.Ticket(
@@ -1952,6 +1979,7 @@ async def mark_purchase_as_validated(
                     existing_membership=existing_membership,
                     product_variant=product_variant,
                     db=db,
+                    settings=settings,
                 )
 
         if product.tickets:

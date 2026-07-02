@@ -1,15 +1,15 @@
 import uuid
 from datetime import UTC, datetime
-from io import BytesIO
 
 import pytest_asyncio
+from fastapi.testclient import TestClient
 
 from app.core.groups import models_groups
 from app.core.users import models_users
 from app.modules.cdr import models_cdr
 from app.modules.cdr.endpoints_cdr import CdrPermissions
-from app.modules.cdr.utils_cdr import construct_dataframe_from_users_purchases
 from tests.commons import (
+    add_object_to_db,
     create_api_access_token,
     create_groups_with_permissions,
     create_user_with_groups,
@@ -109,6 +109,7 @@ async def init_objects():
         group_id=str(seller1_group.id),
         order=1,
     )
+    await add_object_to_db(seller1)
 
     global seller2
     seller2 = models_cdr.Seller(
@@ -117,6 +118,7 @@ async def init_objects():
         group_id=str(seller2_group.id),
         order=2,
     )
+    await add_object_to_db(seller2)
 
     global product1
     product1 = models_cdr.CdrProduct(
@@ -130,6 +132,7 @@ async def init_objects():
         year=datetime.now(UTC).year,
         needs_validation=True,
     )
+    await add_object_to_db(product1)
 
     global product2
     product2 = models_cdr.CdrProduct(
@@ -143,6 +146,7 @@ async def init_objects():
         year=datetime.now(UTC).year,
         needs_validation=True,
     )
+    await add_object_to_db(product2)
 
     global product3
     product3 = models_cdr.CdrProduct(
@@ -156,6 +160,7 @@ async def init_objects():
         year=datetime.now(UTC).year,
         needs_validation=True,
     )
+    await add_object_to_db(product3)
 
     global customdata_field1
     customdata_field1 = models_cdr.CustomDataField(
@@ -164,6 +169,7 @@ async def init_objects():
         name="Champ 1",
         can_user_answer=False,
     )
+    await add_object_to_db(customdata_field1)
 
     global customdata_field2
     customdata_field2 = models_cdr.CustomDataField(
@@ -172,6 +178,7 @@ async def init_objects():
         name="Champ 2",
         can_user_answer=False,
     )
+    await add_object_to_db(customdata_field2)
 
     global product1_variant1
     product1_variant1 = models_cdr.ProductVariant(
@@ -184,6 +191,7 @@ async def init_objects():
         enabled=True,
         year=datetime.now(UTC).year,
     )
+    await add_object_to_db(product1_variant1)
 
     global product1_variant2
     product1_variant2 = models_cdr.ProductVariant(
@@ -196,6 +204,7 @@ async def init_objects():
         enabled=True,
         year=datetime.now(UTC).year,
     )
+    await add_object_to_db(product1_variant2)
 
     global product1_variant3
     product1_variant3 = models_cdr.ProductVariant(
@@ -208,6 +217,7 @@ async def init_objects():
         enabled=True,
         year=datetime.now(UTC).year,
     )
+    await add_object_to_db(product1_variant3)
 
     global product2_variant1
     product2_variant1 = models_cdr.ProductVariant(
@@ -220,6 +230,7 @@ async def init_objects():
         enabled=True,
         year=datetime.now(UTC).year,
     )
+    await add_object_to_db(product2_variant1)
 
     global product3_variant1
     product3_variant1 = models_cdr.ProductVariant(
@@ -232,6 +243,7 @@ async def init_objects():
         enabled=True,
         year=datetime.now(UTC).year,
     )
+    await add_object_to_db(product3_variant1)
 
     global purchase_user1_product1_variant1
     purchase_user1_product1_variant1 = models_cdr.Purchase(
@@ -241,6 +253,7 @@ async def init_objects():
         validated=True,
         purchased_on=datetime.now(UTC),
     )
+    await add_object_to_db(purchase_user1_product1_variant1)
 
     global purchase_user1_product2_variant1
     purchase_user1_product2_variant1 = models_cdr.Purchase(
@@ -250,6 +263,7 @@ async def init_objects():
         validated=False,
         purchased_on=datetime.now(UTC),
     )
+    await add_object_to_db(purchase_user1_product2_variant1)
 
     global purchase_user1_product3_variant1
     purchase_user1_product3_variant1 = models_cdr.Purchase(
@@ -259,6 +273,7 @@ async def init_objects():
         validated=False,
         purchased_on=datetime.now(UTC),
     )
+    await add_object_to_db(purchase_user1_product3_variant1)
 
     global purchase_user2_product1_variant2
     purchase_user2_product1_variant2 = models_cdr.Purchase(
@@ -268,6 +283,7 @@ async def init_objects():
         validated=False,
         purchased_on=datetime.now(UTC),
     )
+    await add_object_to_db(purchase_user2_product1_variant2)
 
     global purchase_user2_product2_variant1
     purchase_user2_product2_variant1 = models_cdr.Purchase(
@@ -277,6 +293,7 @@ async def init_objects():
         validated=False,
         purchased_on=datetime.now(UTC),
     )
+    await add_object_to_db(purchase_user2_product2_variant1)
 
     global purchase_user3_product1_variant3
     purchase_user3_product1_variant3 = models_cdr.Purchase(
@@ -286,6 +303,7 @@ async def init_objects():
         validated=True,
         purchased_on=datetime.now(UTC),
     )
+    await add_object_to_db(purchase_user3_product1_variant3)
 
     global purchase_user3_product3_variant1
     purchase_user3_product3_variant1 = models_cdr.Purchase(
@@ -295,6 +313,7 @@ async def init_objects():
         validated=False,
         purchased_on=datetime.now(UTC),
     )
+    await add_object_to_db(purchase_user3_product3_variant1)
 
     global customdata_user1
     customdata_user1 = models_cdr.CustomData(
@@ -302,6 +321,7 @@ async def init_objects():
         field_id=customdata_field1.id,
         value="Value 1",
     )
+    await add_object_to_db(customdata_user1)
 
     global customdata_user2
     customdata_user2 = models_cdr.CustomData(
@@ -309,6 +329,7 @@ async def init_objects():
         field_id=customdata_field1.id,
         value="Value 2",
     )
+    await add_object_to_db(customdata_user2)
 
     global customdata_user3
     customdata_user3 = models_cdr.CustomData(
@@ -316,48 +337,60 @@ async def init_objects():
         field_id=customdata_field1.id,
         value="Value 3",
     )
+    await add_object_to_db(customdata_user3)
 
 
-def test_construct_dataframe_from_users_purchases():
-    users_purchases = {
-        cdr_user1.id: [
-            purchase_user1_product1_variant1,
-            purchase_user1_product2_variant1,
-        ],
-        cdr_user2.id: [
-            purchase_user2_product1_variant2,
-            purchase_user2_product2_variant1,
-        ],
-        cdr_user3.id: [
-            purchase_user3_product1_variant3,
-        ],
-    }
-    users = [cdr_user1, cdr_user2, cdr_user3]
-    products = [product1, product2]
-    product_variants = [
-        product1_variant1,
-        product1_variant2,
-        product1_variant3,
-        product2_variant1,
-    ]
-    customdata_fields = {
-        product1.id: [customdata_field1],
-        product2.id: [customdata_field2],
-    }
-    users_answers = {
-        cdr_user1.id: [customdata_user1],
-        cdr_user2.id: [customdata_user2],
-        cdr_user3.id: [customdata_user3],
-    }
+# def test_construct_dataframe_from_users_purchases():
+#     users_purchases = {
+#         cdr_user1.id: [
+#             purchase_user1_product1_variant1,
+#             purchase_user1_product2_variant1,
+#         ],
+#         cdr_user2.id: [
+#             purchase_user2_product1_variant2,
+#             purchase_user2_product2_variant1,
+#         ],
+#         cdr_user3.id: [
+#             purchase_user3_product1_variant3,
+#         ],
+#     }
+#     users = [cdr_user1, cdr_user2, cdr_user3]
+#     products = [product1, product2]
+#     product_variants = [
+#         product1_variant1,
+#         product1_variant2,
+#         product1_variant3,
+#         product2_variant1,
+#     ]
+#     customdata_fields = {
+#         product1.id: [customdata_field1],
+#         product2.id: [customdata_field2],
+#     }
+#     users_answers = {
+#         cdr_user1.id: [customdata_user1],
+#         cdr_user2.id: [customdata_user2],
+#         cdr_user3.id: [customdata_user3],
+#     }
 
-    excel_io = BytesIO()
+#     excel_io = BytesIO()
 
-    construct_dataframe_from_users_purchases(
-        users=users,
-        products=products,
-        variants=product_variants,
-        users_purchases=users_purchases,
-        data_fields=customdata_fields,
-        users_answers=users_answers,
-        export_io=excel_io,
+
+#     construct_dataframe_from_users_purchases(
+#         users=users,
+#         products=products,
+#         variants=product_variants,
+#         users_purchases=users_purchases,
+#         data_fields=customdata_fields,
+#         users_answers=users_answers,
+#         export_io=excel_io,
+#     )
+def test_get_seller_result(client: TestClient):
+    response = client.get(
+        f"/cdr/sellers/{seller1.id}/results/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200, response.text
+    assert (
+        response.headers["content-type"]
+        == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )

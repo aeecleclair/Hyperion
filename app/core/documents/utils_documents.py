@@ -245,6 +245,16 @@ async def use_template_for_user(
     )
 
 
+async def delete_document(
+    document: schemas_documents.Document,
+    documenso: DocumensoAPIWrapper,
+    db: AsyncSession,
+) -> None:
+    await documenso.delete_document(document_id=int(document.documenso_id))
+
+    await cruds_documents.delete_document_by_id(document_id=document.id, db=db)
+
+
 async def handle_document_callback(
     document_module: str,
     document_id: uuid.UUID,

@@ -1,30 +1,28 @@
-from collections.abc import Sequence
 from datetime import date
 from uuid import UUID
 
 from sqlalchemy import and_, delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.documents.types_documenso import DocumentStatus
 from app.core.memberships import models_memberships, schemas_memberships
-from app.core.users import schemas_users
+from app.core.memberships.utils_memberships import (
+    membership_complete_model_to_schema,
+    membership_model_to_schema,
+    user_membership_complete_model_to_schema,
+    user_membership_with_association_model_to_schema,
+)
 
 
 async def get_association_memberships(
     db: AsyncSession,
-) -> Sequence[schemas_memberships.MembershipSimple]:
+) -> list[schemas_memberships.MembershipSimple]:
     result = (
         (await db.execute(select(models_memberships.CoreAssociationMembership)))
         .scalars()
         .all()
     )
-    return [
-        schemas_memberships.MembershipSimple(
-            name=membership.name,
-            id=membership.id,
-            manager_group_id=membership.manager_group_id,
-        )
-        for membership in result
-    ]
+    return [membership_model_to_schema(membership) for membership in result]
 
 
 async def get_association_membership_by_name(
@@ -42,21 +40,13 @@ async def get_association_membership_by_name(
         .scalars()
         .first()
     )
-    return (
-        schemas_memberships.MembershipSimple(
-            name=result.name,
-            manager_group_id=result.manager_group_id,
-            id=result.id,
-        )
-        if result
-        else None
-    )
+    return membership_model_to_schema(result) if result else None
 
 
 async def get_association_membership_by_id(
     db: AsyncSession,
     membership_id: UUID,
-) -> schemas_memberships.MembershipSimple | None:
+) -> schemas_memberships.MembershipComplete | None:
     result = (
         (
             await db.execute(
@@ -68,15 +58,7 @@ async def get_association_membership_by_id(
         .scalars()
         .first()
     )
-    return (
-        schemas_memberships.MembershipSimple(
-            name=result.name,
-            manager_group_id=result.manager_group_id,
-            id=result.id,
-        )
-        if result
-        else None
-    )
+    return membership_complete_model_to_schema(result) if result else None
 
 
 async def create_association_membership(
@@ -87,6 +69,7 @@ async def create_association_membership(
         id=membership.id,
         name=membership.name,
         manager_group_id=membership.manager_group_id,
+        template_id=membership.template_id,
     )
     db.add(membership_db)
 
@@ -105,14 +88,13 @@ async def delete_association_membership(
 async def update_association_membership(
     db: AsyncSession,
     membership_id: UUID,
-    membership: schemas_memberships.MembershipBase,
+    membership: schemas_memberships.MembershipEdit,
 ):
     await db.execute(
         update(models_memberships.CoreAssociationMembership)
         .where(models_memberships.CoreAssociationMembership.id == membership_id)
         .values(
-            name=membership.name,
-            manager_group_id=membership.manager_group_id,
+            **membership.model_dump(exclude_unset=True),
         ),
     )
 
@@ -125,7 +107,7 @@ async def get_user_memberships_by_user_id(
     minimal_end_date: date | None = None,
     maximal_end_date: date | None = None,
     manager_restriction: list[str] | None = None,
-) -> Sequence[schemas_memberships.UserMembershipComplete]:
+) -> list[schemas_memberships.UserMembershipComplete]:
     result = (
         (
             await db.execute(
@@ -161,22 +143,7 @@ async def get_user_memberships_by_user_id(
         .all()
     )
     return [
-        schemas_memberships.UserMembershipComplete(
-            id=membership.id,
-            user_id=membership.user_id,
-            association_membership_id=membership.association_membership_id,
-            start_date=membership.start_date,
-            end_date=membership.end_date,
-            user=schemas_users.CoreUserSimple(
-                id=membership.user.id,
-                account_type=membership.user.account_type,
-                school_id=membership.user.school_id,
-                nickname=membership.user.nickname,
-                firstname=membership.user.firstname,
-                name=membership.user.name,
-            ),
-        )
-        for membership in result
+        user_membership_complete_model_to_schema(membership) for membership in result
     ]
 
 
@@ -187,7 +154,7 @@ async def get_user_memberships_by_association_membership_id(
     maximal_start_date: date | None = None,
     minimal_end_date: date | None = None,
     maximal_end_date: date | None = None,
-) -> Sequence[schemas_memberships.UserMembershipComplete]:
+) -> list[schemas_memberships.UserMembershipComplete]:
     result = (
         (
             await db.execute(
@@ -217,22 +184,7 @@ async def get_user_memberships_by_association_membership_id(
         .all()
     )
     return [
-        schemas_memberships.UserMembershipComplete(
-            id=membership.id,
-            user_id=membership.user_id,
-            association_membership_id=membership.association_membership_id,
-            start_date=membership.start_date,
-            end_date=membership.end_date,
-            user=schemas_users.CoreUserSimple(
-                id=membership.user.id,
-                account_type=membership.user.account_type,
-                school_id=membership.user.school_id,
-                nickname=membership.user.nickname,
-                firstname=membership.user.firstname,
-                name=membership.user.name,
-            ),
-        )
-        for membership in result
+        user_membership_complete_model_to_schema(membership) for membership in result
     ]
 
 
@@ -240,7 +192,7 @@ async def get_user_memberships_by_user_id_and_association_membership_id(
     db: AsyncSession,
     user_id: str,
     association_membership_id: UUID,
-) -> Sequence[schemas_memberships.UserMembershipComplete]:
+) -> list[schemas_memberships.UserMembershipComplete]:
     result = (
         (
             await db.execute(
@@ -255,22 +207,7 @@ async def get_user_memberships_by_user_id_and_association_membership_id(
         .all()
     )
     return [
-        schemas_memberships.UserMembershipComplete(
-            id=membership.id,
-            user_id=membership.user_id,
-            association_membership_id=membership.association_membership_id,
-            start_date=membership.start_date,
-            end_date=membership.end_date,
-            user=schemas_users.CoreUserSimple(
-                id=membership.user.id,
-                account_type=membership.user.account_type,
-                school_id=membership.user.school_id,
-                nickname=membership.user.nickname,
-                firstname=membership.user.firstname,
-                name=membership.user.name,
-            ),
-        )
-        for membership in result
+        user_membership_complete_model_to_schema(membership) for membership in result
     ]
 
 
@@ -280,7 +217,7 @@ async def get_user_memberships_by_user_id_start_end_and_association_membership_i
     start_date: date,
     end_date: date,
     association_membership_id: UUID,
-) -> Sequence[schemas_memberships.UserMembershipComplete]:
+) -> list[schemas_memberships.UserMembershipComplete]:
     result = (
         (
             await db.execute(
@@ -299,29 +236,14 @@ async def get_user_memberships_by_user_id_start_end_and_association_membership_i
         .all()
     )
     return [
-        schemas_memberships.UserMembershipComplete(
-            id=membership.id,
-            user_id=membership.user_id,
-            association_membership_id=membership.association_membership_id,
-            start_date=membership.start_date,
-            end_date=membership.end_date,
-            user=schemas_users.CoreUserSimple(
-                id=membership.user.id,
-                account_type=membership.user.account_type,
-                school_id=membership.user.school_id,
-                nickname=membership.user.nickname,
-                firstname=membership.user.firstname,
-                name=membership.user.name,
-            ),
-        )
-        for membership in result
+        user_membership_complete_model_to_schema(membership) for membership in result
     ]
 
 
 async def get_user_membership_by_id(
     db: AsyncSession,
     user_membership_id: UUID,
-) -> schemas_memberships.UserMembershipComplete | None:
+) -> schemas_memberships.UserMembershipWithAssociation | None:
     result = (
         (
             await db.execute(
@@ -334,25 +256,26 @@ async def get_user_membership_by_id(
         .scalars()
         .first()
     )
-    return (
-        schemas_memberships.UserMembershipComplete(
-            id=result.id,
-            user_id=result.user_id,
-            association_membership_id=result.association_membership_id,
-            start_date=result.start_date,
-            end_date=result.end_date,
-            user=schemas_users.CoreUserSimple(
-                id=result.user.id,
-                account_type=result.user.account_type,
-                school_id=result.user.school_id,
-                nickname=result.user.nickname,
-                firstname=result.user.firstname,
-                name=result.user.name,
-            ),
+    return user_membership_with_association_model_to_schema(result) if result else None
+
+
+async def get_user_membership_by_document_id(
+    db: AsyncSession,
+    document_id: UUID,
+) -> schemas_memberships.UserMembershipWithAssociation | None:
+    result = (
+        (
+            await db.execute(
+                select(models_memberships.CoreAssociationUserMembership).where(
+                    models_memberships.CoreAssociationUserMembership.document_id
+                    == document_id,
+                ),
+            )
         )
-        if result
-        else None
+        .scalars()
+        .first()
     )
+    return user_membership_with_association_model_to_schema(result) if result else None
 
 
 async def create_user_membership(
@@ -365,6 +288,8 @@ async def create_user_membership(
         association_membership_id=user_membership.association_membership_id,
         start_date=user_membership.start_date,
         end_date=user_membership.end_date,
+        document_id=user_membership.document_id,
+        document_status=user_membership.document_status,
     )
     db.add(membership_db)
 
@@ -390,5 +315,20 @@ async def update_user_membership(
         .where(
             models_memberships.CoreAssociationUserMembership.id == user_membership_id,
         )
-        .values(**user_membership_edit.model_dump(exclude_none=True)),
+        .values(**user_membership_edit.model_dump(exclude_unset=True)),
+    )
+
+
+async def update_user_membership_document(
+    db: AsyncSession,
+    user_membership_id: UUID,
+    document_id: UUID | None,
+    document_status: DocumentStatus | None,
+):
+    await db.execute(
+        update(models_memberships.CoreAssociationUserMembership)
+        .where(
+            models_memberships.CoreAssociationUserMembership.id == user_membership_id,
+        )
+        .values(document_id=document_id, document_status=document_status),
     )
