@@ -175,7 +175,7 @@ async def create_paper(
 
 @module.router.post(
     "/ph/{paper_id}/pdf",
-    status_code=201,
+    status_code=204,
 )
 async def create_paper_pdf_and_cover(
     paper_id: uuid.UUID,

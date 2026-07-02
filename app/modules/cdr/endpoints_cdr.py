@@ -1671,7 +1671,7 @@ async def create_purchase(
 
 @module.router.post(
     "/cdr/batch-purchases/",
-    status_code=201,
+    status_code=204,
 )
 async def create_purchase_batch(
     batch: schemas_cdr.BatchPurchase,
@@ -1972,7 +1972,7 @@ async def mark_purchase_as_validated(
 
 @module.router.post(
     "/cdr/batch-validation/",
-    status_code=201,
+    status_code=204,
 )
 async def validate_purchase_batch(
     batch: schemas_cdr.BatchValidation,
@@ -2365,7 +2365,7 @@ async def delete_curriculum(
 
 @module.router.post(
     "/cdr/users/{user_id}/curriculums/{curriculum_id}/",
-    status_code=201,
+    status_code=204,
 )
 async def create_curriculum_membership(
     user_id: str,

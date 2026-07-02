@@ -287,7 +287,7 @@ async def edit_delivery(
 
 @module.router.post(
     "/amap/deliveries/{delivery_id}/products",
-    status_code=201,
+    status_code=204,
 )
 async def add_product_to_delivery(
     products_ids: schemas_amap.DeliveryProductsUpdate,
