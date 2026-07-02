@@ -231,7 +231,7 @@ def test_add_product_to_delivery(client: TestClient) -> None:
         json={"products_ids": [product.id]},
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.status_code == 201
+    assert response.status_code == 204
 
 
 def test_remove_product_from_delivery(client: TestClient) -> None:
@@ -250,7 +250,7 @@ def test_remove_product_from_delivery(client: TestClient) -> None:
         json={"products_ids": [product.id]},
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.status_code == 201
+    assert response.status_code == 204
 
 
 def test_get_orders_from_delivery(client: TestClient) -> None:

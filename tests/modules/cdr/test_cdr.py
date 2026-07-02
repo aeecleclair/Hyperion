@@ -1997,7 +1997,7 @@ def test_create_curriculum_membership_user(client: TestClient):
         f"/cdr/users/{user.id!s}/curriculums/{curriculum.id!s}/",
         headers={"Authorization": f"Bearer {token_user}"},
     )
-    assert response.status_code == 201
+    assert response.status_code == 204
 
 
 def test_delete_curriculum_membership_wrong_user(client: TestClient):

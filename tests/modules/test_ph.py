@@ -111,7 +111,7 @@ def test_create_paper_pdf_and_cover(client: TestClient) -> None:
             headers={"Authorization": f"Bearer {token_ph}"},
         )
 
-    assert response.status_code == 201
+    assert response.status_code == 204
     assert Path(f"data/ph/pdf/{paper.id}.pdf").is_file()
     assert Path(f"data/ph/cover/{paper.id}.jpg").is_file()
 
