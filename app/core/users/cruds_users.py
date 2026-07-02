@@ -139,6 +139,33 @@ async def get_user_by_email(
     return result.scalars().first()
 
 
+async def get_users_by_emails(
+    db: AsyncSession,
+    emails: list[str],
+) -> list[schemas_users.CoreUser]:
+    """Return users with emails from database as a list of dictionaries"""
+
+    result = await db.execute(
+        select(models_users.CoreUser).where(models_users.CoreUser.email.in_(emails)),
+    )
+    return [
+        schemas_users.CoreUser(
+            id=user.id,
+            name=user.name,
+            firstname=user.firstname,
+            email=user.email,
+            account_type=user.account_type,
+            school_id=user.school_id,
+            birthday=user.birthday,
+            phone=user.phone,
+            promo=user.promo,
+            floor=user.floor,
+            created_on=user.created_on,
+        )
+        for user in result.scalars().all()
+    ]
+
+
 async def get_recovery_request_within_delay_registred_user(
     db: AsyncSession,
     email: str,

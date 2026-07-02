@@ -299,7 +299,7 @@ async def create_user_with_groups(
 def create_api_access_token(
     user: models_users.CoreUser,
     expires_delta: timedelta | None = None,
-):
+) -> str:
     """
     Create a JWT access token for the `user` with the scope `API`
     """

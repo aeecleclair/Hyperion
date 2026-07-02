@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.schools import cruds_schools
-from app.core.schools.models_schools import CoreSchool
+from app.core.schools.schemas_schools import CoreSchool
 from app.core.utils.config import Settings
 from app.types.factory import Factory
 
