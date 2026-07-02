@@ -1,6 +1,5 @@
 import uuid
 from datetime import UTC, datetime
-from io import BytesIO
 
 import pytest_asyncio
 from fastapi.testclient import TestClient
@@ -9,7 +8,6 @@ from app.core.groups import models_groups
 from app.core.users import models_users
 from app.modules.cdr import models_cdr
 from app.modules.cdr.endpoints_cdr import CdrPermissions
-from app.modules.cdr.utils_cdr import construct_dataframe_from_users_purchases
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
