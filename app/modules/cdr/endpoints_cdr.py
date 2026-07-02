@@ -2696,10 +2696,31 @@ async def create_payment(
         action=str(db_payment.__dict__),
         timestamp=datetime.now(UTC),
     )
-
     cruds_cdr.create_payment(db, db_payment)
     cruds_cdr.create_action(db, db_action)
     await db.flush()
+    purchases = await cruds_cdr.get_purchases_by_user_id(
+        db=db,
+        user_id=user_id,
+        cdr_year=cdr_year.year,
+    )
+    payments = await cruds_cdr.get_payments_by_user_id(
+        db=db,
+        user_id=user_id,
+        cdr_year=cdr_year.year,
+    )
+    purchases_total = sum(
+        purchase.product_variant.price * purchase.quantity for purchase in purchases
+    )
+    payments_total = sum(payment.total for payment in payments)
+    if purchases_total - payments_total <= 0:
+        for purchase in purchases:
+            await cruds_cdr.mark_purchase_as_validated(
+                db=db,
+                user_id=user_id,
+                product_variant_id=purchase.product_variant.id,
+                validated=True,
+            )
     return db_payment
 
 
