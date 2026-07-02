@@ -11,7 +11,65 @@ from app.modules.seed_library import (
 )
 from app.modules.seed_library.types_seed_library import (
     PlantState,
+    SpeciesType,
 )
+
+
+def _species_complete_from_model(
+    species: models_seed_library.Species,
+) -> schemas_seed_library.SpeciesComplete:
+    """Build a SpeciesComplete schema from a Species model.
+
+    The model stores `difficulty` and `species_type` as nullable for legacy
+    reasons but the schema (the API contract) requires non-null values.
+    Defaults are applied if the legacy DB row is missing them.
+    """
+    return schemas_seed_library.SpeciesComplete(
+        id=species.id,
+        prefix=species.prefix,
+        name=species.name,
+        difficulty=species.difficulty if species.difficulty is not None else 1,
+        card=species.card,
+        nb_seeds_recommended=species.nb_seeds_recommended,
+        species_type=(
+            species.species_type
+            if species.species_type is not None
+            else SpeciesType.other
+        ),
+        start_season=species.start_season,
+        end_season=species.end_season,
+        time_maturation=species.time_maturation,
+    )
+
+
+def _plant_complete_from_model(
+    plant: models_seed_library.Plant,
+) -> schemas_seed_library.PlantComplete:
+    """Build a PlantComplete schema from a Plant model.
+
+    The model stores `nb_seeds_envelope` and `confidential` as nullable for
+    legacy reasons but the schema (the API contract) requires non-null
+    values. Defaults are applied if the legacy DB row is missing them.
+    """
+    return schemas_seed_library.PlantComplete(
+        id=plant.id,
+        state=plant.state,
+        species_id=plant.species_id,
+        propagation_method=plant.propagation_method,
+        nb_seeds_envelope=(
+            plant.nb_seeds_envelope if plant.nb_seeds_envelope is not None else 1
+        ),
+        reference=plant.reference,
+        ancestor_id=plant.ancestor_id,
+        previous_note=plant.previous_note,
+        current_note=plant.current_note,
+        borrower_id=plant.borrower_id,
+        confidential=plant.confidential if plant.confidential is not None else False,
+        nickname=plant.nickname,
+        planting_date=plant.planting_date,
+        borrowing_date=plant.borrowing_date,
+    )
+
 
 # ---------------------------------------------------------------------------- #
 #                                  Species                                     #
@@ -78,21 +136,7 @@ async def get_all_species(
     """Return all Species from database"""
 
     result = (await db.execute(select(models_seed_library.Species))).scalars().all()
-    return [
-        schemas_seed_library.SpeciesComplete(
-            id=species.id,
-            prefix=species.prefix,
-            name=species.name,
-            difficulty=species.difficulty,
-            card=species.card,
-            nb_seeds_recommended=species.nb_seeds_recommended,
-            species_type=species.species_type,
-            start_season=species.start_season,
-            end_season=species.end_season,
-            time_maturation=species.time_maturation,
-        )
-        for species in result
-    ]
+    return [_species_complete_from_model(species) for species in result]
 
 
 async def get_species_by_id(
@@ -112,22 +156,7 @@ async def get_species_by_id(
         .scalars()
         .first()
     )
-    return (
-        schemas_seed_library.SpeciesComplete(
-            id=result.id,
-            prefix=result.prefix,
-            name=result.name,
-            difficulty=result.difficulty,
-            card=result.card,
-            nb_seeds_recommended=result.nb_seeds_recommended,
-            species_type=result.species_type,
-            start_season=result.start_season,
-            end_season=result.end_season,
-            time_maturation=result.time_maturation,
-        )
-        if result
-        else None
-    )
+    return _species_complete_from_model(result) if result else None
 
 
 # ---------------------------------------------------------------------------- #
@@ -204,25 +233,7 @@ async def get_plants_by_user_id(
         .scalars()
         .all()
     )
-    return [
-        schemas_seed_library.PlantComplete(
-            id=plant.id,
-            state=plant.state,
-            species_id=plant.species_id,
-            propagation_method=plant.propagation_method,
-            nb_seeds_envelope=plant.nb_seeds_envelope,
-            reference=plant.reference,
-            ancestor_id=plant.ancestor_id,
-            previous_note=plant.previous_note,
-            current_note=plant.current_note,
-            borrower_id=plant.borrower_id,
-            confidential=plant.confidential,
-            nickname=plant.nickname,
-            planting_date=plant.planting_date,
-            borrowing_date=plant.borrowing_date,
-        )
-        for plant in result
-    ]
+    return [_plant_complete_from_model(plant) for plant in result]
 
 
 async def get_plant_by_id(
@@ -242,26 +253,7 @@ async def get_plant_by_id(
         .scalars()
         .first()
     )
-    return (
-        schemas_seed_library.PlantComplete(
-            id=result.id,
-            state=result.state,
-            species_id=result.species_id,
-            propagation_method=result.propagation_method,
-            nb_seeds_envelope=result.nb_seeds_envelope,
-            reference=result.reference,
-            ancestor_id=result.ancestor_id,
-            previous_note=result.previous_note,
-            current_note=result.current_note,
-            borrower_id=result.borrower_id,
-            confidential=result.confidential,
-            nickname=result.nickname,
-            planting_date=result.planting_date,
-            borrowing_date=result.borrowing_date,
-        )
-        if result
-        else None
-    )
+    return _plant_complete_from_model(result) if result else None
 
 
 async def get_waiting_plants(
@@ -280,25 +272,7 @@ async def get_waiting_plants(
         .scalars()
         .all()
     )
-    return [
-        schemas_seed_library.PlantComplete(
-            id=plant.id,
-            state=plant.state,
-            species_id=plant.species_id,
-            propagation_method=plant.propagation_method,
-            nb_seeds_envelope=plant.nb_seeds_envelope,
-            reference=plant.reference,
-            ancestor_id=plant.ancestor_id,
-            previous_note=plant.previous_note,
-            current_note=plant.current_note,
-            borrower_id=plant.borrower_id,
-            confidential=plant.confidential,
-            nickname=plant.nickname,
-            planting_date=plant.planting_date,
-            borrowing_date=plant.borrowing_date,
-        )
-        for plant in result
-    ]
+    return [_plant_complete_from_model(plant) for plant in result]
 
 
 async def borrow_plant(

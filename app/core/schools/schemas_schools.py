@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.utils import validators
 
@@ -16,6 +16,8 @@ class CoreSchoolBase(BaseModel):
 
 class CoreSchool(CoreSchoolBase):
     id: UUID
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CoreSchoolUpdate(BaseModel):

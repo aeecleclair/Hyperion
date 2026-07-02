@@ -82,6 +82,7 @@ ignore = [
     "S104",
     "B008",
     "C401",
+    "COM812",  # Conflicts with the ruff formatter (per ruff's own warning).
     "ISC001",
     "SIM102",
     "SIM105",

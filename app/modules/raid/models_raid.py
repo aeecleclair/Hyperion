@@ -1,18 +1,35 @@
 """Models file for module_raid"""
 
-from datetime import date
+from datetime import date, datetime
+from uuid import UUID
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, ForeignKeyConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.users.models_users import CoreUser
 from app.modules.raid.raid_type import (
     Difficulty,
     DocumentType,
     DocumentValidation,
     MeetingPlace,
+    RaidRegistrationStatus,
+    Situation,
     Size,
 )
-from app.types.sqlalchemy import Base
+from app.types.sqlalchemy import Base, PrimaryKey
+
+
+class RaidEdition(Base):
+    __tablename__ = "raid_edition"
+
+    id: Mapped[PrimaryKey]
+    year: Mapped[int]
+    name: Mapped[str]
+    start_date: Mapped[date | None]
+    end_date: Mapped[date | None]
+    registering_end_date: Mapped[date | None]
+    active: Mapped[bool]
+    inscription_enabled: Mapped[bool]
 
 
 class Document(Base):
@@ -21,6 +38,7 @@ class Document(Base):
         primary_key=True,
         index=True,
     )
+    edition_id: Mapped[UUID] = mapped_column(ForeignKey("raid_edition.id"))
     name: Mapped[str]
     uploaded_at: Mapped[date]
     type: Mapped[DocumentType]
@@ -35,6 +53,7 @@ class SecurityFile(Base):
         primary_key=True,
         index=True,
     )
+    edition_id: Mapped[UUID] = mapped_column(ForeignKey("raid_edition.id"))
     allergy: Mapped[str | None]
     asthma: Mapped[bool]
     intensive_care_unit: Mapped[bool | None]
@@ -72,19 +91,22 @@ class SecurityFile(Base):
 
 class RaidParticipant(Base):
     __tablename__ = "raid_participant"
-    id: Mapped[str] = mapped_column(
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("core_user.id"),
         primary_key=True,
         index=True,
     )
-    name: Mapped[str]
-    firstname: Mapped[str]
-    birthday: Mapped[date]
-    phone: Mapped[str]
-    email: Mapped[str]
+    edition_id: Mapped[UUID] = mapped_column(
+        ForeignKey("raid_edition.id"),
+        primary_key=True,
+    )
+    status: Mapped[RaidRegistrationStatus] = mapped_column(
+        default=RaidRegistrationStatus.draft,
+    )
     address: Mapped[str | None] = mapped_column(default=None)
     bike_size: Mapped[Size | None] = mapped_column(default=None)
     t_shirt_size: Mapped[Size | None] = mapped_column(default=None)
-    situation: Mapped[str | None] = mapped_column(default=None)
+    situation: Mapped[Situation | None] = mapped_column(default=None)
     other_school: Mapped[str | None] = mapped_column(default=None)
     company: Mapped[str | None] = mapped_column(default=None)
     diet: Mapped[str | None] = mapped_column(default=None)
@@ -141,107 +163,16 @@ class RaidParticipant(Base):
         foreign_keys=[parent_authorization_id],
         init=False,
     )
-    attestation_on_honour: Mapped[bool] = mapped_column(
-        default=False,
-    )
+    attestation_on_honour: Mapped[bool] = mapped_column(default=False)
     payment: Mapped[bool] = mapped_column(default=False)
-    t_shirt_payment: Mapped[bool] = mapped_column(
-        default=False,
-    )
+    t_shirt_payment: Mapped[bool] = mapped_column(default=False)
     is_minor: Mapped[bool] = mapped_column(default=False)
 
-    @property
-    def number_of_document(self) -> int:
-        number_total = 3
-        if self.situation and self.situation.split(" : ")[0] in [
-            "centrale",
-            "otherschool",
-        ]:
-            number_total += 1
-        if self.is_minor:
-            number_total += 1
-        return number_total
-
-    @property
-    def number_of_validated_document(self) -> int:
-        number_validated = 0
-        if (
-            self.situation
-            and self.situation.split(" : ")[0] in ["centrale", "otherschool"]
-            and self.student_card
-            and self.student_card.validation == DocumentValidation.accepted
-        ):
-            number_validated += 1
-        if self.id_card and self.id_card.validation == DocumentValidation.accepted:
-            number_validated += 1
-        if (
-            self.medical_certificate
-            and self.medical_certificate.validation == DocumentValidation.accepted
-        ):
-            number_validated += 1
-        if (
-            self.raid_rules
-            and self.raid_rules.validation == DocumentValidation.accepted
-        ):
-            number_validated += 1
-        if (
-            self.is_minor
-            and self.parent_authorization
-            and self.parent_authorization.validation == DocumentValidation.accepted
-        ):
-            number_validated += 1
-        return number_validated
-
-    @property
-    def validation_progress(self) -> float:
-        number_total = 10
-        conditions = [
-            self.address,
-            self.bike_size,
-            self.t_shirt_size,
-            self.situation,
-            self.attestation_on_honour,
-        ]
-        number_validated: float = sum(
-            [condition is not None for condition in conditions],
-        )
-        if self.situation and self.situation.split(" : ")[0] in [
-            "centrale",
-            "otherschool",
-        ]:
-            number_total += 1
-            if (
-                self.student_card
-                and self.student_card.validation == DocumentValidation.accepted
-            ):
-                number_validated += 1
-        if self.is_minor:
-            number_total += 1
-            if self.parent_authorization:
-                if self.parent_authorization.validation == DocumentValidation.accepted:
-                    number_validated += 1
-                elif (
-                    self.parent_authorization.validation == DocumentValidation.temporary
-                ):
-                    number_validated += 0.5
-        if self.id_card and self.id_card.validation == DocumentValidation.accepted:
-            number_validated += 1
-        if self.medical_certificate:
-            if self.medical_certificate.validation == DocumentValidation.accepted:
-                number_validated += 1
-            elif self.medical_certificate.validation == DocumentValidation.temporary:
-                number_validated += 0.5
-        if self.security_file and self.security_file:
-            if self.security_file.validation == DocumentValidation.accepted:
-                number_validated += 1
-            elif self.security_file.validation == DocumentValidation.temporary:
-                number_validated += 0.5
-        if (
-            self.raid_rules
-            and self.raid_rules.validation == DocumentValidation.accepted
-        ):
-            number_validated += 1
-        return (number_validated / number_total) * 100
+    user: Mapped[CoreUser] = relationship(
+        "CoreUser",
+        lazy="joined",
+        init=False,
+    )
 
 
 class RaidTeam(Base):
@@ -250,41 +181,39 @@ class RaidTeam(Base):
         primary_key=True,
         index=True,
     )
+    edition_id: Mapped[UUID] = mapped_column(ForeignKey("raid_edition.id"))
     name: Mapped[str]
     difficulty: Mapped[Difficulty | None]
-    captain_id: Mapped[str] = mapped_column(
-        ForeignKey("raid_participant.id"),
-    )
-    second_id: Mapped[str | None] = mapped_column(
-        ForeignKey("raid_participant.id"),
-        default=None,
-    )
+    captain_id: Mapped[str]
+    second_id: Mapped[str | None] = mapped_column(default=None)
     number: Mapped[int | None] = mapped_column(default=None)
     captain: Mapped[RaidParticipant] = relationship(
         "RaidParticipant",
-        foreign_keys=[captain_id],
+        foreign_keys="[RaidTeam.captain_id, RaidTeam.edition_id]",
         init=False,
+        overlaps="second",
     )
-    second: Mapped[RaidParticipant] = relationship(
+    second: Mapped[RaidParticipant | None] = relationship(
         "RaidParticipant",
-        foreign_keys=[second_id],
+        foreign_keys="[RaidTeam.second_id, RaidTeam.edition_id]",
         init=False,
+        overlaps="captain",
     )
     meeting_place: Mapped[MeetingPlace | None] = mapped_column(default=None)
     file_id: Mapped[str | None] = mapped_column(default=None)
 
-    @property
-    def validation_progress(self) -> float:
-        number_validated = 0
-        number_total = 2
-        if self.difficulty:
-            number_validated += 1
-        if self.meeting_place:
-            number_validated += 1
-        return (number_validated / number_total) * 10 + (
-            self.captain.validation_progress
-            + (self.second.validation_progress if self.second else 0)
-        ) * 0.45
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["captain_id", "edition_id"],
+            ["raid_participant.user_id", "raid_participant.edition_id"],
+            name="fk_raid_team_captain",
+        ),
+        ForeignKeyConstraint(
+            ["second_id", "edition_id"],
+            ["raid_participant.user_id", "raid_participant.edition_id"],
+            name="fk_raid_team_second",
+        ),
+    )
 
 
 class InviteToken(Base):
@@ -293,6 +222,7 @@ class InviteToken(Base):
         primary_key=True,
         index=True,
     )
+    edition_id: Mapped[UUID] = mapped_column(ForeignKey("raid_edition.id"))
     team_id: Mapped[str] = mapped_column(ForeignKey("raid_team.id"))
     token: Mapped[str]
 
@@ -303,7 +233,45 @@ class RaidParticipantCheckout(Base):
         primary_key=True,
         index=True,
     )
-    participant_id: Mapped[str] = mapped_column(
-        ForeignKey("raid_participant.id"),
-    )
+    participant_user_id: Mapped[str]
+    edition_id: Mapped[UUID]
     checkout_id: Mapped[str] = mapped_column(ForeignKey("checkout_checkout.id"))
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["participant_user_id", "edition_id"],
+            ["raid_participant.user_id", "raid_participant.edition_id"],
+            name="fk_raid_participant_checkout_participant",
+        ),
+    )
+
+
+class RaidVolunteer(Base):
+    __tablename__ = "raid_volunteer"
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("core_user.id"),
+        primary_key=True,
+    )
+    edition_id: Mapped[UUID] = mapped_column(
+        ForeignKey("raid_edition.id"),
+        primary_key=True,
+    )
+    created_at: Mapped[datetime]
+    validated: Mapped[bool]
+    cancelled: Mapped[bool]
+    diet: Mapped[str | None] = mapped_column(default=None)
+    allergy: Mapped[str | None] = mapped_column(default=None)
+    t_shirt_size: Mapped[Size | None] = mapped_column(default=None)
+    emergency_person_name: Mapped[str | None] = mapped_column(default=None)
+    emergency_person_phone: Mapped[str | None] = mapped_column(default=None)
+    has_car: Mapped[bool] = mapped_column(default=False)
+    car_seats: Mapped[int | None] = mapped_column(default=None)
+    is_special_driver: Mapped[bool] = mapped_column(default=False)
+    is_utility_vehicle_driver: Mapped[bool] = mapped_column(default=False)
+    is_parcours_helper: Mapped[bool] = mapped_column(default=False)
+
+    user: Mapped[CoreUser] = relationship(
+        "CoreUser",
+        lazy="joined",
+        init=False,
+    )

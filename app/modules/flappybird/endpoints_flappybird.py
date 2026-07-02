@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import AccountType
 from app.core.permissions.type_permissions import ModulePermissions
-from app.core.users import models_users
+from app.core.users import models_users, schemas_users
 from app.dependencies import get_db, is_user_allowed_to
 from app.modules.flappybird import (
     cruds_flappybird,
@@ -80,7 +80,9 @@ async def get_current_user_flappybird_personal_best(
         )
     return schemas_flappybird.FlappyBirdScoreCompleteFeedBack(
         value=user_personal_best_table.value,
-        user=user_personal_best_table.user,
+        user=schemas_users.CoreUserSimple.model_validate(
+            user_personal_best_table.user,
+        ),
         creation_time=user_personal_best_table.creation_time,
         position=position,
     )

@@ -122,11 +122,11 @@ class CoreUsersFactory(Factory):
                 name=user_info.name,
                 email=user_info.email,
                 floor=None,
-                phone=None,
+                phone=user_info.phone,
                 promo=None,
                 school_id=SchoolType.centrale_lyon.value,
                 account_type=groups_type.AccountType.student,
-                birthday=None,
+                birthday=user_info.birthday,
                 created_on=datetime.now(tz=UTC),
             )
             await cruds_users.create_user(db=db, user=user)
