@@ -1,7 +1,7 @@
 import logging
 import re
 from collections.abc import Sequence
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from io import BytesIO
 from uuid import UUID, uuid4
 
@@ -1814,44 +1814,40 @@ async def add_membership(
             ),
             None,
         )
+        start_date = date(datetime.now(tz=UTC).date().year, 9, 1)
+        end_date = start_date + product_variant.related_membership_added_duration
         if existing_membership:
-            await cruds_memberships.update_user_membership(
+            start_date = max(
+                existing_membership.end_date + timedelta(days=1),
+                start_date,
+            )
+        user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
+        if not user:
+            raise PurchaseUserNotFoundError(user_id)
+        association_membership = (
+            await cruds_memberships.get_association_membership_by_id(
                 db=db,
-                user_membership_id=existing_membership.id,
-                user_membership_edit=schemas_memberships.UserMembershipEdit(
-                    end_date=existing_membership.end_date
-                    + product_variant.related_membership_added_duration,
-                ),
+                membership_id=product_related_membership_id,
             )
-        else:
-            user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
-            if not user:
-                raise PurchaseUserNotFoundError(user_id)
-            association_membership = (
-                await cruds_memberships.get_association_membership_by_id(
-                    db=db,
-                    membership_id=product_related_membership_id,
-                )
+        )
+        if not association_membership:
+            raise ProductAssociationMembershipNotFoundError(
+                product_variant.product_id,
             )
-            if not association_membership:
-                raise ProductAssociationMembershipNotFoundError(
-                    product_variant.product_id,
-                )
-            await add_membership_to_user(
-                user=user_model_to_schema(user),
-                association_membership=association_membership,
-                db=db,
-                user_membership=schemas_memberships.UserMembershipSimple(
-                    id=uuid4(),
-                    user_id=user_id,
-                    association_membership_id=product_related_membership_id,
-                    start_date=date(datetime.now(tz=UTC).date().year, 9, 1),
-                    end_date=date(datetime.now(tz=UTC).date().year, 9, 1)
-                    + product_variant.related_membership_added_duration,
-                    valid=True,
-                ),
-                settings=settings,
-            )
+        await add_membership_to_user(
+            user=user_model_to_schema(user),
+            association_membership=association_membership,
+            db=db,
+            user_membership=schemas_memberships.UserMembershipSimple(
+                id=uuid4(),
+                user_id=user_id,
+                association_membership_id=product_related_membership_id,
+                start_date=start_date,
+                end_date=end_date,
+                valid=True,
+            ),
+            settings=settings,
+        )
 
 
 @module.router.patch(
