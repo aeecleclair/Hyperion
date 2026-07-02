@@ -200,3 +200,9 @@ TRUSTED_PAYMENT_REDIRECT_URLS:
 # This service will use a special token to access the data
 # If this token is not set, the service will not be able to access the data and no integrity check will be performed
 #MYECLPAY_DATA_VERIFIER_ACCESS_TOKEN: ""
+
+###########################
+# Documenso configuration #
+###########################
+DOCUMENSO_URL: https://documenso.test.fr
+DOCUMENSO_SECRET: somestrongsecret

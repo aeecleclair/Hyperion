@@ -1,9 +1,3 @@
-"""
-File defining the API itself, using fastAPI and schemas, and calling the cruds functions
-
-School management is part of the core of Hyperion. These endpoints allow managing schools.
-"""
-
 import re
 import uuid
 
@@ -13,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.schools import (
     cruds_schools,
-    models_schools,
     schemas_schools,
 )
 from app.core.schools.factory_schools import CoreSchoolsFactory
@@ -95,28 +88,31 @@ async def create_school(
             detail=f"A school with the name {school.name} already exist",
         )
 
-    db_school = models_schools.CoreSchool(
+    school = schemas_schools.CoreSchool(
         id=uuid.uuid4(),
         name=school.name,
         email_regex=school.email_regex,
     )
-    await cruds_schools.create_school(school=db_school, db=db)
+
+    await cruds_schools.create_school(
+        school=school,
+        db=db,
+    )
     users = await cruds_users.get_users(
         db=db,
         schools_ids=[SchoolType.no_school.value],
     )
     for db_user in users:
-        if re.match(db_school.email_regex, db_user.email):
+        if re.match(school.email_regex, db_user.email):
             await cruds_users.update_user(
                 db,
                 db_user.id,
                 schemas_users.CoreUserUpdateAdmin(
-                    school_id=db_school.id,
+                    school_id=school.id,
                     account_type=AccountType.other_school_student,
                 ),
             )
-    await db.flush()
-    return db_school
+    return school
 
 
 @router.patch(

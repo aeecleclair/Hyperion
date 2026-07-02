@@ -107,6 +107,6 @@ def client(request, worker_id: str) -> Generator[TestClient]:
     # locking logic to skip init_db on all but one worker, leaving DBs without tables.
     with (
         patch("app.utils.initialization.get_number_of_workers", return_value=1),
-        TestClient(test_app) as client,
+        TestClient(test_app, raise_server_exceptions=False) as client,
     ):
         yield client
