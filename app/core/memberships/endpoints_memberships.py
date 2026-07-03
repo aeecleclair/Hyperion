@@ -371,10 +371,14 @@ async def read_user_memberships(
             user_id,
             manager_restriction=[group.id for group in user.groups],
         )
-    return await cruds_memberships.get_user_memberships_by_user_id(
+    memberships = await cruds_memberships.get_user_memberships_by_user_id(
         db,
         user_id,
     )
+    hyperion_error_logger.error(
+        f"User {user.id} accessed memberships for user {user_id}: {memberships}",
+    )
+    return memberships
 
 
 @router.get(

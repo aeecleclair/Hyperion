@@ -65,13 +65,14 @@ async def create_association_membership(
     db: AsyncSession,
     membership: schemas_memberships.MembershipSimple,
 ):
-    membership_db = models_memberships.CoreAssociationMembership(
-        id=membership.id,
-        name=membership.name,
-        manager_group_id=membership.manager_group_id,
-        template_id=membership.template_id,
+    db.add(
+        models_memberships.CoreAssociationMembership(
+            id=membership.id,
+            name=membership.name,
+            manager_group_id=membership.manager_group_id,
+            template_id=membership.template_id,
+        ),
     )
-    db.add(membership_db)
 
 
 async def delete_association_membership(
@@ -282,16 +283,17 @@ async def create_user_membership(
     db: AsyncSession,
     user_membership: schemas_memberships.UserMembershipSimple,
 ):
-    membership_db = models_memberships.CoreAssociationUserMembership(
-        id=user_membership.id,
-        user_id=user_membership.user_id,
-        association_membership_id=user_membership.association_membership_id,
-        start_date=user_membership.start_date,
-        end_date=user_membership.end_date,
-        document_id=user_membership.document_id,
-        document_status=user_membership.document_status,
+    db.add(
+        models_memberships.CoreAssociationUserMembership(
+            id=user_membership.id,
+            user_id=user_membership.user_id,
+            association_membership_id=user_membership.association_membership_id,
+            start_date=user_membership.start_date,
+            end_date=user_membership.end_date,
+            document_id=user_membership.document_id,
+            document_status=user_membership.document_status,
+        ),
     )
-    db.add(membership_db)
 
 
 async def delete_user_membership(

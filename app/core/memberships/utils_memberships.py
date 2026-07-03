@@ -1,3 +1,4 @@
+import logging
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -26,6 +27,8 @@ from app.core.users.utils_users import user_model_to_schema
 from app.core.utils.config import Settings
 
 MODULE_ROOT = "memberships"
+
+hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
 def membership_model_to_schema(
@@ -194,7 +197,7 @@ async def add_membership_to_user(
     user_membership: schemas_memberships.UserMembershipSimple,
     db: AsyncSession,
     settings: Settings,
-):
+) -> schemas_memberships.UserMembershipComplete:
     """
     Add a membership to a user.
     :param user: The user to add the membership to.
@@ -224,12 +227,16 @@ async def add_membership_to_user(
             db=db,
             documenso=documenso,
         )
+        await db.flush()
         user_membership.document_id = document.id
         user_membership.document_status = document.status
         user_membership.valid = (
             user_membership.document_status == DocumentStatus.COMPLETED
         )
 
+    hyperion_error_logger.debug(
+        f"Adding membership {association_membership.id} to user {user.id} with membership data: {user_membership}",
+    )
     await cruds_memberships.create_user_membership(
         db=db,
         user_membership=user_membership,
