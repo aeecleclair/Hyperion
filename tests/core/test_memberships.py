@@ -11,14 +11,18 @@ from app.core.documents import models_documents
 from app.core.documents.types_documenso import DocumentStatus
 from app.core.groups import models_groups
 from app.core.groups.groups_type import GroupType
-from app.core.memberships import models_memberships
-from app.core.memberships.utils_memberships import MODULE_ROOT
+from app.core.memberships import cruds_memberships, models_memberships
+from app.core.memberships.utils_memberships import (
+    MODULE_ROOT,
+    membership_document_callback,
+)
 from app.core.users import models_users
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,
     create_groups_with_permissions,
     create_user_with_groups,
+    get_TestingSessionLocal,
 )
 
 bde_group: models_groups.CoreGroup
@@ -146,7 +150,7 @@ async def init_objects():
         start_date=datetime.now(tz=UTC).date() - timedelta(days=100),
         end_date=datetime.now(tz=UTC).date(),
         document_id=document.id,
-        document_status=DocumentStatus.COMPLETED,
+        document_status=DocumentStatus.PENDING,
     )
     await add_object_to_db(useecl_user_membership)
 
@@ -422,7 +426,7 @@ async def test_document_renewal_admin(client: TestClient, mocker: MockerFixture)
         "app.core.documents.utils_documents.uuid.uuid4",
         return_value=mocked_id,
     )
-    mocker.patch(
+    mock_use = mocker.patch(
         "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.use_template",
         return_value=MockedTemplateUseResponse(
             id=100,
@@ -449,6 +453,7 @@ async def test_document_renewal_admin(client: TestClient, mocker: MockerFixture)
         },
     )
     assert response.status_code == 201
+    assert mock_use.called
 
     membership_response = client.get(
         f"/memberships/users/{admin_user.id}/{useecl_association_membership.id}",
@@ -635,7 +640,7 @@ def test_create_user_membership_with_overlapping_dates(client: TestClient):
 
 
 def test_create_user_membership_admin(client: TestClient, mocker: MockerFixture):
-    mocker.patch(
+    mock_use = mocker.patch(
         "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.use_template",
         return_value=MockedTemplateUseResponse(
             id=101,
@@ -655,6 +660,7 @@ def test_create_user_membership_admin(client: TestClient, mocker: MockerFixture)
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 201
+    assert mock_use.called
     membership_id = response.json()["id"]
 
     response = client.get(
@@ -712,13 +718,34 @@ def test_delete_user_membership_wrong_id(client: TestClient):
     assert response.status_code == 404
 
 
-async def test_delete_user_membership_admin(client: TestClient):
+async def test_delete_user_membership_admin(client: TestClient, mocker: MockerFixture):
+    mock_delete = mocker.patch(
+        "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.delete_document",
+        return_value=None,
+    )
+
+    new_document = models_documents.DocumentDocument(
+        id=uuid.uuid4(),
+        documenso_id=2,
+        name="Document",
+        template_id=template.id,
+        module=MODULE_ROOT,
+        user_id=user.id,
+        status=DocumentStatus.COMPLETED,
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+        signing_token="token",
+    )
+    await add_object_to_db(new_document)
+
     new_membership = models_memberships.CoreAssociationUserMembership(
         id=uuid.uuid4(),
         user_id=user.id,
         association_membership_id=useecl_association_membership.id,
         start_date=datetime.now(tz=UTC).date() - timedelta(days=365),
         end_date=datetime.now(tz=UTC).date() + timedelta(days=365),
+        document_id=new_document.id,
+        document_status=DocumentStatus.COMPLETED,
     )
     await add_object_to_db(new_membership)
 
@@ -727,6 +754,7 @@ async def test_delete_user_membership_admin(client: TestClient):
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 204
+    assert mock_delete.called
 
     response = client.get(
         f"/memberships/users/{user.id}",
@@ -736,7 +764,15 @@ async def test_delete_user_membership_admin(client: TestClient):
     assert str(new_membership.id) not in [x["id"] for x in response.json()]
 
 
-async def test_delete_user_membership_manager(client: TestClient):
+async def test_delete_user_membership_manager(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    mock_delete = mocker.patch(
+        "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.delete_document",
+        return_value=None,
+    )
+
     new_membership = models_memberships.CoreAssociationUserMembership(
         id=uuid.uuid4(),
         user_id=bde_user.id,
@@ -751,6 +787,7 @@ async def test_delete_user_membership_manager(client: TestClient):
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 204
+    assert not mock_delete.called
 
     response = client.get(
         f"/memberships/users/{user.id}",
@@ -948,14 +985,16 @@ async def test_post_batch_user_memberships_admin(client: TestClient):
         for x in response.json()
         if x["association_membership_id"] == str(aeecl_association_membership.id)
     ]
-    seen = False
-    for membership in aeecl_memberships:
-        if membership["start_date"] == str(today - timedelta(days=1000)) and membership[
-            "end_date"
-        ] == str(today + timedelta(days=365)):
-            assert not seen
-            seen = True
-    assert seen
+    membership = next(
+        (
+            x
+            for x in aeecl_memberships
+            if x["start_date"] == str(today - timedelta(days=1000))
+            and x["end_date"] == str(today + timedelta(days=365))
+        ),
+        None,
+    )
+    assert membership is not None
     membership = next(
         (
             x
@@ -966,3 +1005,43 @@ async def test_post_batch_user_memberships_admin(client: TestClient):
         None,
     )
     assert membership is not None
+
+
+async def test_synchronize(client: TestClient):
+    group_membership = models_groups.CoreMembership(
+        user_id=bde_user.id,
+        group_id=dummy_group_1.id,
+        description=None,
+    )
+    await add_object_to_db(group_membership)
+
+    response = client.post(
+        f"/memberships/{aeecl_association_membership.id}/group/{dummy_group_1.id}/synchronize",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 201
+
+    response = client.get(
+        f"/groups/{dummy_group_1.id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    members = response.json()["members"]
+    assert any(member["id"] == str(user.id) for member in members)
+    assert not any(member["id"] == str(bde_user.id) for member in members)
+
+
+async def test_document_callback(client: TestClient, mocker: MockerFixture):
+    async with get_TestingSessionLocal()() as db:
+        await membership_document_callback(
+            db=db,
+            document_id=document.id,
+            document_status=DocumentStatus.COMPLETED,
+        )
+
+        membership = await cruds_memberships.get_user_membership_by_id(
+            user_membership_id=useecl_user_membership.id,
+            db=db,
+        )
+        assert membership is not None
+        assert membership.document_status == DocumentStatus.COMPLETED

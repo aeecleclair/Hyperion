@@ -21,6 +21,7 @@ from app.core.memberships.factory_memberships import CoreMembershipsFactory
 from app.core.memberships.utils_memberships import (
     MODULE_ROOT,
     add_membership_to_user,
+    remove_membership_from_user,
     renew_membership_documents,
     validate_user_new_membership,
 )
@@ -551,7 +552,6 @@ async def add_batch_membership(
                 )
             except HTTPException:
                 pass
-    await db.flush()
     return unknown_users
 
 
@@ -610,6 +610,7 @@ async def delete_user_membership(
     membership_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
+    settings=Depends(get_settings),
 ):
     """
     Delete a user membership.
@@ -636,9 +637,10 @@ async def delete_user_membership(
     ):
         raise HTTPException(status_code=403, detail="Unauthorized")
 
-    await cruds_memberships.delete_user_membership(
+    await remove_membership_from_user(
+        user_membership=db_user_membership,
+        settings=settings,
         db=db,
-        user_membership_id=membership_id,
     )
 
 
@@ -679,13 +681,14 @@ async def synchronize_membership_with_group(
             minimal_end_date=datetime.now(UTC).date(),
         )
     )
+    unique_membership_user_ids = {member.user_id for member in membership_members}
     await cruds_groups.delete_membership_by_group_id(
         group_id=group_id,
         db=db,
     )
-    for member in membership_members:
+    for user_id in unique_membership_user_ids:
         membership = models_groups.CoreMembership(
-            user_id=member.user_id,
+            user_id=user_id,
             group_id=group_id,
             description=None,
         )
