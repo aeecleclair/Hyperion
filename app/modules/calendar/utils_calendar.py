@@ -7,7 +7,7 @@ from icalendar import Calendar, Event, vRecur
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.feed import schemas_feed
-from app.core.feed.utils_feed import create_feed_news, edit_feed_news
+from app.core.feed.utils_feed import create_feed_news, delete_feed_news, edit_feed_news
 from app.core.utils.config import Settings
 from app.modules.calendar import models_calendar
 from app.modules.calendar.types_calendar import Decision
@@ -38,7 +38,7 @@ async def add_event_to_feed(
         action_start=event.ticket_url_opening,
         module=module_value,
         module_object_id=module_object_id_value,
-        image_directory="event",
+        image_directory=root,
         image_id=event.id,
         require_feed_admin_approval=False,
         db=db,
@@ -48,12 +48,14 @@ async def add_event_to_feed(
 
 async def edit_event_feed_news(
     event: models_calendar.Event,
+    module: str,
+    module_object_id: UUID,
     db: AsyncSession,
     notification_tool: NotificationTool,
 ):
     await edit_feed_news(
-        module=root,
-        module_object_id=event.id,
+        module=module,
+        module_object_id=module_object_id,
         news_edit=schemas_feed.NewsEdit(
             title=event.name,
             start=event.start,
@@ -65,6 +67,21 @@ async def edit_event_feed_news(
         require_feed_admin_approval=False,
         db=db,
         notification_tool=notification_tool,
+    )
+
+
+async def delete_event_feed_news(
+    module: str,
+    module_object_id: UUID,
+    db: AsyncSession,
+):
+    """
+    module: could be "event" or "ticket"
+    """
+    await delete_feed_news(
+        module=module,
+        module_object_id=module_object_id,
+        db=db,
     )
 
 

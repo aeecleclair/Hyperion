@@ -7,6 +7,9 @@ from fastapi.testclient import TestClient
 
 from app.core.associations import models_associations
 from app.core.groups import models_groups
+from app.core.mypayment import models_mypayment
+from app.core.mypayment.types_mypayment import WalletType
+from app.core.tickets import models_tickets
 from app.core.users import models_users
 from app.modules.calendar import models_calendar
 from app.modules.calendar.endpoints_calendar import CalendarPermissions
@@ -36,6 +39,9 @@ token_simple: str
 token_amap: str
 
 simple_user_ical_secret = "simple_user_ical_secret"
+
+
+ticket_event: models_tickets.TicketEvent
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
@@ -148,6 +154,61 @@ async def init_objects() -> None:
         secret=simple_user_ical_secret,
     )
     await add_object_to_db(secret)
+
+    # Ticket event linked to feed
+    core_association = models_associations.CoreAssociation(
+        id=uuid.uuid4(),
+        name="Association",
+        group_id=admin_group.id,
+    )
+    await add_object_to_db(core_association)
+    structure = models_mypayment.Structure(
+        id=uuid.uuid4(),
+        name="Test Structure",
+        creation=datetime.datetime.now(datetime.UTC),
+        association_membership_id=None,
+        manager_user_id=calendar_user_admin.id,
+        short_id="ABC",
+        siege_address_street="123 Test Street",
+        siege_address_city="Test City",
+        siege_address_zipcode="12345",
+        siege_address_country="Test Country",
+        siret="12345678901234",
+        iban="FR76 1234 5678 9012 3456 7890 123",
+        bic="AZERTYUIOP",
+    )
+    await add_object_to_db(structure)
+    store_wallet = models_mypayment.Wallet(
+        id=uuid.uuid4(),
+        type=WalletType.STORE,
+        balance=5000,  # 50€
+    )
+    await add_object_to_db(store_wallet)
+
+    mypayment_store: models_mypayment.Store = models_mypayment.Store(
+        id=uuid.uuid4(),
+        name="Test Store",
+        structure_id=structure.id,
+        wallet_id=store_wallet.id,
+        creation=datetime.datetime.now(datetime.UTC),
+        association_id=core_association.id,
+    )
+    await add_object_to_db(mypayment_store)
+
+    global ticket_event
+    ticket_event = models_tickets.TicketEvent(
+        id=uuid.uuid4(),
+        name="Ticket Event",
+        open_datetime=datetime.datetime.now(datetime.UTC),
+        close_datetime=datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=1),
+        quota=100,
+        disabled=False,
+        store_id=mypayment_store.id,
+        sessions=[],
+        categories=[],
+        questions=[],
+    )
+    await add_object_to_db(ticket_event)
 
 
 def test_get_all_events(client: TestClient) -> None:
@@ -333,10 +394,79 @@ def test_add_event_non_existing_association(client: TestClient) -> None:
     assert response.status_code == 404
 
 
+def test_edit_event_non_existing_id(client: TestClient) -> None:
+    response = client.patch(
+        f"/calendar/events/{uuid.uuid4()}",
+        json={"description": "Apprendre à programmer"},
+        headers={"Authorization": f"Bearer {token_amap}"},
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Event not found"
+
+
 def test_edit_event(client: TestClient) -> None:
     response = client.patch(
         f"/calendar/events/{calendar_event.id}",
         json={"description": "Apprendre à programmer"},
+        headers={"Authorization": f"Bearer {token_amap}"},
+    )
+    assert response.status_code == 204
+
+
+def test_edit_event_with_ticket_event_id_and_ticket_url(client: TestClient) -> None:
+    response = client.patch(
+        f"/calendar/events/{calendar_event.id}",
+        json={
+            "ticket_url": "https://example.com/ticket",
+            "ticket_event_id": str(uuid.uuid4()),
+        },
+        headers={"Authorization": f"Bearer {token_amap}"},
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "ticket_url and ticket_url_opening should not be provided when ticket_event_id is provided"
+    )
+
+
+def test_edit_event_with_non_existing_ticket_event_id(client: TestClient) -> None:
+    response = client.patch(
+        f"/calendar/events/{calendar_event.id}",
+        json={
+            "ticket_event_id": str(uuid.uuid4()),
+        },
+        headers={"Authorization": f"Bearer {token_amap}"},
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Ticket event not found"
+
+
+def test_edit_event_between_ticket_event_id_and_ticket_url(client: TestClient) -> None:
+
+    response = client.patch(
+        f"/calendar/events/{calendar_event.id}",
+        json={
+            "ticket_event_id": str(ticket_event.id),
+        },
+        headers={"Authorization": f"Bearer {token_amap}"},
+    )
+    assert response.status_code == 204
+
+    response = client.patch(
+        f"/calendar/events/{calendar_event.id}",
+        json={
+            "ticket_url": "https://example.com/ticket",
+            "ticket_url_opening": "2019-08-24T14:15:22Z",
+        },
+        headers={"Authorization": f"Bearer {token_amap}"},
+    )
+    assert response.status_code == 204
+
+    response = client.patch(
+        f"/calendar/events/{calendar_event.id}",
+        json={
+            "ticket_event_id": str(ticket_event.id),
+        },
         headers={"Authorization": f"Bearer {token_amap}"},
     )
     assert response.status_code == 204
@@ -351,6 +481,10 @@ def test_edit_event_with_missing_ticket_field(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token_amap}"},
     )
     assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Ticket URL and opening time must be provided together"
+    )
 
     response = client.patch(
         f"/calendar/events/{calendar_event_to_delete.id}",
@@ -360,6 +494,10 @@ def test_edit_event_with_missing_ticket_field(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token_amap}"},
     )
     assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Ticket URL and opening time must be provided together"
+    )
 
 
 def test_edit_event_not_member(client: TestClient) -> None:

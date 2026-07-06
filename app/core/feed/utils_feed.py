@@ -125,6 +125,44 @@ async def edit_feed_news(
             )
 
 
+async def update_news_module_and_object_id(
+    module: str,
+    module_object_id: uuid.UUID,
+    new_module: str,
+    new_module_object_id: uuid.UUID,
+    db: AsyncSession,
+):
+    """
+    Change the module and module_object_id of a news in the feed
+    """
+    await cruds_feed.update_news_module_and_object_id(
+        module=module,
+        module_object_id=module_object_id,
+        new_module=new_module,
+        new_module_object_id=new_module_object_id,
+        db=db,
+    )
+
+
+async def delete_feed_news(
+    module: str,
+    module_object_id: uuid.UUID,
+    db: AsyncSession,
+):
+    """
+    Delete a news in the feed
+
+    module: identifier of the module that created the news, may be used to open the right page in the app
+    module_object_id: identifier of the object that is linked to the news in the module, may be used to open the right page in the app
+    """
+
+    await cruds_feed.delete_news_by_module_object_id(
+        module=module,
+        module_object_id=module_object_id,
+        db=db,
+    )
+
+
 async def check_if_module_object_id_is_linked_to_feed(
     module: str,
     module_object_id: uuid.UUID,

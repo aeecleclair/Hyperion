@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.feed import models_feed, schemas_feed
@@ -62,6 +62,29 @@ async def change_news_status(
     )
 
 
+async def update_news_module_and_object_id(
+    module: str,
+    module_object_id: UUID,
+    new_module: str,
+    new_module_object_id: UUID,
+    db: AsyncSession,
+) -> None:
+    """
+    Change the module and module_object_id of a news in the feed
+    """
+    await db.execute(
+        update(models_feed.News)
+        .where(
+            models_feed.News.module == module,
+            models_feed.News.module_object_id == module_object_id,
+        )
+        .values(
+            module=new_module,
+            module_object_id=new_module_object_id,
+        ),
+    )
+
+
 async def change_news_status_by_module_object_id(
     module: str,
     module_object_id: UUID,
@@ -106,3 +129,16 @@ async def get_news_by_module_object_id(
         ),
     )
     return result.scalars().first()
+
+
+async def delete_news_by_module_object_id(
+    module: str,
+    module_object_id: UUID,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        delete(models_feed.News).where(
+            models_feed.News.module == module,
+            models_feed.News.module_object_id == module_object_id,
+        ),
+    )

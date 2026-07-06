@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.associations import cruds_associations
-from app.core.feed import cruds_feed
+from app.core.feed import cruds_feed, utils_feed
 from app.core.feed.types_feed import NewsStatus
 from app.core.groups.groups_type import AccountType
 from app.core.notification.schemas_notification import Message
@@ -33,6 +33,7 @@ from app.modules.calendar import (
 )
 from app.modules.calendar.factory_calendar import CalendarFactory
 from app.modules.calendar.types_calendar import Decision
+from app.modules.calendar.utils_calendar import delete_event_feed_news
 from app.types.content_type import ContentType
 from app.types.exceptions import NewlyAddedObjectInDbNotFoundError
 from app.types.module import Module
@@ -417,7 +418,7 @@ async def add_event(
     "/calendar/events/{event_id}",
     status_code=204,
 )
-async def edit_envent(
+async def edit_event(
     event_id: uuid.UUID,
     event_edit: schemas_calendar.EventEdit,
     db: AsyncSession = Depends(get_db),
@@ -431,23 +432,44 @@ async def edit_envent(
 
     **Only usable by admins or members of the event's association**
     """
-    event = await cruds_calendar.get_event(db=db, event_id=event_id)
+    old_event = await cruds_calendar.get_event(db=db, event_id=event_id)
 
-    if event is None:
-        raise HTTPException(status_code=404)
+    if old_event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
 
-    if event_edit.ticket_url_opening and not event_edit.ticket_url:
-        if not event.ticket_url_opening:
+    previous_feed_module = (
+        "tickets" if old_event.ticket_event_id else utils_calendar.root
+    )
+    previous_feed_module_object_id = old_event.ticket_event_id or event_id
+
+    if event_edit.ticket_event_id:
+        if event_edit.ticket_url or event_edit.ticket_url_opening:
             raise HTTPException(
                 status_code=400,
-                detail="Ticket URL and opening time must be provided together",
+                detail="ticket_url and ticket_url_opening should not be provided when ticket_event_id is provided",
             )
-    if event_edit.ticket_url and not event_edit.ticket_url_opening:
-        if not event.ticket_url:
-            raise HTTPException(
-                status_code=400,
-                detail="Ticket URL and opening time must be provided together",
-            )
+        ticket_event = await cruds_tickets.get_event_simple_by_id(
+            event_id=event_edit.ticket_event_id,
+            db=db,
+        )
+        if ticket_event is None:
+            raise HTTPException(status_code=404, detail="Ticket event not found")
+        event_edit.ticket_url_opening = ticket_event.open_datetime
+
+    elif (event_edit.ticket_url_opening and not event_edit.ticket_url) or (
+        event_edit.ticket_url and not event_edit.ticket_url_opening
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Ticket URL and opening time must be provided together",
+        )
+
+    if event_edit.ticket_event_id:
+        # We want to set the ticket_url to None when a ticket_event_id is provided
+        event_edit.ticket_url = None
+    elif event_edit.ticket_url:
+        # We want to force the ticket_event_id to None when a ticket_url is provided
+        event_edit.ticket_event_id = None
 
     has_user_calendar_admin_access = await has_user_permission(
         user,
@@ -458,7 +480,7 @@ async def edit_envent(
     if (
         not is_user_member_of_an_association(
             user=user,
-            association=event.association,
+            association=old_event.association,
         )
         and not has_user_calendar_admin_access
     ):
@@ -467,8 +489,8 @@ async def edit_envent(
             detail="You are not allowed to edit this event",
         )
 
-    new_decision = event.decision
-    if event.decision != Decision.pending and not has_user_calendar_admin_access:
+    new_decision = old_event.decision
+    if old_event.decision != Decision.pending and not has_user_calendar_admin_access:
         # If the event is not pending and the user is not a member of the group BDE, we will change the decision back to pending
         new_decision = Decision.pending
 
@@ -481,11 +503,39 @@ async def edit_envent(
     event_db = await cruds_calendar.get_event(db=db, event_id=event_id)
     if event_db is None:
         raise NewlyAddedObjectInDbNotFoundError("event")
-    await utils_calendar.edit_event_feed_news(
-        event=event_db,
-        db=db,
-        notification_tool=notification_tool,
-    )
+
+    if old_event.decision != Decision.pending and not has_user_calendar_admin_access:
+        # We want to remove the feed related news if the event was previously approved
+        await delete_event_feed_news(
+            module=previous_feed_module,
+            module_object_id=previous_feed_module_object_id,
+            db=db,
+        )
+    else:
+        # If we approve the event directly, we want to update the feed news
+
+        new_feed_module = "tickets" if event_db.ticket_event_id else utils_calendar.root
+        new_feed_module_object_id = event_db.ticket_event_id or event_id
+
+        if (
+            new_feed_module != previous_feed_module
+            or new_feed_module_object_id != previous_feed_module_object_id
+        ):
+            await utils_feed.update_news_module_and_object_id(
+                module=previous_feed_module,
+                module_object_id=previous_feed_module_object_id,
+                new_module=new_feed_module,
+                new_module_object_id=new_feed_module_object_id,
+                db=db,
+            )
+
+        await utils_calendar.edit_event_feed_news(
+            event=event_db,
+            module=new_feed_module,
+            module_object_id=new_feed_module_object_id,
+            db=db,
+            notification_tool=notification_tool,
+        )
 
 
 @module.router.patch(
