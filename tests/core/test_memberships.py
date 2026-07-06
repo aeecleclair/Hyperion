@@ -1007,6 +1007,73 @@ async def test_post_batch_user_memberships_admin(client: TestClient):
     assert membership is not None
 
 
+async def test_user_document_renewal_unknown_membership(client: TestClient):
+    response = client.post(
+        f"/memberships/users/{uuid.uuid4()}/renew-documents",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 404
+
+
+async def test_user_document_renewal_user(client: TestClient):
+    response = client.post(
+        f"/memberships/users/{useecl_user_membership.id}/renew-documents",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
+
+async def test_user_document_renewal_no_template_id(client: TestClient):
+    response = client.post(
+        f"/memberships/users/{aeecl_user_membership.id}/renew-documents",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 400
+
+
+async def test_user_document_renewal_admin(client: TestClient, mocker: MockerFixture):
+
+    mocked_id = uuid4()
+    mocker.patch(
+        "app.core.documents.utils_documents.uuid.uuid4",
+        return_value=mocked_id,
+    )
+    mock_use = mocker.patch(
+        "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.use_template",
+        return_value=MockedTemplateUseResponse(
+            id=1100,
+            recipients=[MockedRecipientResponse(token="mocked_signing_token")],
+            title="Mocked Document Title",
+        ),
+    )
+
+    targeted_membership = models_memberships.CoreAssociationUserMembership(
+        id=uuid.uuid4(),
+        user_id=bde_user.id,
+        association_membership_id=useecl_association_membership.id,
+        start_date=datetime.now(tz=UTC).date() - timedelta(days=1000),
+        end_date=datetime.now(tz=UTC).date() + timedelta(days=750),
+    )
+    await add_object_to_db(targeted_membership)
+
+    response = client.post(
+        f"/memberships/users/{targeted_membership.id}/renew-documents",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 201
+    assert mock_use.called
+
+    membership_response = client.get(
+        f"/memberships/users/{bde_user.id}/{useecl_association_membership.id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert membership_response.status_code == 200
+    assert any(
+        membership["document_id"] == str(mocked_id)
+        for membership in membership_response.json()
+    )
+
+
 async def test_synchronize(client: TestClient):
     group_membership = models_groups.CoreMembership(
         user_id=bde_user.id,

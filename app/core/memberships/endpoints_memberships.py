@@ -602,6 +602,75 @@ async def update_user_membership(
     )
 
 
+@router.post(
+    "/memberships/users/{membership_id}/renew-documents",
+    status_code=201,
+    response_model=schemas_memberships.MembershipRenewalErrors,
+)
+async def renew_user_membership_document(
+    membership_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user()),
+    settings=Depends(get_settings),
+):
+    """
+    Renew the documents of a user membership.
+
+    **This endpoint is only usable by administrators and membership managers**
+    """
+    db_user_membership = await cruds_memberships.get_user_membership_by_id(
+        db=db,
+        user_membership_id=membership_id,
+    )
+    if db_user_membership is None:
+        raise HTTPException(status_code=404, detail="User membership not found")
+    db_association_membership = (
+        await cruds_memberships.get_association_membership_by_id(
+            db,
+            db_user_membership.association_membership_id,
+        )
+    )
+    if db_association_membership is None:
+        raise ValueError
+    if not is_user_member_of_any_group(
+        user,
+        [GroupType.admin, db_association_membership.manager_group_id],
+    ):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    if db_association_membership.template is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Association Membership has no template associated",
+        )
+    team = await cruds_documents.get_team_by_id(
+        db=db,
+        team_id=db_association_membership.template.team_id,
+    )
+    if team is None:
+        raise ElementTeamNotFoundError(
+            team_id=db_association_membership.template.team_id,
+        )
+
+    try:
+        await renew_membership_documents(
+            association_membership=db_association_membership,
+            team=team,
+            user_membership=db_user_membership,
+            db=db,
+            settings=settings,
+        )
+        return schemas_memberships.MembershipRenewalErrors(errors={})
+    except Exception as e:
+        if isinstance(e, DocumentCreationError):
+            return schemas_memberships.MembershipRenewalErrors(
+                errors={e.user_email: e.message},
+            )
+        return schemas_memberships.MembershipRenewalErrors(
+            errors={db_user_membership.user_id: str(e)},
+        )
+
+
 @router.delete(
     "/memberships/users/{membership_id}",
     status_code=204,
