@@ -330,7 +330,7 @@ async def update_template(
 )
 async def use_template(
     template_id: uuid.UUID,
-    recipient_list: schemas_documents.TemplateUse,
+    parameters: schemas_documents.TemplateUse,
     db: AsyncSession = Depends(get_db),
     user: schemas_users.CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
@@ -373,12 +373,22 @@ async def use_template(
     errors: dict[str, str] = {}
     users = await cruds_users.get_users_by_emails(
         db=db,
-        emails=recipient_list.recipients,
+        emails=list(set(parameters.recipients)),
     )
     found_emails = [user.email for user in users]
-    for email in recipient_list.recipients:
+    for email in parameters.recipients:
         if email not in found_emails:
             errors[email] = "User not found"
+    if not parameters.allow_duplicate:
+        existing_documents = await cruds_documents.get_documents_by_template_id(
+            db=db,
+            template_id=template_id,
+        )
+        existing_user_ids = {doc.user_id for doc in existing_documents}
+        existing_users = {user for user in users if user.id in existing_user_ids}
+        users = {user for user in users if user.id not in existing_user_ids}
+        for each_user in existing_users:
+            errors[each_user.email] = "Document already exists for this user"
 
     # Retrieve the target user to fill in the recipient fields
     documents = await asyncio.gather(

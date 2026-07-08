@@ -60,6 +60,7 @@ class TemplateDocumensoUpdate(BaseModel):
 
 class TemplateUse(BaseModel):
     recipients: list[str]
+    allow_duplicate: bool | None = False
 
 
 class TemplateUseResponse(BaseModel):
