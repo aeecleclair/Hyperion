@@ -821,6 +821,22 @@ async def test_use_template_for_a_recipient_user_not_found(
     assert response.json()["errors"]["test@test.fr"] == "User not found"
 
 
+async def test_use_template_for_a_recipient_duplicate(
+    client: TestClient,
+):
+    response = client.post(
+        f"/documents/templates/{templateTeam1.id}/documents/",
+        json={"recipients": [user_lambda.email]},
+        headers={"Authorization": f"Bearer {user_team1_token}"},
+    )
+    assert response.status_code == 201, response.text
+    assert len(response.json()["errors"]) == 1
+    assert (
+        response.json()["errors"][user_lambda.email]
+        == "Document already exists for this user"
+    )
+
+
 async def test_use_template_for_a_recipient(
     client: TestClient,
     mocker: MockerFixture,
@@ -840,7 +856,10 @@ async def test_use_template_for_a_recipient(
     )
     response = client.post(
         f"/documents/templates/{templateTeam1.id}/documents/",
-        json={"recipients": [user_lambda.email]},
+        json={
+            "recipients": [user_lambda.email],
+            "allow_duplicate": True,
+        },
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
     assert response.status_code == 201, response.text

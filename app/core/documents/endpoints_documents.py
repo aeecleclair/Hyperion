@@ -371,9 +371,11 @@ async def use_template(
         )
 
     errors: dict[str, str] = {}
-    users = await cruds_users.get_users_by_emails(
-        db=db,
-        emails=list(set(parameters.recipients)),
+    users = set(
+        await cruds_users.get_users_by_emails(
+            db=db,
+            emails=list(set(parameters.recipients)),
+        ),
     )
     found_emails = [user.email for user in users]
     for email in parameters.recipients:
