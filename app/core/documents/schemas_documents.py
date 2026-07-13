@@ -9,7 +9,6 @@ from app.core.users.schemas_users import CoreUser
 
 
 class TeamBase(BaseModel):
-    team_id: int
     group_id: str
     name: str
     api_key: str
@@ -17,6 +16,12 @@ class TeamBase(BaseModel):
 
 class Team(TeamBase):
     id: UUID
+    team_id: int
+
+
+class TeamInfo(BaseModel):
+    id: UUID
+    name: str
 
 
 class TeamComplete(Team):
@@ -45,8 +50,11 @@ class Template(TemplateBase):
 
 
 class TemplateComplete(Template):
-    documents: list["DocumentComplete"]
     team: Team
+
+
+class TemplateCompleteWithDocuments(TemplateComplete):
+    documents: list["DocumentWithUser"]
 
 
 class TemplateUpdate(BaseModel):
@@ -87,5 +95,9 @@ class DocumentWithToken(Document):
     signing_token: str
 
 
-class DocumentComplete(Document):
+class DocumentWithUser(Document):
     user: CoreUser
+
+
+class DocumentWithTeamInfo(Document):
+    team_info: TeamInfo

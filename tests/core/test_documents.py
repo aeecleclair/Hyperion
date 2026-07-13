@@ -3,7 +3,12 @@ from unittest.mock import ANY
 from uuid import UUID, uuid4
 
 import pytest_asyncio
-from documenso_sdk import DocumentDownloadResponse
+from documenso_sdk import (
+    DocumentDownloadResponse,
+    FolderFindFoldersData,
+    FolderFindFoldersDataType,
+    FolderFindFoldersVisibility,
+)
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 from pytest_mock import MockerFixture
@@ -338,18 +343,62 @@ async def test_create_team_invalid_api_key(client: TestClient):
     assert len(response.json()) == 2
 
 
+async def test_create_team_no_folder(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    mocker.patch(
+        "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.find_folders",
+        return_value=[],
+    )
+    response = client.post(
+        "/documents/teams/",
+        json={
+            "team_id": 6,
+            "group_id": group3.id,
+            "name": "Team 6",
+            "api_key": "api_key_6",
+        },
+        headers={"Authorization": f"Bearer {user_admin_token}"},
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "No folders found in Documenso for the provided API key"
+    )
+
+    response = client.get(
+        "/documents/teams/",
+        headers={"Authorization": f"Bearer {user_admin_token}"},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+
+
 async def test_create_team(
     client: TestClient,
     mocker: MockerFixture,
 ):
     mocker.patch(
         "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.find_folders",
-        return_value=None,
+        return_value=[
+            FolderFindFoldersData(
+                id="zs",
+                name="aqsz",
+                user_id=1,
+                team_id=3,
+                parent_id=None,
+                created_at=datetime.now(UTC).isoformat(),
+                updated_at=datetime.now(UTC).isoformat(),
+                pinned=False,
+                visibility=FolderFindFoldersVisibility.EVERYONE,
+                type=FolderFindFoldersDataType.DOCUMENT,
+            ),
+        ],
     )
     response = client.post(
         "/documents/teams/",
         json={
-            "team_id": 3,
             "group_id": group3.id,
             "name": "Team 3",
             "api_key": "api_key_3",
@@ -447,13 +496,105 @@ async def test_update_team_invalid_api_key(client: TestClient):
     assert team1_data["api_key"] == "api_key_1"
 
 
+async def test_update_team_no_folder(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    mocker.patch(
+        "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.find_folders",
+        return_value=[],
+    )
+    response = client.patch(
+        f"/documents/teams/{team1.id}",
+        json={
+            "name": "Team 1 Updated",
+            "group_id": group4.id,
+            "api_key": "api_key_1_updated",
+        },
+        headers={"Authorization": f"Bearer {user_admin_token}"},
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "No folders found in Documenso for the provided API key"
+    )
+
+    response = client.get(
+        "/documents/teams",
+        headers={"Authorization": f"Bearer {user_admin_token}"},
+    )
+    assert response.status_code == 200
+    teams = response.json()
+    team1_data = next((t for t in teams if t["id"] == str(team1.id)), None)
+    assert team1_data is not None
+    assert team1_data["name"] == "Team 1"
+
+
+async def test_update_team_different_documenso_team(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    mocker.patch(
+        "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.find_folders",
+        return_value=[
+            FolderFindFoldersData(
+                id="zs",
+                name="aqsz",
+                user_id=1,
+                team_id=8,
+                parent_id=None,
+                created_at=datetime.now(UTC).isoformat(),
+                updated_at=datetime.now(UTC).isoformat(),
+                pinned=False,
+                visibility=FolderFindFoldersVisibility.EVERYONE,
+                type=FolderFindFoldersDataType.DOCUMENT,
+            ),
+        ],
+    )
+    response = client.patch(
+        f"/documents/teams/{team1.id}",
+        json={
+            "api_key": "api_key_1_updated",
+        },
+        headers={"Authorization": f"Bearer {user_admin_token}"},
+    )
+    assert response.status_code == 400, response.text
+    assert (
+        response.json()["detail"]
+        == "The provided API key corresponds to a different Documenso team than the one being updated"
+    )
+
+    response = client.get(
+        "/documents/teams",
+        headers={"Authorization": f"Bearer {user_admin_token}"},
+    )
+    assert response.status_code == 200
+    teams = response.json()
+    team1_data = next((t for t in teams if t["id"] == str(team1.id)), None)
+    assert team1_data is not None
+    assert team1_data["api_key"] == "api_key_1"
+
+
 async def test_update_team(
     client: TestClient,
     mocker: MockerFixture,
 ):
     mocker.patch(
         "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.find_folders",
-        return_value=None,
+        return_value=[
+            FolderFindFoldersData(
+                id="zs",
+                name="aqsz",
+                user_id=1,
+                team_id=1,
+                parent_id=None,
+                created_at=datetime.now(UTC).isoformat(),
+                updated_at=datetime.now(UTC).isoformat(),
+                pinned=False,
+                visibility=FolderFindFoldersVisibility.EVERYONE,
+                type=FolderFindFoldersDataType.DOCUMENT,
+            ),
+        ],
     )
     response = client.patch(
         f"/documents/teams/{team1.id}",

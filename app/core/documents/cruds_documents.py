@@ -8,11 +8,12 @@ from sqlalchemy.orm import selectinload
 from app.core.documents import models_documents, schemas_documents
 from app.core.documents.types_documenso import DocumentStatus
 from app.core.documents.utils_documents import (
-    document_complete_model_to_schema,
     document_model_to_schema,
+    document_with_team_info_model_to_schema,
+    document_with_user_model_to_schema,
     team_complete_model_to_schema,
     team_model_to_schema,
-    template_complete_model_to_schema,
+    template_complete_with_documents_model_to_schema,
     template_model_to_schema,
 )
 
@@ -82,6 +83,26 @@ async def get_team_by_name(
             await db.execute(
                 select(models_documents.DocumentTeam).where(
                     models_documents.DocumentTeam.name == name,
+                ),
+            )
+        )
+        .scalars()
+        .first()
+    )
+    return team_model_to_schema(result) if result else None
+
+
+async def get_team_by_team_id(
+    db: AsyncSession,
+    team_id: int,
+) -> schemas_documents.Team | None:
+    """Return a team by its Documenso team id."""
+
+    result = (
+        (
+            await db.execute(
+                select(models_documents.DocumentTeam).where(
+                    models_documents.DocumentTeam.team_id == team_id,
                 ),
             )
         )
@@ -173,7 +194,7 @@ async def get_team_templates(
 async def get_template_by_id(
     db: AsyncSession,
     template_id: UUID,
-) -> schemas_documents.TemplateComplete | None:
+) -> schemas_documents.TemplateCompleteWithDocuments | None:
     """Return a template by its internal id."""
 
     result = (
@@ -191,13 +212,13 @@ async def get_template_by_id(
         .scalars()
         .first()
     )
-    return template_complete_model_to_schema(result) if result else None
+    return template_complete_with_documents_model_to_schema(result) if result else None
 
 
 async def get_template_by_documenso_id(
     db: AsyncSession,
     documenso_id: int,
-) -> schemas_documents.TemplateComplete | None:
+) -> schemas_documents.TemplateCompleteWithDocuments | None:
     """Return a template by its Documenso id."""
 
     result = (
@@ -211,7 +232,7 @@ async def get_template_by_documenso_id(
         .scalars()
         .first()
     )
-    return template_complete_model_to_schema(result) if result else None
+    return template_complete_with_documents_model_to_schema(result) if result else None
 
 
 async def create_template(
@@ -259,21 +280,29 @@ async def update_template(
 async def get_documents_by_user_id(
     db: AsyncSession,
     user_id: str,
-) -> list[schemas_documents.Document]:
+) -> list[schemas_documents.DocumentWithTeamInfo]:
     """Return all documents assigned to a user (without signing token)"""
 
     result = await db.execute(
-        select(models_documents.DocumentDocument).where(
+        select(models_documents.DocumentDocument)
+        .where(
             models_documents.DocumentDocument.user_id == user_id,
+        )
+        .options(
+            selectinload(models_documents.DocumentDocument.template).selectinload(
+                models_documents.DocumentTemplate.team,
+            ),
         ),
     )
-    return [document_model_to_schema(doc) for doc in result.scalars().all()]
+    return [
+        document_with_team_info_model_to_schema(doc) for doc in result.scalars().all()
+    ]
 
 
 async def get_documents_by_template_id(
     db: AsyncSession,
     template_id: UUID,
-) -> list[schemas_documents.DocumentComplete]:
+) -> list[schemas_documents.DocumentWithUser]:
     """Return all documents generated from a given template"""
 
     result = await db.execute(
@@ -281,7 +310,7 @@ async def get_documents_by_template_id(
             models_documents.DocumentDocument.template_id == template_id,
         ),
     )
-    return [document_complete_model_to_schema(doc) for doc in result.scalars().all()]
+    return [document_with_user_model_to_schema(doc) for doc in result.scalars().all()]
 
 
 async def get_document_by_id(

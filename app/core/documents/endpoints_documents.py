@@ -123,23 +123,32 @@ async def create_team(
             detail=f"A team for the group {team_base.group_id} already exists",
         )
 
-    team = schemas_documents.Team(
-        id=uuid.uuid4(),
-        team_id=team_base.team_id,
-        group_id=team_base.group_id,
-        name=team_base.name,
-        api_key=team_base.api_key,
-    )
-
-    documenso = _configure_documenso_api_wrapper(team, settings)
+    documenso = _configure_documenso_api_wrapper(team_base.api_key, settings)
     try:
-        await documenso.find_folders()
+        folders = await documenso.find_folders()
     except Exception as e:
         raise HTTPException(
             status_code=400,
             detail=f"Failed to connect to Documenso with the provided API key: {e}",
         )
-
+    if not folders:
+        raise HTTPException(
+            status_code=400,
+            detail="No folders found in Documenso for the provided API key",
+        )
+    team_id = int(folders[0].team_id)
+    if await cruds_documents.get_team_by_team_id(db=db, team_id=team_id) is not None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"A team with the Documenso team ID {team_id} already exists",
+        )
+    team = schemas_documents.Team(
+        id=uuid.uuid4(),
+        team_id=int(team_id),
+        group_id=team_base.group_id,
+        name=team_base.name,
+        api_key=team_base.api_key,
+    )
     await cruds_documents.create_team(team=team, db=db)
     return team
 
@@ -186,15 +195,26 @@ async def update_team(
                 status_code=400,
                 detail=f"A team for the group {team_update.group_id} already exists",
             )
-
-    documenso = _configure_documenso_api_wrapper(db_team, settings)
-    try:
-        await documenso.find_folders()
-    except Exception as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Failed to connect to Documenso with the provided API key: {e}",
-        )
+    if team_update.api_key and team_update.api_key != db_team.api_key:
+        documenso = _configure_documenso_api_wrapper(team_update.api_key, settings)
+        try:
+            folders = await documenso.find_folders()
+        except Exception as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to connect to Documenso with the provided API key: {e}",
+            )
+        if not folders:
+            raise HTTPException(
+                status_code=400,
+                detail="No folders found in Documenso for the provided API key",
+            )
+        documenso_team_id = int(folders[0].team_id)
+        if documenso_team_id != db_team.team_id:
+            raise HTTPException(
+                status_code=400,
+                detail="The provided API key corresponds to a different Documenso team than the one being updated",
+            )
 
     await cruds_documents.update_team(db=db, team_id=team_id, team_update=team_update)
 
@@ -254,7 +274,7 @@ async def read_team_templates(
 
 @router.get(
     "/documents/templates/{template_id}",
-    response_model=schemas_documents.TemplateComplete,
+    response_model=schemas_documents.TemplateCompleteWithDocuments,
     status_code=200,
 )
 async def read_template(
@@ -361,7 +381,7 @@ async def use_template(
             detail="You do not have permission to use this template",
         )
 
-    documenso = _configure_documenso_api_wrapper(db_team, settings)
+    documenso = _configure_documenso_api_wrapper(db_team.api_key, settings)
 
     destination_folder_id = db_template.document_directory_id
     if destination_folder_id is None:
@@ -424,7 +444,7 @@ async def use_template(
 
 @router.get(
     "/documents/me/",
-    response_model=list[schemas_documents.Document],
+    response_model=list[schemas_documents.DocumentWithTeamInfo],
     status_code=200,
 )
 async def read_my_documents(
@@ -511,7 +531,7 @@ async def download_document_file(
     ):
         raise HTTPException(status_code=403, detail="Access forbidden")
 
-    documenso = _configure_documenso_api_wrapper(db_team, settings=settings)
+    documenso = _configure_documenso_api_wrapper(db_team.api_key, settings=settings)
     file_content = await documenso.download_document(
         document_id=db_document.documenso_id,
     )
@@ -527,7 +547,7 @@ async def download_document_file(
 
 @router.get(
     "/documents/templates/{template_id}/documents/",
-    response_model=list[schemas_documents.DocumentComplete],
+    response_model=list[schemas_documents.DocumentWithUser],
     status_code=200,
 )
 async def read_template_documents(

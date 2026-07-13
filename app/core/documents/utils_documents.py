@@ -65,8 +65,25 @@ def template_complete_model_to_schema(
         updated_at=model.updated_at,
         deleted=model.deleted,
         document_directory_id=model.document_directory_id,
+        team=team_model_to_schema(model.team),
+    )
+
+
+def template_complete_with_documents_model_to_schema(
+    model: models_documents.DocumentTemplate,
+) -> schemas_documents.TemplateCompleteWithDocuments:
+    """Convert a DocumentTemplate model to a TemplateComplete schema."""
+    return schemas_documents.TemplateCompleteWithDocuments(
+        id=model.id,
+        documenso_id=model.documenso_id,
+        name=model.name,
+        team_id=model.team_id,
+        created_at=model.created_at,
+        updated_at=model.updated_at,
+        deleted=model.deleted,
+        document_directory_id=model.document_directory_id,
         documents=[
-            document_complete_model_to_schema(document) for document in model.documents
+            document_with_user_model_to_schema(document) for document in model.documents
         ],
         team=team_model_to_schema(model.team),
     )
@@ -108,11 +125,11 @@ def document_model_to_schema(
     )
 
 
-def document_complete_model_to_schema(
+def document_with_user_model_to_schema(
     model: models_documents.DocumentDocument,
-) -> schemas_documents.DocumentComplete:
+) -> schemas_documents.DocumentWithUser:
     """Convert a DocumentDocument model to a DocumentComplete schema."""
-    return schemas_documents.DocumentComplete(
+    return schemas_documents.DocumentWithUser(
         id=model.id,
         documenso_id=model.documenso_id,
         name=model.name,
@@ -133,15 +150,36 @@ def document_complete_model_to_schema(
     )
 
 
+def document_with_team_info_model_to_schema(
+    model: models_documents.DocumentDocument,
+) -> schemas_documents.DocumentWithTeamInfo:
+    """Convert a DocumentDocument model to a DocumentWithTemplate schema."""
+    return schemas_documents.DocumentWithTeamInfo(
+        id=model.id,
+        documenso_id=model.documenso_id,
+        name=model.name,
+        template_id=model.template_id,
+        module=model.module,
+        user_id=model.user_id,
+        status=model.status,
+        created_at=model.created_at,
+        updated_at=model.updated_at,
+        team_info=schemas_documents.TeamInfo(
+            id=model.template.team.id,
+            name=model.template.team.name,
+        ),
+    )
+
+
 def _configure_documenso_api_wrapper(
-    team: schemas_documents.Team,
+    api_key: str,
     settings: Settings,
 ) -> DocumensoAPIWrapper:
     if settings.DOCUMENSO_URL is None:
         raise MissingDocumensoURLError()
     return DocumensoAPIWrapper(
         configuration=DocumensoConfiguration(
-            api_key=team.api_key,
+            api_key=api_key,
             documenso_url=settings.DOCUMENSO_URL,
         ),
     )

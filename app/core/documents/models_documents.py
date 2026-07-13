@@ -48,6 +48,7 @@ class DocumentTemplate(Base):
         "DocumentDocument",
         lazy="selectin",
         init=False,
+        back_populates="template",
     )
     team: Mapped[DocumentTeam] = relationship(
         "DocumentTeam",
@@ -75,4 +76,10 @@ class DocumentDocument(Base):
         "CoreUser",
         lazy="joined",
         init=False,
+    )
+    template: Mapped[DocumentTemplate] = relationship(
+        "DocumentTemplate",
+        lazy="selectin",
+        init=False,
+        back_populates="documents",
     )

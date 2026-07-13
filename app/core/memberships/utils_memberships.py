@@ -216,7 +216,7 @@ async def add_membership_to_user(
             raise ElementTemplateNotFoundError(association_membership.template_id)
 
         documenso = _configure_documenso_api_wrapper(
-            team=template.team,
+            api_key=template.team.api_key,
             settings=settings,
         )
 
@@ -274,7 +274,7 @@ async def renew_membership_documents(
         return
 
     documenso = _configure_documenso_api_wrapper(
-        team=team,
+        api_key=team.api_key,
         settings=settings,
     )
 
@@ -323,7 +323,7 @@ async def remove_membership_from_user(
         if template is None:
             return
         documenso = _configure_documenso_api_wrapper(
-            team=template.team,
+            api_key=template.team.api_key,
             settings=settings,
         )
         await delete_document(
