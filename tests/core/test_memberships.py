@@ -96,6 +96,7 @@ async def init_objects():
         id=uuid.uuid4(),
         documenso_id=1,
         name="Template",
+        recipient_id=1,
         team_id=team.id,
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
