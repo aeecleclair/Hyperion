@@ -38,6 +38,7 @@ class DocumentTemplate(Base):
     id: Mapped[PrimaryKey]
     documenso_id: Mapped[int] = mapped_column(unique=True)
     name: Mapped[str]
+    recipient_id: Mapped[int]
     team_id: Mapped[UUID] = mapped_column(ForeignKey("document_team.id"))
     created_at: Mapped[datetime]
     updated_at: Mapped[datetime]

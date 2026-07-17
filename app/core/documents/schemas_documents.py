@@ -38,6 +38,7 @@ class TeamUpdate(BaseModel):
 class TemplateBase(BaseModel):
     documenso_id: int
     name: str
+    recipient_id: int
     team_id: UUID
 
 

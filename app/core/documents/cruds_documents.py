@@ -352,6 +352,7 @@ async def create_template(
             id=template.id,
             documenso_id=template.documenso_id,
             name=template.name,
+            recipient_id=template.recipient_id,
             team_id=template.team_id,
             deleted=template.deleted,
             document_directory_id=template.document_directory_id,
