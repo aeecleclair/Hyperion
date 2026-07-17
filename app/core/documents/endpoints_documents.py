@@ -247,7 +247,7 @@ async def delete_team(
 
 @router.get(
     "/documents/teams/{team_id}/templates/",
-    response_model=list[schemas_documents.Template],
+    response_model=list[schemas_documents.TemplateWithStatistics],
     status_code=200,
 )
 async def read_team_templates(
@@ -269,7 +269,10 @@ async def read_team_templates(
             detail="You do not have permission to view templates for this team",
         )
 
-    return await cruds_documents.get_team_templates(db=db, team_id=team_id)
+    return await cruds_documents.get_team_templates_with_statistics(
+        db=db,
+        team_id=team_id,
+    )
 
 
 @router.get(

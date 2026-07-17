@@ -275,6 +275,15 @@ async def test_get_user_teams(client: TestClient):
     )
     assert response.status_code == 200
     assert len(response.json()) == 1
+    template_team = response.json()[0]
+    assert template_team["id"] == str(team1.id)
+    templates = template_team["templates"]
+    assert len(templates) == 2
+    assert templates[0]["id"] == str(templateTeam1.id)
+    assert templates[0]["statistics"]["total_documents"] == 6
+    assert templates[0]["statistics"]["total_signed_documents"] == 1
+    assert templates[0]["statistics"]["total_pending_documents"] == 4
+    assert templates[0]["statistics"]["total_rejected_documents"] == 1
 
 
 async def test_create_team_existing_group(client: TestClient):
@@ -673,6 +682,10 @@ async def test_get_team_templates(client: TestClient):
     templates = response.json()
     assert len(templates) == 1
     assert templates[0]["id"] == str(templateTeam2.id)
+    assert templates[0]["statistics"]["total_documents"] == 1
+    assert templates[0]["statistics"]["total_signed_documents"] == 0
+    assert templates[0]["statistics"]["total_pending_documents"] == 1
+    assert templates[0]["statistics"]["total_rejected_documents"] == 0
 
 
 async def test_get_team_templates_not_found(client: TestClient):

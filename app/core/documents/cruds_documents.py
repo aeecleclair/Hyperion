@@ -1,9 +1,10 @@
+from collections import defaultdict
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import ScalarSelect, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import noload, selectinload
 
 from app.core.documents import models_documents, schemas_documents
 from app.core.documents.types_documenso import DocumentStatus
@@ -14,8 +15,35 @@ from app.core.documents.utils_documents import (
     team_complete_model_to_schema,
     team_model_to_schema,
     template_complete_with_documents_model_to_schema,
-    template_model_to_schema,
+    template_with_statistics_model_to_schema,
 )
+
+
+def _template_statistics_subqueries() -> tuple[
+    ScalarSelect[int],
+    ScalarSelect[int],
+    ScalarSelect[int],
+    ScalarSelect[int],
+]:
+    def base(*extra):
+        return (
+            select(func.count(models_documents.DocumentDocument.id))
+            .where(
+                models_documents.DocumentDocument.template_id
+                == models_documents.DocumentTemplate.id,
+                *extra,
+            )
+            .correlate(models_documents.DocumentTemplate)
+            .scalar_subquery()
+        )
+
+    return (
+        base(),
+        base(models_documents.DocumentDocument.status == DocumentStatus.COMPLETED),
+        base(models_documents.DocumentDocument.status == DocumentStatus.PENDING),
+        base(models_documents.DocumentDocument.status == DocumentStatus.REJECTED),
+    )
+
 
 # region Team
 
@@ -51,9 +79,9 @@ async def get_teams_by_group_ids(
     db: AsyncSession,
     group_ids: list[str],
 ) -> list[schemas_documents.TeamComplete]:
-    """Return a team by its internal id."""
+    """Return teams by their group ids, along with their templates and statistics."""
 
-    result = (
+    teams = (
         (
             await db.execute(
                 select(models_documents.DocumentTeam)
@@ -61,15 +89,64 @@ async def get_teams_by_group_ids(
                     models_documents.DocumentTeam.group_id.in_(group_ids),
                 )
                 .options(
-                    selectinload(models_documents.DocumentTeam.templates),
                     selectinload(models_documents.DocumentTeam.group),
+                    noload(models_documents.DocumentTeam.templates),
                 ),
             )
         )
         .scalars()
         .all()
     )
-    return [team_complete_model_to_schema(team) for team in result]
+
+    if not teams:
+        return []
+
+    team_ids = [team.id for team in teams]
+
+    total_sq, completed_sq, pending_sq, rejected_sq = _template_statistics_subqueries()
+
+    templates_result = await db.execute(
+        select(
+            models_documents.DocumentTemplate,
+            total_sq.label("total_documents"),
+            completed_sq.label("total_signed_documents"),
+            pending_sq.label("total_pending_documents"),
+            rejected_sq.label("total_rejected_documents"),
+        )
+        .where(
+            models_documents.DocumentTemplate.team_id.in_(team_ids),
+        )
+        .options(
+            noload(models_documents.DocumentTemplate.documents),
+        ),
+    )
+
+    templates_by_team_id: dict[UUID, list[schemas_documents.TemplateWithStatistics]] = (
+        defaultdict(list)
+    )
+    for (
+        template,
+        total_documents,
+        total_signed_documents,
+        total_pending_documents,
+        total_rejected_documents,
+    ) in templates_result.all():
+        templates_by_team_id[template.team_id].append(
+            template_with_statistics_model_to_schema(
+                template,
+                schemas_documents.TemplateStatistics(
+                    total_documents=total_documents,
+                    total_signed_documents=total_signed_documents,
+                    total_pending_documents=total_pending_documents,
+                    total_rejected_documents=total_rejected_documents,
+                ),
+            ),
+        )
+
+    return [
+        team_complete_model_to_schema(team, templates_by_team_id.get(team.id, []))
+        for team in teams
+    ]
 
 
 async def get_team_by_name(
@@ -177,18 +254,47 @@ async def delete_team(db: AsyncSession, team_id: UUID) -> None:
 # region Template
 
 
-async def get_team_templates(
+async def get_team_templates_with_statistics(
     db: AsyncSession,
     team_id: UUID,
-) -> list[schemas_documents.Template]:
-    """Return all templates filtered by team."""
+) -> list[schemas_documents.TemplateWithStatistics]:
+    """Return all templates filtered by team, with document statistics."""
+
+    total_sq, completed_sq, pending_sq, rejected_sq = _template_statistics_subqueries()
 
     result = await db.execute(
-        select(models_documents.DocumentTemplate).where(
+        select(
+            models_documents.DocumentTemplate,
+            total_sq.label("total_documents"),
+            completed_sq.label("total_signed_documents"),
+            pending_sq.label("total_pending_documents"),
+            rejected_sq.label("total_rejected_documents"),
+        )
+        .where(
             models_documents.DocumentTemplate.team_id == team_id,
+        )
+        .options(
+            noload(models_documents.DocumentTemplate.documents),
         ),
     )
-    return [template_model_to_schema(template) for template in result.scalars().all()]
+    return [
+        template_with_statistics_model_to_schema(
+            template,
+            schemas_documents.TemplateStatistics(
+                total_documents=total_documents,
+                total_signed_documents=total_signed_documents,
+                total_pending_documents=total_pending_documents,
+                total_rejected_documents=total_rejected_documents,
+            ),
+        )
+        for (
+            template,
+            total_documents,
+            total_signed_documents,
+            total_pending_documents,
+            total_rejected_documents,
+        ) in result.all()
+    ]
 
 
 async def get_template_by_id(

@@ -39,6 +39,24 @@ def template_model_to_schema(
     )
 
 
+def template_with_statistics_model_to_schema(
+    model: models_documents.DocumentTemplate,
+    statistics: schemas_documents.TemplateStatistics,
+) -> schemas_documents.TemplateWithStatistics:
+    """Convert a DocumentTemplate model to a TemplateWithStatistics schema."""
+    return schemas_documents.TemplateWithStatistics(
+        id=model.id,
+        documenso_id=model.documenso_id,
+        name=model.name,
+        team_id=model.team_id,
+        created_at=model.created_at,
+        updated_at=model.updated_at,
+        deleted=model.deleted,
+        document_directory_id=model.document_directory_id,
+        statistics=statistics,
+    )
+
+
 def team_model_to_schema(
     model: models_documents.DocumentTeam,
 ) -> schemas_documents.Team:
@@ -91,6 +109,7 @@ def template_complete_with_documents_model_to_schema(
 
 def team_complete_model_to_schema(
     model: models_documents.DocumentTeam,
+    templates_with_statistics: list[schemas_documents.TemplateWithStatistics],
 ) -> schemas_documents.TeamComplete:
     """Convert a DocumentTeam model to a TeamComplete schema."""
     return schemas_documents.TeamComplete(
@@ -99,7 +118,7 @@ def team_complete_model_to_schema(
         api_key=model.api_key,
         name=model.name,
         group_id=model.group_id,
-        templates=[template_model_to_schema(template) for template in model.templates],
+        templates=templates_with_statistics,
         group=CoreGroup(
             id=model.group.id,
             name=model.group.name,

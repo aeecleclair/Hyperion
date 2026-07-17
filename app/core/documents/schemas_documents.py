@@ -25,7 +25,7 @@ class TeamInfo(BaseModel):
 
 
 class TeamComplete(Team):
-    templates: list["Template"]
+    templates: list["TemplateWithStatistics"]
     group: CoreGroup
 
 
@@ -47,6 +47,17 @@ class Template(TemplateBase):
     document_directory_id: str | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class TemplateStatistics(BaseModel):
+    total_documents: int
+    total_signed_documents: int
+    total_pending_documents: int
+    total_rejected_documents: int
+
+
+class TemplateWithStatistics(Template):
+    statistics: TemplateStatistics
 
 
 class TemplateComplete(Template):
