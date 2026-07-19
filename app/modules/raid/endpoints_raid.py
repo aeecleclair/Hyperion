@@ -3,7 +3,7 @@ import uuid
 from datetime import UTC, date, datetime
 
 from anyio import Path
-from fastapi import Depends, File, HTTPException, UploadFile
+from fastapi import Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,6 +29,7 @@ from app.modules.raid.utils.utils_raid import (
 )
 from app.types.content_type import ContentType
 from app.types.module import Module
+from app.types.upload import FILE_RESPONSE, UploadFile
 from app.utils.tools import (
     delete_all_folder_from_data,
     get_core_data,
@@ -401,7 +402,7 @@ async def delete_all_teams(
 )
 async def upload_document(
     document_type: DocumentType,
-    file: UploadFile = File(...),
+    file: UploadFile,
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
@@ -454,6 +455,7 @@ async def upload_document(
 @module.router.get(
     "/raid/document/{document_id}",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def read_document(
@@ -994,6 +996,7 @@ async def get_payment_url(
 @module.router.get(
     "/raid/security_files_zip",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def download_security_files_zip(
@@ -1018,6 +1021,7 @@ async def download_security_files_zip(
 @module.router.get(
     "/raid/team_files_zip",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def download_team_files_zip(

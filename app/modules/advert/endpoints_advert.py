@@ -2,7 +2,7 @@ import logging
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import Depends, File, HTTPException, Query, UploadFile
+from fastapi import Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,6 +27,7 @@ from app.modules.advert import (
 from app.modules.advert.factory_advert import AdvertFactory
 from app.types.content_type import ContentType
 from app.types.module import Module
+from app.types.upload import FILE_RESPONSE, UploadFile
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.tools import (
     compress_and_save_image_file,
@@ -284,6 +285,7 @@ async def delete_advert(
 @module.router.get(
     "/advert/adverts/{advert_id}/picture",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def read_advert_image(
@@ -318,7 +320,7 @@ async def read_advert_image(
 )
 async def create_advert_image(
     advert_id: uuid.UUID,
-    image: UploadFile = File(...),
+    image: UploadFile,
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([AdvertPermissions.access_adverts]),
     ),

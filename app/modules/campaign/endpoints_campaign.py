@@ -4,7 +4,7 @@ import uuid
 from datetime import UTC, datetime
 
 from anyio import Path
-from fastapi import Depends, File, HTTPException, UploadFile
+from fastapi import Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,6 +27,7 @@ from app.modules.campaign.types_campaign import ListType, StatusType
 from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
+from app.types.upload import FILE_RESPONSE, UploadFile
 from app.utils.tools import (
     compress_and_save_image_file,
     get_file_from_data,
@@ -824,7 +825,7 @@ async def get_stats_for_section(
 )
 async def create_campaigns_logo(
     list_id: str,
-    image: UploadFile = File(...),
+    image: UploadFile,
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([CampaignPermissions.manage_campaign]),
     ),
@@ -872,6 +873,7 @@ async def create_campaigns_logo(
 @module.router.get(
     "/campaign/lists/{list_id}/logo",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def read_campaigns_logo(

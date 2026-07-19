@@ -3,7 +3,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 import httpx
-from fastapi import Depends, File, HTTPException, UploadFile
+from fastapi import Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,6 +25,7 @@ from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
 from app.types.scheduler import Scheduler
+from app.types.upload import FILE_RESPONSE, UploadFile
 from app.utils.communication.date_manager import (
     get_date_day,
     get_date_month,
@@ -224,7 +225,7 @@ async def delete_session(
 )
 async def create_campaigns_logo(
     session_id: str,
-    image: UploadFile = File(...),
+    image: UploadFile,
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([CinemaPermissions.manage_sessions]),
     ),
@@ -259,6 +260,7 @@ async def create_campaigns_logo(
 @module.router.get(
     "/cinema/sessions/{session_id}/poster",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def read_session_poster(

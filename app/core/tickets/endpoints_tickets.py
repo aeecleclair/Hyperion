@@ -39,6 +39,7 @@ from app.dependencies import (
 )
 from app.types.exceptions import ObjectExpectedInDbNotFoundError
 from app.types.module import CoreModule
+from app.types.upload import FILE_RESPONSE
 from app.utils.communication.notifications import NotificationTool
 from app.utils.mail.mailworker import send_email
 
@@ -1121,6 +1122,7 @@ async def get_event_tickets(
 @router.get(
     "/tickets/admin/events/{event_id}/tickets/csv",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def get_event_tickets_csv(

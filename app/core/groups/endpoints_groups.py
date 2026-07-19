@@ -7,7 +7,7 @@ Group management is part of the core of Hyperion. These endpoints allow managing
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,6 +25,7 @@ from app.dependencies import (
 )
 from app.types.content_type import ContentType
 from app.types.module import CoreModule
+from app.types.upload import FILE_RESPONSE, UploadFile
 from app.utils.communication.notifications import NotificationManager
 from app.utils.tools import (
     compress_and_save_image_file,
@@ -393,6 +394,7 @@ async def create_group_logo(
 @router.get(
     "/groups/{group_id}/logo",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def read_user_profile_picture(

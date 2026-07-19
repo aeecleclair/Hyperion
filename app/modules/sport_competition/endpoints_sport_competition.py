@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from io import BytesIO
 from uuid import UUID, uuid4
 
-from fastapi import Body, Depends, File, HTTPException, Query, Response, UploadFile
+from fastapi import Body, Depends, HTTPException, Query, Response
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -66,6 +66,7 @@ from app.modules.sport_competition.utils_sport_competition import (
 )
 from app.types.content_type import ContentType
 from app.types.module import Module
+from app.types.upload import FILE_RESPONSE, UploadFile
 from app.utils.tools import (
     delete_file_from_data,
     get_file_from_data,
@@ -2033,6 +2034,7 @@ async def get_participants_for_school(
 @module.router.get(
     "/competition/participants/users/{user_id}/certificate",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
 )
 async def download_participant_certificate(
     user_id: str,
@@ -2237,7 +2239,7 @@ async def join_sport(
 )
 async def upload_participant_certificate(
     sport_id: UUID,
-    certificate: UploadFile = File(...),
+    certificate: UploadFile,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([SportCompetitionPermissions.access_sport_competition]),
@@ -4451,6 +4453,7 @@ async def register_to_volunteer_shift(
 @module.router.get(
     "/competition/data-export/users",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def export_competition_users_data(
@@ -4522,6 +4525,7 @@ async def export_competition_users_data(
 @module.router.get(
     "/competition/data-export/schools/{school_id}/users",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def export_school_competition_users_data(
@@ -4602,6 +4606,7 @@ async def export_school_competition_users_data(
 @module.router.get(
     "/competition/data-export/participants/captains",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def export_participants_captains_data(
@@ -4659,6 +4664,7 @@ async def export_participants_captains_data(
 @module.router.get(
     "/competition/data-export/schools/{school_id}/quotas",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def export_school_quotas_data(
@@ -4727,6 +4733,7 @@ async def export_school_quotas_data(
 @module.router.get(
     "/competition/data-export/sports/{sport_id}/quotas",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def export_sport_quotas_data(
@@ -4783,6 +4790,7 @@ async def export_sport_quotas_data(
 @module.router.get(
     "/competition/data-export/sports/{sport_id}/participants",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def export_sport_participants_data(

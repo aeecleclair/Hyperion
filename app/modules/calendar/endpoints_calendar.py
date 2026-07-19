@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import Depends, File, HTTPException, UploadFile
+from fastapi import Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,6 +37,7 @@ from app.modules.calendar.utils_calendar import delete_event_feed_news
 from app.types.content_type import ContentType
 from app.types.exceptions import NewlyAddedObjectInDbNotFoundError
 from app.types.module import Module
+from app.types.upload import FILE_RESPONSE, UploadFile
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.tools import (
     compress_and_save_image_file,
@@ -189,6 +190,7 @@ async def get_event_ticket_url(
 @module.router.get(
     "/calendar/events/{event_id}/image",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def get_event_image(
@@ -237,7 +239,7 @@ async def get_event_image(
 )
 async def create_event_image(
     event_id: uuid.UUID,
-    image: UploadFile = File(...),
+    image: UploadFile,
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([CalendarPermissions.access_calendar]),
     ),
@@ -732,6 +734,7 @@ async def recreate_ical_file(
 @module.router.get(
     "/calendar/ical",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def get_icalendar_file(

@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +21,7 @@ from app.modules.recommendation.factory_recommendation import RecommendationFact
 from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
+from app.types.upload import FILE_RESPONSE, UploadFile
 from app.utils.tools import (
     compress_and_save_image_file,
     get_file_from_data,
@@ -150,6 +151,7 @@ async def delete_recommendation(
 @module.router.get(
     "/recommendation/recommendations/{recommendation_id}/picture",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def read_recommendation_image(
@@ -186,7 +188,7 @@ async def read_recommendation_image(
 )
 async def create_recommendation_image(
     recommendation_id: uuid.UUID,
-    image: UploadFile = File(),
+    image: UploadFile,
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([RecommendationPermissions.manage_recommendation]),
     ),

@@ -1,9 +1,11 @@
 from datetime import datetime
+from typing import Annotated
 from uuid import UUID
 
 from pydantic import (
     BaseModel,
     Field,
+    WithJsonSchema,
     model_validator,
 )
 
@@ -209,7 +211,15 @@ class WalletDevice(WalletDeviceBase):
 
 
 class WalletDeviceCreation(WalletDeviceBase):
-    ed25519_public_key: bytes
+    # A `bytes` field serializes to the JSON Schema 2020-12 form
+    # `{"type": "string", "contentMediaType": "application/octet-stream"}`, which
+    # breaks OpenAPI/Swagger client generators. The value is a base64-encoded
+    # public key (decoded in the endpoint), so we describe it as an OAS base64
+    # string instead.
+    ed25519_public_key: Annotated[
+        bytes,
+        WithJsonSchema({"type": "string", "format": "byte"}),
+    ]
 
 
 class TransactionBase(BaseModel):

@@ -48,6 +48,7 @@ from app.modules.cdr.utils_cdr import (
 )
 from app.types.exceptions import ObjectExpectedInDbNotFoundError
 from app.types.module import Module
+from app.types.upload import FILE_RESPONSE
 from app.types.websocket import (
     HyperionWebsocketsRoom,
     WebsocketConnectionManager,
@@ -539,6 +540,7 @@ async def generate_and_send_results(
     "/cdr/sellers/{seller_id}/results/",
     status_code=200,
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
 )
 async def send_seller_results(
     seller_id: UUID,

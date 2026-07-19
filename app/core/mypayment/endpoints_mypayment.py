@@ -100,6 +100,7 @@ from app.types import standard_responses
 from app.types.exceptions import ObjectExpectedInDbNotFoundError
 from app.types.module import CoreModule
 from app.types.scopes_type import ScopeType
+from app.types.upload import FILE_RESPONSE
 from app.utils.auth.auth_utils import get_user_id_from_token_with_scopes
 from app.utils.communication.notifications import NotificationTool
 from app.utils.mail.mailworker import send_email
@@ -3083,6 +3084,7 @@ async def get_structure_invoices(
 @router.get(
     "/mypayment/invoices/{invoice_id}",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
 )
 async def download_invoice(
     invoice_id: UUID,

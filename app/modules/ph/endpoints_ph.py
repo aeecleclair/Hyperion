@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime, time, timedelta
 
-from fastapi import Depends, File, HTTPException, UploadFile
+from fastapi import Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +20,7 @@ from app.modules.ph import cruds_ph, models_ph, schemas_ph
 from app.types.content_type import ContentType
 from app.types.module import Module
 from app.types.scheduler import Scheduler
+from app.types.upload import FILE_RESPONSE, UploadFile
 from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import (
     delete_file_from_data,
@@ -57,6 +58,7 @@ module = Module(
 @module.router.get(
     "/ph/{paper_id}/pdf",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def get_paper_pdf(
@@ -179,7 +181,7 @@ async def create_paper(
 )
 async def create_paper_pdf_and_cover(
     paper_id: uuid.UUID,
-    pdf: UploadFile = File(...),
+    pdf: UploadFile,
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([PHPermissions.manage_ph]),
     ),

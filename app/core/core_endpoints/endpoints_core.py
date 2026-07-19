@@ -8,6 +8,7 @@ from app.dependencies import (
     get_settings,
 )
 from app.types.module import CoreModule
+from app.types.upload import FILE_RESPONSE
 from app.utils.tools import patch_identity_in_text
 
 router = APIRouter(tags=["Core"])
@@ -197,6 +198,7 @@ async def get_variables(settings: Settings = Depends(get_settings)):
 @router.get(
     "/favicon.ico",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def get_favicon():

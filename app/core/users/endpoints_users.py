@@ -10,10 +10,8 @@ from fastapi import (
     BackgroundTasks,
     Body,
     Depends,
-    File,
     HTTPException,
     Query,
-    UploadFile,
 )
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -45,6 +43,7 @@ from app.types.content_type import ContentType
 from app.types.exceptions import UserWithEmailAlreadyExistError
 from app.types.module import CoreModule
 from app.types.s3_access import S3Access
+from app.types.upload import FILE_RESPONSE, UploadFile
 from app.utils.communication.notifications import NotificationManager
 from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
@@ -1105,7 +1104,7 @@ async def update_user_as_super_admin(
     status_code=201,
 )
 async def create_current_user_profile_picture(
-    image: UploadFile = File(...),
+    image: UploadFile,
     user: models_users.CoreUser = Depends(is_user()),
 ):
     """
@@ -1135,6 +1134,7 @@ async def create_current_user_profile_picture(
 @router.get(
     "/users/me/profile-picture",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def read_own_profile_picture(
@@ -1154,6 +1154,7 @@ async def read_own_profile_picture(
 @router.get(
     "/users/{user_id}/profile-picture",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def read_user_profile_picture(

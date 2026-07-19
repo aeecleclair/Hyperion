@@ -14,6 +14,7 @@ from app.dependencies import (
     is_user_allowed_to,
 )
 from app.types.module import CoreModule
+from app.types.upload import FILE_RESPONSE
 from app.utils.tools import get_file_from_data
 
 router = APIRouter(tags=["Feed"])
@@ -51,6 +52,7 @@ async def get_published_news(
 @router.get(
     "/feed/news/{news_id}/image",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def get_news_image(

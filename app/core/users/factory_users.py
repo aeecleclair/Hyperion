@@ -126,6 +126,16 @@ class CoreUsersFactory(Factory):
             )
             await cruds_users.create_user(db=db, user=user)
             for group in user_info.groups:
+                # A demo user may reference a group that does not exist in the
+                # database (e.g. a group only created by a later migration).
+                # We skip those memberships instead of failing the whole factory.
+                if await cruds_groups.get_group_by_id(db=db, group_id=group) is None:
+                    hyperion_error_logger.warning(
+                        "Skipping membership for demo user %s: group %s does not exist",
+                        user.email,
+                        group,
+                    )
+                    continue
                 await cruds_groups.create_membership(
                     db=db,
                     membership=CoreMembership(

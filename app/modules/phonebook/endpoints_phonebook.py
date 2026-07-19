@@ -1,7 +1,7 @@
 import logging
 import uuid
 
-from fastapi import Depends, File, HTTPException, UploadFile
+from fastapi import Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +21,7 @@ from app.modules.phonebook.types_phonebook import RoleTags
 from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
+from app.types.upload import FILE_RESPONSE, UploadFile
 from app.utils.tools import (
     compress_and_save_image_file,
     get_file_from_data,
@@ -772,7 +773,7 @@ async def delete_membership(
 )
 async def create_association_logo(
     association_id: str,
-    image: UploadFile = File(),
+    image: UploadFile,
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
@@ -820,6 +821,7 @@ async def create_association_logo(
 @module.router.get(
     "/phonebook/associations/{association_id}/picture",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def read_association_logo(

@@ -1,7 +1,7 @@
 import logging
 import uuid
 
-from fastapi import Depends, File, HTTPException, UploadFile
+from fastapi import Depends, HTTPException
 from fastapi.responses import FileResponse
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +22,7 @@ from app.modules.raffle.types_raffle import RaffleStatusType
 from app.types import standard_responses
 from app.types.content_type import ContentType
 from app.types.module import Module
+from app.types.upload import FILE_RESPONSE, UploadFile
 from app.utils.redis import locker_get, locker_set
 from app.utils.tools import (
     compress_and_save_image_file,
@@ -225,7 +226,7 @@ async def get_raffle_stats(
 )
 async def create_current_raffle_logo(
     raffle_id: str,
-    image: UploadFile = File(...),
+    image: UploadFile,
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
@@ -272,6 +273,7 @@ async def create_current_raffle_logo(
 @module.router.get(
     "/tombola/raffles/{raffle_id}/logo",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def read_raffle_logo(
@@ -779,7 +781,7 @@ async def get_prizes_by_raffleid(
 )
 async def create_prize_picture(
     prize_id: str,
-    image: UploadFile = File(...),
+    image: UploadFile,
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
@@ -830,6 +832,7 @@ async def create_prize_picture(
 @module.router.get(
     "/tombola/prizes/{prize_id}/picture",
     response_class=FileResponse,
+    responses=FILE_RESPONSE,
     status_code=200,
 )
 async def read_prize_logo(
