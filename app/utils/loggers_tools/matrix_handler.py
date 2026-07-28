@@ -1,13 +1,13 @@
 import logging
-from logging import StreamHandler
-from typing import override
+from logging import LogRecord, StreamHandler
+from typing import TextIO, override
 
 from app.utils.communication.matrix import Matrix
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
 
-class MatrixHandler(StreamHandler):
+class MatrixHandler(StreamHandler[TextIO]):
     """
     A logging handler which sends log records to a Matrix server.
 
@@ -38,7 +38,7 @@ class MatrixHandler(StreamHandler):
             )
 
     @override
-    def emit(self, record):
+    def emit(self, record: LogRecord) -> None:
         if self.enabled:
             msg = self.format(record)
             try:

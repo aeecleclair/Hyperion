@@ -15,7 +15,7 @@ from app.types.exceptions import MissingTZInfoInDatetimeError
 SessionLocalType = Callable[[], AsyncSession]
 
 
-class TZDateTime(TypeDecorator):
+class TZDateTime(TypeDecorator[datetime.datetime]):
     """
     Custom SQLAlchemy type for storing timezone-aware timestamps as timezone-naive UTC timestamps.
     We use this custom type because sqlite doesn't support datetime with timezone

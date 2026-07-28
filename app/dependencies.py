@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Annotated, Any, cast
 from uuid import UUID
 
 import calypsso
-import redis
+import redis.asyncio as redis
 import starlette
 import starlette.datastructures
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
@@ -101,7 +101,7 @@ async def init_state(
 
     SessionLocal = init_SessionLocal(engine)
 
-    redis_client = init_redis_client(
+    redis_client = await init_redis_client(
         settings=settings,
         hyperion_error_logger=hyperion_error_logger,
     )
@@ -145,7 +145,7 @@ async def disconnect_state(
     This methode should be called as a dependency as tests may need to run additional steps
     """
 
-    disconnect_redis_client(GLOBAL_STATE["redis_client"])
+    await disconnect_redis_client(GLOBAL_STATE["redis_client"])
     await disconnect_scheduler(GLOBAL_STATE["scheduler"])
     await disconnect_websocket_connection_manager(GLOBAL_STATE["ws_manager"])
 

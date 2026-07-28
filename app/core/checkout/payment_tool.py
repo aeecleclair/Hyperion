@@ -166,10 +166,10 @@ class CheckoutTool:
             payer: HelloAssoApiV5ModelsCartsCheckoutPayer | None = None
             if payer_user is not None:
                 payer = HelloAssoApiV5ModelsCartsCheckoutPayer(
-                    first_name=payer_user.firstname,  # ty:ignore[unknown-argument]
-                    last_name=payer_user.name,  # ty:ignore[unknown-argument]
+                    first_name=payer_user.firstname,
+                    last_name=payer_user.name,
                     email=payer_user.email,
-                    date_of_birth=datetime.combine(  # ty:ignore[unknown-argument]
+                    date_of_birth=datetime.combine(
                         payer_user.birthday,
                         datetime.min.time(),
                         tzinfo=UTC,
@@ -182,19 +182,19 @@ class CheckoutTool:
             secret = security.generate_token(nbytes=12)
 
             init_checkout_body = HelloAssoApiV5ModelsCartsInitCheckoutBody(
-                total_amount=checkout_amount,  # ty:ignore[unknown-argument]
-                initial_amount=checkout_amount,  # ty:ignore[unknown-argument]
-                item_name=checkout_name,  # ty:ignore[unknown-argument]
-                back_url=redirection_uri,  # ty:ignore[unknown-argument]
-                error_url=redirection_uri,  # ty:ignore[unknown-argument]
-                return_url=redirection_uri,  # ty:ignore[unknown-argument]
-                contains_donation=False,  # ty:ignore[unknown-argument]
+                total_amount=checkout_amount,
+                initial_amount=checkout_amount,
+                item_name=checkout_name,
+                back_url=redirection_uri,
+                error_url=redirection_uri,
+                return_url=redirection_uri,
+                contains_donation=False,
                 payer=payer,
                 metadata=schemas_checkout.HelloAssoCheckoutMetadata(
                     secret=secret,
                     hyperion_checkout_id=str(checkout_model_id),
                 ).model_dump(),
-            )  # ty:ignore[missing-argument] # See https://github.com/astral-sh/ty/issues/1438
+            )
 
             response: HelloAssoApiV5ModelsCartsInitCheckoutResponse
             with ApiClient(configuration) as api_client:

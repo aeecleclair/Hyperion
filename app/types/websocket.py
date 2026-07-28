@@ -76,7 +76,7 @@ class WebsocketConnectionManager:
 
         # We keep a reference to the listening tasks for each room
         # to be able to stop listening to a room when there is no more connection
-        self.listening_tasks: dict[HyperionWebsocketsRoom, asyncio.Task] = {}
+        self.listening_tasks: dict[HyperionWebsocketsRoom, asyncio.Task[None]] = {}
 
     async def connect_broadcaster(self):
         await self.broadcaster.connect()

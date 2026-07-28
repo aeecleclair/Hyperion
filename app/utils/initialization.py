@@ -6,7 +6,7 @@ from collections.abc import Callable
 from typing import ParamSpec, TypeVar
 
 import psutil
-import redis
+import redis.asyncio as redis
 from pydantic import ValidationError
 from sqlalchemy import Connection, MetaData, delete, select
 from sqlalchemy.engine import Engine, create_engine
@@ -340,7 +340,7 @@ async def use_lock_for_workers[**P, R](
         ):
             await execute_async_or_sync_method(job_function, *args, **kwargs)
 
-    elif redis_client.set(key, "1", nx=True, ex=120):
+    elif await redis_client.set(key, "1", nx=True, ex=120):
         # We acquired the lock, we execute the function
         logger.info(f"Running {getattr(job_function, '__name__', repr(job_function))}")
 
@@ -348,19 +348,19 @@ async def use_lock_for_workers[**P, R](
 
         if unlock_key is not None:
             # We set the unlock_key for other workers to resume operation
-            redis_client.set(unlock_key, "1")
+            await redis_client.set(unlock_key, "1")
 
             # After 60 seconds we remove the key for both performance and reloading issues
             # we assume other jobs won't take more than 60 seconds and will check this key before expiration
-            redis_client.expire(unlock_key, 60)
+            await redis_client.expire(unlock_key, 60)
 
         # After 60 seconds we remove the key for both performance and reloading issues
         # we assume other jobs won't take more than 60 seconds and will check this key before expiration
-        redis_client.expire(key, 60)
+        await redis_client.expire(key, 60)
 
     elif unlock_key:
         # As an `unlock_key` is provided, we will wait until an other worker has finished executing `job_function`
-        while redis_client.get(unlock_key) is None:
+        while await redis_client.get(unlock_key) is None:
             logger.debug(
                 f"Waiting for {getattr(job_function, '__name__', repr(job_function))} to finish",
             )

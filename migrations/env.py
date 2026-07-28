@@ -124,7 +124,7 @@ def run_migrations_online() -> None:
     We requires a *connection* (`Connection` or `AsyncConnection`) object. You may obtain one from an *connectable* calling the [`connect` method](https://docs.sqlalchemy.org/en/20/core/connections.html#sqlalchemy.engine.Engine.connect).
     """
 
-    connection: None | Connection | AsyncConnection = config.attributes.get(
+    connection: Connection | AsyncConnection | None = config.attributes.get(
         "connection",
         None,
     )

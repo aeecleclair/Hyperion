@@ -57,7 +57,7 @@ async def override_init_state(
 
     SessionLocal = init_test_SessionLocal(engine=engine)
 
-    redis_client = init_redis_client(
+    redis_client = await init_redis_client(
         settings=settings,
         hyperion_error_logger=hyperion_error_logger,
     )

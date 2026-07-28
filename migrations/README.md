@@ -75,7 +75,7 @@ from sqlalchemy.dialects import postgresql
 You need to use:
 
 ```python
-postgresql.ENUM(name="availableassociationmembership", create_type=False),
+postgresql.ENUM(name="availableassociationmembership", create_type=False)
 ```
 
 ### Convert str id to uuid

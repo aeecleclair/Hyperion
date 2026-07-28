@@ -1,38 +1,38 @@
-alembic==1.18.4                     # database migrations
-anyio==4.13.0
-arq==0.28.0                         # Scheduler 
+alembic==1.18.5                     # database migrations
+anyio==4.14.2
+arq==0.28.0                         # Scheduler, [not maintained, see https://github.com/python-arq/arq/issues/510]
 asyncpg==0.31.0                     # PostgreSQL adapter for asynchronous operations
 authlib==1.7.2
 bcrypt==5.0.0                       # password hashing
-boto3==1.43.24                      # S3 storage
+boto3==1.43.56                      # S3 storage
 broadcaster==0.3.1                  # Working with websockets with multiple workers.
 calypsso-proximapp==2.8.0
 email-validator==2.3.0
-Faker==40.21.0
-fastapi[standard]==0.136.3
-firebase-admin==7.4.0               # Firebase is used for push notification
-google-api-python-client==2.197.0
+Faker==40.36.0
+fastapi[standard]==0.140.0
+firebase-admin==7.5.0               # Firebase is used for push notification
+google-api-python-client==2.198.0
 google-auth-oauthlib==1.4.0
 helloasso-python==1.0.8
-httpx2==2.3.0
-icalendar==7.1.2
+httpx2==2.9.1
+icalendar==7.2.2
 jellyfish==1.2.1                    # String Matching
 Jinja2==3.1.6                       # template engine for html files
-phonenumbers==9.0.32                # Used for phone number validation
+phonenumbers==9.0.35                # Used for phone number validation
 psutil==7.2.2                       # psutil is used to determine the number of Hyperion workers
 psycopg[binary]==3.3.4              # PostgreSQL adapter for *synchronous* operations at startup (database initializations & migrations)
 pydantic-extra-types==2.11.1
-pydantic-settings==2.14.1
+pydantic-settings==2.14.2
 pydantic==2.13.4
-pyjwt[crypto]==2.13.0                # generate and verify the JWT tokens, imported as `jwt`
-PyMuPDF==1.27.2.3                    # PDF processing, imported as `fitz`
-pypdf==6.13.0
-python-multipart==0.0.32             # a form data parser, as oauth flow requires form-data parameters
-redis==5.3.1
+pyjwt[crypto]==2.13.0               # generate and verify the JWT tokens, imported as `jwt`
+PyMuPDF==1.28.0                     # PDF processing, imported as `fitz`
+pypdf==6.14.2
+python-multipart==0.0.32            # a form data parser, as oauth flow requires form-data parameters
+redis==5.3.1                        # arq requires redis<6
 requests==2.34.2
 sqlalchemy-utils == 0.42.1          # used to identify foreign keys when merging users
-SQLAlchemy[asyncio]==2.0.50         # [asyncio] allows greenlet to be installed on Apple M1 devices.
+SQLAlchemy[asyncio]==2.0.51         # [asyncio] allows greenlet to be installed on Apple M1 devices.
 unidecode==1.4.0
-uvicorn[standard]==0.49.0
+uvicorn[standard]==0.51.0
 weasyprint==69.0                    # HTML to PDF converter
 xlsxwriter==3.2.9

@@ -65,9 +65,9 @@ class School(BaseModel):
     # On registration, user whose email match these regex will be automatically assigned to the corresponding account type
     # Use simple quotes to avoid escaping the regex
     # Ex: `student_email_regex: '^[\w\-.]*@domain.fr$'`
-    student_email_regex: Pattern
-    staff_email_regex: Pattern | None = None
-    former_student_email_regex: Pattern | None = None
+    student_email_regex: Pattern[str]
+    staff_email_regex: Pattern[str] | None = None
+    former_student_email_regex: Pattern[str] | None = None
 
     # If event should be confirmed by a moderator before being added to the calendar
     require_event_confirmation: bool = True

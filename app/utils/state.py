@@ -3,7 +3,8 @@ from collections.abc import Callable
 from typing import Any, TypedDict
 
 import calypsso
-import redis
+import redis.asyncio as redis
+from redis.exceptions import ConnectionError as RedisConnectionError
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -76,7 +77,7 @@ def init_SessionLocal(engine: AsyncEngine) -> SessionLocalType:
     )
 
 
-def init_redis_client(
+async def init_redis_client(
     settings: Settings,
     hyperion_error_logger: logging.Logger,
 ) -> redis.Redis | None:
@@ -93,18 +94,19 @@ def init_redis_client(
                 password=settings.REDIS_PASSWORD,
                 socket_keepalive=True,
             )
-            redis_client.ping()  # Test the connection
-        except redis.exceptions.ConnectionError:
+            await redis_client.ping()  # Test the connection
+        except RedisConnectionError:
             hyperion_error_logger.exception(
                 "Redis connection error: Check the Redis configuration or the Redis server",
             )
+
     return redis_client
 
 
-def disconnect_redis_client(redis_client: redis.Redis | None) -> None:
+async def disconnect_redis_client(redis_client: redis.Redis | None) -> None:
     if redis_client is not None:
-        redis_client.flushdb()
-        redis_client.close()
+        await redis_client.flushdb()
+        await redis_client.close()
 
 
 async def init_scheduler(

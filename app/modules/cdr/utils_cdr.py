@@ -370,7 +370,7 @@ def build_data_rows(
     users: list[models_users.CoreUser],
     users_purchases: dict[str, list[models_cdr.Purchase]],
     users_answers: dict[str, list[models_cdr.CustomData]],
-    product_structure: dict,
+    product_structure: dict,  # ty:ignore[missing-type-argument]
     col_idx: int,
 ):
     data_rows = []
@@ -413,7 +413,7 @@ def build_data_rows(
 def write_fixed_headers(
     worksheet: xlsxwriter.Workbook.worksheet_class,
     fixed_columns: list[str],
-    formats: dict,
+    formats: dict,  # ty:ignore[missing-type-argument]
 ):
     for col, title in enumerate(fixed_columns):
         worksheet.merge_range(0, col, 2, col, title, formats["header"]["base"])
@@ -421,9 +421,9 @@ def write_fixed_headers(
 
 def write_product_headers(
     worksheet: xlsxwriter.Workbook.worksheet_class,
-    product_structure: dict,
+    product_structure: dict,  # ty:ignore[missing-type-argument]
     fixed_columns: list[str],
-    formats: dict,
+    formats: dict,  # ty:ignore[missing-type-argument]
     max_lens: list[int],
 ):
     product_end_cols = [
@@ -542,10 +542,10 @@ def write_product_headers(
 
 def write_data_rows(
     worksheet: xlsxwriter.Workbook.worksheet_class,
-    data_rows: list,
+    data_rows: list,  # ty:ignore[missing-type-argument]
     product_end_cols: list[int],
     variant_end_cols: list[int],
-    formats: dict,
+    formats: dict,  # ty:ignore[missing-type-argument]
     max_lens: list[int],
     start_row: int = 3,
 ):
@@ -600,9 +600,9 @@ def write_to_excel(
     worksheet_name: str,
     fixed_columns: list[str],
     product_structure,
-    data_rows: list,
+    data_rows: list,  # ty:ignore[missing-type-argument]
     col_idx: int,
-    formats: dict,
+    formats: dict,  # ty:ignore[missing-type-argument]
 ):
     worksheet = workbook.add_worksheet(worksheet_name)
     max_lens = [len(c) for c in fixed_columns] + [0] * (col_idx - len(fixed_columns))

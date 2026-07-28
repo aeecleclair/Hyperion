@@ -52,7 +52,7 @@ from app.utils.redis import limiter
 from app.utils.state import LifespanState
 
 if TYPE_CHECKING:
-    from redis import Redis
+    from redis.asyncio import Redis
 
     from app.types.factory import Factory
 
@@ -400,21 +400,21 @@ async def initialize_notification_topics(
                     )
 
 
-def use_route_path_as_operation_ids(app: FastAPI) -> None:
+def use_route_path_as_operation_id(route: APIRoute) -> str:
     """
-    Simplify operation IDs so that generated API clients have simpler function names.
+    Simplify operation ID so that generated API clients have simpler function names.
 
     Theses names may be used by API clients to generate function names.
     The operation_id will have the format "method_path", like "get_users_me".
 
     See https://fastapi.tiangolo.com/advanced/path-operation-advanced-configuration/
     """
-    for route in app.routes:
-        if isinstance(route, APIRoute):
-            # The operation_id should be unique.
-            # It is possible to set multiple methods for the same endpoint method but it's not considered a good practice.
-            method = "_".join(route.methods)
-            route.operation_id = method.lower() + route.path.replace("/", "_")
+    if route.methods:
+        # The operation_id should be unique.
+        # It is possible to set multiple methods for the same endpoint method but it's not considered a good practice.
+        method = "_".join(route.methods)
+        return method.lower() + route.path.replace("/", "_")
+    return route.name
 
 
 def init_db(
@@ -645,9 +645,9 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         title="Hyperion",
         version=settings.HYPERION_VERSION,
         lifespan=lifespan,
+        custom_generate_unique_id=use_route_path_as_operation_id,
     )
     app.include_router(api.api_router)
-    use_route_path_as_operation_ids(app)
 
     app.add_middleware(
         CORSMiddleware,
@@ -702,7 +702,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         # We test the ip address with the redis limiter
         process = True
         if redis_client and settings.ENABLE_RATE_LIMITER:  # If redis is configured
-            process, log = limiter(
+            process, log = await limiter(
                 redis_client,
                 ip_address,
                 settings.REDIS_LIMIT,

@@ -40,7 +40,7 @@ class RoleTags(Enum):
     resp_part = "Respo Partenariats"
 
 
-def define_order_of_memberships(memberships: list[sa.Row[Any]]) -> list[list]:
+def define_order_of_memberships(memberships: list[sa.Row[Any]]) -> list[list[Any]]:
     """
     Use tag systeme to introduce a coherent member_order to older membership
     """

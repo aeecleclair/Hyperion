@@ -143,7 +143,7 @@ class Scheduler:
         # ArqWorker, in charge of scheduling and executing tasks
         self.worker: Worker | None = None
         # Task will contain the asyncio task that runs the worker
-        self.task: asyncio.Task | None = None
+        self.task: asyncio.Task[None] | None = None
 
     async def start(
         self,
@@ -254,7 +254,7 @@ class OfflineScheduler(Scheduler):
         # ArqWorker, in charge of scheduling and executing tasks
         self.worker: Worker | None = None
         # Task will contain the asyncio task that runs the worker
-        self.task: asyncio.Task | None = None
+        self.task: asyncio.Task[None] | None = None
         # Pointer to the get_db dependency
 
     async def start(

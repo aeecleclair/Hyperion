@@ -31,8 +31,8 @@ def build_data_rows(
     school_product_quotas: list[schemas_sport_competition.SchoolProductQuota],
     sports: list[schemas_sport_competition.Sport],
     products: list[schemas_sport_competition.ProductComplete],
-) -> tuple[list[list], list[list[int]]]:
-    data_rows: list[list] = [[], [], []]
+) -> tuple[list[list], list[list[int]]]:  # ty:ignore[missing-type-argument]
+    data_rows: list[list] = [[], [], []]  # ty:ignore[missing-type-argument]
     thick_columns: list[list[int]] = [[], [], []]  # First column index
 
     sport_dict = {sport.id: sport for sport in sports}
@@ -102,7 +102,7 @@ def build_data_rows(
 
 def write_sports_headers(
     worksheet: xlsxwriter.Workbook.worksheet_class,
-    formats: dict,
+    formats: dict,  # ty:ignore[missing-type-argument]
 ):
     for col_idx, column in enumerate(SPORT_COLUMNS):
         worksheet.write(0, col_idx, column, formats["header"]["base"])
@@ -110,7 +110,7 @@ def write_sports_headers(
 
 def write_generals_headers(
     worksheet: xlsxwriter.Workbook.worksheet_class,
-    formats: dict,
+    formats: dict,  # ty:ignore[missing-type-argument]
 ):
     for col_idx, column in enumerate(GENERAL_COLUMNS):
         worksheet.write(0, col_idx, column, formats["header"]["base"])
@@ -118,7 +118,7 @@ def write_generals_headers(
 
 def write_products_headers(
     worksheet: xlsxwriter.Workbook.worksheet_class,
-    formats: dict,
+    formats: dict,  # ty:ignore[missing-type-argument]
 ):
     for col_idx, column in enumerate(PRODUCT_COLUMNS):
         worksheet.write(0, col_idx, column, formats["header"]["base"])
@@ -126,9 +126,9 @@ def write_products_headers(
 
 def write_general_quota_sheet(
     worksheet: xlsxwriter.Workbook.worksheet_class,
-    data_rows: list,
+    data_rows: list,  # ty:ignore[missing-type-argument]
     thick_columns: list[int],
-    formats: dict,
+    formats: dict,  # ty:ignore[missing-type-argument]
 ):
     write_generals_headers(worksheet, formats)
     columns_max_length = [len(c) for c in SPORT_COLUMNS]
@@ -146,9 +146,9 @@ def write_general_quota_sheet(
 
 def write_sport_quota_sheet(
     worksheet: xlsxwriter.Workbook.worksheet_class,
-    data_rows: list,
+    data_rows: list,  # ty:ignore[missing-type-argument]
     thick_columns: list[int],
-    formats: dict,
+    formats: dict,  # ty:ignore[missing-type-argument]
 ):
     write_sports_headers(worksheet, formats)
     columns_max_length = [len(c) for c in SPORT_COLUMNS]
@@ -166,9 +166,9 @@ def write_sport_quota_sheet(
 
 def write_product_quota_sheet(
     worksheet: xlsxwriter.Workbook.worksheet_class,
-    data_rows: list,
+    data_rows: list,  # ty:ignore[missing-type-argument]
     thick_columns: list[int],
-    formats: dict,
+    formats: dict,  # ty:ignore[missing-type-argument]
 ):
     write_products_headers(worksheet, formats)
     columns_max_length = [len(c) for c in SPORT_COLUMNS]
@@ -186,9 +186,9 @@ def write_product_quota_sheet(
 
 def write_to_excel(
     workbook: xlsxwriter.Workbook,
-    data_rows: list[list],
+    data_rows: list[list],  # ty:ignore[missing-type-argument]
     thick_columns: list[list[int]],
-    formats: dict,
+    formats: dict,  # ty:ignore[missing-type-argument]
 ):
     if len(data_rows[0]) > 0:
         general_worksheet = workbook.add_worksheet("Quotas généraux")

@@ -1,7 +1,7 @@
 import string
 from datetime import UTC, datetime
-from logging import StreamHandler
-from typing import override
+from logging import LogRecord, StreamHandler
+from typing import TextIO, override
 
 from app.types.s3_access import S3Access
 from app.utils.tools import get_random_string
@@ -9,7 +9,7 @@ from app.utils.tools import get_random_string
 alphanum = string.ascii_lowercase + string.digits
 
 
-class S3LogHandler(StreamHandler):
+class S3LogHandler(StreamHandler[TextIO]):
     def __init__(
         self,
         failure_logger: str,
@@ -28,7 +28,7 @@ class S3LogHandler(StreamHandler):
         )
 
     @override
-    def emit(self, record):
+    def emit(self, record: LogRecord) -> None:
         filename: str | None = getattr(record, "s3_filename", None)
         subfolder: str | None = getattr(record, "s3_subfolder", None)
         retention: int = getattr(record, "s3_retention", 0)

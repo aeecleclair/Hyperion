@@ -3,7 +3,7 @@ import uuid
 
 from fastapi import Depends, HTTPException
 from fastapi.responses import FileResponse
-from redis import Redis
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups import cruds_groups
@@ -522,13 +522,13 @@ async def buy_ticket(
 
     redis_key = "raffle_" + user.id
 
-    if not isinstance(redis_client, Redis) or locker_get(
+    if not isinstance(redis_client, Redis) or await locker_get(
         redis_client=redis_client,
         key=redis_key,
     ):
         raise HTTPException(status_code=429, detail="Too fast !")
 
-    locker_set(redis_client=redis_client, key=redis_key, lock=True)
+    await locker_set(redis_client=redis_client, key=redis_key, lock=True)
 
     try:
         new_amount = balance.balance - pack_ticket.price
@@ -550,7 +550,7 @@ async def buy_ticket(
         return tickets
 
     finally:
-        locker_set(redis_client=redis_client, key=redis_key, lock=False)
+        await locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
 
 @module.router.get(
@@ -1002,12 +1002,12 @@ async def edit_cash_by_id(
 
     redis_key = "raffle_" + user_id
 
-    if not isinstance(redis_client, Redis) or locker_get(
+    if not isinstance(redis_client, Redis) or await locker_get(
         redis_client=redis_client,
         key=redis_key,
     ):
         raise HTTPException(status_code=403, detail="Too fast !")
-    locker_set(redis_client=redis_client, key=redis_key, lock=True)
+    await locker_set(redis_client=redis_client, key=redis_key, lock=True)
 
     try:
         await cruds_raffle.edit_cash(
@@ -1016,7 +1016,7 @@ async def edit_cash_by_id(
             db=db,
         )
     finally:
-        locker_set(redis_client=redis_client, key=redis_key, lock=False)
+        await locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
 
 @module.router.post(
