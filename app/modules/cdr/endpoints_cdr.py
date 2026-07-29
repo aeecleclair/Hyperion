@@ -2640,7 +2640,7 @@ async def get_total_payments_by_seller(
 
     **User must a CDR Admin to use this endpoint**
     """
-    if not (await has_user_permission(user, CdrPermissions.manage_cdr_cdr, db)):
+    if not (await has_user_permission(user, CdrPermissions.manage_cdr, db)):
         raise HTTPException(
             status_code=403,
             detail="You're not allowed to see this.",
@@ -2668,7 +2668,7 @@ async def get_total_payments(
 
     **User must a CDR Admin to use this endpoint**
     """
-    if not (await has_user_permission(user, CdrPermissions.manage_cdr_cdr, db)):
+    if not (await has_user_permission(user, CdrPermissions.manage_cdr, db)):
         raise HTTPException(
             status_code=403,
             detail="You're not allowed to see this.",
