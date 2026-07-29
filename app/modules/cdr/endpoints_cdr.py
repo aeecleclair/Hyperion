@@ -2624,6 +2624,60 @@ async def delete_curriculum_membership(
 
 
 @module.router.get(
+    "/cdr/users/total_payments_by_seller/",
+    response_model=list[schemas_cdr.PaymentComplete],
+    status_code=200,
+)
+async def get_total_payments(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
+    ),
+):
+    """
+    Get a user's payments.
+
+    **User must a CDR Admin to use this endpoint**
+    """
+    if not ( 
+        await has_user_permission(user, CdrPermissions.manage_cdr_cdr, db)
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You're not allowed to see this.",
+        )
+    return await cruds_cdr.get_payment_products_by_sell(
+        db=db,
+    )
+
+@module.router.get(
+    "/cdr/users/total_payments/",
+    response_model=list[schemas_cdr.TotalPurchaseValidatedBySeller],
+    status_code=200,
+)
+async def get_total_payments(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
+    ),
+):
+    """
+    Get a user's payments.
+
+    **User must a CDR Admin to use this endpoint**
+    """
+    if not ( 
+        await has_user_permission(user, CdrPermissions.manage_cdr_cdr, db)
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You're not allowed to see this.",
+        )
+    return await cruds_cdr.get_total_payment_types(
+        db=db,
+    )
+
+@module.router.get(
     "/cdr/users/{user_id}/payments/",
     response_model=list[schemas_cdr.PaymentComplete],
     status_code=200,
