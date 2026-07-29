@@ -2633,6 +2633,7 @@ async def get_total_payments(
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([CdrPermissions.manage_cdr]),
     ),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get a user's payments.
@@ -2648,6 +2649,7 @@ async def get_total_payments(
         )
     return await cruds_cdr.get_payment_products_by_sell(
         db=db,
+        cdr_year=cdr_year.year
     )
 
 @module.router.get(
@@ -2660,6 +2662,7 @@ async def get_total_payments(
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([CdrPermissions.manage_cdr]),
     ),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get a user's payments.
@@ -2675,6 +2678,7 @@ async def get_total_payments(
         )
     return await cruds_cdr.get_total_payment_types(
         db=db,
+        cdr_year=cdr_year.year
     )
 
 @module.router.get(
