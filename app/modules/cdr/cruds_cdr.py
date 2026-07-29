@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import noload, selectinload
 
@@ -792,6 +792,50 @@ async def delete_payment(
             models_cdr.Payment.id == payment_id,
         ),
     )
+
+async def get_payment_products_by_seller(
+    db: AsyncSession,
+):
+    result = (await db.execute(
+                select(
+                    models_cdr.Seller.name,
+                    func.sum(models_cdr.ProductVariant.price * models_cdr.Purchase.quantity).label("total_amount")
+                )
+                .join(models_cdr.CdrProduct, models_cdr.Seller.id == models_cdr.CdrProduct.seller_id)
+                .join(models_cdr.ProductVariant, models_cdr.ProductVariant.product_id == models_cdr.CdrProduct.id)
+                .join(models_cdr.Purchase, models_cdr.Purchase.product_variant_id == models_cdr.ProductVariant.id)
+                .where(models_cdr.Purchase.validated == True)
+                .group_by(models_cdr.Seller.id)
+            )
+            )
+    
+    return [
+        schemas_cdr.TotalPurchaseValidatedBySeller(
+            total_validated=row.total_amount,
+            name=row.name,
+        )
+        for row in result.all()
+    ]
+
+async def get_total_payment_types(
+    db: AsyncSession,
+):
+    result = (await db.execute(
+                select(
+                    models_cdr.Payment.payment_type,
+                    func.sum(models_cdr.Payment.total).label("total")
+                )
+                .group_by(models_cdr.Payment.payment_type)
+            )
+            )
+    
+    return [
+        schemas_cdr.PaymentBase(
+            total=row.total,
+            payment_type=row.payment_type,
+        )
+        for row in result.all()
+    ]
 
 
 def create_action(
