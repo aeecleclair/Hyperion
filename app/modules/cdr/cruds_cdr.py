@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import delete, select, update, func
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import noload, selectinload
 
@@ -793,23 +793,37 @@ async def delete_payment(
         ),
     )
 
+
 async def get_payment_products_by_seller(
     db: AsyncSession,
     cdr_year: int,
 ) -> list[schemas_cdr.TotalPurchaseValidatedBySeller]:
-    result = (await db.execute(
-                select(
-                    models_cdr.Seller.name,
-                    func.sum(models_cdr.ProductVariant.price * models_cdr.Purchase.quantity).label("total_amount")
-                )
-                .join(models_cdr.CdrProduct, models_cdr.Seller.id == models_cdr.CdrProduct.seller_id)
-                .join(models_cdr.ProductVariant, models_cdr.ProductVariant.product_id == models_cdr.CdrProduct.id)
-                .join(models_cdr.Purchase, models_cdr.Purchase.product_variant_id == models_cdr.ProductVariant.id)
-                .where(models_cdr.Purchase.validated == True and models_cdr.ProductVariant.year == cdr_year)
-                .group_by(models_cdr.Seller.id)
-            )
-            )
-    
+    result = await db.execute(
+        select(
+            models_cdr.Seller.name,
+            func.sum(
+                models_cdr.ProductVariant.price * models_cdr.Purchase.quantity,
+            ).label("total_amount"),
+        )
+        .join(
+            models_cdr.CdrProduct,
+            models_cdr.Seller.id == models_cdr.CdrProduct.seller_id,
+        )
+        .join(
+            models_cdr.ProductVariant,
+            models_cdr.ProductVariant.product_id == models_cdr.CdrProduct.id,
+        )
+        .join(
+            models_cdr.Purchase,
+            models_cdr.Purchase.product_variant_id == models_cdr.ProductVariant.id,
+        )
+        .where(
+            models_cdr.Purchase.validated
+            and models_cdr.ProductVariant.year == cdr_year,
+        )
+        .group_by(models_cdr.Seller.id),
+    )
+
     return [
         schemas_cdr.TotalPurchaseValidatedBySeller(
             total_validated=row.total_amount,
@@ -818,20 +832,20 @@ async def get_payment_products_by_seller(
         for row in result.all()
     ]
 
+
 async def get_total_payment_types(
     db: AsyncSession,
     cdr_year: int,
 ) -> list[schemas_cdr.PaymentBase]:
-    result = (await db.execute(
-                select(
-                    models_cdr.Payment.payment_type,
-                    func.sum(models_cdr.Payment.total).label("total")
-                )
-                .where(models_cdr.Payment.year == cdr_year)
-                .group_by(models_cdr.Payment.payment_type)
-            )
-            )
-    
+    result = await db.execute(
+        select(
+            models_cdr.Payment.payment_type,
+            func.sum(models_cdr.Payment.total).label("total"),
+        )
+        .where(models_cdr.Payment.year == cdr_year)
+        .group_by(models_cdr.Payment.payment_type),
+    )
+
     return [
         schemas_cdr.PaymentBase(
             total=row.total,

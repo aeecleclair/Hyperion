@@ -336,6 +336,7 @@ class BatchValidation(BaseModel):
     product_variant_id: UUID
     validated: bool
 
+
 class TotalPurchaseValidatedBySeller(BaseModel):
-    name : str
+    name: str
     total_validated: int

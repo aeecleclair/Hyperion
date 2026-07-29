@@ -2698,7 +2698,7 @@ async def delete_curriculum_membership(
     response_model=list[schemas_cdr.PaymentComplete],
     status_code=200,
 )
-async def get_total_payments(
+async def get_total_payments_by_seller(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([CdrPermissions.manage_cdr]),
@@ -2706,21 +2706,20 @@ async def get_total_payments(
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
-    Get a user's payments.
+    Get the total of payments done in the CDR by each seller.
 
     **User must a CDR Admin to use this endpoint**
     """
-    if not ( 
-        await has_user_permission(user, CdrPermissions.manage_cdr_cdr, db)
-    ):
+    if not (await has_user_permission(user, CdrPermissions.manage_cdr_cdr, db)):
         raise HTTPException(
             status_code=403,
             detail="You're not allowed to see this.",
         )
-    return await cruds_cdr.get_payment_products_by_sell(
+    return await cruds_cdr.get_payment_products_by_seller(
         db=db,
-        cdr_year=cdr_year.year
+        cdr_year=cdr_year.year,
     )
+
 
 @module.router.get(
     "/cdr/users/total_payments/",
@@ -2735,21 +2734,20 @@ async def get_total_payments(
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
-    Get a user's payments.
+    Get the total of payments done in the CDR.
 
     **User must a CDR Admin to use this endpoint**
     """
-    if not ( 
-        await has_user_permission(user, CdrPermissions.manage_cdr_cdr, db)
-    ):
+    if not (await has_user_permission(user, CdrPermissions.manage_cdr_cdr, db)):
         raise HTTPException(
             status_code=403,
             detail="You're not allowed to see this.",
         )
     return await cruds_cdr.get_total_payment_types(
         db=db,
-        cdr_year=cdr_year.year
+        cdr_year=cdr_year.year,
     )
+
 
 @module.router.get(
     "/cdr/users/{user_id}/payments/",
