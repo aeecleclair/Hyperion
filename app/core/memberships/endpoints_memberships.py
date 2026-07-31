@@ -184,6 +184,19 @@ async def create_association_membership(
             detail="Group not found",
         )
 
+    if membership.template_id is not None:
+        template = await cruds_documents.get_template_by_id(
+            db=db,
+            template_id=membership.template_id,
+        )
+        if template is None:
+            raise HTTPException(status_code=404, detail="Template not found")
+        if template.team.group_id != membership.manager_group_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Template team group does not match membership manager group",
+            )
+
     db_association_membership = schemas_memberships.MembershipSimple(
         name=membership.name,
         manager_group_id=membership.manager_group_id,
@@ -205,7 +218,7 @@ async def update_association_membership(
     association_membership_id: uuid.UUID,
     membership: schemas_memberships.MembershipEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    user: models_users.CoreUser = Depends(is_user()),
 ):
     """
     Update a membership.
@@ -220,6 +233,30 @@ async def update_association_membership(
     )
     if db_association_membership is None:
         raise HTTPException(status_code=404, detail="Association Membership not found")
+    if not is_user_member_of_any_group(
+        user,
+        [
+            GroupType.admin,
+            db_association_membership.manager_group_id,
+        ],
+    ):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    if membership.template_id is not None:
+        template = await cruds_documents.get_template_by_id(
+            db=db,
+            template_id=membership.template_id,
+        )
+        if template is None:
+            raise HTTPException(status_code=404, detail="Template not found")
+        membership_group_id = (
+            membership.manager_group_id or db_association_membership.manager_group_id
+        )
+        if template.team.group_id != membership_group_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Template team group does not match membership manager group",
+            )
 
     await cruds_memberships.update_association_membership(
         db=db,
@@ -286,7 +323,7 @@ async def renew_users_membership_document(
         )
     )
 
-    results: list[None | BaseException] = await asyncio.gather(
+    results: list[BaseException | None] = await asyncio.gather(
         *[
             renew_membership_documents(
                 association_membership=db_association_membership,
