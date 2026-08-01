@@ -11,6 +11,6 @@ pytest-mock==3.14.1
 pytest==9.0.1
 ruff==0.15.10
 types-Authlib==1.5.0.20250516
-types-fpdf2==2.8.3.20250516
+types-fpdf2==2.8.4.20260724
 types-psutil==7.0.0.20250601
 types-redis==4.6.0.20241004
