@@ -370,6 +370,7 @@ async def init_objects():
         name="Template",
         recipient_id=1,
         team_id=document_team.id,
+        generate_email=False,
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
         deleted=False,

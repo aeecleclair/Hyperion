@@ -98,6 +98,7 @@ async def init_objects():
         name="Template",
         recipient_id=1,
         team_id=team.id,
+        generate_email=False,
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
         deleted=False,
@@ -211,6 +212,13 @@ def test_create_association_membership_user(client: TestClient):
     )
     assert response.status_code == 403
 
+    membership_response = client.get(
+        "/memberships",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert membership_response.status_code == 200
+    assert len(membership_response.json()) == 2
+
 
 def test_create_association_membership_duplicate_name(client: TestClient):
     response = client.post(
@@ -222,6 +230,17 @@ def test_create_association_membership_duplicate_name(client: TestClient):
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == f"A membership with the name {aeecl_association_membership.name} already exists"
+    )
+
+    membership_response = client.get(
+        "/memberships",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert membership_response.status_code == 200
+    assert len(membership_response.json()) == 2
 
 
 def test_create_association_membership_unknown_manager_group(client: TestClient):
@@ -234,6 +253,59 @@ def test_create_association_membership_unknown_manager_group(client: TestClient)
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 404
+    assert response.json()["detail"] == "Manager group not found"
+
+    membership_response = client.get(
+        "/memberships",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert membership_response.status_code == 200
+    assert len(membership_response.json()) == 2
+
+
+def test_create_association_membership_unknown_template(client: TestClient):
+    response = client.post(
+        "/memberships",
+        json={
+            "name": "Random Association",
+            "manager_group_id": dummy_group_1.id,
+            "template_id": str(uuid.uuid4()),
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Template not found"
+
+    membership_response = client.get(
+        "/memberships",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert membership_response.status_code == 200
+    assert len(membership_response.json()) == 2
+
+
+def test_create_association_membership_wrong_template_team(client: TestClient):
+    response = client.post(
+        "/memberships",
+        json={
+            "name": "Random Association",
+            "manager_group_id": dummy_group_1.id,
+            "template_id": str(template.id),
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Template team group does not match membership manager group"
+    )
+
+    membership_response = client.get(
+        "/memberships",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert membership_response.status_code == 200
+    assert len(membership_response.json()) == 2
 
 
 def test_create_association_membership_admin(client: TestClient):
@@ -352,6 +424,66 @@ def test_patch_association_membership_user(client: TestClient):
     assert aeecl_association_membership.manager_group_id in [
         x["manager_group_id"] for x in response.json()
     ]
+
+
+async def test_patch_association_membership_unknown_manager_group(client: TestClient):
+    response = client.patch(
+        f"/memberships/{aeecl_association_membership.id}",
+        json={
+            "name": "Random Association3",
+            "manager_group_id": str(uuid.uuid4()),
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Manager group not found"
+
+
+async def test_patch_association_membership_duplicate_name(client: TestClient):
+    response = client.patch(
+        f"/memberships/{aeecl_association_membership.id}",
+        json={
+            "name": useecl_association_membership.name,
+            "manager_group_id": dummy_group_2.id,
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == f"A membership with the name {useecl_association_membership.name} already exists"
+    )
+
+
+async def test_patch_association_membership_unknown_template(client: TestClient):
+    response = client.patch(
+        f"/memberships/{aeecl_association_membership.id}",
+        json={
+            "name": "Random Association3",
+            "manager_group_id": dummy_group_2.id,
+            "template_id": str(uuid.uuid4()),
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Template not found"
+
+
+async def test_patch_association_membership_wrong_template_team(client: TestClient):
+    response = client.patch(
+        f"/memberships/{aeecl_association_membership.id}",
+        json={
+            "name": "Random Association3",
+            "manager_group_id": dummy_group_2.id,
+            "template_id": str(template.id),
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Template team group does not match membership manager group"
+    )
 
 
 async def test_patch_association_membership_admin(client: TestClient):

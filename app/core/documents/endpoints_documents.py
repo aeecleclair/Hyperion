@@ -25,7 +25,7 @@ from app.core.documents.types_documenso import (
     WebhookEvent,
 )
 from app.core.documents.utils_documents import (
-    _configure_documenso_api_wrapper,
+    configure_documenso_api_wrapper,
     handle_document_callback,
     handle_template_creation_webhook,
     use_template_for_user,
@@ -123,7 +123,7 @@ async def create_team(
             detail=f"A team for the group {team_base.group_id} already exists",
         )
 
-    documenso = _configure_documenso_api_wrapper(team_base.api_key, settings)
+    documenso = configure_documenso_api_wrapper(team_base.api_key, settings)
     try:
         folders = await documenso.find_folders()
     except Exception as e:
@@ -196,7 +196,7 @@ async def update_team(
                 detail=f"A team for the group {team_update.group_id} already exists",
             )
     if team_update.api_key and team_update.api_key != db_team.api_key:
-        documenso = _configure_documenso_api_wrapper(team_update.api_key, settings)
+        documenso = configure_documenso_api_wrapper(team_update.api_key, settings)
         try:
             folders = await documenso.find_folders()
         except Exception as e:
@@ -384,10 +384,9 @@ async def use_template(
             detail="You do not have permission to use this template",
         )
 
-    documenso = _configure_documenso_api_wrapper(db_team.api_key, settings)
+    documenso = configure_documenso_api_wrapper(db_team.api_key, settings)
 
-    destination_folder_id = db_template.document_directory_id
-    if destination_folder_id is None:
+    if db_template.document_directory_id is None:
         raise HTTPException(
             status_code=400,
             detail="No destination folder configured for this template",
@@ -534,7 +533,7 @@ async def download_document_file(
     ):
         raise HTTPException(status_code=403, detail="Access forbidden")
 
-    documenso = _configure_documenso_api_wrapper(db_team.api_key, settings=settings)
+    documenso = configure_documenso_api_wrapper(db_team.api_key, settings=settings)
     file_content = await documenso.download_document(
         document_id=db_document.documenso_id,
     )

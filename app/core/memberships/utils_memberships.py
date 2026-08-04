@@ -11,7 +11,7 @@ from app.core.documents.exceptions_documents import (
 )
 from app.core.documents.types_documenso import DocumentStatus
 from app.core.documents.utils_documents import (
-    _configure_documenso_api_wrapper,
+    configure_documenso_api_wrapper,
     delete_document,
     document_model_to_schema,
     template_model_to_schema,
@@ -215,7 +215,7 @@ async def add_membership_to_user(
         if template is None:
             raise ElementTemplateNotFoundError(association_membership.template_id)
 
-        documenso = _configure_documenso_api_wrapper(
+        documenso = configure_documenso_api_wrapper(
             api_key=template.team.api_key,
             settings=settings,
         )
@@ -273,7 +273,7 @@ async def renew_membership_documents(
     if association_membership.template is None:
         return
 
-    documenso = _configure_documenso_api_wrapper(
+    documenso = configure_documenso_api_wrapper(
         api_key=team.api_key,
         settings=settings,
     )
@@ -322,7 +322,7 @@ async def remove_membership_from_user(
         )
         if template is None:
             return
-        documenso = _configure_documenso_api_wrapper(
+        documenso = configure_documenso_api_wrapper(
             api_key=template.team.api_key,
             settings=settings,
         )

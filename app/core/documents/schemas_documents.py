@@ -40,6 +40,7 @@ class TemplateBase(BaseModel):
     name: str
     recipient_id: int
     team_id: UUID
+    generate_email: bool
 
 
 class Template(TemplateBase):

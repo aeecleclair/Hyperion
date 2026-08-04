@@ -112,6 +112,7 @@ async def init_objects() -> None:
         name="Template 1",
         recipient_id=1,
         team_id=team1.id,
+        generate_email=False,
         created_at=datetime(2023, 1, 1, tzinfo=UTC),
         updated_at=datetime(2023, 1, 2, tzinfo=UTC),
         deleted=False,
@@ -125,6 +126,7 @@ async def init_objects() -> None:
         name="Template 2",
         recipient_id=2,
         team_id=team2.id,
+        generate_email=False,
         created_at=datetime(2023, 1, 3, tzinfo=UTC),
         updated_at=datetime(2023, 1, 4, tzinfo=UTC),
         deleted=False,
@@ -137,6 +139,7 @@ async def init_objects() -> None:
         name="Template Deleted",
         recipient_id=3,
         team_id=team1.id,
+        generate_email=False,
         created_at=datetime(2023, 1, 5, tzinfo=UTC),
         updated_at=datetime(2023, 1, 6, tzinfo=UTC),
         deleted=True,
@@ -965,6 +968,32 @@ async def test_use_template_invalid_destination_folder(
     )
 
 
+async def test_use_template_for_a_recipient_generate_email(
+    client: TestClient,
+):
+    emailTemplate = DocumentTemplate(
+        id=uuid4(),
+        documenso_id=4,
+        name="Template Generate Email",
+        recipient_id=4,
+        team_id=team1.id,
+        generate_email=True,
+        created_at=datetime(2023, 1, 21, tzinfo=UTC),
+        updated_at=datetime(2023, 1, 22, tzinfo=UTC),
+        document_directory_id="directory_id_1",
+    )
+    await add_object_to_db(emailTemplate)
+
+    response = client.post(
+        f"/documents/templates/{emailTemplate.id}/documents/",
+        json={"recipients": [user_lambda.email]},
+        headers={"Authorization": f"Bearer {user_team1_token}"},
+    )
+    assert response.status_code == 201, response.text
+    assert len(response.json()["errors"]) == 1
+    assert response.json()["errors"][user_lambda.email] == "User not found"
+
+
 async def test_use_template_for_a_recipient_user_not_found(
     client: TestClient,
 ):
@@ -1281,6 +1310,7 @@ async def test_webhook_template_update(
         name="My Template",
         recipient_id=4,
         team_id=team1.id,
+        generate_email=True,
         created_at=datetime(2023, 1, 1, tzinfo=UTC),
         updated_at=datetime(2023, 1, 2, tzinfo=UTC),
         deleted=False,
@@ -1299,6 +1329,9 @@ async def test_webhook_template_update(
             "recipients": [{"id": 52, "token": "SIGNING_TOKEN"}],
             "createdAt": "2026-06-16T13:44:05.967Z",
             "updatedAt": "2026-06-16T13:44:05.967Z",
+            "documentMeta": {
+                "distributionMethod": "NONE",
+            },
         },
         "createdAt": "2026-06-16T13:44:05.967Z",
         "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
@@ -1372,6 +1405,7 @@ async def test_webhook_template_deletion(
         recipient_id=4,
         name="My Template",
         team_id=team1.id,
+        generate_email=False,
         created_at=datetime(2023, 1, 1, tzinfo=UTC),
         updated_at=datetime(2023, 1, 2, tzinfo=UTC),
         deleted=False,

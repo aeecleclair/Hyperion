@@ -354,6 +354,7 @@ async def create_template(
             name=template.name,
             recipient_id=template.recipient_id,
             team_id=template.team_id,
+            generate_email=template.generate_email,
             deleted=template.deleted,
             document_directory_id=template.document_directory_id,
             created_at=template.created_at,

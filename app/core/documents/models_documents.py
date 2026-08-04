@@ -40,6 +40,7 @@ class DocumentTemplate(Base):
     name: Mapped[str]
     recipient_id: Mapped[int]
     team_id: Mapped[UUID] = mapped_column(ForeignKey("document_team.id"))
+    generate_email: Mapped[bool]
     created_at: Mapped[datetime]
     updated_at: Mapped[datetime]
     deleted: Mapped[bool] = mapped_column(default=False)

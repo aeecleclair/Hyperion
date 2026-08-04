@@ -14,7 +14,11 @@ from app.core.documents.exceptions_documents import (
     DocumentCreationError,
     MissingDocumensoURLError,
 )
-from app.core.documents.types_documenso import DocumentStatus, TemplateCreatedPayload
+from app.core.documents.types_documenso import (
+    DistributionMethod,
+    DocumentStatus,
+    TemplateCreatedPayload,
+)
 from app.core.groups.schemas_groups import CoreGroup
 from app.core.users.schemas_users import CoreUser
 from app.core.utils.config import Settings
@@ -33,6 +37,7 @@ def template_model_to_schema(
         name=model.name,
         recipient_id=model.recipient_id,
         team_id=model.team_id,
+        generate_email=model.generate_email,
         created_at=model.created_at,
         updated_at=model.updated_at,
         deleted=model.deleted,
@@ -51,6 +56,7 @@ def template_with_statistics_model_to_schema(
         name=model.name,
         recipient_id=model.recipient_id,
         team_id=model.team_id,
+        generate_email=model.generate_email,
         created_at=model.created_at,
         updated_at=model.updated_at,
         deleted=model.deleted,
@@ -82,6 +88,7 @@ def template_complete_model_to_schema(
         name=model.name,
         recipient_id=model.recipient_id,
         team_id=model.team_id,
+        generate_email=model.generate_email,
         created_at=model.created_at,
         updated_at=model.updated_at,
         deleted=model.deleted,
@@ -100,6 +107,7 @@ def template_complete_with_documents_model_to_schema(
         name=model.name,
         recipient_id=model.recipient_id,
         team_id=model.team_id,
+        generate_email=model.generate_email,
         created_at=model.created_at,
         updated_at=model.updated_at,
         deleted=model.deleted,
@@ -194,7 +202,7 @@ def document_with_team_info_model_to_schema(
     )
 
 
-def _configure_documenso_api_wrapper(
+def configure_documenso_api_wrapper(
     api_key: str,
     settings: Settings,
 ) -> DocumensoAPIWrapper:
@@ -231,6 +239,10 @@ async def handle_template_creation_webhook(
         name=payload.title,
         recipient_id=payload.recipients[0].id,
         team_id=owning_team.id,
+        generate_email=payload.document_meta.distribution_method
+        == DistributionMethod.EMAIL
+        if payload.document_meta is not None
+        else False,
         deleted=False,
         document_directory_id=None,
         created_at=payload.created_at,
@@ -250,6 +262,11 @@ async def use_template_for_user(
         raise DocumentCreationError(
             user_email=user.email,
             message="Template does not have a document directory ID",
+        )
+    if template.generate_email:
+        raise DocumentCreationError(
+            user_email=user.email,
+            message="Template is set to generate email, which is not supported",
         )
     document_id = uuid.uuid4()
     try:

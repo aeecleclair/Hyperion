@@ -12,6 +12,7 @@ from documenso_sdk import (
     TemplateCreateDocumentFromTemplateResponse,
     TemplateFindTemplatesData,
 )
+from documenso_sdk.utils import BackoffStrategy, RetryConfig
 from pydantic import BaseModel
 
 
@@ -28,6 +29,16 @@ class DocumensoAPIWrapper:
         self.client = Documenso(
             api_key=configuration.api_key,
             server_url=configuration.documenso_url,
+            retry_config=RetryConfig(
+                strategy="exponential",
+                backoff=BackoffStrategy(
+                    initial_interval=1000,
+                    max_interval=10000,
+                    exponent=2.0,
+                    max_elapsed_time=60000,
+                ),
+                retry_connection_errors=True,
+            ),
         )
 
     async def find_folders(

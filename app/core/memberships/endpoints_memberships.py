@@ -181,7 +181,7 @@ async def create_association_membership(
     if group is None:
         raise HTTPException(
             status_code=404,
-            detail="Group not found",
+            detail="Manager group not found",
         )
 
     if membership.template_id is not None:
@@ -241,6 +241,30 @@ async def update_association_membership(
         ],
     ):
         raise HTTPException(status_code=403, detail="Unauthorized")
+
+    if (
+        membership.manager_group_id is not None
+        and membership.manager_group_id != db_association_membership.manager_group_id
+    ):
+        group = await cruds_groups.get_group_by_id(db, membership.manager_group_id)
+        if group is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Manager group not found",
+            )
+
+    if (
+        membership.name is not None
+        and membership.name != db_association_membership.name
+    ):
+        if await cruds_memberships.get_association_membership_by_name(
+            name=membership.name,
+            db=db,
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail=f"A membership with the name {membership.name} already exists",
+            )
 
     if membership.template_id is not None:
         template = await cruds_documents.get_template_by_id(
