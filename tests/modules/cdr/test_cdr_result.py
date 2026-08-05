@@ -340,50 +340,6 @@ async def init_objects():
     await add_object_to_db(customdata_user3)
 
 
-# def test_construct_dataframe_from_users_purchases():
-#     users_purchases = {
-#         cdr_user1.id: [
-#             purchase_user1_product1_variant1,
-#             purchase_user1_product2_variant1,
-#         ],
-#         cdr_user2.id: [
-#             purchase_user2_product1_variant2,
-#             purchase_user2_product2_variant1,
-#         ],
-#         cdr_user3.id: [
-#             purchase_user3_product1_variant3,
-#         ],
-#     }
-#     users = [cdr_user1, cdr_user2, cdr_user3]
-#     products = [product1, product2]
-#     product_variants = [
-#         product1_variant1,
-#         product1_variant2,
-#         product1_variant3,
-#         product2_variant1,
-#     ]
-#     customdata_fields = {
-#         product1.id: [customdata_field1],
-#         product2.id: [customdata_field2],
-#     }
-#     users_answers = {
-#         cdr_user1.id: [customdata_user1],
-#         cdr_user2.id: [customdata_user2],
-#         cdr_user3.id: [customdata_user3],
-#     }
-
-#     excel_io = BytesIO()
-
-
-#     construct_dataframe_from_users_purchases(
-#         users=users,
-#         products=products,
-#         variants=product_variants,
-#         users_purchases=users_purchases,
-#         data_fields=customdata_fields,
-#         users_answers=users_answers,
-#         export_io=excel_io,
-#     )
 def test_get_seller_result(client: TestClient):
     response = client.get(
         f"/cdr/sellers/{seller1.id}/results/",

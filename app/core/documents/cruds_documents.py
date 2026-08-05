@@ -25,6 +25,11 @@ def _template_statistics_subqueries() -> tuple[
     ScalarSelect[int],
     ScalarSelect[int],
 ]:
+    """
+    Return subqueries for counting documents by status for templates.
+    Add extra filters to the subqueries by passing them as arguments to the base function.
+    """
+
     def base(*extra):
         return (
             select(func.count(models_documents.DocumentDocument.id))

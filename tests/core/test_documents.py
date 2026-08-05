@@ -991,7 +991,10 @@ async def test_use_template_for_a_recipient_generate_email(
     )
     assert response.status_code == 201, response.text
     assert len(response.json()["errors"]) == 1
-    assert response.json()["errors"][user_lambda.email] == "User not found"
+    assert (
+        response.json()["errors"][user_lambda.email]
+        == "Template is set to generate email, which is not supported"
+    )
 
 
 async def test_use_template_for_a_recipient_user_not_found(
