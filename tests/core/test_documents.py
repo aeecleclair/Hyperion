@@ -795,7 +795,8 @@ async def test_update_template_directory_not_found(client: TestClient):
 
 
 async def test_update_template_directory_unknown_directory(
-    client: TestClient, mocker: MockerFixture
+    client: TestClient,
+    mocker: MockerFixture,
 ):
     mocker.patch(
         "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.find_folders",
