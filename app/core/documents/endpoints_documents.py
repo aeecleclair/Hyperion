@@ -311,9 +311,10 @@ async def read_template(
 )
 async def update_template(
     template_id: uuid.UUID,
-    template_update: schemas_documents.TemplateUpdate,
+    template_update: schemas_documents.TemplateEdit,
     db: AsyncSession = Depends(get_db),
     user: schemas_users.CoreUser = Depends(is_user()),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Update the destination folder of a template.
@@ -338,11 +339,25 @@ async def update_template(
             status_code=403,
             detail="You do not have permission to update this template",
         )
+    folder_id = db_template.document_directory_id
+    if template_update.document_directory_path is not None:
+        documenso = configure_documenso_api_wrapper(db_team.api_key, settings)
+        folder = await documenso.find_folder_from_path(
+            path=template_update.document_directory_path,
+        )
+        if folder is None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Folder not found in Documenso for the provided path: {template_update.document_directory_path}",
+            )
+        folder_id = folder.id
 
     await cruds_documents.update_template(
         db=db,
         template_id=template_id,
-        template_update=template_update,
+        template_update=schemas_documents.TemplateUpdate(
+            document_directory_id=folder_id,
+        ),
     )
 
 

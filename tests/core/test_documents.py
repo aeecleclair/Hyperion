@@ -742,11 +742,37 @@ async def test_get_template_not_found(client: TestClient):
     assert response.status_code == 404
 
 
-async def test_update_template_directory(client: TestClient):
-    new_directory_id = "new_directory_id"
+class MockFolderFindFoldersData(BaseModel):
+    id: str
+    name: str
+
+
+async def test_update_template_directory(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    final_id = "directory_id"
+    mocker.patch(
+        "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.find_folders",
+        return_value=[
+            MockFolderFindFoldersData(
+                id="directory_id",
+                name="subdirectory",
+            ),
+            MockFolderFindFoldersData(
+                id="random_id",
+                name="test",
+            ),
+            MockFolderFindFoldersData(
+                id="random_id_2",
+                name="new_directory",
+            ),
+        ],
+    )
+    new_directory_path = "new_directory/test/subdirectory"
     response = client.patch(
         f"/documents/templates/{templateTeam1.id}",
-        json={"document_directory_id": new_directory_id},
+        json={"document_directory_path": new_directory_path},
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
     assert response.status_code == 204
@@ -756,7 +782,7 @@ async def test_update_template_directory(client: TestClient):
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
     assert response.status_code == 200
-    assert response.json()["document_directory_id"] == new_directory_id
+    assert response.json()["document_directory_id"] == final_id
 
 
 async def test_update_template_directory_not_found(client: TestClient):
@@ -766,6 +792,39 @@ async def test_update_template_directory_not_found(client: TestClient):
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
     assert response.status_code == 404
+
+
+async def test_update_template_directory_unknown_directory(
+    client: TestClient, mocker: MockerFixture
+):
+    mocker.patch(
+        "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.find_folders",
+        return_value=[
+            MockFolderFindFoldersData(
+                id="directory_id",
+                name="subdirectory",
+            ),
+            MockFolderFindFoldersData(
+                id="random_id",
+                name="test",
+            ),
+            MockFolderFindFoldersData(
+                id="random_id_2",
+                name="new_directory",
+            ),
+        ],
+    )
+
+    response = client.patch(
+        f"/documents/templates/{templateTeam1.id}",
+        json={"document_directory_path": "unknown_directory_path"},
+        headers={"Authorization": f"Bearer {user_team1_token}"},
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Folder not found in Documenso for the provided path: unknown_directory_path"
+    )
 
 
 async def test_update_template_directory_as_lambda(client: TestClient):

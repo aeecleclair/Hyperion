@@ -70,6 +70,10 @@ class TemplateCompleteWithDocuments(TemplateComplete):
     documents: list["DocumentWithUser"]
 
 
+class TemplateEdit(BaseModel):
+    document_directory_path: str | None = None
+
+
 class TemplateUpdate(BaseModel):
     document_directory_id: str | None = None
 
