@@ -645,7 +645,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         title="Hyperion",
         version=settings.HYPERION_VERSION,
         lifespan=lifespan,
-        custom_generate_unique_id=use_route_path_as_operation_id,
+        generate_unique_id_function=use_route_path_as_operation_id,
     )
     app.include_router(api.api_router)
 
