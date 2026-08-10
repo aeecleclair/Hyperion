@@ -818,8 +818,8 @@ async def get_payment_products_by_seller(
             models_cdr.Purchase.product_variant_id == models_cdr.ProductVariant.id,
         )
         .where(
-            models_cdr.Purchase.validated
-            and models_cdr.ProductVariant.year == cdr_year,
+            models_cdr.Purchase.validated,
+            models_cdr.ProductVariant.year == cdr_year,
         )
         .group_by(models_cdr.Seller.id),
     )
@@ -853,6 +853,22 @@ async def get_total_payment_types(
         )
         for row in result.all()
     ]
+
+
+async def get_total_payment(
+    db: AsyncSession,
+    cdr_year: int,
+) -> int:
+
+    result = await db.execute(
+        select(
+            func.sum(models_cdr.Payment.total).label("total"),
+        ).where(models_cdr.Payment.year == cdr_year),
+    )
+    try:
+        return result.all()[0].total / 100
+    except IndexError:
+        return 0
 
 
 def create_action(

@@ -340,3 +340,12 @@ class BatchValidation(BaseModel):
 class TotalPurchaseValidatedBySeller(BaseModel):
     name: str
     total_validated: int
+
+
+class UserPaymentStatus(BaseModel):
+    user_id: str
+    total_purchased: int
+    total_paid: int
+    has_unvalidated_purchase: bool
+    is_overcharged: bool
+    is_undercharged: bool
