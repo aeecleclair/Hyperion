@@ -117,6 +117,45 @@ async def get_cdr_users(
 
 
 @module.router.get(
+    "/cdr/users/problematic_payments/",
+    response_model=list[schemas_cdr.CdrUserPreview],
+    status_code=200,
+)
+async def get_cdr_users_problematic_payments(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.access_cdr]),
+    ),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
+):
+    """
+    Get all users with problematic payments.
+
+    **User must be part of a seller group to use this endpoint**
+    """
+    if not (
+        await has_user_permission(user, CdrPermissions.manage_cdr, db)
+        or await cruds_cdr.get_sellers_by_group_ids(
+            db=db,
+            group_ids=[g.id for g in user.groups],
+        )
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You must be a seller to use this endpoint.",
+        )
+    users = {
+        u.user_id: u.__dict__
+        for u in await cruds_cdr.get_users_with_problematic_payments(
+            db=db, cdr_year=cdr_year.year
+        )
+    }
+    hyperion_error_logger.info(list(users.values()))
+
+    return list(users.values())
+
+
+@module.router.get(
     "/cdr/users/pending/",
     response_model=list[schemas_cdr.CdrUserPreview],
     status_code=200,
@@ -173,6 +212,91 @@ async def get_cdr_users_pending_validation(
         )
         for user in core_users
     ]
+
+
+@module.router.get(
+    "/cdr/users/total_payments_by_seller/",
+    response_model=list[schemas_cdr.TotalPurchaseValidatedBySeller],
+    status_code=200,
+)
+async def get_total_payments_by_seller(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
+    ),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
+):
+    """
+    Get the total of payments done in the CDR by each seller.
+
+    **User must a CDR Admin to use this endpoint**
+    """
+    if not (await has_user_permission(user, CdrPermissions.manage_cdr, db)):
+        raise HTTPException(
+            status_code=403,
+            detail="You're not allowed to see this.",
+        )
+    return await cruds_cdr.get_payment_products_by_seller(
+        db=db,
+        cdr_year=cdr_year.year,
+    )
+
+
+@module.router.get(
+    "/cdr/users/total_payments_per_type/",
+    response_model=list[schemas_cdr.PaymentBase],
+    status_code=200,
+)
+async def get_total_payments_types(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
+    ),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
+):
+    """
+    Get the total of payments done in the CDR.
+
+    **User must a CDR Admin to use this endpoint**
+    """
+    if not (await has_user_permission(user, CdrPermissions.manage_cdr, db)):
+        raise HTTPException(
+            status_code=403,
+            detail="You're not allowed to see this.",
+        )
+    return await cruds_cdr.get_total_payment_types(
+        db=db,
+        cdr_year=cdr_year.year,
+    )
+
+
+@module.router.get(
+    "/cdr/users/total_payments/",
+    response_model=int,
+    status_code=200,
+)
+async def get_total_payments(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
+    ),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
+):
+    """
+    Get the total of payments done in the CDR.
+
+    **User must a CDR Admin to use this endpoint**
+    """
+    if not (await has_user_permission(user, CdrPermissions.manage_cdr, db)):
+        raise HTTPException(
+            status_code=403,
+            detail="You're not allowed to see this.",
+        )
+
+    return await cruds_cdr.get_total_payment(
+        db=db,
+        cdr_year=cdr_year.year,
+    )
 
 
 @module.router.get(
@@ -2621,62 +2745,6 @@ async def delete_curriculum_membership(
             hyperion_error_logger.exception(
                 f"Error while sending a message to the room {HyperionWebsocketsRoom.CDR}",
             )
-
-
-@module.router.get(
-    "/cdr/users/total_payments_by_seller/",
-    response_model=list[schemas_cdr.PaymentComplete],
-    status_code=200,
-)
-async def get_total_payments_by_seller(
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
-        is_user_allowed_to([CdrPermissions.manage_cdr]),
-    ),
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
-):
-    """
-    Get the total of payments done in the CDR by each seller.
-
-    **User must a CDR Admin to use this endpoint**
-    """
-    if not (await has_user_permission(user, CdrPermissions.manage_cdr, db)):
-        raise HTTPException(
-            status_code=403,
-            detail="You're not allowed to see this.",
-        )
-    return await cruds_cdr.get_payment_products_by_seller(
-        db=db,
-        cdr_year=cdr_year.year,
-    )
-
-
-@module.router.get(
-    "/cdr/users/total_payments/",
-    response_model=list[schemas_cdr.TotalPurchaseValidatedBySeller],
-    status_code=200,
-)
-async def get_total_payments(
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
-        is_user_allowed_to([CdrPermissions.manage_cdr]),
-    ),
-    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
-):
-    """
-    Get the total of payments done in the CDR.
-
-    **User must a CDR Admin to use this endpoint**
-    """
-    if not (await has_user_permission(user, CdrPermissions.manage_cdr, db)):
-        raise HTTPException(
-            status_code=403,
-            detail="You're not allowed to see this.",
-        )
-    return await cruds_cdr.get_total_payment_types(
-        db=db,
-        cdr_year=cdr_year.year,
-    )
 
 
 @module.router.get(
