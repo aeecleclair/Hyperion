@@ -147,7 +147,7 @@ async def get_cdr_users_problematic_payments(
     users = {
         u.user_id: u.__dict__
         for u in await cruds_cdr.get_users_with_problematic_payments(
-            db=db, cdr_year=cdr_year.year
+            db=db, cdr_year=cdr_year.year,
         )
     }
     hyperion_error_logger.info(list(users.values()))
