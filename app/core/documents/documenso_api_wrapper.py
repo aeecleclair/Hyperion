@@ -3,15 +3,13 @@ from uuid import UUID
 from documenso_sdk import (
     Documenso,
     DocumentDownloadResponse,
-    DocumentFindData,
-    DocumentUpdateData,
     FolderFindFoldersData,
     FolderFindFoldersQueryParamType,
     FolderFindFoldersResponse,
     TemplateCreateDocumentFromTemplateRecipientRequest,
     TemplateCreateDocumentFromTemplateResponse,
-    TemplateFindTemplatesData,
 )
+from documenso_sdk.utils import BackoffStrategy, RetryConfig
 from pydantic import BaseModel
 
 
@@ -28,6 +26,16 @@ class DocumensoAPIWrapper:
         self.client = Documenso(
             api_key=configuration.api_key,
             server_url=configuration.documenso_url,
+            retry_config=RetryConfig(
+                strategy="exponential",
+                backoff=BackoffStrategy(
+                    initial_interval=1000,
+                    max_interval=10000,
+                    exponent=2.0,
+                    max_elapsed_time=60000,
+                ),
+                retry_connection_errors=True,
+            ),
         )
 
     async def find_folders(
@@ -68,39 +76,6 @@ class DocumensoAPIWrapper:
             parent_id = matching_folder.id
         return matching_folder
 
-    async def get_folder_documents(self, folder_id: str) -> list[DocumentFindData]:
-        current_page = 1
-        max_pages = 1
-        all_documents: list[DocumentFindData] = []
-        while current_page <= max_pages:
-            response = await self.client.documents.find_async(
-                folder_id=folder_id,
-                page=current_page,
-                per_page=100,
-            )
-            all_documents.extend(response.data)
-            max_pages = int(response.total_pages)
-            current_page += 1
-        return all_documents
-
-    async def get_folder_templates(
-        self,
-        folder_id: str | None = None,
-    ) -> list[TemplateFindTemplatesData]:
-        current_page = 1
-        max_pages = 1
-        all_templates: list[TemplateFindTemplatesData] = []
-        while current_page <= max_pages:
-            response = await self.client.templates.find_async(
-                folder_id=folder_id,
-                page=current_page,
-                per_page=100,
-            )
-            all_templates.extend(response.data)
-            max_pages = int(response.total_pages)
-            current_page += 1
-        return all_templates
-
     async def use_template(
         self,
         template_id: float,
@@ -119,17 +94,50 @@ class DocumensoAPIWrapper:
     async def download_document(self, document_id: float) -> DocumentDownloadResponse:
         return await self.client.documents.download_async(document_id=document_id)
 
-    async def move_document(
-        self,
-        document_id: float,
-        destination_folder_id: str,
-    ) -> bool:
-        await self.client.documents.update_async(
-            document_id=document_id,
-            data=DocumentUpdateData(folder_id=destination_folder_id),
-        )
-        return True
-
     async def delete_document(self, document_id: float) -> bool:
         await self.client.documents.delete_async(document_id=document_id)
         return True
+
+    # async def move_document(
+    #     self,
+    #     document_id: float,
+    #     destination_folder_id: str,
+    # ) -> bool:
+    #     await self.client.documents.update_async(
+    #         document_id=document_id,
+    #         data=DocumentUpdateData(folder_id=destination_folder_id),
+    #     )
+    #     return True
+
+    # async def get_folder_documents(self, folder_id: str) -> list[DocumentFindData]:
+    #     current_page = 1
+    #     max_pages = 1
+    #     all_documents: list[DocumentFindData] = []
+    #     while current_page <= max_pages:
+    #         response = await self.client.documents.find_async(
+    #             folder_id=folder_id,
+    #             page=current_page,
+    #             per_page=100,
+    #         )
+    #         all_documents.extend(response.data)
+    #         max_pages = int(response.total_pages)
+    #         current_page += 1
+    #     return all_documents
+
+    # async def get_folder_templates(
+    #     self,
+    #     folder_id: str | None = None,
+    # ) -> list[TemplateFindTemplatesData]:
+    #     current_page = 1
+    #     max_pages = 1
+    #     all_templates: list[TemplateFindTemplatesData] = []
+    #     while current_page <= max_pages:
+    #         response = await self.client.templates.find_async(
+    #             folder_id=folder_id,
+    #             page=current_page,
+    #             per_page=100,
+    #         )
+    #         all_templates.extend(response.data)
+    #         max_pages = int(response.total_pages)
+    #         current_page += 1
+    #     return all_templates

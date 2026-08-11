@@ -78,33 +78,59 @@ class WebhookEvent(StrEnum):
 #     model_config = {"populate_by_name": True}
 
 
-# class DocumentMeta(BaseModel):
-#     id: str
-#     subject: str | None = None
-#     message: str | None = None
-#     timezone: str | None = None
-#     password: str | None = None
-#     date_format: str | None = Field(None, alias="dateFormat")
-#     redirect_url: str | None = Field(None, alias="redirectUrl")
-#     signing_order: SigningOrder | None = Field(None, alias="signingOrder")
-#     allow_dictate_next_signer: bool | None = Field(
+# class EmailSettings(BaseModel):
+#     document_deleted: bool | None = Field(None, alias="documentDeleted")
+#     document_pending: bool | None = Field(None, alias="documentPending")
+#     recipient_signed: bool | None = Field(None, alias="recipientSigned")
+#     recipient_removed: bool | None = Field(None, alias="recipientRemoved")
+#     document_completed: bool | None = Field(None, alias="documentCompleted")
+#     owner_document_created: bool | None = Field(
 #         None,
-#         alias="allowDictateNextSigner",
+#         alias="ownerDocumentCreated",
 #     )
-#     typed_signature_enabled: bool | None = Field(None, alias="typedSignatureEnabled")
-#     upload_signature_enabled: bool | None = Field(
+#     owner_recipient_expired: bool | None = Field(
 #         None,
-#         alias="uploadSignatureEnabled",
+#         alias="ownerRecipientExpired",
 #     )
-#     draw_signature_enabled: bool | None = Field(None, alias="drawSignatureEnabled")
-#     language: str | None = None
-#     distribution_method: DistributionMethod | None = Field(
+#     owner_document_completed: bool | None = Field(
 #         None,
-#         alias="distributionMethod",
+#         alias="ownerDocumentCompleted",
 #     )
-#     email_settings: Any | None = Field(None, alias="emailSettings")
+#     recipient_signing_request: bool | None = Field(
+#         None,
+#         alias="recipientSigningRequest",
+#     )
 
 #     model_config = {"populate_by_name": True}
+
+
+class DocumentMeta(BaseModel):
+    #     id: str
+    #     subject: str | None = None
+    #     message: str | None = None
+    #     timezone: str | None = None
+    #     password: str | None = None
+    #     date_format: str | None = Field(None, alias="dateFormat")
+    #     redirect_url: str | None = Field(None, alias="redirectUrl")
+    #     signing_order: SigningOrder | None = Field(None, alias="signingOrder")
+    #     allow_dictate_next_signer: bool | None = Field(
+    #         None,
+    #         alias="allowDictateNextSigner",
+    #     )
+    #     typed_signature_enabled: bool | None = Field(None, alias="typedSignatureEnabled")
+    #     upload_signature_enabled: bool | None = Field(
+    #         None,
+    #         alias="uploadSignatureEnabled",
+    #     )
+    #     draw_signature_enabled: bool | None = Field(None, alias="drawSignatureEnabled")
+    #     language: str | None = None
+    distribution_method: DistributionMethod | None = Field(
+        None,
+        alias="distributionMethod",
+    )
+    # email_settings: EmailSettings | None = Field(None, alias="emailSettings")
+
+    model_config = {"populate_by_name": True}
 
 
 class Recipient(BaseModel):
@@ -152,7 +178,7 @@ class BaseDocumensoPayload(BaseModel):
     # completed_at: datetime | None = Field(None, alias="completedAt")
     # deleted_at: datetime | None = Field(None, alias="deletedAt")
     # template_id: int | None = Field(None, alias="templateId")
-    # document_meta: DocumentMeta | None = Field(None, alias="documentMeta")
+    document_meta: DocumentMeta | None = Field(None, alias="documentMeta")
 
     model_config = {"populate_by_name": True}
 

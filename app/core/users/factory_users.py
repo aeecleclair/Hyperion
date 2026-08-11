@@ -53,7 +53,8 @@ class CoreUsersFactory(Factory):
 
     @classmethod
     async def create_core_users(cls, db: AsyncSession):
-        password = [faker.password(16, True, True, True, True) for _ in range(NB_USERS)]
+        easy_password = security.get_password_hash("password")
+        password = [easy_password for _ in range(NB_USERS)]
         firstname = [faker.first_name() for _ in range(NB_USERS)]
         name = [faker.last_name() for _ in range(NB_USERS)]
         nickname = [faker.user_name() for _ in range(NB_USERS)]

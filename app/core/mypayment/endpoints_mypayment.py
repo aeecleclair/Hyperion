@@ -2278,7 +2278,7 @@ async def validate_can_scan_qrcode(
             association_membership_id=store.structure.association_membership_id,
             db=db,
         )
-        if result is None:
+        if result is None or not result.valid:
             return standard_responses.Result(success=False)
 
     return standard_responses.Result(success=True)
@@ -2465,7 +2465,7 @@ async def store_scan_qrcode(
                     association_membership_id=store.structure.association_membership_id,
                     db=db,
                 )
-                if current_membership is None:
+                if current_membership is None or not current_membership.valid:
                     raise HTTPException(
                         status_code=400,
                         detail="User is not a member of the association",

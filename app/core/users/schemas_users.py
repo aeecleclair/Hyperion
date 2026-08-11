@@ -47,6 +47,9 @@ class CoreUser(CoreUserSimple):
     groups: "list[CoreGroupSimple]" = []
     school: CoreSchool | None = None
 
+    def __hash__(self) -> int:
+        return hash(self.id)
+
 
 class CoreUserUpdate(BaseModel):
     """Schema for user update"""
