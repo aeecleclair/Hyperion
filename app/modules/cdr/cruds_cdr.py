@@ -858,7 +858,7 @@ async def get_total_payment_types(
 async def get_total_payment(
     db: AsyncSession,
     cdr_year: int,
-) -> int:
+):
 
     result = await db.execute(
         select(
@@ -866,7 +866,7 @@ async def get_total_payment(
         ).where(models_cdr.Payment.year == cdr_year),
     )
     try:
-        return result.all()[0].total / 100
+        return result.all()[0].total // 100
     except IndexError:
         return 0
 
