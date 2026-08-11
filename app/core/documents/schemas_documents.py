@@ -9,7 +9,6 @@ from app.core.users.schemas_users import CoreUser
 
 
 class TeamBase(BaseModel):
-    team_id: int
     group_id: str
     name: str
     api_key: str
@@ -17,10 +16,16 @@ class TeamBase(BaseModel):
 
 class Team(TeamBase):
     id: UUID
+    team_id: int
+
+
+class TeamInfo(BaseModel):
+    id: UUID
+    name: str
 
 
 class TeamComplete(Team):
-    templates: list["Template"]
+    templates: list["TemplateWithStatistics"]
     group: CoreGroup
 
 
@@ -33,7 +38,9 @@ class TeamUpdate(BaseModel):
 class TemplateBase(BaseModel):
     documenso_id: int
     name: str
+    recipient_id: int
     team_id: UUID
+    generate_email: bool
 
 
 class Template(TemplateBase):
@@ -44,9 +51,27 @@ class Template(TemplateBase):
     updated_at: datetime
 
 
+class TemplateStatistics(BaseModel):
+    total_documents: int
+    total_signed_documents: int
+    total_pending_documents: int
+    total_rejected_documents: int
+
+
+class TemplateWithStatistics(Template):
+    statistics: TemplateStatistics
+
+
 class TemplateComplete(Template):
-    documents: list["DocumentComplete"]
     team: Team
+
+
+class TemplateCompleteWithDocuments(TemplateComplete):
+    documents: list["DocumentWithUser"]
+
+
+class TemplateEdit(BaseModel):
+    document_directory_path: str | None = None
 
 
 class TemplateUpdate(BaseModel):
@@ -60,6 +85,7 @@ class TemplateDocumensoUpdate(BaseModel):
 
 class TemplateUse(BaseModel):
     recipients: list[str]
+    allow_duplicate: bool | None = False
 
 
 class TemplateUseResponse(BaseModel):
@@ -86,5 +112,9 @@ class DocumentWithToken(Document):
     signing_token: str
 
 
-class DocumentComplete(Document):
+class DocumentWithUser(Document):
     user: CoreUser
+
+
+class DocumentWithTeamInfo(Document):
+    team_info: TeamInfo

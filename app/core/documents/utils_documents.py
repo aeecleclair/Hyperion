@@ -14,7 +14,11 @@ from app.core.documents.exceptions_documents import (
     DocumentCreationError,
     MissingDocumensoURLError,
 )
-from app.core.documents.types_documenso import DocumentStatus, TemplateCreatedPayload
+from app.core.documents.types_documenso import (
+    DistributionMethod,
+    DocumentStatus,
+    TemplateCreatedPayload,
+)
 from app.core.groups.schemas_groups import CoreGroup
 from app.core.users.schemas_users import CoreUser
 from app.core.utils.config import Settings
@@ -31,11 +35,33 @@ def template_model_to_schema(
         id=model.id,
         documenso_id=model.documenso_id,
         name=model.name,
+        recipient_id=model.recipient_id,
         team_id=model.team_id,
+        generate_email=model.generate_email,
         created_at=model.created_at,
         updated_at=model.updated_at,
         deleted=model.deleted,
         document_directory_id=model.document_directory_id,
+    )
+
+
+def template_with_statistics_model_to_schema(
+    model: models_documents.DocumentTemplate,
+    statistics: schemas_documents.TemplateStatistics,
+) -> schemas_documents.TemplateWithStatistics:
+    """Convert a DocumentTemplate model to a TemplateWithStatistics schema."""
+    return schemas_documents.TemplateWithStatistics(
+        id=model.id,
+        documenso_id=model.documenso_id,
+        name=model.name,
+        recipient_id=model.recipient_id,
+        team_id=model.team_id,
+        generate_email=model.generate_email,
+        created_at=model.created_at,
+        updated_at=model.updated_at,
+        deleted=model.deleted,
+        document_directory_id=model.document_directory_id,
+        statistics=statistics,
     )
 
 
@@ -60,13 +86,34 @@ def template_complete_model_to_schema(
         id=model.id,
         documenso_id=model.documenso_id,
         name=model.name,
+        recipient_id=model.recipient_id,
         team_id=model.team_id,
+        generate_email=model.generate_email,
+        created_at=model.created_at,
+        updated_at=model.updated_at,
+        deleted=model.deleted,
+        document_directory_id=model.document_directory_id,
+        team=team_model_to_schema(model.team),
+    )
+
+
+def template_complete_with_documents_model_to_schema(
+    model: models_documents.DocumentTemplate,
+) -> schemas_documents.TemplateCompleteWithDocuments:
+    """Convert a DocumentTemplate model to a TemplateComplete schema."""
+    return schemas_documents.TemplateCompleteWithDocuments(
+        id=model.id,
+        documenso_id=model.documenso_id,
+        name=model.name,
+        recipient_id=model.recipient_id,
+        team_id=model.team_id,
+        generate_email=model.generate_email,
         created_at=model.created_at,
         updated_at=model.updated_at,
         deleted=model.deleted,
         document_directory_id=model.document_directory_id,
         documents=[
-            document_complete_model_to_schema(document) for document in model.documents
+            document_with_user_model_to_schema(document) for document in model.documents
         ],
         team=team_model_to_schema(model.team),
     )
@@ -74,6 +121,7 @@ def template_complete_model_to_schema(
 
 def team_complete_model_to_schema(
     model: models_documents.DocumentTeam,
+    templates_with_statistics: list[schemas_documents.TemplateWithStatistics],
 ) -> schemas_documents.TeamComplete:
     """Convert a DocumentTeam model to a TeamComplete schema."""
     return schemas_documents.TeamComplete(
@@ -82,7 +130,7 @@ def team_complete_model_to_schema(
         api_key=model.api_key,
         name=model.name,
         group_id=model.group_id,
-        templates=[template_model_to_schema(template) for template in model.templates],
+        templates=templates_with_statistics,
         group=CoreGroup(
             id=model.group.id,
             name=model.group.name,
@@ -108,11 +156,11 @@ def document_model_to_schema(
     )
 
 
-def document_complete_model_to_schema(
+def document_with_user_model_to_schema(
     model: models_documents.DocumentDocument,
-) -> schemas_documents.DocumentComplete:
+) -> schemas_documents.DocumentWithUser:
     """Convert a DocumentDocument model to a DocumentComplete schema."""
-    return schemas_documents.DocumentComplete(
+    return schemas_documents.DocumentWithUser(
         id=model.id,
         documenso_id=model.documenso_id,
         name=model.name,
@@ -133,15 +181,36 @@ def document_complete_model_to_schema(
     )
 
 
-def _configure_documenso_api_wrapper(
-    team: schemas_documents.Team,
+def document_with_team_info_model_to_schema(
+    model: models_documents.DocumentDocument,
+) -> schemas_documents.DocumentWithTeamInfo:
+    """Convert a DocumentDocument model to a DocumentWithTemplate schema."""
+    return schemas_documents.DocumentWithTeamInfo(
+        id=model.id,
+        documenso_id=model.documenso_id,
+        name=model.name,
+        template_id=model.template_id,
+        module=model.module,
+        user_id=model.user_id,
+        status=model.status,
+        created_at=model.created_at,
+        updated_at=model.updated_at,
+        team_info=schemas_documents.TeamInfo(
+            id=model.template.team.id,
+            name=model.template.team.name,
+        ),
+    )
+
+
+def configure_documenso_api_wrapper(
+    api_key: str,
     settings: Settings,
 ) -> DocumensoAPIWrapper:
     if settings.DOCUMENSO_URL is None:
         raise MissingDocumensoURLError()
     return DocumensoAPIWrapper(
         configuration=DocumensoConfiguration(
-            api_key=team.api_key,
+            api_key=api_key,
             documenso_url=settings.DOCUMENSO_URL,
         ),
     )
@@ -168,7 +237,12 @@ async def handle_template_creation_webhook(
         id=uuid.uuid4(),
         documenso_id=payload.id,
         name=payload.title,
+        recipient_id=payload.recipients[0].id,
         team_id=owning_team.id,
+        generate_email=payload.document_meta.distribution_method
+        == DistributionMethod.EMAIL
+        if payload.document_meta is not None
+        else False,
         deleted=False,
         document_directory_id=None,
         created_at=payload.created_at,
@@ -189,6 +263,11 @@ async def use_template_for_user(
             user_email=user.email,
             message="Template does not have a document directory ID",
         )
+    if template.generate_email:
+        raise DocumentCreationError(
+            user_email=user.email,
+            message="Template is set to generate email, which is not supported",
+        )
     document_id = uuid.uuid4()
     try:
         documenso_response = await documenso.use_template(
@@ -196,7 +275,7 @@ async def use_template_for_user(
             external_id=document_id,
             recipients=[
                 TemplateCreateDocumentFromTemplateRecipientRequest(
-                    id=1,
+                    id=template.recipient_id,
                     name=f"{user.firstname} {user.name}",
                     email=user.email,
                 ),
@@ -243,6 +322,16 @@ async def use_template_for_user(
         created_at=document.created_at,
         updated_at=document.updated_at,
     )
+
+
+async def delete_document(
+    document: schemas_documents.Document,
+    documenso: DocumensoAPIWrapper,
+    db: AsyncSession,
+) -> None:
+    await documenso.delete_document(document_id=int(document.documenso_id))
+
+    await cruds_documents.delete_document_by_id(document_id=document.id, db=db)
 
 
 async def handle_document_callback(
