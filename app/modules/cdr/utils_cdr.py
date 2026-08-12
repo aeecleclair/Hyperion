@@ -329,8 +329,6 @@ def build_product_structure(
         for variant in product_variants:
             qty_col = col_idx
             col_idx += 1
-            price_col = col_idx
-            col_idx += 1
             valid_col = None
             if needs_validation:
                 valid_col = col_idx
@@ -339,7 +337,6 @@ def build_product_structure(
                 {
                     "variant": variant,
                     "qty_col": qty_col,
-                    "price_col": price_col,
                     "valid_col": valid_col,
                 },
             )
@@ -379,7 +376,7 @@ def build_data_rows(
 ):
     data_rows = []
     for user in users:
-        row: list[str | int | float] = [""] * col_idx
+        row: list[str | int] = [""] * col_idx
         row[0] = user.name
         row[1] = user.firstname
         row[2] = user.nickname or ""
@@ -398,7 +395,6 @@ def build_data_rows(
                 p = purchases_map.get(vinfo["variant"].id)
                 if p and p.quantity > 0:
                     row[vinfo["qty_col"]] = p.quantity
-                    row[vinfo["price_col"]] = vinfo["variant"].price / 100
 
                     if (
                         prod_struct["needs_validation"]
@@ -424,7 +420,7 @@ def write_fixed_headers(
     formats: dict,
 ):
     for col, title in enumerate(fixed_columns):
-        worksheet.merge_range(0, col, 2, col, title, formats["header"]["base"])
+        worksheet.merge_range(0, col, 3, col, title, formats["header"]["base"])
 
 
 def write_product_headers(
@@ -450,7 +446,7 @@ def write_product_headers(
             end_col = (
                 variants_info[-1]["valid_col"]
                 if (needs_validation and variants_info[-1]["valid_col"] is not None)
-                else variants_info[-1]["price_col"]
+                else variants_info[-1]["qty_col"]
             )
         elif custom_cols:
             start_col = custom_cols[0]
@@ -475,22 +471,28 @@ def write_product_headers(
 
         for vinfo in variants_info:
             qty_col = vinfo["qty_col"]
-            variant_end_col = (
-                vinfo["valid_col"]
-                if needs_validation and vinfo["valid_col"] is not None
-                else vinfo["price_col"]
-            )
 
-            worksheet.merge_range(
-                1,
-                qty_col,
-                1,
-                variant_end_col,
-                vinfo["variant"].name_fr,
-                formats["header"]["base"],
-            )
+            if needs_validation:
+                worksheet.merge_range(
+                    1,
+                    qty_col,
+                    1,
+                    qty_col + 1,
+                    vinfo["variant"].name_fr,
+                    formats["header"]["base"],
+                )
+            else:
+                worksheet.write(
+                    1,
+                    qty_col,
+                    vinfo["variant"].name_fr,
+                    formats["header"]["base"],
+                )
 
-            variant_end_cols.add(variant_end_col)
+            if needs_validation and vinfo["valid_col"] is not None:
+                variant_end_cols.add(vinfo["valid_col"])
+            else:
+                variant_end_cols.add(vinfo["qty_col"])
 
         if custom_cols:
             if len(custom_cols) > 1:
@@ -515,24 +517,41 @@ def write_product_headers(
                 max_lens[c] = max(max_lens[c], info_comp_len)
 
         for vinfo in variants_info:
-            worksheet.write(2, vinfo["qty_col"], "Quantité", formats["header"]["base"])
+            price = vinfo["variant"].price / 100
+
+            worksheet.write_number(
+                2,
+                vinfo["qty_col"],
+                price,
+                formats["header"]["base"],
+            )
+            max_lens[vinfo["qty_col"]] = max(
+                max_lens[vinfo["qty_col"]],
+                len(str(price)),
+            )
+
+            if needs_validation and vinfo["valid_col"] is not None:
+                worksheet.write_blank(
+                    2,
+                    vinfo["valid_col"],
+                    None,
+                    formats["header"]["base"],
+                )
+
+            worksheet.write(
+                3,
+                vinfo["qty_col"],
+                "Quantité",
+                formats["header"]["base"],
+            )
             max_lens[vinfo["qty_col"]] = max(
                 max_lens[vinfo["qty_col"]],
                 len("Quantité"),
             )
-            worksheet.write(
-                2,
-                vinfo["price_col"],
-                "Prix unitaire (€)",
-                formats["header"]["base"],
-            )
-            max_lens[vinfo["price_col"]] = max(
-                max_lens[vinfo["price_col"]],
-                len("Prix unitaire (€)"),
-            )
+
             if needs_validation and vinfo["valid_col"] is not None:
                 worksheet.write(
-                    2,
+                    3,
                     vinfo["valid_col"],
                     "Validé",
                     formats["header"]["base"],
@@ -543,8 +562,22 @@ def write_product_headers(
                 )
 
         for i, field in enumerate(fields):
-            worksheet.write(2, custom_cols[i], field.name, formats["header"]["base"])
-            max_lens[custom_cols[i]] = max(max_lens[custom_cols[i]], len(field.name))
+            worksheet.write_blank(
+                2,
+                custom_cols[i],
+                None,
+                formats["header"]["base"],
+            )
+            worksheet.write(
+                3,
+                custom_cols[i],
+                field.name,
+                formats["header"]["base"],
+            )
+            max_lens[custom_cols[i]] = max(
+                max_lens[custom_cols[i]],
+                len(field.name),
+            )
 
         for c in range(start_col, end_col + 1):
             max_lens[c] = max(max_lens[c], len(product.name_fr))
@@ -559,7 +592,7 @@ def write_data_rows(
     variant_end_cols: list[int],
     formats: dict,
     max_lens: list[int],
-    start_row: int = 3,
+    start_row: int = 4,
 ):
     for row_idx, row in enumerate(data_rows, start=start_row):
         is_last_row = row_idx == start_row + len(data_rows) - 1
@@ -636,7 +669,7 @@ def write_to_excel(
         max_lens,
     )
     autosize_columns(worksheet, max_lens)
-    worksheet.freeze_panes(3, len(fixed_columns))
+    worksheet.freeze_panes(4, len(fixed_columns))
 
 
 def construct_dataframe_from_users_purchases(
