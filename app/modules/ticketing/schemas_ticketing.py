@@ -83,6 +83,7 @@ class SessionUpdate(BaseModel):
     quota: Annotated[int, Field(gt=0)] | None = None
     user_quota: Annotated[int, Field(gt=0)] | None = None
     disabled: bool | None = None
+    date: datetime | None = None
 
 
 class CategoryBase(BaseModel):
