@@ -316,7 +316,7 @@ def build_product_structure(
     for v in variants:
         variants_by_product.setdefault(v.product_id, []).append(v)
 
-    fixed_columns = ["Nom", "Prénom", "Surnom", "Email"]
+    fixed_columns = ["Nom", "Prénom", "Surnom", "Email", "Étage", "Curriculum"]
     col_idx = len(fixed_columns)
 
     product_structure = []
@@ -329,6 +329,8 @@ def build_product_structure(
         for variant in product_variants:
             qty_col = col_idx
             col_idx += 1
+            price_col = col_idx
+            col_idx += 1
             valid_col = None
             if needs_validation:
                 valid_col = col_idx
@@ -337,6 +339,7 @@ def build_product_structure(
                 {
                     "variant": variant,
                     "qty_col": qty_col,
+                    "price_col": price_col,
                     "valid_col": valid_col,
                 },
             )
@@ -370,16 +373,19 @@ def build_data_rows(
     users: list[models_users.CoreUser],
     users_purchases: dict[str, list[models_cdr.Purchase]],
     users_answers: dict[str, list[models_cdr.CustomData]],
+    users_curriculum: dict[str, str],
     product_structure: dict,
     col_idx: int,
 ):
     data_rows = []
     for user in users:
-        row: list[str | int] = [""] * col_idx
+        row: list[str | int | float] = [""] * col_idx
         row[0] = user.name
         row[1] = user.firstname
         row[2] = user.nickname or ""
         row[3] = user.email
+        row[4] = user.floor or ""
+        row[5] = users_curriculum.get(user.id, "")
 
         answers = users_answers.get(user.id, [])
         answers_map = {a.field_id: a.value for a in answers}
@@ -392,6 +398,8 @@ def build_data_rows(
                 p = purchases_map.get(vinfo["variant"].id)
                 if p and p.quantity > 0:
                     row[vinfo["qty_col"]] = p.quantity
+                    row[vinfo["price_col"]] = vinfo["variant"].price / 100
+
                     if (
                         prod_struct["needs_validation"]
                         and vinfo["valid_col"] is not None
@@ -442,7 +450,7 @@ def write_product_headers(
             end_col = (
                 variants_info[-1]["valid_col"]
                 if (needs_validation and variants_info[-1]["valid_col"] is not None)
-                else variants_info[-1]["qty_col"]
+                else variants_info[-1]["price_col"]
             )
         elif custom_cols:
             start_col = custom_cols[0]
@@ -467,27 +475,22 @@ def write_product_headers(
 
         for vinfo in variants_info:
             qty_col = vinfo["qty_col"]
-            if needs_validation:
-                worksheet.merge_range(
-                    1,
-                    qty_col,
-                    1,
-                    qty_col + 1,
-                    vinfo["variant"].name_fr,
-                    formats["header"]["base"],
-                )
-            else:
-                worksheet.write(
-                    1,
-                    qty_col,
-                    vinfo["variant"].name_fr,
-                    formats["header"]["base"],
-                )
+            variant_end_col = (
+                vinfo["valid_col"]
+                if needs_validation and vinfo["valid_col"] is not None
+                else vinfo["price_col"]
+            )
 
-            if needs_validation and vinfo["valid_col"] is not None:
-                variant_end_cols.add(vinfo["valid_col"])
-            else:
-                variant_end_cols.add(vinfo["qty_col"])
+            worksheet.merge_range(
+                1,
+                qty_col,
+                1,
+                variant_end_col,
+                vinfo["variant"].name_fr,
+                formats["header"]["base"],
+            )
+
+            variant_end_cols.add(variant_end_col)
 
         if custom_cols:
             if len(custom_cols) > 1:
@@ -516,6 +519,16 @@ def write_product_headers(
             max_lens[vinfo["qty_col"]] = max(
                 max_lens[vinfo["qty_col"]],
                 len("Quantité"),
+            )
+            worksheet.write(
+                2,
+                vinfo["price_col"],
+                "Prix unitaire (€)",
+                formats["header"]["base"],
+            )
+            max_lens[vinfo["price_col"]] = max(
+                max_lens[vinfo["price_col"]],
+                len("Prix unitaire (€)"),
             )
             if needs_validation and vinfo["valid_col"] is not None:
                 worksheet.write(
@@ -633,9 +646,10 @@ def construct_dataframe_from_users_purchases(
     products: list[models_cdr.CdrProduct],
     variants: list[models_cdr.ProductVariant],
     data_fields: dict[UUID, list[models_cdr.CustomDataField]],
+    users_curriculum: dict[str, str],
     export_io: BytesIO,
 ):
-    fixed_columns = ["Nom", "Prénom", "Surnom", "Email"]
+    fixed_columns = ["Nom", "Prénom", "Surnom", "Email", "Étage", "Curriculum"]
 
     product_structure, col_idx = build_product_structure(
         products,
@@ -647,6 +661,7 @@ def construct_dataframe_from_users_purchases(
         users_to_write,
         users_purchases,
         users_answers,
+        users_curriculum,
         product_structure,
         col_idx,
     )

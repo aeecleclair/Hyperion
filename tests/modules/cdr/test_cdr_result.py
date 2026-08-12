@@ -350,6 +350,12 @@ def test_construct_dataframe_from_users_purchases():
         cdr_user3.id: [customdata_user3],
     }
 
+    users_curriculum = {
+        cdr_user1.id: "ECL",
+        cdr_user2.id: "EM",
+        cdr_user3.id: "",
+    }
+
     excel_io = BytesIO()
 
     construct_dataframe_from_users_purchases(
@@ -359,5 +365,6 @@ def test_construct_dataframe_from_users_purchases():
         users_purchases=users_purchases,
         data_fields=customdata_fields,
         users_answers=users_answers,
+        users_curriculum=users_curriculum,
         export_io=excel_io,
     )
