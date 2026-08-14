@@ -58,7 +58,7 @@
                 Date de naissance
               </td>
               <td class="px-3 p-2 border border-slate-500">
-                {{birthday.strftime("%d/%m/%Y")}}
+                {% if birthday %}{{birthday.strftime("%d/%m/%Y")}}{% endif %}
               </td>
             </tr>
             <tr>
@@ -212,7 +212,7 @@
                 Date de naissance
               </td>
               <td class="px-3 p-2 border border-slate-500">
-                {{birthday.strftime("%d/%m/%Y")}}
+                {% if birthday %}{{birthday.strftime("%d/%m/%Y")}}{% endif %}
               </td>
             </tr>
             <tr>
