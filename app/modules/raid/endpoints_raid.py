@@ -1275,6 +1275,22 @@ async def get_my_volunteer(
 
 
 @module.router.get(
+    "/raid/participants",
+    response_model=list[schemas_raid.RaidParticipant],
+    status_code=200,
+)
+async def list_participants(
+    status: RaidRegistrationStatus | None = None,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.manage_raid]),
+    ),
+    edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
+):
+    return await cruds_raid.get_all_participants(edition.id, db, status)
+
+
+@module.router.get(
     "/raid/volunteers",
     response_model=list[schemas_raid.RaidVolunteer],
     status_code=200,

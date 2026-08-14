@@ -359,6 +359,28 @@ def test_get_participant_as_admin(client: TestClient) -> None:
     assert r.status_code == 200
 
 
+def test_list_participants_admin_only(client: TestClient) -> None:
+    # A regular participant lacks manage_raid — the list is admin-only, which is
+    # what makes the Sentinel raid-import restricted to raid admins.
+    r = client.get(
+        "/raid/participants",
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 403
+
+
+def test_list_participants_as_admin(client: TestClient) -> None:
+    r = client.get(
+        "/raid/participants",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert any(p["user_id"] == user_captain.id for p in body)
+    # Full read schema embeds CoreUser — the importer maps name/email off it.
+    assert all("user" in p and "email" in p["user"] for p in body)
+
+
 def test_create_participant_missing_identity_400(client: TestClient) -> None:
     r = client.post(
         "/raid/participants",
