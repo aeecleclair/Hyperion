@@ -675,9 +675,8 @@ async def read_document(
             edition.id,
             db,
         )
-        if (
-            user.id != participant.user_id
-            and (user_team is None or owner_team is None or user_team.id != owner_team.id)
+        if user.id != participant.user_id and (
+            user_team is None or owner_team is None or user_team.id != owner_team.id
         ):
             raise HTTPException(
                 status_code=403,

@@ -226,7 +226,6 @@ class RaidTeamPreview(RaidTeamBase):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def validation_progress(self) -> float:
-
         captain_progress = (
             self.captain.validation_progress
             if isinstance(self.captain, RaidParticipant)

@@ -343,9 +343,7 @@ async def test_check_volunteer_rejects_wrong_edition() -> None:
             uuid4(),
             AsyncMock(),
         )
-    assert exc_info.value.detail == (
-        "Volunteer does not belong to the current edition"
-    )
+    assert exc_info.value.detail == ("Volunteer does not belong to the current edition")
 
 
 @pytest.mark.asyncio
@@ -362,11 +360,11 @@ async def test_check_volunteer_rejects_missing_phone() -> None:
     )
     with pytest.raises(HTTPException) as exc_info:
         await validation_checker.check_volunteer_validation_consistency(
-            v, eid, AsyncMock(),
+            v,
+            eid,
+            AsyncMock(),
         )
-    assert exc_info.value.detail == (
-        "Volunteer phone is not set on the user profile"
-    )
+    assert exc_info.value.detail == ("Volunteer phone is not set on the user profile")
 
 
 @pytest.mark.asyncio
@@ -383,7 +381,9 @@ async def test_check_volunteer_rejects_missing_emergency_contact() -> None:
     )
     with pytest.raises(HTTPException) as exc_info:
         await validation_checker.check_volunteer_validation_consistency(
-            v, eid, AsyncMock(),
+            v,
+            eid,
+            AsyncMock(),
         )
     assert exc_info.value.detail == "Volunteer emergency contact is incomplete"
 
@@ -403,7 +403,9 @@ async def test_check_volunteer_passes_for_complete_profile() -> None:
         car_seats=None,
     )
     await validation_checker.check_volunteer_validation_consistency(
-        v, eid, AsyncMock(),
+        v,
+        eid,
+        AsyncMock(),
     )
 
 
@@ -457,7 +459,11 @@ def test_compute_participant_progress_partial_gives_fraction() -> None:
 
 
 def test_count_total_required_documents_centrale() -> None:
-    p = Mock(spec=models_raid.RaidParticipant, situation=Situation.centrale, is_minor=False)
+    p = Mock(
+        spec=models_raid.RaidParticipant,
+        situation=Situation.centrale,
+        is_minor=False,
+    )
     assert validation_checker.count_total_required_documents(p) == 4
 
 
@@ -467,7 +473,11 @@ def test_count_total_required_documents_other_minor() -> None:
 
 
 def test_count_total_required_documents_centrale_minor() -> None:
-    p = Mock(spec=models_raid.RaidParticipant, situation=Situation.centrale, is_minor=True)
+    p = Mock(
+        spec=models_raid.RaidParticipant,
+        situation=Situation.centrale,
+        is_minor=True,
+    )
     assert validation_checker.count_total_required_documents(p) == 5
 
 
