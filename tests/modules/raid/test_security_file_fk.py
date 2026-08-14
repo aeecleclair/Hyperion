@@ -112,11 +112,31 @@ class TestSecurityFileFKViolation:
 
         # Mock the permission check
         with (
-            patch("app.modules.raid.endpoints_raid.has_user_permission", new=AsyncMock(return_value=False)),
-            patch("app.modules.raid.endpoints_raid.get_participant_or_404", new=AsyncMock(return_value=participant)),
-            patch("app.modules.raid.endpoints_raid.cruds_raid.get_team_by_participant_id", new=AsyncMock(return_value=team)),
-            patch("app.modules.raid.endpoints_raid.cruds_raid.update_security_file", new=AsyncMock()) as mock_update,
-            patch("app.modules.raid.endpoints_raid.cruds_raid.get_security_file_by_security_id", new=AsyncMock(return_value=Mock(spec=schemas_raid.SecurityFile, id="existing_sec_file_id"))),
+            patch(
+                "app.modules.raid.endpoints_raid.has_user_permission",
+                new=AsyncMock(return_value=False),
+            ),
+            patch(
+                "app.modules.raid.endpoints_raid.get_participant_or_404",
+                new=AsyncMock(return_value=participant),
+            ),
+            patch(
+                "app.modules.raid.endpoints_raid.cruds_raid.get_team_by_participant_id",
+                new=AsyncMock(return_value=team),
+            ),
+            patch(
+                "app.modules.raid.endpoints_raid.cruds_raid.update_security_file",
+                new=AsyncMock(),
+            ) as mock_update,
+            patch(
+                "app.modules.raid.endpoints_raid.cruds_raid.get_security_file_by_security_id",
+                new=AsyncMock(
+                    return_value=Mock(
+                        spec=schemas_raid.SecurityFile,
+                        id="existing_sec_file_id",
+                    ),
+                ),
+            ),
         ):
             result = await set_security_file(
                 security_file=security_file_base,
@@ -149,12 +169,30 @@ class TestSecurityFileFKViolation:
         mock_security_file.id = "new_sec_file_id"
 
         with (
-            patch("app.modules.raid.endpoints_raid.has_user_permission", new=AsyncMock(return_value=False)),
-            patch("app.modules.raid.endpoints_raid.get_participant_or_404", new=AsyncMock(return_value=participant)),
-            patch("app.modules.raid.endpoints_raid.cruds_raid.get_team_by_participant_id", new=AsyncMock(return_value=team)),
-            patch("app.modules.raid.endpoints_raid.cruds_raid.add_security_file", new=AsyncMock()) as mock_add,
-            patch("app.modules.raid.endpoints_raid.cruds_raid.assign_security_file", new=AsyncMock()) as mock_assign,
-            patch("app.modules.raid.endpoints_raid.cruds_raid.get_security_file_by_security_id", new=AsyncMock(return_value=mock_security_file)),
+            patch(
+                "app.modules.raid.endpoints_raid.has_user_permission",
+                new=AsyncMock(return_value=False),
+            ),
+            patch(
+                "app.modules.raid.endpoints_raid.get_participant_or_404",
+                new=AsyncMock(return_value=participant),
+            ),
+            patch(
+                "app.modules.raid.endpoints_raid.cruds_raid.get_team_by_participant_id",
+                new=AsyncMock(return_value=team),
+            ),
+            patch(
+                "app.modules.raid.endpoints_raid.cruds_raid.add_security_file",
+                new=AsyncMock(),
+            ) as mock_add,
+            patch(
+                "app.modules.raid.endpoints_raid.cruds_raid.assign_security_file",
+                new=AsyncMock(),
+            ) as mock_assign,
+            patch(
+                "app.modules.raid.endpoints_raid.cruds_raid.get_security_file_by_security_id",
+                new=AsyncMock(return_value=mock_security_file),
+            ),
             patch("uuid.uuid4", return_value="new_sec_file_id"),
         ):
             result = await set_security_file(
@@ -193,11 +231,31 @@ class TestSecurityFileFKViolation:
         security_file_base = _create_mock_security_file_base()
 
         with (
-            patch("app.modules.raid.endpoints_raid.has_user_permission", new=AsyncMock(return_value=False)),
-            patch("app.modules.raid.endpoints_raid.get_participant_or_404", new=AsyncMock(return_value=participant)),
-            patch("app.modules.raid.endpoints_raid.cruds_raid.get_team_by_participant_id", new=AsyncMock(return_value=team)),
-            patch("app.modules.raid.endpoints_raid.cruds_raid.update_security_file", new=AsyncMock()) as mock_update,
-            patch("app.modules.raid.endpoints_raid.cruds_raid.get_security_file_by_security_id", new=AsyncMock(return_value=Mock(spec=schemas_raid.SecurityFile, id=security_file_id))),
+            patch(
+                "app.modules.raid.endpoints_raid.has_user_permission",
+                new=AsyncMock(return_value=False),
+            ),
+            patch(
+                "app.modules.raid.endpoints_raid.get_participant_or_404",
+                new=AsyncMock(return_value=participant),
+            ),
+            patch(
+                "app.modules.raid.endpoints_raid.cruds_raid.get_team_by_participant_id",
+                new=AsyncMock(return_value=team),
+            ),
+            patch(
+                "app.modules.raid.endpoints_raid.cruds_raid.update_security_file",
+                new=AsyncMock(),
+            ) as mock_update,
+            patch(
+                "app.modules.raid.endpoints_raid.cruds_raid.get_security_file_by_security_id",
+                new=AsyncMock(
+                    return_value=Mock(
+                        spec=schemas_raid.SecurityFile,
+                        id=security_file_id,
+                    ),
+                ),
+            ),
         ):
             await set_security_file(
                 security_file=security_file_base,
@@ -245,7 +303,9 @@ class TestSecurityFileFKViolation:
         # Check what model_dump returns
         dump = security_file_base.model_dump(exclude_none=True)
         assert "id" not in dump, "SecurityFileBase should not have 'id' field"
-        assert "validation" not in dump, "SecurityFileBase should not have 'validation' field"
+        assert "validation" not in dump, (
+            "SecurityFileBase should not have 'validation' field"
+        )
         # The dump should only contain the fields that are set
         assert dump["allergy"] == "pollen"
         assert dump["asthma"] is True
@@ -288,11 +348,26 @@ class TestSecurityFileFKEdgeCases:
         security_file_base = _create_mock_security_file_base()
 
         with (
-            patch("app.modules.raid.endpoints_raid.has_user_permission", new=AsyncMock(return_value=False)),
-            patch("app.modules.raid.endpoints_raid.get_participant_or_404", new=AsyncMock(return_value=participant)),
-            patch("app.modules.raid.endpoints_raid.cruds_raid.get_team_by_participant_id", new=AsyncMock(return_value=team)),
-            patch("app.modules.raid.endpoints_raid.cruds_raid.update_security_file", new=AsyncMock()) as mock_update,
-            patch("app.modules.raid.endpoints_raid.cruds_raid.get_security_file_by_security_id", new=AsyncMock(return_value=None)),
+            patch(
+                "app.modules.raid.endpoints_raid.has_user_permission",
+                new=AsyncMock(return_value=False),
+            ),
+            patch(
+                "app.modules.raid.endpoints_raid.get_participant_or_404",
+                new=AsyncMock(return_value=participant),
+            ),
+            patch(
+                "app.modules.raid.endpoints_raid.cruds_raid.get_team_by_participant_id",
+                new=AsyncMock(return_value=team),
+            ),
+            patch(
+                "app.modules.raid.endpoints_raid.cruds_raid.update_security_file",
+                new=AsyncMock(),
+            ) as mock_update,
+            patch(
+                "app.modules.raid.endpoints_raid.cruds_raid.get_security_file_by_security_id",
+                new=AsyncMock(return_value=None),
+            ),
         ):
             mock_update.side_effect = Exception("FK violation: security file not found")
             with pytest.raises(Exception, match="FK violation"):
@@ -303,4 +378,3 @@ class TestSecurityFileFKEdgeCases:
                     user=user,
                     edition=edition,
                 )
-

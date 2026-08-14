@@ -298,7 +298,9 @@ async def test_validate_payment_invalid_amount(mocker: MockerFixture) -> None:
         "app.modules.raid.utils.utils_raid.get_core_data",
         new=AsyncMock(
             return_value=coredata_raid.RaidPrice(
-                student_price=50, t_shirt_price=15, external_price=90,
+                student_price=50,
+                t_shirt_price=15,
+                external_price=90,
             ),
         ),
     )

@@ -1,4 +1,5 @@
 """Tests for PDF generation to ensure filenames are UUIDs, not team names."""
+
 import datetime
 import tempfile
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -68,7 +69,10 @@ def _create_mock_information() -> MagicMock:
     return info
 
 
-def _create_mock_team(team_id: str | None = None, team_name: str = "Test Team") -> MagicMock:
+def _create_mock_team(
+    team_id: str | None = None,
+    team_name: str = "Test Team",
+) -> MagicMock:
     """Create a mock RaidTeam for testing."""
     if team_id is None:
         team_id = str(uuid4())
@@ -93,7 +97,8 @@ class TestPDFGenerationFilename:
         information = _create_mock_information()
 
         with patch(
-            "app.modules.raid.utils.utils_raid.generate_pdf_from_template", new=AsyncMock(),
+            "app.modules.raid.utils.utils_raid.generate_pdf_from_template",
+            new=AsyncMock(),
         ) as mock_generate:
             await generate_security_file_pdf(participant, information)
 
@@ -112,7 +117,8 @@ class TestPDFGenerationFilename:
         team_id = team.id
 
         with patch(
-            "app.modules.raid.utils.utils_raid.generate_pdf_from_template", new=AsyncMock(),
+            "app.modules.raid.utils.utils_raid.generate_pdf_from_template",
+            new=AsyncMock(),
         ) as mock_generate:
             await generate_recap_file_pdf(team)
 
@@ -201,7 +207,8 @@ class TestPDFGenerationOldCodePattern:
         team = _create_mock_team(team_name="Équipe de Test")
 
         with patch(
-            "app.modules.raid.utils.utils_raid.generate_pdf_from_template", new=AsyncMock(),
+            "app.modules.raid.utils.utils_raid.generate_pdf_from_template",
+            new=AsyncMock(),
         ) as mock_generate:
             await generate_recap_file_pdf(team)
 
@@ -247,4 +254,3 @@ class TestSaveBytesAsDataFilenameValidation:
         with tempfile.TemporaryDirectory():
             # We can't easily change the data path, so just test the validation
             pass
-
