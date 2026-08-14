@@ -80,37 +80,8 @@ async def _set_user_identity(user_id: str, phone: str, birthday: datetime.date) 
         await db.commit()
 
 
-async def _ensure_tables_created() -> None:
-    """Work around the test harness's flaky `use_lock_for_workers` path.
-
-    In test mode the init_db startup hook may be skipped when the current
-    pytest process isn't selected as the "chosen worker" by psutil. Force
-    table creation so init_objects never races with it.
-    """
-    session_local = get_TestingSessionLocal()
-    async with session_local() as db:
-        engine = db.bind
-        assert isinstance(engine, AsyncEngine)
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-
-
 @pytest_asyncio.fixture(scope="module", autouse=True)
-async def init_objects(client) -> None:
-    await _ensure_tables_created()
-
-    # The init_db startup hook normally seeds each module's access permission
-    # against the default account types. When the fallback worker selection
-    # skips init_db we also need to seed them; when it runs we must not
-    # double-insert. Wrap in try/except to stay idempotent.
-    for account_type in AccountType:
-        try:
-            await add_account_type_permission(
-                RaidPermissions.access_raid,
-                account_type,
-            )
-        except Exception:  # noqa: S110
-            pass
+async def init_objects() -> None:
 
     global admin_group, active_edition
     admin_group = await create_groups_with_permissions(
