@@ -47,6 +47,7 @@ from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.tools import (
     delete_all_folder_from_data,
+    delete_file_from_data,
     get_core_data,
     get_file_from_data,
     get_random_string,
@@ -622,22 +623,27 @@ async def upload_document(
         type=document_type,
         validation=DocumentValidation.pending,
     )
-    await cruds_raid.create_document(document_schema, edition.id, db)
+    try:
+        await cruds_raid.create_document(document_schema, edition.id, db)
 
-    document_key = {
-        DocumentType.idCard: "id_card_id",
-        DocumentType.medicalCertificate: "medical_certificate_id",
-        DocumentType.studentCard: "student_card_id",
-        DocumentType.raidRules: "raid_rules_id",
-        DocumentType.parentAuthorization: "parent_authorization_id",
-    }[document_type]
-    await cruds_raid.assign_document(
-        user.id,
-        edition.id,
-        document_id,
-        document_key,
-        db,
-    )
+        document_key = {
+            DocumentType.idCard: "id_card_id",
+            DocumentType.medicalCertificate: "medical_certificate_id",
+            DocumentType.studentCard: "student_card_id",
+            DocumentType.raidRules: "raid_rules_id",
+            DocumentType.parentAuthorization: "parent_authorization_id",
+        }[document_type]
+        await cruds_raid.assign_document(
+            user.id,
+            edition.id,
+            document_id,
+            document_key,
+            db,
+        )
+    except Exception:
+        # Rollback: delete the uploaded file if DB operations fail
+        await delete_file_from_data(directory="raid", filename=document_id)
+        raise
     return schemas_raid.DocumentCreation(id=document_id)
 
 
@@ -1053,39 +1059,6 @@ async def update_raid_information(
                 is_minor,
                 db,
             )
-
-
-@module.router.patch(
-    "/raid/drive",
-    status_code=204,
-)
-async def update_drive_folders(
-    drive_folders: schemas_raid.RaidDriveFoldersCreation,
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
-        is_user_allowed_to([RaidPermissions.manage_raid]),
-    ),
-):
-    schemas_folders = coredata_raid.RaidDriveFolders(
-        parent_folder_id=drive_folders.parent_folder_id,
-        registering_folder_id=None,
-        security_folder_id=None,
-    )
-    await set_core_data(schemas_folders, db)
-
-
-@module.router.get(
-    "/raid/drive",
-    response_model=schemas_raid.RaidDriveFoldersCreation,
-    status_code=200,
-)
-async def get_drive_folders(
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
-        is_user_allowed_to([RaidPermissions.manage_raid]),
-    ),
-):
-    return await get_core_data(coredata_raid.RaidDriveFolders, db)
 
 
 @module.router.get(
