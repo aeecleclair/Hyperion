@@ -650,14 +650,18 @@ def test_upgrade(
     assert len(participant_rows) == 2
 
     # User 1: centrale -> status should become 'validated' (payment + attestation)
-    p1 = next(r for r in participant_rows if r[0] == "11111111-1111-1111-1111-111111111111")
+    p1 = next(
+        r for r in participant_rows if r[0] == "11111111-1111-1111-1111-111111111111"
+    )
     assert str(p1[1]) == str(DEFAULT_EDITION_ID)
     assert p1[2] == "centrale"
     assert p1[3] is None
     assert p1[4] == "validated"
 
     # User 2: otherschool : CentraleSupélec -> other_school populated, status 'submitted'
-    p2 = next(r for r in participant_rows if r[0] == "22222222-2222-2222-2222-222222222222")
+    p2 = next(
+        r for r in participant_rows if r[0] == "22222222-2222-2222-2222-222222222222"
+    )
     assert str(p2[1]) == str(DEFAULT_EDITION_ID)
     assert p2[2] == "otherSchool"
     assert p2[3] == "CentraleSupélec"

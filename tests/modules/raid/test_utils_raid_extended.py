@@ -168,7 +168,9 @@ async def test_set_team_number_success():
         await set_team_number(team, edition_id, db)
 
         # Verify max team number was retrieved and team updated
-        mock_cruds.get_max_team_number_by_difficulty.assert_called_once_with(Difficulty.sports, edition_id, db)
+        mock_cruds.get_max_team_number_by_difficulty.assert_called_once_with(
+            Difficulty.sports, edition_id, db,
+        )
         mock_cruds.update_team.assert_called_once()
 
 
@@ -198,7 +200,10 @@ async def test_set_team_number_with_existing_team():
 def test_participant_pdf_context_with_user():
     """Test _participant_pdf_context when user is present."""
     participant = Mock(spec=schemas_raid.RaidParticipant)
-    participant.model_dump.return_value = {"user_id": "test_user", "edition_id": uuid4()}
+    participant.model_dump.return_value = {
+        "user_id": "test_user",
+        "edition_id": uuid4(),
+    }
 
     user = Mock()
     user.name = "Doe"
@@ -221,7 +226,10 @@ def test_participant_pdf_context_with_user():
 def test_participant_pdf_context_without_user():
     """Test _participant_pdf_context when user is None."""
     participant = Mock(spec=schemas_raid.RaidParticipant)
-    participant.model_dump.return_value = {"user_id": "test_user", "edition_id": uuid4()}
+    participant.model_dump.return_value = {
+        "user_id": "test_user",
+        "edition_id": uuid4(),
+    }
     participant.user = None
 
     result = _participant_pdf_context(participant)
@@ -251,7 +259,9 @@ async def test_get_participant_success():
         result = await get_participant(user_id, edition_id, db)
 
         assert result is participant
-        mock_cruds.get_participant_by_user_id.assert_called_once_with(user_id, edition_id, db)
+        mock_cruds.get_participant_by_user_id.assert_called_once_with(
+            user_id, edition_id, db,
+        )
 
 
 @pytest.mark.asyncio
