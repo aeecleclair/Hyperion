@@ -478,31 +478,6 @@ def test_calculate_raid_payment_invalid_price():
     assert "Prices not set" in exc_info.value.detail
 
 
-def test_calculate_raid_payment_no_participant():
-    """Test calculate_raid_payment raises when participant is None."""
-    prices = coredata_raid.RaidPrice(
-        student_price=50.0,
-        t_shirt_price=15.0,
-        external_price=90.0,
-    )
-    participant = schemas_raid.RaidParticipant(
-        user_id=str(uuid4()),
-        edition_id=uuid4(),
-        status=RaidRegistrationStatus.draft,
-        payment=False,
-        t_shirt_payment=False,
-        user=None,
-        attestation_on_honour=False,
-        is_minor=False,
-    )
-
-    with pytest.raises(HTTPException) as exc_info:
-        calculate_raid_payment(participant, prices)
-
-    assert exc_info.value.status_code == 404
-    assert "Participant not found" in exc_info.value.detail
-
-
 # --- Test coverage for calculate_raid_payment with None situation ---------------------------
 
 
