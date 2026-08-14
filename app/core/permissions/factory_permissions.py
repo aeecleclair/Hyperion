@@ -8,6 +8,8 @@ from app.types.factory import Factory
 
 
 class CorePermissionsFactory(Factory):
+    depends_on = []
+
     @classmethod
     async def run(cls, db: AsyncSession, settings: Settings) -> None:
         for permission in permissions_list:
@@ -26,4 +28,4 @@ class CorePermissionsFactory(Factory):
             permissions_list,
             db,
         )
-        return len(permissions) == 0
+        return not any(permission.groups for permission in permissions)

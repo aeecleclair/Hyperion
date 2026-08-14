@@ -517,7 +517,7 @@ async def buy_ticket(
 
     redis_key = "raffle_" + user.id
 
-    if not isinstance(redis_client, Redis) or locker_get(
+    if not isinstance(redis_client, Redis) or await locker_get(
         redis_client=redis_client,
         key=redis_key,
     ):
@@ -985,7 +985,7 @@ async def edit_cash_by_id(
 
     redis_key = "raffle_" + user_id
 
-    if not isinstance(redis_client, Redis) or locker_get(
+    if not isinstance(redis_client, Redis) or await locker_get(
         redis_client=redis_client,
         key=redis_key,
     ):
