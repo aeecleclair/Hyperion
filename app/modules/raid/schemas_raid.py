@@ -292,10 +292,6 @@ class EmergencyContact(BaseModel):
     phone: str | None = None
 
 
-class RaidDriveFoldersCreation(BaseModel):
-    parent_folder_id: str
-
-
 class PaymentUrl(BaseModel):
     url: str
 
