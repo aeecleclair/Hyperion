@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from uuid import UUID
 
-from sqlalchemy import ForeignKey, ForeignKeyConstraint
+from sqlalchemy import ForeignKey, ForeignKeyConstraint, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.users.models_users import CoreUser
@@ -212,6 +212,11 @@ class RaidTeam(Base):
             ["second_id", "edition_id"],
             ["raid_participant.user_id", "raid_participant.edition_id"],
             name="fk_raid_team_second",
+        ),
+        UniqueConstraint(
+            "second_id",
+            "edition_id",
+            name="uq_raid_team_second_id_edition_id",
         ),
     )
 
