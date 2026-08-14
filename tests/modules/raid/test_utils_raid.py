@@ -17,6 +17,8 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException
 from pytest_mock import MockerFixture
+from sqlalchemy.ext.asyncio import AsyncSession
+from unittest.mock import AsyncMock, Mock
 
 from app.modules.raid import coredata_raid
 from app.modules.raid.models_raid import RaidParticipant, RaidTeam
@@ -24,7 +26,10 @@ from app.modules.raid.raid_type import Difficulty, Situation, Size
 from app.modules.raid.utils.utils_raid import (
     calculate_raid_payment,
     set_team_number,
+    validate_payment,
     will_birthday_be_minor_on,
+    get_all_security_files_zip,
+    get_all_team_files_zip,
 )
 
 # -- will_birthday_be_minor_on ---------------------------------------------
@@ -274,3 +279,72 @@ async def test_set_team_number_passes_edition_to_crud(mocker: MockerFixture) -> 
     args, _ = mock_max.call_args
     assert args[0] == Difficulty.sports
     assert args[1] == edition_id
+
+
+# -- validate_payment -------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_validate_payment_invalid_amount(mocker: MockerFixture) -> None:
+    """Test that validate_payment logs error for invalid payment amount."""
+    import logging
+
+    db = AsyncMock(spec=AsyncSession)
+    mocker.patch(
+        "app.modules.raid.cruds_raid.get_participant_checkout_by_checkout_id",
+        new=AsyncMock(return_value=Mock(participant_user_id="user1", edition_id=uuid4())),
+    )
+    mocker.patch(
+        "app.modules.raid.utils.utils_raid.get_core_data",
+        new=AsyncMock(return_value=coredata_raid.RaidPrice(student_price=50, t_shirt_price=15, external_price=90)),
+    )
+
+    checkout_payment = Mock()
+    checkout_payment.checkout_id = "checkout_123"
+    checkout_payment.paid_amount = 999  # Invalid amount
+
+    mock_logger = mocker.patch("app.modules.raid.utils.utils_raid.hyperion_error_logger")
+    await validate_payment(checkout_payment, db)
+
+    mock_logger.error.assert_called_with("Invalid payment amount")
+
+
+# -- get_all_security_files_zip / get_all_team_files_zip --------------------
+
+
+@pytest.mark.asyncio
+async def test_get_all_security_files_zip_no_teams(mocker: MockerFixture) -> None:
+    """Test that get_all_security_files_zip raises HTTPException when no teams."""
+    db = AsyncMock(spec=AsyncSession)
+    information = Mock(spec=coredata_raid.RaidInformation)
+    edition_id = uuid4()
+
+    mocker.patch(
+        "app.modules.raid.cruds_raid.get_all_teams",
+        new=AsyncMock(return_value=[]),
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await get_all_security_files_zip(db, information, edition_id)
+
+    assert exc_info.value.status_code == 400
+    assert exc_info.value.detail == "No team found."
+
+
+@pytest.mark.asyncio
+async def test_get_all_team_files_zip_no_teams(mocker: MockerFixture) -> None:
+    """Test that get_all_team_files_zip raises HTTPException when no teams."""
+    db = AsyncMock(spec=AsyncSession)
+    information = Mock(spec=coredata_raid.RaidInformation)
+    edition_id = uuid4()
+
+    mocker.patch(
+        "app.modules.raid.cruds_raid.get_all_teams",
+        new=AsyncMock(return_value=[]),
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await get_all_team_files_zip(db, information, edition_id)
+
+    assert exc_info.value.status_code == 400
+    assert exc_info.value.detail == "No team found."
