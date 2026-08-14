@@ -503,7 +503,6 @@ def pre_test_upgrade(
             "phone": "0102030405",
             "floor": "Autre",
             "created_on": None,
-            "make_user_external": False,
         },
     )
     alembic_runner.insert_into(
@@ -522,7 +521,6 @@ def pre_test_upgrade(
             "phone": "0607080910",
             "floor": "Autre",
             "created_on": None,
-            "make_user_external": False,
         },
     )
 
@@ -632,7 +630,7 @@ def test_upgrade(
     # raid_edition exists and has our seeded row
     edition_rows = alembic_connection.execute(
         sa.text(
-            "SELECT id, year, name, active, inscription_enabled FROM raid_edition"
+            "SELECT id, year, name, active, inscription_enabled FROM raid_edition",
         ),
     ).fetchall()
     assert len(edition_rows) == 1
@@ -646,7 +644,7 @@ def test_upgrade(
     participant_rows = alembic_connection.execute(
         sa.text(
             "SELECT user_id, edition_id, situation, other_school, status "
-            "FROM raid_participant ORDER BY user_id"
+            "FROM raid_participant ORDER BY user_id",
         ),
     ).fetchall()
     assert len(participant_rows) == 2
@@ -677,7 +675,7 @@ def test_upgrade(
     # raid_participant_checkout: participant_id -> participant_user_id + edition_id
     alembic_connection.execute(
         sa.text(
-            "SELECT participant_user_id, edition_id FROM raid_participant_checkout"
+            "SELECT participant_user_id, edition_id FROM raid_participant_checkout",
         ),
     ).fetchall()
     # No checkout rows were seeded, but the column + FK should exist
