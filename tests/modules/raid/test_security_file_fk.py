@@ -1,6 +1,6 @@
 import datetime
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -60,7 +60,7 @@ def _create_mock_team(team_id: str = "team_123") -> Mock:
 def _create_mock_participant(
     security_file_id: str | None = "sec_file_123",
     user_id: str = "user_123",
-    edition_id: uuid4 | None = None,
+    edition_id: UUID | None = None,
 ) -> Mock:
     """Create a mock RaidParticipant for testing."""
     if edition_id is None:

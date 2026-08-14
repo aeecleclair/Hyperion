@@ -16,7 +16,8 @@ from app.modules.raid.utils.utils_raid import (
     get_all_security_files_zip,
     get_all_team_files_zip,
 )
-from app.utils.tools import FileNameIsNotAnUUIDError, save_bytes_as_data
+from app.types.exceptions import FileNameIsNotAnUUIDError
+from app.utils.tools import save_bytes_as_data
 
 # --- Helper functions -----------------------------------------------------
 
