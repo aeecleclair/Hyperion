@@ -303,8 +303,6 @@ def calculate_raid_payment(
 
     price = 0
     checkout_name = ""
-    if not participant:
-        raise HTTPException(status_code=404, detail="Participant not found.")
 
     if not participant.payment:
         if (

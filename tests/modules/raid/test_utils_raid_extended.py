@@ -16,7 +16,6 @@ from app.core.payment import schemas_payment
 from app.modules.raid import coredata_raid, schemas_raid
 from app.modules.raid.raid_type import (
     Difficulty,
-    RaidRegistrationStatus,
     Situation,
     Size,
 )
