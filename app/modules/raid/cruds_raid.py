@@ -67,10 +67,11 @@ async def get_all_participants(
 async def update_participant(
     user_id: str,
     edition_id: UUID,
-    values: dict,
+    values: schemas_raid.RaidParticipantUpdate,
     db: AsyncSession,
 ) -> None:
-    if not values:
+    values_dict = values.model_dump(exclude_none=True)
+    if not values_dict:
         return
     await db.execute(
         update(models_raid.RaidParticipant)
@@ -78,7 +79,7 @@ async def update_participant(
             models_raid.RaidParticipant.user_id == user_id,
             models_raid.RaidParticipant.edition_id == edition_id,
         )
-        .values(**values),
+        .values(**values_dict),
     )
     await db.flush()
 
@@ -168,6 +169,14 @@ async def get_all_validated_teams(
     db: AsyncSession,
 ) -> list[schemas_raid.RaidTeam]:
     """Validated = captain AND second both have status=validated."""
+    # We use raw table aliases instead of ORM relationships because:
+    # 1. The composite FK (user_id + edition_id) on RaidParticipant means the
+    #    `captain` and `second` relationships on RaidTeam are not simple
+    #    single-column joins; SQLAlchemy can't easily express "join on both
+    #    captain_id+edition_id AND second_id+edition_id simultaneously" via
+    #    the relationship API without loading the full object graph.
+    # 2. A raw join lets us filter on participant.status in the same query
+    #    without an extra round-trip or in-Python filtering.
     Captain = models_raid.RaidParticipant.__table__.alias("captain_p")
     Second = models_raid.RaidParticipant.__table__.alias("second_p")
     stmt = (
@@ -690,6 +699,10 @@ async def get_max_team_number_by_difficulty(
 
     Validated = both captain and second have status=validated.
     """
+    # Same rationale as in get_all_validated_teams: the composite FK on
+    # RaidParticipant makes the ORM relationships awkward for a simultaneous
+    # join on both captain+edition_id and second+edition_id while filtering
+    # on participant.status in the same query.
     Captain = models_raid.RaidParticipant.__table__.alias("captain_p")
     Second = models_raid.RaidParticipant.__table__.alias("second_p")
     stmt = (
@@ -752,7 +765,19 @@ async def get_all_editions(
     db: AsyncSession,
 ) -> list[schemas_raid.RaidEdition]:
     result = await db.execute(select(models_raid.RaidEdition))
-    return [schemas_raid.RaidEdition.model_validate(e) for e in result.scalars().all()]
+    return [
+        schemas_raid.RaidEdition(
+            id=e.id,
+            year=e.year,
+            name=e.name,
+            start_date=e.start_date,
+            end_date=e.end_date,
+            registering_end_date=e.registering_end_date,
+            active=e.active,
+            inscription_enabled=e.inscription_enabled,
+        )
+        for e in result.scalars().all()
+    ]
 
 
 async def get_edition_by_id(
@@ -765,7 +790,18 @@ async def get_edition_by_id(
         ),
     )
     model = result.scalars().first()
-    return schemas_raid.RaidEdition.model_validate(model) if model else None
+    if model is None:
+        return None
+    return schemas_raid.RaidEdition(
+        id=model.id,
+        year=model.year,
+        name=model.name,
+        start_date=model.start_date,
+        end_date=model.end_date,
+        registering_end_date=model.registering_end_date,
+        active=model.active,
+        inscription_enabled=model.inscription_enabled,
+    )
 
 
 async def get_active_edition(
@@ -777,7 +813,18 @@ async def get_active_edition(
         ),
     )
     model = result.scalars().first()
-    return schemas_raid.RaidEdition.model_validate(model) if model else None
+    if model is None:
+        return None
+    return schemas_raid.RaidEdition(
+        id=model.id,
+        year=model.year,
+        name=model.name,
+        start_date=model.start_date,
+        end_date=model.end_date,
+        registering_end_date=model.registering_end_date,
+        active=model.active,
+        inscription_enabled=model.inscription_enabled,
+    )
 
 
 async def create_edition(
@@ -804,7 +851,7 @@ async def update_edition(
     edit: schemas_raid.RaidEditionEdit,
     db: AsyncSession,
 ) -> None:
-    values = edit.model_dump(exclude_none=True)
+    values = edit.model_dump(exclude_unset=True)
     if not values:
         return
     await db.execute(
@@ -899,10 +946,11 @@ async def get_all_volunteers_by_edition(
 async def update_volunteer(
     user_id: str,
     edition_id: UUID,
-    values: dict,
+    values: schemas_raid.RaidVolunteerEdit,
     db: AsyncSession,
 ) -> None:
-    if not values:
+    values_dict = values.model_dump(exclude_none=True)
+    if not values_dict:
         return
     await db.execute(
         update(models_raid.RaidVolunteer)
@@ -910,7 +958,7 @@ async def update_volunteer(
             models_raid.RaidVolunteer.user_id == user_id,
             models_raid.RaidVolunteer.edition_id == edition_id,
         )
-        .values(**values),
+        .values(**values_dict),
     )
     await db.flush()
 

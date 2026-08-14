@@ -304,8 +304,7 @@ async def update_participant(
         ):
             raise HTTPException(status_code=404, detail="Security_file not found.")
 
-    values = participant_update.model_dump(exclude_none=True)
-    await cruds_raid.update_participant(user_id, edition.id, values, db)
+    await cruds_raid.update_participant(user_id, edition.id, participant_update, db)
 
 
 @module.router.post(
@@ -1328,8 +1327,7 @@ async def update_volunteer(
             status_code=400,
             detail="Volunteer is validated; admin-only update",
         )
-    values = volunteer_edit.model_dump(exclude_none=True)
-    await cruds_raid.update_volunteer(user_id, edition.id, values, db)
+    await cruds_raid.update_volunteer(user_id, edition.id, volunteer_edit, db)
 
 
 @module.router.patch(
