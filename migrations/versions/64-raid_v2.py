@@ -4,6 +4,7 @@ Create Date: 2026-08-14 23:38:34.379180
 """
 
 from collections.abc import Sequence
+from enum import Enum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -19,6 +20,56 @@ revision: str = "ee92f619275e"
 down_revision: str | None = "2b6eae542913"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
+
+
+class DocumentType(Enum):
+    idCard = "idCard"
+    medicalCertificate = "medicalCertificate"
+    studentCard = "studentCard"
+    raidRules = "raidRules"
+    parentAuthorization = "parentAuthorization"
+
+
+class DocumentValidation(Enum):
+    pending = "pending"
+    accepted = "accepted"
+    refused = "refused"
+    temporary = "temporary"
+
+
+class Size(Enum):
+    XS = "XS"
+    S = "S"
+    M = "M"
+    L = "L"
+    XL = "XL"
+    None_ = "None_"
+
+
+class Difficulty(Enum):
+    discovery = "discovery"
+    sports = "sports"
+    expert = "expert"
+
+
+class MeetingPlace(Enum):
+    centrale = "centrale"
+    bellecour = "bellecour"
+    anyway = "anyway"
+
+
+class Situation(Enum):
+    centrale = "centrale"
+    otherSchool = "otherSchool"
+    corporatePartner = "corporatePartner"
+    other = "other"
+
+
+class RaidRegistrationStatus(Enum):
+    draft = "draft"
+    submitted = "submitted"
+    validated = "validated"
+    cancelled = "cancelled"
 
 
 def upgrade() -> None:
@@ -277,6 +328,18 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_raid_document_id"), table_name="raid_document")
     op.drop_table("raid_document")
     op.drop_table("raid_edition")
+
+    conn = op.get_bind()
+    sa.Enum(DocumentType, name="documenttype").drop(conn, checkfirst=False)
+    sa.Enum(DocumentValidation, name="documentvalidation").drop(conn, checkfirst=False)
+    sa.Enum(Size, name="size").drop(conn, checkfirst=False)
+    sa.Enum(Difficulty, name="difficulty").drop(conn, checkfirst=False)
+    sa.Enum(MeetingPlace, name="meetingplace").drop(conn, checkfirst=False)
+    sa.Enum(Situation, name="situation").drop(conn, checkfirst=False)
+    sa.Enum(RaidRegistrationStatus, name="raidregistrationstatus").drop(
+        conn,
+        checkfirst=False,
+    )
     # ### end Alembic commands ###
 
 
