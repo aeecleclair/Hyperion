@@ -9,7 +9,7 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.payment import schemas_payment
-from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
+from app.modules.raid import coredata_raid, cruds_raid, schemas_raid
 from app.modules.raid.raid_type import Difficulty, Situation, Size
 from app.modules.raid.utils.pdf.conversion_utils import (
     get_difficulty_label,
@@ -102,7 +102,7 @@ async def validate_payment(
 
 
 async def set_team_number(
-    team: models_raid.RaidTeam,
+    team: schemas_raid.RaidTeam,
     edition_id: UUID,
     db: AsyncSession,
 ) -> None:
@@ -127,13 +127,9 @@ async def set_team_number(
     await cruds_raid.update_team(team.id, updated_team, db)
 
 
-def _participant_pdf_context(participant: models_raid.RaidParticipant) -> dict:
+def _participant_pdf_context(participant: schemas_raid.RaidParticipant) -> dict:
     """Build a template context with identity fields pulled from CoreUser."""
-    ctx = {
-        key: value
-        for key, value in participant.__dict__.items()
-        if not key.startswith("_")
-    }
+    ctx = participant.model_dump()
     if participant.user is not None:
         ctx["name"] = participant.user.name
         ctx["firstname"] = participant.user.firstname
@@ -144,7 +140,7 @@ def _participant_pdf_context(participant: models_raid.RaidParticipant) -> dict:
 
 
 async def generate_security_file_pdf(
-    participant: models_raid.RaidParticipant,
+    participant: schemas_raid.RaidParticipant,
     information: coredata_raid.RaidInformation,
     team_number: int | None = None,
 ):
@@ -173,7 +169,7 @@ async def generate_security_file_pdf(
 
 
 async def generate_recap_file_pdf(
-    team: models_raid.RaidTeam,
+    team: schemas_raid.RaidTeam,
 ):
     from app.modules.raid.utils.validation_checker import compute_team_progress
 
@@ -294,7 +290,7 @@ async def get_participant(
     user_id: str,
     edition_id: UUID,
     db: AsyncSession,
-) -> models_raid.RaidParticipant:
+) -> schemas_raid.RaidParticipant:
     participant = await cruds_raid.get_participant_by_user_id(user_id, edition_id, db)
     if not participant:
         raise HTTPException(status_code=404, detail="Participant not found.")
@@ -302,7 +298,7 @@ async def get_participant(
 
 
 def calculate_raid_payment(
-    participant: models_raid.RaidParticipant,
+    participant: schemas_raid.RaidParticipant,
     raid_prices: coredata_raid.RaidPrice,
 ):
     if (

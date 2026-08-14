@@ -11,7 +11,7 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db
-from app.modules.raid import cruds_raid, models_raid, schemas_raid
+from app.modules.raid import cruds_raid, schemas_raid
 
 
 async def get_current_raid_edition(
@@ -20,14 +20,14 @@ async def get_current_raid_edition(
     edition = await cruds_raid.get_active_edition(db)
     if not edition:
         raise HTTPException(status_code=404, detail="No active raid edition")
-    return schemas_raid.RaidEdition.model_validate(edition)
+    return edition
 
 
 async def get_participant_or_404(
     user_id: str,
     edition_id: UUID,
     db: AsyncSession,
-) -> models_raid.RaidParticipant:
+) -> schemas_raid.RaidParticipant:
     participant = await cruds_raid.get_participant_by_user_id(user_id, edition_id, db)
     if participant is None:
         raise HTTPException(status_code=404, detail="Participant not found")
@@ -38,7 +38,7 @@ async def get_volunteer_or_404(
     user_id: str,
     edition_id: UUID,
     db: AsyncSession,
-) -> models_raid.RaidVolunteer:
+) -> schemas_raid.RaidVolunteer:
     volunteer = await cruds_raid.get_volunteer_by_user_id(user_id, edition_id, db)
     if volunteer is None:
         raise HTTPException(status_code=404, detail="Volunteer not found")

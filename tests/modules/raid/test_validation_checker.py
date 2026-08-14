@@ -252,7 +252,7 @@ async def test_full_participant_checker_passes_for_valid_data() -> None:
     p = _make_validated_participant(edition_id=edition_id)
     team = Mock(
         spec=models_raid.RaidTeam,
-        second_id="other-id",
+        second=Mock(),
         difficulty=Difficulty.sports,
         meeting_place=MeetingPlace.centrale,
     )
@@ -279,7 +279,7 @@ async def test_full_participant_checker_fails_when_team_incomplete() -> None:
     p = _make_validated_participant(edition_id=edition_id)
     team_no_second = Mock(
         spec=models_raid.RaidTeam,
-        second_id=None,
+        second=None,
         difficulty=Difficulty.sports,
         meeting_place=MeetingPlace.centrale,
     )

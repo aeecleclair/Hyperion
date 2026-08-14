@@ -40,6 +40,8 @@ class Document(DocumentBase):
     uploaded_at: date
     validation: DocumentValidation
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class SecurityFileBase(BaseModel):
     allergy: str | None = None
@@ -62,6 +64,8 @@ class SecurityFile(SecurityFileBase):
     validation: DocumentValidation
     id: str
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class RaidParticipantBase(BaseModel):
     """Shape used when the user first self-enrols.
@@ -70,6 +74,31 @@ class RaidParticipantBase(BaseModel):
     they live on CoreUser and are read via the `user` relationship on the
     read schemas below.
     """
+
+
+class RaidParticipantCreate(BaseModel):
+    """Flat column-level payload used by the create CRUD."""
+
+    user_id: str
+    edition_id: UUID
+    status: RaidRegistrationStatus
+    address: str | None = None
+    bike_size: Size | None = None
+    t_shirt_size: Size | None = None
+    situation: Situation | None = None
+    other_school: str | None = None
+    company: str | None = None
+    diet: str | None = None
+    id_card_id: str | None = None
+    medical_certificate_id: str | None = None
+    security_file_id: str | None = None
+    student_card_id: str | None = None
+    raid_rules_id: str | None = None
+    parent_authorization_id: str | None = None
+    attestation_on_honour: bool = False
+    payment: bool = False
+    t_shirt_payment: bool = False
+    is_minor: bool = False
 
 
 class RaidParticipantPreview(RaidParticipantBase):
@@ -91,11 +120,17 @@ class RaidParticipant(RaidParticipantPreview):
     other_school: str | None = None
     company: str | None = None
     diet: str | None = None
+    id_card_id: str | None = None
     id_card: Document | None = None
+    medical_certificate_id: str | None = None
     medical_certificate: Document | None = None
+    security_file_id: str | None = None
     security_file: SecurityFile | None = None
+    student_card_id: str | None = None
     student_card: Document | None = None
+    raid_rules_id: str | None = None
     raid_rules: Document | None = None
+    parent_authorization_id: str | None = None
     parent_authorization: Document | None = None
     attestation_on_honour: bool
     is_minor: bool
@@ -179,7 +214,9 @@ class RaidTeamPreview(RaidTeamBase):
     id: str
     edition_id: UUID
     number: int | None = None
+    captain_id: str
     captain: RaidParticipantPreview
+    second_id: str | None = None
     second: RaidParticipantPreview | None = None
     difficulty: Difficulty | None = None
     meeting_place: MeetingPlace | None = None
@@ -208,7 +245,9 @@ class RaidTeam(RaidTeamBase):
     id: str
     edition_id: UUID
     number: int | None = None
+    captain_id: str
     captain: RaidParticipant
+    second_id: str | None = None
     second: RaidParticipant | None = None
     difficulty: Difficulty | None = None
     meeting_place: MeetingPlace | None = None
@@ -225,6 +264,20 @@ class RaidTeam(RaidTeamBase):
         return (filled / 2) * 10 + (captain_progress + second_progress) * 0.45
 
 
+class RaidTeamCreate(BaseModel):
+    """Flat column-level payload used by the create CRUD."""
+
+    id: str
+    edition_id: UUID
+    name: str
+    captain_id: str
+    second_id: str | None = None
+    difficulty: Difficulty | None = None
+    meeting_place: MeetingPlace | None = None
+    number: int | None = None
+    file_id: str | None = None
+
+
 class RaidTeamUpdate(BaseModel):
     name: str | None = None
     number: int | None = None
@@ -233,8 +286,12 @@ class RaidTeamUpdate(BaseModel):
 
 
 class InviteToken(BaseModel):
+    id: str
+    edition_id: UUID
     team_id: str
     token: str
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EmergencyContact(BaseModel):
@@ -255,6 +312,8 @@ class RaidParticipantCheckout(BaseModel):
     participant_user_id: str
     edition_id: UUID
     checkout_id: str
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RaidEditionBase(BaseModel):
@@ -284,6 +343,14 @@ class RaidEditionEdit(BaseModel):
 
 
 class RaidVolunteerBase(BaseModel):
+    """Shared volunteer fields.
+
+    The car_seats/has_car consistency check is enforced only on the
+    write-side schemas (RaidVolunteerCreate, RaidVolunteerEdit). Reads
+    pass whatever is stored through unchanged so the admin validation
+    endpoint can surface inconsistent rows for manual fix-up.
+    """
+
     t_shirt_size: Size | None = None
     diet: str | None = None
     allergy: str | None = None
@@ -295,14 +362,26 @@ class RaidVolunteerBase(BaseModel):
     is_utility_vehicle_driver: bool = False
     is_parcours_helper: bool = False
 
-    @model_validator(mode="after")
-    def _check_car_seats_consistency(self):
-        if self.has_car and (self.car_seats is None or self.car_seats <= 0):
-            msg = "has_car=True requires car_seats > 0"
-            raise ValueError(msg)
-        if not self.has_car:
-            self.car_seats = None
-        return self
+
+def _validate_car_seats(self):
+    if self.has_car and (self.car_seats is None or self.car_seats <= 0):
+        msg = "has_car=True requires car_seats > 0"
+        raise ValueError(msg)
+    if not self.has_car:
+        self.car_seats = None
+    return self
+
+
+class RaidVolunteerCreate(RaidVolunteerBase):
+    """Flat column-level payload used by the create CRUD (no CoreUser)."""
+
+    user_id: str
+    edition_id: UUID
+    created_at: datetime
+    validated: bool = False
+    cancelled: bool = False
+
+    _check_car_seats_consistency = model_validator(mode="after")(_validate_car_seats)
 
 
 class RaidVolunteer(RaidVolunteerBase):

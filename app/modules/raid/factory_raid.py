@@ -16,7 +16,7 @@ from app.core.permissions import cruds_permissions, schemas_permissions
 from app.core.users import cruds_users
 from app.core.users.factory_users import CoreUsersFactory
 from app.core.utils.config import Settings
-from app.modules.raid import cruds_raid, models_raid
+from app.modules.raid import cruds_raid, schemas_raid
 from app.modules.raid.raid_type import (
     Difficulty,
     MeetingPlace,
@@ -77,7 +77,7 @@ class RaidFactory(Factory):
     async def run(cls, db: AsyncSession, settings: Settings) -> None:
         await cls._ensure_raid_admin_group(db)
 
-        edition = models_raid.RaidEdition(
+        edition = schemas_raid.RaidEdition(
             id=cls.edition_id,
             year=datetime.now(UTC).year,
             name="Raid",
@@ -96,7 +96,7 @@ class RaidFactory(Factory):
         captain_id, second_id, volunteer_id = seed_users
 
         for idx, uid in enumerate((captain_id, second_id)):
-            participant = models_raid.RaidParticipant(
+            participant = schemas_raid.RaidParticipantCreate(
                 user_id=uid,
                 edition_id=cls.edition_id,
                 status=RaidRegistrationStatus.submitted,
@@ -104,47 +104,27 @@ class RaidFactory(Factory):
                 bike_size=Size.M,
                 t_shirt_size=Size.M,
                 situation=Situation.centrale,
-                other_school=None,
-                company=None,
-                diet=None,
-                id_card_id=None,
-                medical_certificate_id=None,
-                security_file_id=None,
-                student_card_id=None,
-                raid_rules_id=None,
-                parent_authorization_id=None,
                 attestation_on_honour=True,
-                payment=False,
-                t_shirt_payment=False,
-                is_minor=False,
             )
             await cruds_raid.create_participant(participant, db)
 
-        team = models_raid.RaidTeam(
+        team = schemas_raid.RaidTeamCreate(
             id=cls.team_id,
             edition_id=cls.edition_id,
             name="Team Seed",
             difficulty=Difficulty.sports,
             captain_id=captain_id,
             second_id=second_id,
-            number=None,
             meeting_place=MeetingPlace.centrale,
-            file_id=None,
         )
         await cruds_raid.create_team(team, db)
 
-        volunteer = models_raid.RaidVolunteer(
+        volunteer = schemas_raid.RaidVolunteerCreate(
             user_id=volunteer_id,
             edition_id=cls.edition_id,
             created_at=datetime.now(UTC),
-            validated=False,
-            cancelled=False,
-            diet=None,
-            allergy=None,
             has_car=True,
             car_seats=4,
-            is_special_driver=False,
-            is_utility_vehicle_driver=False,
             is_parcours_helper=True,
         )
         await cruds_raid.create_volunteer(volunteer, db)
