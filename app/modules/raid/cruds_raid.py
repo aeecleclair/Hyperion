@@ -142,8 +142,8 @@ async def get_all_validated_teams(
     db: AsyncSession,
 ) -> Sequence[models_raid.RaidTeam]:
     """Validated = captain AND second both have status=validated."""
-    Captain = models_raid.RaidParticipant.__table__.alias("captain_p")  # noqa: N806
-    Second = models_raid.RaidParticipant.__table__.alias("second_p")  # noqa: N806
+    Captain = models_raid.RaidParticipant.__table__.alias("captain_p")
+    Second = models_raid.RaidParticipant.__table__.alias("second_p")
     stmt = (
         select(models_raid.RaidTeam)
         .where(models_raid.RaidTeam.edition_id == edition_id)
@@ -618,8 +618,8 @@ async def get_max_team_number_by_difficulty(
 
     Validated = both captain and second have status=validated.
     """
-    Captain = models_raid.RaidParticipant.__table__.alias("captain_p")  # noqa: N806
-    Second = models_raid.RaidParticipant.__table__.alias("second_p")  # noqa: N806
+    Captain = models_raid.RaidParticipant.__table__.alias("captain_p")
+    Second = models_raid.RaidParticipant.__table__.alias("second_p")
     stmt = (
         select(func.max(models_raid.RaidTeam.number))
         .where(

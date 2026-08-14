@@ -7,6 +7,8 @@ distinct `detail` string per failure so the frontend can i18n cleanly; we
 assert the exact strings so they stay stable.
 """
 
+# ruff: noqa: SLF001  # tests deliberately exercise private sub-checks
+
 from unittest.mock import Mock
 from uuid import uuid4
 
@@ -255,7 +257,7 @@ async def test_full_participant_checker_passes_for_valid_data() -> None:
         meeting_place=MeetingPlace.centrale,
     )
 
-    import app.modules.raid.cruds_raid as cruds_raid
+    from app.modules.raid import cruds_raid
 
     original = cruds_raid.get_team_by_participant_id
     cruds_raid.get_team_by_participant_id = AsyncMock(return_value=team)
@@ -282,7 +284,7 @@ async def test_full_participant_checker_fails_when_team_incomplete() -> None:
         meeting_place=MeetingPlace.centrale,
     )
 
-    import app.modules.raid.cruds_raid as cruds_raid
+    from app.modules.raid import cruds_raid
 
     original = cruds_raid.get_team_by_participant_id
     cruds_raid.get_team_by_participant_id = AsyncMock(return_value=team_no_second)
@@ -305,7 +307,7 @@ async def test_full_participant_checker_fails_when_no_team() -> None:
     edition_id = uuid4()
     p = _make_validated_participant(edition_id=edition_id)
 
-    import app.modules.raid.cruds_raid as cruds_raid
+    from app.modules.raid import cruds_raid
 
     original = cruds_raid.get_team_by_participant_id
     cruds_raid.get_team_by_participant_id = AsyncMock(return_value=None)
@@ -397,6 +399,8 @@ async def test_check_volunteer_passes_for_complete_profile() -> None:
         user=Mock(phone="06"),
         emergency_person_name="Jane",
         emergency_person_phone="06",
+        has_car=False,
+        car_seats=None,
     )
     await validation_checker.check_volunteer_validation_consistency(
         v, eid, AsyncMock(),

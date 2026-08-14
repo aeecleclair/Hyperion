@@ -22,7 +22,6 @@ from app.modules.raid.raid_type import (
     Size,
 )
 
-
 # -- RaidParticipantUpdate: situation validators ---------------------------
 
 
