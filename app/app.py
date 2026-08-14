@@ -140,10 +140,14 @@ def update_db_tables(
     """
 
     try:
-        # We have an Engine, we want to acquire a Connection
-        with sync_engine.begin() as conn:
+        # We commit after each step instead of holding a single transaction for the
+        # whole function, so that we never hold locks on all tables at once. Otherwise,
+        # on a database with many tables, we could exceed the `max_locks_per_transaction`
+        # limit (drop, create and stamp would all hold their locks in the same transaction).
+        with sync_engine.connect() as conn:
             if drop_db:
                 initialization.drop_db_sync(conn)
+                conn.commit()
 
             alembic_current_revision = get_alembic_current_revision(conn)
 
@@ -157,16 +161,20 @@ def update_db_tables(
 
                 # Create all tables
                 Base.metadata.create_all(conn)
+                conn.commit()
+
                 # We stamp the database with the latest revision so that
                 # alembic knows that the database is up to date
                 stamp_alembic_head(conn)
+                conn.commit()
             else:
                 hyperion_error_logger.info(
                     f"Startup: Database tables already created (current revision: {alembic_current_revision}), running migrations",
                 )
                 run_alembic_upgrade(conn)
+                conn.commit()
 
-            hyperion_error_logger.info("Startup: Database tables updated")
+        hyperion_error_logger.info("Startup: Database tables updated")
     except Exception as error:
         hyperion_error_logger.fatal(
             f"Startup: Could not create tables in the database: {error}",

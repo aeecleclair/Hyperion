@@ -3,6 +3,9 @@ services:
     image: postgres:15.1-alpine3.17
     container_name: hyperion-db-dev
     restart: unless-stopped
+    # Running tests in parallel (pytest-xdist) can brush past the default
+    # max_locks_per_transaction=64 when many tables are dropped/created at once.
+    command: postgres -c max_locks_per_transaction=512 -c max_connections=200
     environment:
       POSTGRES_HOST: ${POSTGRES_HOST}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
