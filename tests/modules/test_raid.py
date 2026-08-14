@@ -15,10 +15,8 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import update
-from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.core.groups import models_groups
-from app.core.groups.groups_type import AccountType
 from app.core.users import cruds_users, models_users, schemas_users
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
 from app.modules.raid.endpoints_raid import RaidPermissions
@@ -31,9 +29,7 @@ from app.modules.raid.raid_type import (
     Situation,
     Size,
 )
-from app.types.sqlalchemy import Base
 from tests.commons import (
-    add_account_type_permission,
     add_coredata_to_db,
     add_object_to_db,
     create_api_access_token,
