@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 from collections.abc import Callable
+from uuid import UUID
 
 import psutil
 import redis
@@ -146,7 +147,7 @@ def set_core_data_crud_sync(
 
 
 def get_school_by_id_sync(
-    school_id: str,
+    school_id: UUID,
     db: Session,
 ) -> models_schools.CoreSchool | None:
     """

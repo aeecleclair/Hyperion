@@ -16,7 +16,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.routing import APIRoute
+from fastapi.routing import APIRoute, iter_route_contexts
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -417,8 +417,8 @@ def use_route_path_as_operation_ids(app: FastAPI) -> None:
 
     See https://fastapi.tiangolo.com/advanced/path-operation-advanced-configuration/
     """
-    for route in app.routes:
-        if isinstance(route, APIRoute):
+    for route in iter_route_contexts(app.routes):
+        if isinstance(route, APIRoute) and route.methods:
             # The operation_id should be unique.
             # It is possible to set multiple methods for the same endpoint method but it's not considered a good practice.
             method = "_".join(route.methods)
@@ -740,7 +740,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         )
 
         return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content=jsonable_encoder({"detail": exc.errors(), "body": exc.body}),
         )
 
