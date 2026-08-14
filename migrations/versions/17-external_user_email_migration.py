@@ -53,7 +53,7 @@ def pre_test_upgrade(
             "phone": "phone",
             "floor": "Autre",
             "created_on": None,
-            "external": False,
+            "make_user_external": False,
         },
     )
     alembic_runner.insert_into(

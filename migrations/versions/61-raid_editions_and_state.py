@@ -503,6 +503,7 @@ def pre_test_upgrade(
             "phone": "0102030405",
             "floor": "Autre",
             "created_on": None,
+            "make_user_external": False,
         },
     )
     alembic_runner.insert_into(
@@ -521,6 +522,7 @@ def pre_test_upgrade(
             "phone": "0607080910",
             "floor": "Autre",
             "created_on": None,
+            "make_user_external": False,
         },
     )
 
