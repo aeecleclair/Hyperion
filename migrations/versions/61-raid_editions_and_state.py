@@ -457,11 +457,234 @@ def pre_test_upgrade(
     alembic_runner: "MigrationContext",
     alembic_connection: sa.Connection,
 ) -> None:
-    pass
+    """Seed data that exercises the migration's UPDATEs and FK creations.
+
+    We insert a minimal raid_edition row plus a few raid_participant rows with
+    varied situation/status combos so the migration's data-backfill logic runs
+    against real data.
+
+    Note: raid_edition is CREATED by this migration, so we can't seed it here.
+    The migration itself inserts the default edition (lines 78-97). We only
+    seed the tables that already exist: core_user, raid_participant, raid_team,
+    raid_document, raid_security_file, raid_invite.
+    """
+    # Core users referenced by participants
+    # First add a school for the FK
+    alembic_runner.insert_into(
+        "core_school",
+        {
+            "id": "11111111-1111-1111-1111-111111111111",
+            "name": "Test School",
+            "email_regex": "@example\\.com$",
+        },
+    )
+    alembic_runner.insert_into(
+        "core_school",
+        {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "name": "Test School 2",
+            "email_regex": "@example\\.com$",
+        },
+    )
+
+    alembic_runner.insert_into(
+        "core_user",
+        {
+            "id": "11111111-1111-1111-1111-111111111111",
+            "email": "user1@example.com",
+            "password_hash": "hash",
+            "school_id": "11111111-1111-1111-1111-111111111111",
+            "account_type": "student",
+            "name": "Doe",
+            "firstname": "John",
+            "nickname": "john",
+            "birthday": None,
+            "promo": 2026,
+            "phone": "0102030405",
+            "floor": "Autre",
+            "created_on": None,
+        },
+    )
+    alembic_runner.insert_into(
+        "core_user",
+        {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "email": "user2@example.com",
+            "password_hash": "hash",
+            "school_id": "22222222-2222-2222-2222-222222222222",
+            "account_type": "student",
+            "name": "Smith",
+            "firstname": "Jane",
+            "nickname": "jane",
+            "birthday": None,
+            "promo": 2026,
+            "phone": "0607080910",
+            "floor": "Autre",
+            "created_on": None,
+        },
+    )
+
+    # raid_participant rows BEFORE migration renames `id` -> `user_id`
+    # and adds edition_id + status columns.
+    # Use legacy 'situation' column values that the migration parses.
+    alembic_runner.insert_into(
+        "raid_participant",
+        {
+            "id": "11111111-1111-1111-1111-111111111111",
+            "name": "Doe",
+            "firstname": "John",
+            "email": "user1@example.com",
+            "birthday": "1990-01-01",
+            "phone": "0102030405",
+            "situation": "centrale",
+            "other_school": None,
+            "address": "1 rue Test",
+            "bike_size": "M",
+            "t_shirt_size": "M",
+            "payment": True,
+            "attestation_on_honour": True,
+            "is_minor": False,
+        },
+    )
+    alembic_runner.insert_into(
+        "raid_participant",
+        {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "name": "Smith",
+            "firstname": "Jane",
+            "email": "user2@example.com",
+            "birthday": "1990-01-01",
+            "phone": "0607080910",
+            "situation": "otherschool : CentraleSupélec",
+            "other_school": None,
+            "address": "2 rue Test",
+            "bike_size": "L",
+            "t_shirt_size": "L",
+            "payment": False,
+            "attestation_on_honour": True,
+            "is_minor": False,
+        },
+    )
+
+    # raid_team row referencing the participants
+    alembic_runner.insert_into(
+        "raid_team",
+        {
+            "id": "team-001",
+            "name": "Team Alpha",
+            "difficulty": "discovery",
+            "captain_id": "11111111-1111-1111-1111-111111111111",
+            "second_id": "22222222-2222-2222-2222-222222222222",
+            "number": 1,
+            "meeting_place": "centrale",
+            "file_id": None,
+        },
+    )
+
+    # raid_document, raid_security_file, raid_invite rows
+    alembic_runner.insert_into(
+        "raid_document",
+        {
+            "id": "doc-001",
+            "name": "ID Card",
+            "uploaded_at": "2024-01-01",
+            "type": "idCard",
+            "validation": "accepted",
+        },
+    )
+    alembic_runner.insert_into(
+        "raid_security_file",
+        {
+            "id": "sec-001",
+            "allergy": None,
+            "asthma": False,
+            "intensive_care_unit": False,
+            "intensive_care_unit_when": None,
+            "ongoing_treatment": None,
+            "sicknesses": None,
+            "hospitalization": None,
+            "surgical_operation": None,
+            "trauma": None,
+            "family": None,
+            "emergency_person_firstname": "Contact",
+            "emergency_person_name": "Emergency",
+            "emergency_person_phone": "0102030405",
+            "file_id": None,
+        },
+    )
+    alembic_runner.insert_into(
+        "raid_invite",
+        {
+            "id": "inv-001",
+            "team_id": "team-001",
+            "token": "test-token",
+        },
+    )
 
 
 def test_upgrade(
     alembic_runner: "MigrationContext",
     alembic_connection: sa.Connection,
 ) -> None:
-    pass
+    """Verify the migration produced the expected schema + data state."""
+    # raid_edition exists and has our seeded row
+    edition_rows = alembic_connection.execute(
+        sa.text(
+            "SELECT id, year, name, active, inscription_enabled FROM raid_edition"
+        ),
+    ).fetchall()
+    assert len(edition_rows) == 1
+    assert str(edition_rows[0][0]) == str(DEFAULT_EDITION_ID)
+    assert edition_rows[0][1] == 2026
+    assert edition_rows[0][2] == "Raid"
+    assert edition_rows[0][3] is True
+    assert edition_rows[0][4] is True
+
+    # raid_participant: PK is now composite (user_id, edition_id)
+    participant_rows = alembic_connection.execute(
+        sa.text(
+            "SELECT user_id, edition_id, situation, other_school, status "
+            "FROM raid_participant ORDER BY user_id"
+        ),
+    ).fetchall()
+    assert len(participant_rows) == 2
+
+    # User 1: centrale -> status should become 'validated' (payment + attestation)
+    p1 = next(r for r in participant_rows if r[0] == "11111111-1111-1111-1111-111111111111")
+    assert str(p1[1]) == str(DEFAULT_EDITION_ID)
+    assert p1[2] == "centrale"
+    assert p1[3] is None
+    assert p1[4] == "validated"
+
+    # User 2: otherschool : CentraleSupélec -> other_school populated, status 'submitted'
+    p2 = next(r for r in participant_rows if r[0] == "22222222-2222-2222-2222-222222222222")
+    assert str(p2[1]) == str(DEFAULT_EDITION_ID)
+    assert p2[2] == "otherSchool"
+    assert p2[3] == "CentraleSupélec"
+    assert p2[4] == "submitted"
+
+    # raid_team got edition_id backfilled and composite FKs created
+    team_rows = alembic_connection.execute(
+        sa.text("SELECT id, edition_id, captain_id, second_id FROM raid_team"),
+    ).fetchall()
+    assert len(team_rows) == 1
+    assert str(team_rows[0][1]) == str(DEFAULT_EDITION_ID)
+    assert team_rows[0][2] == "11111111-1111-1111-1111-111111111111"
+    assert team_rows[0][3] == "22222222-2222-2222-2222-222222222222"
+
+    # raid_participant_checkout: participant_id -> participant_user_id + edition_id
+    alembic_connection.execute(
+        sa.text(
+            "SELECT participant_user_id, edition_id FROM raid_participant_checkout"
+        ),
+    ).fetchall()
+    # No checkout rows were seeded, but the column + FK should exist
+    # (pytest-alembic will error if the FK creation fails)
+
+    # raid_document, raid_security_file, raid_invite got edition_id + FKs
+    for table in ("raid_document", "raid_security_file", "raid_invite"):
+        rows = alembic_connection.execute(
+            sa.text(f"SELECT edition_id FROM {table}"),
+        ).fetchall()
+        assert len(rows) >= 1
+        assert all(str(r[0]) == str(DEFAULT_EDITION_ID) for r in rows)
