@@ -37,6 +37,7 @@ class CoreUser(Base):
     phone: Mapped[str | None]
     floor: Mapped[str | None]
     created_on: Mapped[datetime | None]
+    make_user_external: Mapped[bool] = mapped_column(default=False)
 
     # We use list["CoreGroup"] with quotes as CoreGroup is only defined after this class
     # Defining CoreUser after CoreGroup would cause a similar issue
