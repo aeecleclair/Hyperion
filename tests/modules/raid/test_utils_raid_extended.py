@@ -14,7 +14,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.payment import schemas_payment
 from app.modules.raid import coredata_raid, schemas_raid
-from app.modules.raid.raid_type import Difficulty, Situation, Size
+from app.modules.raid.raid_type import (
+    Difficulty,
+    RaidRegistrationStatus,
+    Situation,
+    Size,
+)
 from app.modules.raid.utils.utils_raid import (
     RaidPayementError,
     _participant_pdf_context,
@@ -480,9 +485,19 @@ def test_calculate_raid_payment_no_participant():
         t_shirt_price=15.0,
         external_price=90.0,
     )
+    participant = schemas_raid.RaidParticipant(
+        user_id=str(uuid4()),
+        edition_id=uuid4(),
+        status=RaidRegistrationStatus.draft,
+        payment=False,
+        t_shirt_payment=False,
+        user=None,
+        attestation_on_honour=False,
+        is_minor=False,
+    )
 
     with pytest.raises(HTTPException) as exc_info:
-        calculate_raid_payment(None, prices)
+        calculate_raid_payment(participant, prices)
 
     assert exc_info.value.status_code == 404
     assert "Participant not found" in exc_info.value.detail
