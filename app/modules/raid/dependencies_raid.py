@@ -27,7 +27,7 @@ async def get_current_raid_edition(
 async def get_participant_or_404(
     user_id: str,
     edition_id: UUID,
-    db: AsyncSession,
+    db: AsyncSession = Depends(get_db),
 ) -> schemas_raid.RaidParticipant:
     participant = await cruds_raid.get_participant_by_user_id(user_id, edition_id, db)
     if participant is None:
@@ -38,7 +38,7 @@ async def get_participant_or_404(
 async def get_volunteer_or_404(
     user_id: str,
     edition_id: UUID,
-    db: AsyncSession,
+    db: AsyncSession = Depends(get_db),
 ) -> schemas_raid.RaidVolunteer:
     volunteer = await cruds_raid.get_volunteer_by_user_id(user_id, edition_id, db)
     if volunteer is None:
