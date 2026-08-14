@@ -16,7 +16,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.routing import APIRoute, iter_route_contexts
+from fastapi.routing import APIRoute
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -408,21 +408,21 @@ async def initialize_notification_topics(
                     )
 
 
-def use_route_path_as_operation_ids(app: FastAPI) -> None:
+def use_route_path_as_operation_id(route: APIRoute) -> str:
     """
-    Simplify operation IDs so that generated API clients have simpler function names.
+    Simplify operation ID so that generated API clients have simpler function names.
 
     Theses names may be used by API clients to generate function names.
     The operation_id will have the format "method_path", like "get_users_me".
 
     See https://fastapi.tiangolo.com/advanced/path-operation-advanced-configuration/
     """
-    for route in iter_route_contexts(app.routes):
-        if isinstance(route, APIRoute) and route.methods:
-            # The operation_id should be unique.
-            # It is possible to set multiple methods for the same endpoint method but it's not considered a good practice.
-            method = "_".join(route.methods)
-            route.operation_id = method.lower() + route.path.replace("/", "_")
+    if route.methods:
+        # The operation_id should be unique.
+        # It is possible to set multiple methods for the same endpoint method but it's not considered a good practice.
+        method = "_".join(route.methods)
+        return method.lower() + route.path.replace("/", "_")
+    return route.name
 
 
 def init_db(
@@ -652,9 +652,9 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         title="Hyperion",
         version=settings.HYPERION_VERSION,
         lifespan=lifespan,
+        custom_generate_unique_id=use_route_path_as_operation_id,
     )
     app.include_router(api.api_router)
-    use_route_path_as_operation_ids(app)
 
     app.add_middleware(
         CORSMiddleware,
