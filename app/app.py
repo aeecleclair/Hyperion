@@ -52,7 +52,7 @@ from app.utils.redis import limiter
 from app.utils.state import LifespanState
 
 if TYPE_CHECKING:
-    from redis import Redis
+    from redis.asyncio import Redis
 
     from app.types.factory import Factory
 

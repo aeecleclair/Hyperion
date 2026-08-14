@@ -3,7 +3,7 @@ import uuid
 from datetime import UTC, datetime
 
 from fastapi import Depends, HTTPException, Response
-from redis import Redis
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import AccountType
@@ -511,7 +511,7 @@ async def add_order_to_delievery(
         key=redis_key,
     ):
         raise HTTPException(status_code=429, detail="Too fast !")
-    locker_set(redis_client=redis_client, key=redis_key, lock=True)
+    await locker_set(redis_client=redis_client, key=redis_key, lock=True)
 
     try:
         await cruds_amap.add_order_to_delivery(
@@ -548,7 +548,7 @@ async def add_order_to_delievery(
             **orderret.__dict__,
         )
     finally:
-        locker_set(redis_client=redis_client, key=redis_key, lock=False)
+        await locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
 
 @module.router.patch(
@@ -641,7 +641,7 @@ async def edit_order_from_delivery(
             key=redis_key,
         ):
             raise HTTPException(status_code=429, detail="Too fast !")
-        locker_set(redis_client=redis_client, key=redis_key, lock=True)
+        await locker_set(redis_client=redis_client, key=redis_key, lock=True)
 
         try:
             await cruds_amap.edit_order_with_products(
@@ -669,7 +669,7 @@ async def edit_order_from_delivery(
             )
 
         finally:
-            locker_set(redis_client=redis_client, key=redis_key, lock=False)
+            await locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
 
 @module.router.delete(
@@ -725,7 +725,7 @@ async def remove_order(
         key=redis_key,
     ):
         raise HTTPException(status_code=429, detail="Too fast !")
-    locker_set(redis_client=redis_client, key=redis_key, lock=True)
+    await locker_set(redis_client=redis_client, key=redis_key, lock=True)
 
     try:
         await cruds_amap.remove_order(
@@ -743,7 +743,7 @@ async def remove_order(
         return Response(status_code=204)
 
     finally:
-        locker_set(redis_client=redis_client, key=redis_key, lock=False)
+        await locker_set(redis_client=redis_client, key=redis_key, lock=False)
 
 
 @module.router.post(

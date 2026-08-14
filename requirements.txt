@@ -14,7 +14,7 @@ firebase-admin==7.5.0               # Firebase is used for push notification
 google-api-python-client==2.198.0
 google-auth-oauthlib==1.4.0
 helloasso-python==1.0.8
-httpx==0.28.1
+httpx2==2.3.0
 icalendar==7.2.2
 jellyfish==1.2.1                    # String Matching
 Jinja2==3.1.6                       # template engine for html files
@@ -28,7 +28,7 @@ pyjwt[crypto]==2.13.0                # generate and verify the JWT tokens, impor
 PyMuPDF==1.28.0                     # PDF processing, imported as `fitz`
 pypdf==6.14.2
 python-multipart==0.0.31             # a form data parser, as oauth flow requires form-data parameters
-redis==5.0.8
+redis==5.3.1
 sqlalchemy-utils == 0.42.1
 SQLAlchemy[asyncio]==2.0.51         # [asyncio] allows greenlet to be installed on Apple M1 devices.
 unidecode==1.4.0
