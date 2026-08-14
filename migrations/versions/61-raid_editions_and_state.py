@@ -37,7 +37,7 @@ class SituationEnum(Enum):
     other = "other"
 
 
-DEFAULT_EDITION_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
+DEFAULT_EDITION_ID = uuid.UUID("fc155c64-46ea-4acd-a941-a31999b5a719")
 
 
 def upgrade() -> None:
