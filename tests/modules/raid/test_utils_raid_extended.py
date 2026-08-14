@@ -169,7 +169,9 @@ async def test_set_team_number_success():
 
         # Verify max team number was retrieved and team updated
         mock_cruds.get_max_team_number_by_difficulty.assert_called_once_with(
-            Difficulty.sports, edition_id, db,
+            Difficulty.sports,
+            edition_id,
+            db,
         )
         mock_cruds.update_team.assert_called_once()
 
@@ -260,7 +262,9 @@ async def test_get_participant_success():
 
         assert result is participant
         mock_cruds.get_participant_by_user_id.assert_called_once_with(
-            user_id, edition_id, db,
+            user_id,
+            edition_id,
+            db,
         )
 
 
