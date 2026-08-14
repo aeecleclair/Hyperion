@@ -286,21 +286,20 @@ async def test_set_team_number_passes_edition_to_crud(mocker: MockerFixture) -> 
 @pytest.mark.asyncio
 async def test_validate_payment_invalid_amount(mocker: MockerFixture) -> None:
     """Test that validate_payment logs error for invalid payment amount."""
-    import logging
 
     db = AsyncMock(spec=AsyncSession)
     mocker.patch(
         "app.modules.raid.cruds_raid.get_participant_checkout_by_checkout_id",
         new=AsyncMock(
-            return_value=Mock(participant_user_id="user1", edition_id=uuid4())
+            return_value=Mock(participant_user_id="user1", edition_id=uuid4()),
         ),
     )
     mocker.patch(
         "app.modules.raid.utils.utils_raid.get_core_data",
         new=AsyncMock(
             return_value=coredata_raid.RaidPrice(
-                student_price=50, t_shirt_price=15, external_price=90
-            )
+                student_price=50, t_shirt_price=15, external_price=90,
+            ),
         ),
     )
 
@@ -309,7 +308,7 @@ async def test_validate_payment_invalid_amount(mocker: MockerFixture) -> None:
     checkout_payment.paid_amount = 999  # Invalid amount
 
     mock_logger = mocker.patch(
-        "app.modules.raid.utils.utils_raid.hyperion_error_logger"
+        "app.modules.raid.utils.utils_raid.hyperion_error_logger",
     )
     await validate_payment(checkout_payment, db)
 
