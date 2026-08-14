@@ -99,7 +99,14 @@ def upgrade() -> None:
             end_date=datetime.strptime(raid_end_date, "%Y-%m-%d").astimezone(UTC).date()
             if raid_end_date
             else None,
-            registering_end_date=raid_registering_end_date,
+            registering_end_date=datetime.strptime(
+                raid_registering_end_date,
+                "%Y-%m-%d",
+            )
+            .astimezone(UTC)
+            .date()
+            if raid_registering_end_date
+            else None,
         ),
     )
 
