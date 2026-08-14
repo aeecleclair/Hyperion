@@ -3,7 +3,6 @@ import zipfile
 from datetime import UTC, date, datetime
 from uuid import UUID
 
-import fitz
 from anyio import Path
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -187,23 +186,6 @@ async def generate_recap_file_pdf(
         context=context,
     )
     return file_id
-
-
-def scale_rect_to_fit(container, content_width, content_height):
-    """Return a rect that fits content inside container preserving aspect ratio."""
-    container_width = container.width
-    container_height = container.height
-
-    scale = min(container_width / content_width, container_height / content_height)
-    new_width = content_width * scale
-    new_height = content_height * scale
-
-    x0 = container.x0 + (container_width - new_width) / 2
-    y0 = container.y0 + (container_height - new_height) / 2
-    x1 = x0 + new_width
-    y1 = y0 + new_height
-
-    return fitz.Rect(x0, y0, x1, y1)
 
 
 async def get_all_security_files_zip(
