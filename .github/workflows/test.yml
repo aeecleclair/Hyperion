@@ -56,21 +56,6 @@ jobs:
       - name: Fetch full main branch history # We don't known the the base commit of the PR
         run: git fetch origin main --unshallow
 
-      # 8 xdist workers each run `create_all` on ~126 tables + ~150 indexes + FKs
-      # in a single transaction, which brushes past the default max_locks_per_transaction=64.
-      # Bump lock-table sizing before tests. GHA services can't set command args directly,
-      # so we exec into the named container, append config, and restart.
-      - name: Tune Postgres for parallel test workers
-        run: |
-          docker exec postgres sh -c "printf 'max_locks_per_transaction = 512\nmax_connections = 200\n' >> /var/lib/postgresql/data/postgresql.conf"
-          docker restart postgres
-          for _ in $(seq 1 30); do
-            if docker exec postgres pg_isready -U hyperion -d hyperion; then exit 0; fi
-            sleep 1
-          done
-          echo "postgres did not become ready after restart" >&2
-          exit 1
-
       # Setup Python (faster than using Python container)
       - name: Setup Python
         uses: actions/setup-python@v6
