@@ -91,7 +91,7 @@ async def init_state(
 
     SessionLocal = init_SessionLocal(engine)
 
-    redis_client = init_redis_client(
+    redis_client = await init_redis_client(
         settings=settings,
         hyperion_error_logger=hyperion_error_logger,
     )
@@ -135,7 +135,7 @@ async def disconnect_state(
     This methode should be called as a dependency as tests may need to run additional steps
     """
 
-    disconnect_redis_client(GLOBAL_STATE["redis_client"])
+    await disconnect_redis_client(GLOBAL_STATE["redis_client"])
     await disconnect_scheduler(GLOBAL_STATE["scheduler"])
     await disconnect_websocket_connection_manager(GLOBAL_STATE["ws_manager"])
 
@@ -229,7 +229,7 @@ async def get_unsafe_db() -> AsyncGenerator[AsyncSession]:
         yield db
 
 
-def get_redis_client() -> redis.Redis | None:
+def get_redis_client() -> redis.asyncio.Redis | None:
     """
     Dependency that returns the redis client
 
