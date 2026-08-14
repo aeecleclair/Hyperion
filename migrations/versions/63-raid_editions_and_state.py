@@ -7,6 +7,7 @@ import contextlib
 import json
 import uuid
 from collections.abc import Sequence
+from datetime import UTC, date, datetime
 from enum import Enum
 from typing import TYPE_CHECKING
 
@@ -90,8 +91,14 @@ def upgrade() -> None:
             id=DEFAULT_EDITION_ID,
             year=2026,
             name="Raid",
-            start_date=raid_start_date,
-            end_date=raid_end_date,
+            start_date=datetime.strptime(raid_start_date, "%Y-%m-%d")
+            .astimezone(UTC)
+            .date()
+            if raid_start_date
+            else None,
+            end_date=datetime.strptime(raid_end_date, "%Y-%m-%d").astimezone(UTC).date()
+            if raid_end_date
+            else None,
             registering_end_date=raid_registering_end_date,
         ),
     )
