@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 
 from anyio import Path
 from fastapi import Depends, File, HTTPException, UploadFile

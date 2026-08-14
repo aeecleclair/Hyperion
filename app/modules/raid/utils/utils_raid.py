@@ -16,6 +16,7 @@ from app.modules.raid.utils.pdf.conversion_utils import (
     get_meeting_place_label,
     nullable_number_to_string,
 )
+from app.modules.raid.utils.validation_checker import compute_team_progress
 from app.utils.tools import (
     generate_pdf_from_template,
     get_core_data,
@@ -167,8 +168,6 @@ async def generate_security_file_pdf(
 async def generate_recap_file_pdf(
     team: schemas_raid.RaidTeam,
 ):
-    from app.modules.raid.utils.validation_checker import compute_team_progress
-
     context = {
         "team_name": team.name,
         "parcours": get_difficulty_label(team.difficulty),
