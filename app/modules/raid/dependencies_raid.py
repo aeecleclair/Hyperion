@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db
 from app.modules.raid import cruds_raid, schemas_raid
+from app.modules.raid.raid_type import RaidRegistrationStatus
 
 
 async def get_current_raid_edition(
@@ -50,8 +51,13 @@ async def ensure_user_is_not_participant_in_edition(
     edition_id: UUID,
     db: AsyncSession,
 ) -> None:
+    # A cancelled participant has given up their slot — they can re-register
+    # on the other track (e.g. switch from participant to volunteer).
     participant = await cruds_raid.get_participant_by_user_id(user_id, edition_id, db)
-    if participant is not None:
+    if (
+        participant is not None
+        and participant.status != RaidRegistrationStatus.cancelled
+    ):
         raise HTTPException(
             status_code=400,
             detail="User is already a participant in this edition",
@@ -63,8 +69,9 @@ async def ensure_user_is_not_volunteer_in_edition(
     edition_id: UUID,
     db: AsyncSession,
 ) -> None:
+    # Same rationale as above: a cancelled volunteer can register as participant.
     volunteer = await cruds_raid.get_volunteer_by_user_id(user_id, edition_id, db)
-    if volunteer is not None:
+    if volunteer is not None and not volunteer.cancelled:
         raise HTTPException(
             status_code=400,
             detail="User is already a volunteer in this edition",
