@@ -4,9 +4,8 @@ Create Date: 2026-07-25 23:45:05.679962
 """
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING
-
 from enum import Enum
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pytest_alembic import MigrationContext
@@ -16,7 +15,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "dd905b1f5f57"
-down_revision: str | None = "84ee3296cc58"
+down_revision: str | None = "ee92f619275e"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
