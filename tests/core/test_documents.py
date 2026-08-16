@@ -1177,7 +1177,6 @@ async def test_webhook_template_creation_unknown_team(
     client: TestClient,
     mocker: MockerFixture,
 ):
-
     mocked_creation = mocker.patch(
         "app.core.documents.utils_documents.cruds_documents.create_template",
         return_value=None,
@@ -1602,7 +1601,6 @@ async def test_webhook_document_completed_already_completed(
     client: TestClient,
     mocker: MockerFixture,
 ):
-
     mocked_update = mocker.patch(
         "app.core.documents.endpoints_documents.cruds_documents.update_document",
         return_value=None,
@@ -1805,7 +1803,6 @@ async def test_webhook_document_rejected(
     client: TestClient,
     mocker: MockerFixture,
 ):
-
     mocked_callback = mocker.patch(
         "tests.core.test_documents.callback",
     )

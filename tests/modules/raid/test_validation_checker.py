@@ -246,7 +246,6 @@ def test_check_all_documents_accepted_rejects_missing_id_card() -> None:
 
 @pytest.mark.asyncio
 async def test_full_participant_checker_passes_for_valid_data() -> None:
-
     edition_id = uuid4()
     p = _make_validated_participant(edition_id=edition_id)
     team = Mock(
@@ -270,7 +269,6 @@ async def test_full_participant_checker_passes_for_valid_data() -> None:
 
 @pytest.mark.asyncio
 async def test_full_participant_checker_fails_when_team_incomplete() -> None:
-
     edition_id = uuid4()
     p = _make_validated_participant(edition_id=edition_id)
     team_no_second = Mock(
@@ -296,7 +294,6 @@ async def test_full_participant_checker_fails_when_team_incomplete() -> None:
 
 @pytest.mark.asyncio
 async def test_full_participant_checker_fails_when_no_team() -> None:
-
     edition_id = uuid4()
     p = _make_validated_participant(edition_id=edition_id)
 
@@ -319,7 +316,6 @@ async def test_full_participant_checker_fails_when_no_team() -> None:
 
 @pytest.mark.asyncio
 async def test_check_volunteer_rejects_wrong_edition() -> None:
-
     v = Mock(
         spec=models_raid.RaidVolunteer,
         edition_id=uuid4(),
@@ -338,7 +334,6 @@ async def test_check_volunteer_rejects_wrong_edition() -> None:
 
 @pytest.mark.asyncio
 async def test_check_volunteer_rejects_missing_phone() -> None:
-
     eid = uuid4()
     v = Mock(
         spec=models_raid.RaidVolunteer,
@@ -358,7 +353,6 @@ async def test_check_volunteer_rejects_missing_phone() -> None:
 
 @pytest.mark.asyncio
 async def test_check_volunteer_rejects_missing_emergency_contact() -> None:
-
     eid = uuid4()
     v = Mock(
         spec=models_raid.RaidVolunteer,
@@ -378,7 +372,6 @@ async def test_check_volunteer_rejects_missing_emergency_contact() -> None:
 
 @pytest.mark.asyncio
 async def test_check_volunteer_passes_for_complete_profile() -> None:
-
     eid = uuid4()
     v = Mock(
         spec=models_raid.RaidVolunteer,
