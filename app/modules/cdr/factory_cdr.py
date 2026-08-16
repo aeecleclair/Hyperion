@@ -7,7 +7,6 @@ from app.core.groups.cruds_groups import get_groups
 from app.core.groups.factory_groups import CoreGroupsFactory
 from app.core.memberships import cruds_memberships
 from app.core.memberships.factory_memberships import CoreMembershipsFactory
-from app.core.permissions import cruds_permissions, schemas_permissions
 from app.core.users.factory_users import CoreUsersFactory
 from app.core.utils.config import Settings
 from app.modules.cdr import coredata_cdr, cruds_cdr, models_cdr
@@ -172,16 +171,20 @@ class CdrFactory(Factory):
         cruds_cdr.create_product(db=db, product=membership_aeecl_product)
         cruds_cdr.create_product(db=db, product=membership_useecl_product)
         cruds_cdr.create_product_variant(
-            db=db, product_variant=membership_aeecl_variant_1
+            db=db,
+            product_variant=membership_aeecl_variant_1,
         )
         cruds_cdr.create_product_variant(
-            db=db, product_variant=membership_aeecl_variant_2
+            db=db,
+            product_variant=membership_aeecl_variant_2,
         )
         cruds_cdr.create_product_variant(
-            db=db, product_variant=membership_useecl_variant_1
+            db=db,
+            product_variant=membership_useecl_variant_1,
         )
         cruds_cdr.create_product_variant(
-            db=db, product_variant=membership_useecl_variant_2
+            db=db,
+            product_variant=membership_useecl_variant_2,
         )
 
         sacoche = models_cdr.CdrProduct(
