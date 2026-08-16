@@ -44,6 +44,7 @@ from app.modules.cdr.exception_cdr import (
     ProductAssociationMembershipNotFoundError,
     PurchaseUserNotFoundError,
 )
+from app.modules.cdr.factory_cdr import CdrFactory
 from app.modules.cdr.types_cdr import (
     CdrLogActionType,
     CdrStatus,
@@ -82,7 +83,7 @@ module = Module(
     tag="Cdr",
     payment_callback=validate_payment,
     default_allowed_account_types=list(AccountType),
-    factory=None,
+    factory=CdrFactory(),
     permissions=CdrPermissions,
 )
 
