@@ -3,7 +3,12 @@ from unittest.mock import ANY
 from uuid import UUID, uuid4
 
 import pytest_asyncio
-from documenso_sdk import DocumentDownloadResponse
+from documenso_sdk import (
+    DocumentDownloadResponse,
+    FolderFindFoldersData,
+    FolderFindFoldersDataType,
+    FolderFindFoldersVisibility,
+)
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 from pytest_mock import MockerFixture
@@ -105,7 +110,9 @@ async def init_objects() -> None:
         id=uuid4(),
         documenso_id=1,
         name="Template 1",
+        recipient_id=1,
         team_id=team1.id,
+        generate_email=False,
         created_at=datetime(2023, 1, 1, tzinfo=UTC),
         updated_at=datetime(2023, 1, 2, tzinfo=UTC),
         deleted=False,
@@ -117,7 +124,9 @@ async def init_objects() -> None:
         id=uuid4(),
         documenso_id=2,
         name="Template 2",
+        recipient_id=2,
         team_id=team2.id,
+        generate_email=False,
         created_at=datetime(2023, 1, 3, tzinfo=UTC),
         updated_at=datetime(2023, 1, 4, tzinfo=UTC),
         deleted=False,
@@ -128,7 +137,9 @@ async def init_objects() -> None:
         id=uuid4(),
         documenso_id=3,
         name="Template Deleted",
+        recipient_id=3,
         team_id=team1.id,
+        generate_email=False,
         created_at=datetime(2023, 1, 5, tzinfo=UTC),
         updated_at=datetime(2023, 1, 6, tzinfo=UTC),
         deleted=True,
@@ -270,6 +281,15 @@ async def test_get_user_teams(client: TestClient):
     )
     assert response.status_code == 200
     assert len(response.json()) == 1
+    template_team = response.json()[0]
+    assert template_team["id"] == str(team1.id)
+    templates = template_team["templates"]
+    assert len(templates) == 2
+    assert templates[0]["id"] == str(templateTeam1.id)
+    assert templates[0]["statistics"]["total_documents"] == 6
+    assert templates[0]["statistics"]["total_signed_documents"] == 1
+    assert templates[0]["statistics"]["total_pending_documents"] == 4
+    assert templates[0]["statistics"]["total_rejected_documents"] == 1
 
 
 async def test_create_team_existing_group(client: TestClient):
@@ -338,18 +358,62 @@ async def test_create_team_invalid_api_key(client: TestClient):
     assert len(response.json()) == 2
 
 
+async def test_create_team_no_folder(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    mocker.patch(
+        "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.find_folders",
+        return_value=[],
+    )
+    response = client.post(
+        "/documents/teams/",
+        json={
+            "team_id": 6,
+            "group_id": group3.id,
+            "name": "Team 6",
+            "api_key": "api_key_6",
+        },
+        headers={"Authorization": f"Bearer {user_admin_token}"},
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "No folders found in Documenso for the provided API key"
+    )
+
+    response = client.get(
+        "/documents/teams/",
+        headers={"Authorization": f"Bearer {user_admin_token}"},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+
+
 async def test_create_team(
     client: TestClient,
     mocker: MockerFixture,
 ):
     mocker.patch(
         "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.find_folders",
-        return_value=None,
+        return_value=[
+            FolderFindFoldersData(
+                id="zs",
+                name="aqsz",
+                user_id=1,
+                team_id=3,
+                parent_id=None,
+                created_at=datetime.now(UTC).isoformat(),
+                updated_at=datetime.now(UTC).isoformat(),
+                pinned=False,
+                visibility=FolderFindFoldersVisibility.EVERYONE,
+                type=FolderFindFoldersDataType.DOCUMENT,
+            ),
+        ],
     )
     response = client.post(
         "/documents/teams/",
         json={
-            "team_id": 3,
             "group_id": group3.id,
             "name": "Team 3",
             "api_key": "api_key_3",
@@ -447,13 +511,105 @@ async def test_update_team_invalid_api_key(client: TestClient):
     assert team1_data["api_key"] == "api_key_1"
 
 
+async def test_update_team_no_folder(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    mocker.patch(
+        "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.find_folders",
+        return_value=[],
+    )
+    response = client.patch(
+        f"/documents/teams/{team1.id}",
+        json={
+            "name": "Team 1 Updated",
+            "group_id": group4.id,
+            "api_key": "api_key_1_updated",
+        },
+        headers={"Authorization": f"Bearer {user_admin_token}"},
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "No folders found in Documenso for the provided API key"
+    )
+
+    response = client.get(
+        "/documents/teams",
+        headers={"Authorization": f"Bearer {user_admin_token}"},
+    )
+    assert response.status_code == 200
+    teams = response.json()
+    team1_data = next((t for t in teams if t["id"] == str(team1.id)), None)
+    assert team1_data is not None
+    assert team1_data["name"] == "Team 1"
+
+
+async def test_update_team_different_documenso_team(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    mocker.patch(
+        "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.find_folders",
+        return_value=[
+            FolderFindFoldersData(
+                id="zs",
+                name="aqsz",
+                user_id=1,
+                team_id=8,
+                parent_id=None,
+                created_at=datetime.now(UTC).isoformat(),
+                updated_at=datetime.now(UTC).isoformat(),
+                pinned=False,
+                visibility=FolderFindFoldersVisibility.EVERYONE,
+                type=FolderFindFoldersDataType.DOCUMENT,
+            ),
+        ],
+    )
+    response = client.patch(
+        f"/documents/teams/{team1.id}",
+        json={
+            "api_key": "api_key_1_updated",
+        },
+        headers={"Authorization": f"Bearer {user_admin_token}"},
+    )
+    assert response.status_code == 400, response.text
+    assert (
+        response.json()["detail"]
+        == "The provided API key corresponds to a different Documenso team than the one being updated"
+    )
+
+    response = client.get(
+        "/documents/teams",
+        headers={"Authorization": f"Bearer {user_admin_token}"},
+    )
+    assert response.status_code == 200
+    teams = response.json()
+    team1_data = next((t for t in teams if t["id"] == str(team1.id)), None)
+    assert team1_data is not None
+    assert team1_data["api_key"] == "api_key_1"
+
+
 async def test_update_team(
     client: TestClient,
     mocker: MockerFixture,
 ):
     mocker.patch(
         "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.find_folders",
-        return_value=None,
+        return_value=[
+            FolderFindFoldersData(
+                id="zs",
+                name="aqsz",
+                user_id=1,
+                team_id=1,
+                parent_id=None,
+                created_at=datetime.now(UTC).isoformat(),
+                updated_at=datetime.now(UTC).isoformat(),
+                pinned=False,
+                visibility=FolderFindFoldersVisibility.EVERYONE,
+                type=FolderFindFoldersDataType.DOCUMENT,
+            ),
+        ],
     )
     response = client.patch(
         f"/documents/teams/{team1.id}",
@@ -532,6 +688,10 @@ async def test_get_team_templates(client: TestClient):
     templates = response.json()
     assert len(templates) == 1
     assert templates[0]["id"] == str(templateTeam2.id)
+    assert templates[0]["statistics"]["total_documents"] == 1
+    assert templates[0]["statistics"]["total_signed_documents"] == 0
+    assert templates[0]["statistics"]["total_pending_documents"] == 1
+    assert templates[0]["statistics"]["total_rejected_documents"] == 0
 
 
 async def test_get_team_templates_not_found(client: TestClient):
@@ -582,11 +742,37 @@ async def test_get_template_not_found(client: TestClient):
     assert response.status_code == 404
 
 
-async def test_update_template_directory(client: TestClient):
-    new_directory_id = "new_directory_id"
+class MockFolderFindFoldersData(BaseModel):
+    id: str
+    name: str
+
+
+async def test_update_template_directory(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    final_id = "directory_id"
+    mocker.patch(
+        "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.find_folders",
+        return_value=[
+            MockFolderFindFoldersData(
+                id="directory_id",
+                name="subdirectory",
+            ),
+            MockFolderFindFoldersData(
+                id="random_id",
+                name="test",
+            ),
+            MockFolderFindFoldersData(
+                id="random_id_2",
+                name="new_directory",
+            ),
+        ],
+    )
+    new_directory_path = "new_directory/test/subdirectory"
     response = client.patch(
         f"/documents/templates/{templateTeam1.id}",
-        json={"document_directory_id": new_directory_id},
+        json={"document_directory_path": new_directory_path},
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
     assert response.status_code == 204
@@ -596,7 +782,7 @@ async def test_update_template_directory(client: TestClient):
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
     assert response.status_code == 200
-    assert response.json()["document_directory_id"] == new_directory_id
+    assert response.json()["document_directory_id"] == final_id
 
 
 async def test_update_template_directory_not_found(client: TestClient):
@@ -606,6 +792,40 @@ async def test_update_template_directory_not_found(client: TestClient):
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
     assert response.status_code == 404
+
+
+async def test_update_template_directory_unknown_directory(
+    client: TestClient,
+    mocker: MockerFixture,
+):
+    mocker.patch(
+        "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.find_folders",
+        return_value=[
+            MockFolderFindFoldersData(
+                id="directory_id",
+                name="subdirectory",
+            ),
+            MockFolderFindFoldersData(
+                id="random_id",
+                name="test",
+            ),
+            MockFolderFindFoldersData(
+                id="random_id_2",
+                name="new_directory",
+            ),
+        ],
+    )
+
+    response = client.patch(
+        f"/documents/templates/{templateTeam1.id}",
+        json={"document_directory_path": "unknown_directory_path"},
+        headers={"Authorization": f"Bearer {user_team1_token}"},
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Folder not found in Documenso for the provided path: unknown_directory_path"
+    )
 
 
 async def test_update_template_directory_as_lambda(client: TestClient):
@@ -808,6 +1028,35 @@ async def test_use_template_invalid_destination_folder(
     )
 
 
+async def test_use_template_for_a_recipient_generate_email(
+    client: TestClient,
+):
+    emailTemplate = DocumentTemplate(
+        id=uuid4(),
+        documenso_id=4,
+        name="Template Generate Email",
+        recipient_id=4,
+        team_id=team1.id,
+        generate_email=True,
+        created_at=datetime(2023, 1, 21, tzinfo=UTC),
+        updated_at=datetime(2023, 1, 22, tzinfo=UTC),
+        document_directory_id="directory_id_1",
+    )
+    await add_object_to_db(emailTemplate)
+
+    response = client.post(
+        f"/documents/templates/{emailTemplate.id}/documents/",
+        json={"recipients": [user_lambda.email]},
+        headers={"Authorization": f"Bearer {user_team1_token}"},
+    )
+    assert response.status_code == 201, response.text
+    assert len(response.json()["errors"]) == 1
+    assert (
+        response.json()["errors"][user_lambda.email]
+        == "Template is set to generate email, which is not supported"
+    )
+
+
 async def test_use_template_for_a_recipient_user_not_found(
     client: TestClient,
 ):
@@ -819,6 +1068,22 @@ async def test_use_template_for_a_recipient_user_not_found(
     assert response.status_code == 201, response.text
     assert len(response.json()["errors"]) == 1
     assert response.json()["errors"]["test@test.fr"] == "User not found"
+
+
+async def test_use_template_for_a_recipient_duplicate(
+    client: TestClient,
+):
+    response = client.post(
+        f"/documents/templates/{templateTeam1.id}/documents/",
+        json={"recipients": [user_lambda.email]},
+        headers={"Authorization": f"Bearer {user_team1_token}"},
+    )
+    assert response.status_code == 201, response.text
+    assert len(response.json()["errors"]) == 1
+    assert (
+        response.json()["errors"][user_lambda.email]
+        == "Document already exists for this user"
+    )
 
 
 async def test_use_template_for_a_recipient(
@@ -840,7 +1105,10 @@ async def test_use_template_for_a_recipient(
     )
     response = client.post(
         f"/documents/templates/{templateTeam1.id}/documents/",
-        json={"recipients": [user_lambda.email]},
+        json={
+            "recipients": [user_lambda.email],
+            "allow_duplicate": True,
+        },
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
     assert response.status_code == 201, response.text
@@ -909,7 +1177,6 @@ async def test_webhook_template_creation_unknown_team(
     client: TestClient,
     mocker: MockerFixture,
 ):
-
     mocked_creation = mocker.patch(
         "app.core.documents.utils_documents.cruds_documents.create_template",
         return_value=None,
@@ -1103,7 +1370,9 @@ async def test_webhook_template_update(
         id=uuid4(),
         documenso_id=11,
         name="My Template",
+        recipient_id=4,
         team_id=team1.id,
+        generate_email=True,
         created_at=datetime(2023, 1, 1, tzinfo=UTC),
         updated_at=datetime(2023, 1, 2, tzinfo=UTC),
         deleted=False,
@@ -1122,6 +1391,9 @@ async def test_webhook_template_update(
             "recipients": [{"id": 52, "token": "SIGNING_TOKEN"}],
             "createdAt": "2026-06-16T13:44:05.967Z",
             "updatedAt": "2026-06-16T13:44:05.967Z",
+            "documentMeta": {
+                "distributionMethod": "NONE",
+            },
         },
         "createdAt": "2026-06-16T13:44:05.967Z",
         "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
@@ -1192,8 +1464,10 @@ async def test_webhook_template_deletion(
     template = DocumentTemplate(
         id=uuid4(),
         documenso_id=12,
+        recipient_id=4,
         name="My Template",
         team_id=team1.id,
+        generate_email=False,
         created_at=datetime(2023, 1, 1, tzinfo=UTC),
         updated_at=datetime(2023, 1, 2, tzinfo=UTC),
         deleted=False,
@@ -1327,7 +1601,6 @@ async def test_webhook_document_completed_already_completed(
     client: TestClient,
     mocker: MockerFixture,
 ):
-
     mocked_update = mocker.patch(
         "app.core.documents.endpoints_documents.cruds_documents.update_document",
         return_value=None,
@@ -1530,7 +1803,6 @@ async def test_webhook_document_rejected(
     client: TestClient,
     mocker: MockerFixture,
 ):
-
     mocked_callback = mocker.patch(
         "tests.core.test_documents.callback",
     )

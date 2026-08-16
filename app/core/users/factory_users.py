@@ -53,7 +53,8 @@ class CoreUsersFactory(Factory):
 
     @classmethod
     async def create_core_users(cls, db: AsyncSession):
-        password = [faker.password(16, True, True, True, True) for _ in range(NB_USERS)]
+        easy_password = security.get_password_hash("password")
+        password = [easy_password for _ in range(NB_USERS)]
         firstname = [faker.first_name() for _ in range(NB_USERS)]
         name = [faker.last_name() for _ in range(NB_USERS)]
         nickname = [faker.user_name() for _ in range(NB_USERS)]
@@ -122,11 +123,11 @@ class CoreUsersFactory(Factory):
                 name=user_info.name,
                 email=user_info.email,
                 floor=None,
-                phone=None,
+                phone=user_info.phone,
                 promo=None,
                 school_id=SchoolType.centrale_lyon.value,
                 account_type=groups_type.AccountType.student,
-                birthday=None,
+                birthday=user_info.birthday,
                 created_on=datetime.now(tz=UTC),
             )
             await cruds_users.create_user(db=db, user=user)
