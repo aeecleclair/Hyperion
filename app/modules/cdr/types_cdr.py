@@ -12,6 +12,7 @@ class PaymentType(StrEnum):
     helloasso = "HelloAsso"
     card = "card"
     archived = "archived"
+    myeclpay = "MyECLPay"
 
 
 class CdrStatus(StrEnum):

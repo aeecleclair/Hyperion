@@ -553,7 +553,6 @@ class MockedTemplateUseResponse(BaseModel):
 
 
 async def test_document_renewal_admin(client: TestClient, mocker: MockerFixture):
-
     mocked_id = uuid4()
     mocker.patch(
         "app.core.documents.utils_documents.uuid.uuid4",
@@ -1165,7 +1164,6 @@ async def test_user_document_renewal_no_template_id(client: TestClient):
 
 
 async def test_user_document_renewal_admin(client: TestClient, mocker: MockerFixture):
-
     mocked_id = uuid4()
     mocker.patch(
         "app.core.documents.utils_documents.uuid.uuid4",

@@ -78,7 +78,6 @@ async def _set_user_identity(user_id: str, phone: str, birthday: datetime.date) 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
-
     global admin_group, active_edition
     admin_group = await create_groups_with_permissions(
         [RaidPermissions.manage_raid],
