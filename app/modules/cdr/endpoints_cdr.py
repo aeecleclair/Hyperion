@@ -815,6 +815,17 @@ async def create_product(
             status_code=403,
             detail="CDR is closed. You cant add a new product.",
         )
+    if product.related_membership_id:
+        related_membership = await cruds_memberships.get_association_membership_by_id(
+            db=db,
+            membership_id=product.related_membership_id,
+        )
+        if not related_membership:
+            raise HTTPException(
+                status_code=404,
+                detail="Related membership not found.",
+            )
+
     db_product = models_cdr.CdrProduct(
         id=uuid4(),
         seller_id=seller_id,
@@ -824,9 +835,7 @@ async def create_product(
         needs_validation=product.needs_validation,
         description_fr=product.description_fr,
         description_en=product.description_en,
-        related_membership_id=product.related_membership.id
-        if product.related_membership
-        else None,
+        related_membership_id=product.related_membership_id,
         year=cdr_year.year,
     )
 

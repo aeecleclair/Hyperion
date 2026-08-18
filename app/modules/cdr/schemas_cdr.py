@@ -130,7 +130,7 @@ class ProductBase(BaseModel):
     description_en: str | None = None
     available_online: bool
     needs_validation: bool = True
-    related_membership: schemas_memberships.MembershipSimple | None = None
+    related_membership_id: UUID | None = None
     tickets: list[GenerateTicketBase] = []
     product_constraints: list[UUID]
     document_constraints: list[UUID]
