@@ -185,7 +185,7 @@ async def get_cdr_users_pending_validation(
 
 
 @module.router.get(
-    "/cdr/stats/total_payments_by_seller/",
+    "/cdr/stats/payment_total_by_seller/",
     response_model=list[schemas_cdr.TotalPurchaseValidatedBySeller],
     status_code=200,
 )
@@ -213,7 +213,7 @@ async def get_payment_total_by_seller(
 
 
 @module.router.get(
-    "/cdr/stats/total_payments_per_type/",
+    "/cdr/stats/payment_total_per_type/",
     response_model=list[schemas_cdr.PaymentBase],
     status_code=200,
 )
@@ -241,7 +241,7 @@ async def get_payment_total_by_type(
 
 
 @module.router.get(
-    "/cdr/stats/total_payments/",
+    "/cdr/stats/payment_total/",
     response_model=int,
     status_code=200,
 )
