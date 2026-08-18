@@ -815,6 +815,17 @@ async def create_product(
             status_code=403,
             detail="CDR is closed. You cant add a new product.",
         )
+    if product.related_membership_id:
+        related_membership = await cruds_memberships.get_association_membership_by_id(
+            db=db,
+            membership_id=product.related_membership_id,
+        )
+        if not related_membership:
+            raise HTTPException(
+                status_code=404,
+                detail="Related membership not found.",
+            )
+
     db_product = models_cdr.CdrProduct(
         id=uuid4(),
         seller_id=seller_id,
@@ -824,9 +835,7 @@ async def create_product(
         needs_validation=product.needs_validation,
         description_fr=product.description_fr,
         description_en=product.description_en,
-        related_membership_id=product.related_membership.id
-        if product.related_membership
-        else None,
+        related_membership_id=product.related_membership_id,
         year=cdr_year.year,
     )
 
@@ -897,20 +906,53 @@ async def update_product(
         user,
         db=db,
     )
-    await check_request_consistency(
+    db_product = await check_request_consistency(
         db=db,
         seller_id=seller_id,
         product_id=product_id,
     )
-    variants = await cruds_cdr.get_product_variants(
-        db=db,
-        product_id=product_id,
-    )
-    if variants and product.related_membership:
+    if not db_product:
         raise HTTPException(
-            status_code=403,
-            detail="You can't link or unlink this product to a membership if it has variant in it.",
+            status_code=404,
+            detail="Product not found.",
         )
+    if (
+        "related_membership_id" in product.model_fields_set
+        and db_product.related_membership_id != product.related_membership_id
+    ):
+        purchases = await cruds_cdr.get_product_validated_purchases(
+            db=db,
+            product_id=product_id,
+        )
+        if purchases:
+            raise HTTPException(
+                status_code=403,
+                detail="You can't change the related membership of a product that has validated purchases.",
+            )
+        if product.related_membership_id is not None:
+            related_membership = (
+                await cruds_memberships.get_association_membership_by_id(
+                    db=db,
+                    membership_id=product.related_membership_id,
+                )
+            )
+            if not related_membership:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Related membership not found.",
+                )
+            for variant in await cruds_cdr.get_product_variants(
+                db=db,
+                product_id=product_id,
+            ):
+                if variant.related_membership_added_duration is None:
+                    await cruds_cdr.update_product_variant(
+                        variant_id=variant.id,
+                        product_variant=schemas_cdr.ProductVariantEdit(
+                            related_membership_added_duration="P1Y",
+                        ),
+                        db=db,
+                    )
 
     await cruds_cdr.update_product(
         product_id=product_id,
