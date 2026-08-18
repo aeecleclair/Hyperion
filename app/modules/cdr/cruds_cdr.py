@@ -865,10 +865,9 @@ async def get_payment_total(
             func.sum(models_cdr.Payment.total).label("total"),
         ).where(models_cdr.Payment.year == cdr_year),
     )
-    try:
-        return result.all()[0].total // 100
-    except IndexError:
-        return 0
+    total = result.scalar()
+
+    return total // 100 if total is not None else 0
 
 
 def create_action(
