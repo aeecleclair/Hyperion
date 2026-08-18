@@ -179,7 +179,7 @@ class ProductEdit(BaseModel):
     description_en: str | None = None
     description: str | None = None
     available_online: bool | None = None
-    related_membership: schemas_memberships.MembershipSimple | None = None
+    related_membership_id: UUID | None = None
     product_constraints: list[UUID] | None = None
     document_constraints: list[UUID] | None = None
 

@@ -206,16 +206,12 @@ async def update_product(
         .where(models_cdr.CdrProduct.id == product_id)
         .values(
             **product.model_dump(
-                exclude_none=True,
+                exclude_unset=True,
                 exclude={
                     "product_constraints",
                     "document_constraints",
-                    "related_membership",
                 },
             ),
-            related_membership_id=product.related_membership.id
-            if product.related_membership
-            else None,
         ),
     )
 

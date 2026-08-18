@@ -160,6 +160,48 @@ async def init_objects():
     )
     await add_object_to_db(empty_seller)
 
+    global document_team, template
+    document_team = models_documents.DocumentTeam(
+        id=uuid.uuid4(),
+        team_id=1,
+        group_id=admin_group.id,
+        name="Team",
+        api_key="team",
+    )
+    await add_object_to_db(document_team)
+
+    template = models_documents.DocumentTemplate(
+        id=uuid.uuid4(),
+        documenso_id=1,
+        name="Template",
+        recipient_id=1,
+        team_id=document_team.id,
+        generate_email=False,
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+        deleted=False,
+        document_directory_id="1",
+    )
+    await add_object_to_db(template)
+
+    global association_membership, user_membership
+    association_membership = models_memberships.CoreAssociationMembership(
+        id=uuid.uuid4(),
+        name="AEECL",
+        manager_group_id=admin_group.id,
+        template_id=template.id,
+    )
+    await add_object_to_db(association_membership)
+
+    user_membership = models_memberships.CoreAssociationUserMembership(
+        id=uuid.uuid4(),
+        user_id=user.id,
+        association_membership_id=association_membership.id,
+        start_date=date(2022, 9, 1),
+        end_date=date(2026, 9, 1),
+    )
+    await add_object_to_db(user_membership)
+
     global product
     product = models_cdr.CdrProduct(
         id=uuid.uuid4(),
@@ -171,6 +213,7 @@ async def init_objects():
         available_online=False,
         year=year,
         needs_validation=True,
+        related_membership_id=association_membership.id,
     )
     await add_object_to_db(product)
 
@@ -353,49 +396,6 @@ async def init_objects():
         year=year,
     )
     await add_object_to_db(payment)
-
-    global document_team, template
-    document_team = models_documents.DocumentTeam(
-        id=uuid.uuid4(),
-        team_id=1,
-        group_id=admin_group.id,
-        name="Team",
-        api_key="team",
-    )
-    await add_object_to_db(document_team)
-
-    template = models_documents.DocumentTemplate(
-        id=uuid.uuid4(),
-        documenso_id=1,
-        name="Template",
-        recipient_id=1,
-        team_id=document_team.id,
-        generate_email=False,
-        created_at=datetime.now(UTC),
-        updated_at=datetime.now(UTC),
-        deleted=False,
-        document_directory_id="1",
-    )
-    await add_object_to_db(template)
-
-    global association_membership
-    association_membership = models_memberships.CoreAssociationMembership(
-        id=uuid.uuid4(),
-        name="AEECL",
-        manager_group_id=admin_group.id,
-        template_id=template.id,
-    )
-    await add_object_to_db(association_membership)
-
-    global user_membership
-    user_membership = models_memberships.CoreAssociationUserMembership(
-        id=uuid.uuid4(),
-        user_id=user.id,
-        association_membership_id=association_membership.id,
-        start_date=date(2022, 9, 1),
-        end_date=date(2026, 9, 1),
-    )
-    await add_object_to_db(user_membership)
 
     global ticket_product
     ticket_product = models_cdr.CdrProduct(
@@ -922,9 +922,9 @@ def test_patch_product_seller(client: TestClient):
     )
     assert response.status_code == 200
     assert str(product.id) in [x["id"] for x in response.json()]
-    for x in response.json():
-        if x["id"] == product.id:
-            assert x["name_fr"] == "Produit modifié"
+    product_data = next(x for x in response.json() if x["id"] == str(product.id))
+    assert product_data["name_fr"] == "Produit modifié"
+    assert product_data["related_membership"]["id"] == str(association_membership.id)
 
 
 def test_patch_product_wrong_product(client: TestClient):
@@ -1026,6 +1026,7 @@ def test_create_product_variant_seller(client: TestClient):
             "unique": True,
             "allowed_curriculum": [str(curriculum.id)],
             "year": year,
+            "related_membership_added_duration": "P1Y",
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
