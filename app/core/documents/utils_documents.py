@@ -222,6 +222,8 @@ async def handle_template_creation_webhook(
 ) -> None:
     if payload.team_id is None:
         return
+    if len(payload.recipients) > 1:
+        return
 
     all_teams = await cruds_documents.get_teams(db=db)
     owning_team = next(

@@ -652,7 +652,7 @@ async def documenso_webhook(
                 template_update=schemas_documents.TemplateDocumensoUpdate(
                     name=update_payload.title,
                     recipient_id=update_payload.recipients[0].id
-                    if update_payload.recipients
+                    if update_payload.recipients and len(update_payload.recipients) == 1
                     else -1,
                     generate_email=update_payload.document_meta.distribution_method
                     == DistributionMethod.EMAIL
