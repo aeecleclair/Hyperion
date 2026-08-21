@@ -2826,7 +2826,7 @@ async def delete_payment(
     status_code=200,
 )
 async def get_payment_url(
-    user_id: str | None = None,
+    target_user_id: str | None = None,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
@@ -2841,7 +2841,7 @@ async def get_payment_url(
 
     target_user = user
 
-    if user_id is not None and user_id != user.id:
+    if target_user_id is not None and target_user_id != user.id:
         if not await has_user_permission(user, CdrPermissions.manage_cdr, db):
             raise HTTPException(
                 status_code=403,
@@ -2850,7 +2850,7 @@ async def get_payment_url(
 
         requested_user = await get_user_by_id(
             db=db,
-            user_id=user_id,
+            user_id=target_user_id,
         )
 
         if requested_user is None:
