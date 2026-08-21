@@ -2848,16 +2848,18 @@ async def get_payment_url(
                 detail="You're not allowed to create a payment for another user.",
             )
 
-        target_user = await get_user_by_id(
+        requested_user = await get_user_by_id(
             db=db,
             user_id=user_id,
         )
 
-        if target_user is None:
+        if requested_user is None:
             raise HTTPException(
                 status_code=404,
                 detail="User not found.",
             )
+
+        target_user = requested_user
 
     purchases = await cruds_cdr.get_purchases_by_user_id(
         db=db,
