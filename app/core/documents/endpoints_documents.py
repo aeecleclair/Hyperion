@@ -15,6 +15,7 @@ from app.core.documents.exceptions_documents import (
     PayloadParsingError,
 )
 from app.core.documents.types_documenso import (
+    DistributionMethod,
     DocumensoWebhook,
     DocumentCompletedPayload,
     DocumentRejectedPayload,
@@ -650,6 +651,13 @@ async def documenso_webhook(
                 template_id=template.id,
                 template_update=schemas_documents.TemplateDocumensoUpdate(
                     name=update_payload.title,
+                    recipient_id=update_payload.recipients[0].id
+                    if update_payload.recipients
+                    else -1,
+                    generate_email=update_payload.document_meta.distribution_method
+                    == DistributionMethod.EMAIL
+                    if update_payload.document_meta is not None
+                    else False,
                 ),
             )
 

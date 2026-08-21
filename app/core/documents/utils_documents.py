@@ -222,8 +222,6 @@ async def handle_template_creation_webhook(
 ) -> None:
     if payload.team_id is None:
         return
-    if len(payload.recipients) != 1:
-        return  # MyECL only handle templates with a single recipient
 
     all_teams = await cruds_documents.get_teams(db=db)
     owning_team = next(
@@ -237,7 +235,7 @@ async def handle_template_creation_webhook(
         id=uuid.uuid4(),
         documenso_id=payload.id,
         name=payload.title,
-        recipient_id=payload.recipients[0].id,
+        recipient_id=payload.recipients[0].id if payload.recipients else -1,
         team_id=owning_team.id,
         generate_email=payload.document_meta.distribution_method
         == DistributionMethod.EMAIL
@@ -267,6 +265,11 @@ async def use_template_for_user(
         raise DocumentCreationError(
             user_email=user.email,
             message="Template is set to generate email, which is not supported",
+        )
+    if template.recipient_id == -1:
+        raise DocumentCreationError(
+            user_email=user.email,
+            message="Template does not have a valid recipient ID",
         )
     document_id = uuid.uuid4()
     try:
