@@ -2860,3 +2860,26 @@ async def test_customdata_deletion_on_purchase_deletion(client: TestClient):
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 404
+
+
+async def test_pay_admin_for_user(client: TestClient):
+    response = client.post(
+        "/cdr/pay/",
+        params={
+            "user_id": cdr_user_with_curriculum_with_non_validated_purchase.id,
+        },
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["url"] == "https://some.url.fr/checkout"
+
+
+def test_pay_other_user_forbidden(client: TestClient):
+    response = client.post(
+        "/cdr/pay/",
+        params={"user_id": user.id},
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+
+    assert response.status_code == 403
