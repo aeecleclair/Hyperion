@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import uuid
 from datetime import UTC, date, datetime
 
@@ -37,8 +36,6 @@ from app.types.module import CoreModule
 from app.utils.tools import is_user_member_of_any_group
 
 router = APIRouter(tags=["Memberships"])
-
-hyperion_error_logger = logging.getLogger("hyperion.error")
 
 core_module = CoreModule(
     root=MODULE_ROOT,
@@ -433,14 +430,10 @@ async def read_user_memberships(
             user_id,
             manager_restriction=[group.id for group in user.groups],
         )
-    memberships = await cruds_memberships.get_user_memberships_by_user_id(
+    return await cruds_memberships.get_user_memberships_by_user_id(
         db,
         user_id,
     )
-    hyperion_error_logger.error(
-        f"User {user.id} accessed memberships for user {user_id}: {memberships}",
-    )
-    return memberships
 
 
 @router.get(
