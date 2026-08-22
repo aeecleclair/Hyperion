@@ -252,6 +252,10 @@ class PaymentComplete(PaymentBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PaymentUrlRequest(BaseModel):
+    target_user_id: str | None = None
+
+
 class PaymentUrl(BaseModel):
     url: str
 
