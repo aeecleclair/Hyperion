@@ -2826,7 +2826,7 @@ async def delete_payment(
     status_code=200,
 )
 async def get_payment_url(
-    target_user_id: str | None = None,
+    payment_request: schemas_cdr.PaymentUrlRequest | None = None,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
@@ -2838,6 +2838,10 @@ async def get_payment_url(
     """
     Get payment url
     """
+
+    target_user_id = (
+        payment_request.target_user_id if payment_request is not None else None
+    )
 
     target_user = user
 

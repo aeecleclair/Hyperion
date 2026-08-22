@@ -2865,7 +2865,7 @@ async def test_customdata_deletion_on_purchase_deletion(client: TestClient):
 async def test_pay_admin_for_user(client: TestClient):
     response = client.post(
         "/cdr/pay/",
-        params={
+        json={
             "target_user_id": cdr_user_with_curriculum_with_non_validated_purchase.id,
         },
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -2878,7 +2878,7 @@ async def test_pay_admin_for_user(client: TestClient):
 def test_pay_other_user_forbidden(client: TestClient):
     response = client.post(
         "/cdr/pay/",
-        params={"target_user_id": user.id},
+        json={"target_user_id": user.id},
         headers={"Authorization": f"Bearer {token_bde}"},
     )
 
