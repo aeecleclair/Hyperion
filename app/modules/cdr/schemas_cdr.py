@@ -335,3 +335,8 @@ class BatchValidation(BaseModel):
     user_emails: list[str]
     product_variant_id: UUID
     validated: bool
+
+
+class TotalPurchaseValidatedBySeller(BaseModel):
+    name: str
+    total_validated: int

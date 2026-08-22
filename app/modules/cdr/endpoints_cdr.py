@@ -185,6 +185,91 @@ async def get_cdr_users_pending_validation(
 
 
 @module.router.get(
+    "/cdr/stats/payment_total_by_seller/",
+    response_model=list[schemas_cdr.TotalPurchaseValidatedBySeller],
+    status_code=200,
+)
+async def get_payment_total_by_seller(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
+    ),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
+):
+    """
+    Get the total of all payments made in the CDR for each seller.
+
+    **User must be a CDR Admin to use this endpoint**
+    """
+    if not (await has_user_permission(user, CdrPermissions.manage_cdr, db)):
+        raise HTTPException(
+            status_code=403,
+            detail="You're not allowed to see this.",
+        )
+    return await cruds_cdr.get_payment_total_by_seller(
+        db=db,
+        cdr_year=cdr_year.year,
+    )
+
+
+@module.router.get(
+    "/cdr/stats/payment_total_per_type/",
+    response_model=list[schemas_cdr.PaymentBase],
+    status_code=200,
+)
+async def get_payment_total_by_type(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
+    ),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
+):
+    """
+    Get the total of all payments made in the CDR for each payment type.
+
+    **User must a CDR Admin to use this endpoint**
+    """
+    if not (await has_user_permission(user, CdrPermissions.manage_cdr, db)):
+        raise HTTPException(
+            status_code=403,
+            detail="You're not allowed to see this.",
+        )
+    return await cruds_cdr.get_payment_total_by_type(
+        db=db,
+        cdr_year=cdr_year.year,
+    )
+
+
+@module.router.get(
+    "/cdr/stats/payment_total/",
+    response_model=int,
+    status_code=200,
+)
+async def get_payment_total(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
+    ),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
+):
+    """
+    Get the total of all payments made in the CDR.
+
+    **User must a CDR Admin to use this endpoint**
+    """
+    if not (await has_user_permission(user, CdrPermissions.manage_cdr, db)):
+        raise HTTPException(
+            status_code=403,
+            detail="You're not allowed to see this.",
+        )
+
+    return await cruds_cdr.get_payment_total(
+        db=db,
+        cdr_year=cdr_year.year,
+    )
+
+
+@module.router.get(
     "/cdr/users/{user_id}/",
     response_model=schemas_cdr.CdrUser,
     status_code=200,
