@@ -57,11 +57,13 @@ from app.utils.tools import (
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
+hyperion_security_logger = logging.getLogger("hyperion.security")
 
 
 class RaidPermissions(ModulePermissions):
     access_raid = "access_raid"
     manage_raid = "manage_raid"
+    read_medical_data = "read_medical_data"
 
 
 module = Module(
@@ -1153,8 +1155,30 @@ async def download_security_files_zip(
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
+    has_medical_permission = await has_user_permission(
+        user,
+        RaidPermissions.read_medical_data,
+        db,
+    )
+
+    if not has_medical_permission:
+        raise HTTPException(
+            status_code=403,
+            detail="You don't have the permisison to have the data of the participants.",
+        )
+
     information = await get_core_data(coredata_raid.RaidInformation, db)
     zip_file_path = await get_all_security_files_zip(db, information, edition.id)
+
+    hyperion_security_logger.info(
+        "Medical data access",
+        extra={
+            "accessed_by_user_id": user.id,
+            "edition_id": str(edition.id),
+            "access_type": "download",
+        },
+    )
+
     return FileResponse(
         zip_file_path,
         media_type="application/zip",
