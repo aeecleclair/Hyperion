@@ -628,10 +628,12 @@ async def get_participant_by_user_id(
     include_security_file: bool = False,
 ) -> schemas_raid.RaidParticipant | None:
 
-    data_to_select = PARTICIPANT_DATA_TO_SELECT.copy()
+    additionnal_data_to_select = []
 
     if include_security_file:
-        data_to_select.append(models_raid.RaidParticipant.security_file)
+        additionnal_data_to_select.append(
+            selectinload(models_raid.RaidParticipant.security_file),
+        )
 
     participant = await db.execute(
         select(models_raid.RaidParticipant)
@@ -640,7 +642,8 @@ async def get_participant_by_user_id(
             models_raid.RaidParticipant.edition_id == edition_id,
         )
         .options(
-            *[selectinload(data) for data in data_to_select],
+            *[selectinload(data) for data in PARTICIPANT_DATA_TO_SELECT],
+            *additionnal_data_to_select,
         ),
     )
     model = participant.scalars().first()
