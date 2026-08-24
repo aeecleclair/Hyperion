@@ -205,13 +205,13 @@ async def get_participant_by_id(
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
     is_owner = user.id == user_id
-    is_admin = await has_user_permission(
+    is_raid_admin = await has_user_permission(
         user,
         RaidPermissions.manage_raid,
         db,
     )
 
-    if not is_owner and not is_admin:
+    if not is_owner and not is_raid_admin:
         raise HTTPException(
             status_code=403,
             detail="You can not get data of another user",
@@ -281,10 +281,10 @@ async def update_participant(
 ):
     saved_participant = await get_participant_or_404(user_id, edition.id, db)
 
-    is_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
-    if user.id != user_id and not is_admin:
+    is_raid_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
+    if user.id != user_id and not is_raid_admin:
         raise HTTPException(status_code=403, detail="You are not the participant.")
-    if not is_admin and saved_participant.status != RaidRegistrationStatus.draft:
+    if not is_raid_admin and saved_participant.status != RaidRegistrationStatus.draft:
         raise HTTPException(
             status_code=400,
             detail="Participant is not in draft state; reopen first",
@@ -373,11 +373,11 @@ async def reopen_participant(
     db: AsyncSession = Depends(get_db),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    is_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
-    if user_id != user.id and not is_admin:
+    is_raid_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
+    if user_id != user.id and not is_raid_admin:
         raise HTTPException(status_code=403, detail="You are not the participant.")
     participant = await get_participant_or_404(user_id, edition.id, db)
-    if participant.status == RaidRegistrationStatus.validated and not is_admin:
+    if participant.status == RaidRegistrationStatus.validated and not is_raid_admin:
         raise HTTPException(
             status_code=403,
             detail="Cannot reopen a validated participant",
@@ -424,11 +424,11 @@ async def cancel_participant(
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    is_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
+    is_raid_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
     participant = await get_participant_or_404(user_id, edition.id, db)
-    if user_id != user.id and not is_admin:
+    if user_id != user.id and not is_raid_admin:
         raise HTTPException(status_code=403, detail="You are not the participant.")
-    if participant.status == RaidRegistrationStatus.validated and not is_admin:
+    if participant.status == RaidRegistrationStatus.validated and not is_raid_admin:
         raise HTTPException(
             status_code=403,
             detail="Only admins can cancel a validated participant",
@@ -550,10 +550,10 @@ async def update_team(
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
     existing_team = await cruds_raid.get_team_by_participant_id(user.id, edition.id, db)
-    is_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
-    if existing_team is None and not is_admin:
+    is_raid_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
+    if existing_team is None and not is_raid_admin:
         raise HTTPException(status_code=404, detail="Team not found.")
-    if existing_team is not None and existing_team.id != team_id and not is_admin:
+    if existing_team is not None and existing_team.id != team_id and not is_raid_admin:
         raise HTTPException(status_code=403, detail="You can only edit your own team.")
     await cruds_raid.update_team(team_id, team, db)
 
@@ -690,8 +690,8 @@ async def read_document(
             detail="Participant owning the document not found.",
         )
 
-    is_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
-    if not is_admin:
+    is_raid_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
+    if not is_raid_admin:
         # Self or teammate can read
         user_team = await cruds_raid.get_team_by_participant_id(
             user.id,
@@ -1320,11 +1320,11 @@ async def update_volunteer(
     db: AsyncSession = Depends(get_db),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    is_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
-    if user.id != user_id and not is_admin:
+    is_raid_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
+    if user.id != user_id and not is_raid_admin:
         raise HTTPException(status_code=403, detail="You are not the volunteer.")
     existing = await get_volunteer_or_404(user_id, edition.id, db)
-    if existing.validated and not is_admin:
+    if existing.validated and not is_raid_admin:
         raise HTTPException(
             status_code=400,
             detail="Volunteer is validated; admin-only update",
@@ -1361,8 +1361,8 @@ async def cancel_volunteer(
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    is_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
-    if user.id != user_id and not is_admin:
+    is_raid_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
+    if user.id != user_id and not is_raid_admin:
         raise HTTPException(status_code=403, detail="You are not the volunteer.")
     await get_volunteer_or_404(user_id, edition.id, db)
     await cruds_raid.update_volunteer_cancellation(user_id, edition.id, True, db)
@@ -1380,11 +1380,11 @@ async def delete_volunteer(
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    is_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
-    if user.id != user_id and not is_admin:
+    is_raid_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
+    if user.id != user_id and not is_raid_admin:
         raise HTTPException(status_code=403, detail="You are not the volunteer.")
     existing = await get_volunteer_or_404(user_id, edition.id, db)
-    if existing.validated and not is_admin:
+    if existing.validated and not is_raid_admin:
         raise HTTPException(
             status_code=403,
             detail="Cannot remove a validated volunteer (admin-only)",
