@@ -20,12 +20,15 @@ PARTICIPANT_DATA_TO_SELECT = [
     models_raid.RaidParticipant.raid_rules,
     models_raid.RaidParticipant.parent_authorization,
     models_raid.RaidParticipant.user,
+    models_raid.RaidParticipant.security_file,
 ]
 
 TEAM_DATA_TO_SELECT = [
-    models_raid.RaidTeam.captain,
-    models_raid.RaidTeam.second,
-    *PARTICIPANT_DATA_TO_SELECT,
+    selectinload(models_raid.RaidTeam.captain).selectinload(attribute)
+    for attribute in PARTICIPANT_DATA_TO_SELECT
+] + [
+    selectinload(models_raid.RaidTeam.second).selectinload(attribute)
+    for attribute in PARTICIPANT_DATA_TO_SELECT
 ]
 
 
@@ -170,7 +173,7 @@ async def get_team_by_participant_id(
             ),
         )
         .options(
-            *[selectinload(data) for data in TEAM_DATA_TO_SELECT],
+            *TEAM_DATA_TO_SELECT,
         ),
     )
     model = team.scalars().first()
@@ -185,7 +188,7 @@ async def get_all_teams(
         select(models_raid.RaidTeam)
         .where(models_raid.RaidTeam.edition_id == edition_id)
         .options(
-            *[selectinload(data) for data in TEAM_DATA_TO_SELECT],
+            *TEAM_DATA_TO_SELECT,
         ),
     )
     return [schemas_raid.RaidTeam.model_validate(t) for t in teams.scalars().all()]
@@ -224,7 +227,7 @@ async def get_all_validated_teams(
             Second.c.status == RaidRegistrationStatus.validated,
         )
         .options(
-            *[selectinload(data) for data in TEAM_DATA_TO_SELECT],
+            *TEAM_DATA_TO_SELECT,
         )
     )
     teams = await db.execute(stmt)
@@ -239,7 +242,7 @@ async def get_team_by_id(
         select(models_raid.RaidTeam)
         .where(models_raid.RaidTeam.id == team_id)
         .options(
-            *[selectinload(data) for data in TEAM_DATA_TO_SELECT],
+            *TEAM_DATA_TO_SELECT,
         ),
     )
     model = team.scalars().first()
