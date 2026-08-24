@@ -740,23 +740,16 @@ async def set_security_file(
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    """Submit or replace the security file of a participant (self or teammate)."""
-    is_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
-    if user.id != participant_id and not is_admin:
-        user_team = await cruds_raid.get_team_by_participant_id(
-            user.id,
-            edition.id,
-            db,
-        )
-        target_team = await cruds_raid.get_team_by_participant_id(
-            participant_id,
-            edition.id,
-            db,
-        )
-        if user_team is None or target_team is None or user_team.id != target_team.id:
-            raise HTTPException(status_code=403, detail="You are not the participant.")
+    if user.id != participant_id:
+        raise HTTPException(status_code=403, detail="You are not the participant.")
 
     participant = await get_participant_or_404(participant_id, edition.id, db)
+
+    if not security_file.consent_given:
+        raise HTTPException(
+            status_code=400,
+            detail="Consent must be given to register medical data",
+        )
 
     if participant.security_file_id:
         await cruds_raid.update_security_file(
