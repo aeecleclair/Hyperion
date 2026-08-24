@@ -67,6 +67,7 @@ def _create_mock_information() -> MagicMock:
     info.rescue = None
     info.security_responsible = None
     info.volunteer_responsible = None
+    info.course_responsible = None
     return info
 
 
