@@ -72,6 +72,8 @@ class SecurityFile(Base):
     emergency_person_name: Mapped[str | None]
     emergency_person_phone: Mapped[str | None]
     file_id: Mapped[str | None]
+    consent_given: Mapped[bool] = mapped_column(default=False)
+    consent_given_at: Mapped[datetime | None] = mapped_column(default=None)
 
     @property
     def validation(self) -> DocumentValidation:
