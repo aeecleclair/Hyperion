@@ -217,13 +217,7 @@ async def get_participant_by_id(
             detail="You can not get data of another user",
         )
 
-    participant = await get_participant_or_404(user_id, edition.id, db)
-
-    # If the user is not the owner, hide its security file from the response
-    if not is_owner:
-        participant.security_file = None
-
-    return participant
+    return await get_participant_or_404(user_id, edition.id, db, not is_owner)
 
 
 @module.router.post(
@@ -263,7 +257,7 @@ async def create_participant(
         is_minor=is_minor,
     )
     await cruds_raid.create_participant(participant_create, db)
-    return await get_participant_or_404(user.id, edition.id, db)
+    return await get_participant_or_404(user.id, edition.id, db, True)
 
 
 @module.router.patch(
@@ -280,6 +274,8 @@ async def update_participant(
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
     saved_participant = await get_participant_or_404(user_id, edition.id, db)
+
+    print(f"saved_participant: {saved_participant}")
 
     is_raid_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
     if user.id != user_id and not is_raid_admin:
@@ -402,7 +398,8 @@ async def validate_participant(
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    participant = await get_participant_or_404(user_id, edition.id, db)
+    participant = await get_participant_or_404(user_id, edition.id, db, True)
+
     await check_participant_validation_consistency(participant, edition.id, db)
     await cruds_raid.update_participant_status(
         user_id,
