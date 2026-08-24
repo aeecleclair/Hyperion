@@ -63,6 +63,8 @@ class SecurityFileBase(BaseModel):
     emergency_person_name: str | None = None
     emergency_person_phone: str | None = None
     file_id: str | None = None
+    consent_given: bool = False
+    consent_given_at: datetime | None = None
 
 
 class SecurityFile(SecurityFileBase):
