@@ -787,6 +787,8 @@ async def set_security_file(
         emergency_person_name=security_file.emergency_person_name,
         emergency_person_phone=security_file.emergency_person_phone,
         file_id=security_file.file_id,
+        consent_given=security_file.consent_given,
+        consent_given_at=datetime.now(UTC),
     )
     await cruds_raid.add_security_file(security_file_schema, edition.id, db)
     await cruds_raid.assign_security_file(

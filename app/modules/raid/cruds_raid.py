@@ -378,6 +378,8 @@ async def add_security_file(
             emergency_person_name=security_file.emergency_person_name,
             emergency_person_phone=security_file.emergency_person_phone,
             file_id=security_file.file_id,
+            consent_given=security_file.consent_given,
+            consent_given_at=security_file.consent_given_at,
         ),
     )
     await db.flush()
