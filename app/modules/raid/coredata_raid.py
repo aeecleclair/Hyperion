@@ -13,6 +13,7 @@ class RaidInformation(core_data.BaseCoreData):
     president: EmergencyContact | None = None
     volunteer_responsible: EmergencyContact | None = None
     security_responsible: EmergencyContact | None = None
+    course_responsible: EmergencyContact | None = None
     rescue: EmergencyContact | None = None
     raid_rules_id: str | None = None
     raid_information_id: str | None = None
