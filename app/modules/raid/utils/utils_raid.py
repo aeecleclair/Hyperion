@@ -151,6 +151,9 @@ async def generate_security_file_pdf(
         "volunteer_responsible": information.volunteer_responsible.__dict__
         if information.volunteer_responsible
         else None,
+        "course_responsible": information.course_responsible.__dict__
+        if information.course_responsible
+        else None,
         "team_number": team_number,
     }
 
