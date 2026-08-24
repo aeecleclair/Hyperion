@@ -275,8 +275,6 @@ async def update_participant(
 ):
     saved_participant = await get_participant_or_404(user_id, edition.id, db)
 
-    print(f"saved_participant: {saved_participant}")
-
     is_raid_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
     if user.id != user_id and not is_raid_admin:
         raise HTTPException(status_code=403, detail="You are not the participant.")
