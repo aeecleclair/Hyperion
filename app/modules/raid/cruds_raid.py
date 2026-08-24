@@ -58,10 +58,16 @@ async def get_all_participants(
     if status is not None:
         stmt = stmt.where(models_raid.RaidParticipant.status == status)
     participants = await db.execute(stmt)
-    return [
-        schemas_raid.RaidParticipant.model_validate(p)
-        for p in participants.scalars().all()
-    ]
+
+    # Remove security_file from the participants list to avoid including it in the response.
+    found_participants = participants.scalars().all()
+    cleaned_participants = []
+    for p in found_participants:
+        participant = schemas_raid.RaidParticipant.model_validate(p)
+        participant.security_file = None
+        cleaned_participants.append(participant)
+
+    return cleaned_participants
 
 
 async def update_participant(
