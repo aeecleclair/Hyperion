@@ -29,7 +29,7 @@ def upgrade() -> None:
     )
     op.add_column(
         "raid_security_file",
-        sa.Column("consent_given_at", TZDateTime(), nullable=False),
+        sa.Column("consent_given_at", TZDateTime(), nullable=True),
     )
 
 
