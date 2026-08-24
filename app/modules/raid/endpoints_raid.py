@@ -204,16 +204,26 @@ async def get_participant_by_id(
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    if user_id != user.id and not await has_user_permission(
+    is_owner = user.id == user_id
+    is_admin = await has_user_permission(
         user,
         RaidPermissions.manage_raid,
         db,
-    ):
+    )
+
+    if not is_owner and not is_admin:
         raise HTTPException(
             status_code=403,
             detail="You can not get data of another user",
         )
-    return await get_participant_or_404(user_id, edition.id, db)
+
+    participant = await get_participant_or_404(user_id, edition.id, db)
+
+    # If the user is not the owner, hide its security file from the response
+    if not is_owner:
+        participant.security_file = None
+
+    return participant
 
 
 @module.router.post(
