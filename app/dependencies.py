@@ -511,6 +511,8 @@ def is_user_allowed_to(
         * make sure the user making the request exists
         * make sure the user has the permission with the given name
         * return the corresponding user `models_users.CoreUser` object
+
+    The user need to have at least ONE of the permissions in the list to be allowed to access the endpoint.
     """
 
     async def is_user_allowed_to(
@@ -528,18 +530,22 @@ def is_user_allowed_to(
         allowed_group_ids: list[str] = []
         allowed_account_types: list[AccountType] = []
         for permission_name in permissions_name:
-            allowed_group_ids += (
-                await cruds_permissions.get_permissions_by_permission_name(
-                    db,
-                    permission_name,
-                )
-            ).groups
-            allowed_account_types += (
-                await cruds_permissions.get_permissions_by_permission_name(
-                    db,
-                    permission_name,
-                )
-            ).account_types
+            allowed_group_ids.extend(
+                (
+                    await cruds_permissions.get_permissions_by_permission_name(
+                        db,
+                        permission_name,
+                    )
+                ).groups,
+            )
+            allowed_account_types.extend(
+                (
+                    await cruds_permissions.get_permissions_by_permission_name(
+                        db,
+                        permission_name,
+                    )
+                ).account_types,
+            )
 
         if (
             not any(
