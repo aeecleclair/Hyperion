@@ -123,7 +123,9 @@ async def set_team_number(
     await cruds_raid.update_team(team.id, updated_team, db)
 
 
-def _participant_pdf_context(participant: schemas_raid.RaidParticipant) -> dict:
+def _participant_pdf_context(
+    participant: schemas_raid.RaidParticipantRestricted,
+) -> dict:
     """Build a template context with identity fields pulled from CoreUser."""
     ctx = participant.model_dump()
     if participant.user is not None:
@@ -168,7 +170,7 @@ async def generate_security_file_pdf(
 
 
 async def generate_recap_file_pdf(
-    team: schemas_raid.RaidTeam,
+    team: schemas_raid.RaidTeamIncludingSecurityFile,
 ):
     context = {
         "team_name": team.name,
@@ -196,7 +198,7 @@ async def get_all_security_files_zip(
     information: coredata_raid.RaidInformation,
     edition_id: UUID,
 ) -> str:
-    teams = await cruds_raid.get_all_teams(edition_id, db)
+    teams = await cruds_raid.get_all_teams_including_security_files(edition_id, db)
     hyperion_error_logger.info(
         f"RAID: Generating ZIP for {len(teams)} security files",
     )
@@ -234,7 +236,7 @@ async def get_all_team_files_zip(
     information: coredata_raid.RaidInformation,
     edition_id: UUID,
 ) -> str:
-    teams = await cruds_raid.get_all_teams(edition_id, db)
+    teams = await cruds_raid.get_all_teams_including_security_files(edition_id, db)
     hyperion_error_logger.info(
         f"RAID: Generating ZIP for {len(teams)} team recap files",
     )
@@ -268,7 +270,7 @@ async def get_participant(
     user_id: str,
     edition_id: UUID,
     db: AsyncSession,
-) -> schemas_raid.RaidParticipant:
+) -> schemas_raid.RaidParticipantRestricted:
     participant = await cruds_raid.get_participant_by_user_id(user_id, edition_id, db)
     if not participant:
         raise HTTPException(status_code=404, detail="Participant not found.")
@@ -276,7 +278,7 @@ async def get_participant(
 
 
 def calculate_raid_payment(
-    participant: schemas_raid.RaidParticipant,
+    participant: schemas_raid.RaidParticipantRestricted,
     raid_prices: coredata_raid.RaidPrice,
 ):
     if (

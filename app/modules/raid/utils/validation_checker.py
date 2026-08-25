@@ -46,7 +46,7 @@ async def check_participant_validation_consistency(
 
 
 def _check_edition_scope(
-    participant: schemas_raid.RaidParticipant,
+    participant: schemas_raid.RaidParticipantRestricted,
     edition_id,
 ) -> None:
     if participant.edition_id != edition_id:
@@ -56,7 +56,9 @@ def _check_edition_scope(
         )
 
 
-def _check_attestation_signed(participant: schemas_raid.RaidParticipant) -> None:
+def _check_attestation_signed(
+    participant: schemas_raid.RaidParticipantRestricted,
+) -> None:
     if not participant.attestation_on_honour:
         raise HTTPException(
             status_code=400,
@@ -64,7 +66,7 @@ def _check_attestation_signed(participant: schemas_raid.RaidParticipant) -> None
         )
 
 
-def _check_payment_done(participant: schemas_raid.RaidParticipant) -> None:
+def _check_payment_done(participant: schemas_raid.RaidParticipantRestricted) -> None:
     if not participant.payment:
         raise HTTPException(
             status_code=400,
@@ -81,7 +83,9 @@ def _check_payment_done(participant: schemas_raid.RaidParticipant) -> None:
         )
 
 
-def _check_security_file_complete(participant: schemas_raid.RaidParticipant) -> None:
+def _check_security_file_complete(
+    participant: schemas_raid.RaidParticipant,
+) -> None:
     security_file = participant.security_file
     if security_file is None:
         raise HTTPException(
@@ -99,7 +103,9 @@ def _check_security_file_complete(participant: schemas_raid.RaidParticipant) -> 
         )
 
 
-def _check_all_documents_accepted(participant: schemas_raid.RaidParticipant) -> None:
+def _check_all_documents_accepted(
+    participant: schemas_raid.RaidParticipantRestricted,
+) -> None:
     _check_document_accepted(participant.id_card, "id card")
     _check_document_accepted(participant.medical_certificate, "medical certificate")
     _check_document_accepted(participant.raid_rules, "raid rules")
@@ -129,7 +135,7 @@ def _check_document_accepted(
 
 
 async def _check_team_complete(
-    participant: schemas_raid.RaidParticipant,
+    participant: schemas_raid.RaidParticipantRestricted,
     db: AsyncSession,
 ) -> None:
     team = await cruds_raid.get_team_by_participant_id(
@@ -259,7 +265,9 @@ _PROFILE_FIELDS: tuple[str, ...] = (
 )
 
 
-def _context(participant: schemas_raid.RaidParticipant) -> _ParticipantContext:
+def _context(
+    participant: schemas_raid.RaidParticipantRestricted,
+) -> _ParticipantContext:
     return _ParticipantContext(
         situation=participant.situation,
         is_minor=participant.is_minor,
@@ -270,7 +278,10 @@ def _applicable_rules(ctx: _ParticipantContext) -> list[_DocumentRule]:
     return [rule for rule in _DOCUMENT_RULES if rule.applies(ctx)]
 
 
-def _score(participant: schemas_raid.RaidParticipant, rule: _DocumentRule) -> float:
+def _score(
+    participant: schemas_raid.RaidParticipant,
+    rule: _DocumentRule,
+) -> float:
     doc = getattr(participant, rule.attr)
     if doc is None:
         return 0.0
@@ -301,7 +312,7 @@ def compute_participant_progress(
     return ((filled_profile + scored_docs) / total) * 100
 
 
-def compute_team_progress(team: schemas_raid.RaidTeam) -> float:
+def compute_team_progress(team: schemas_raid.RaidTeamIncludingSecurityFile) -> float:
     """Combine the two participants' progress with the team-level metadata."""
     team_filled = int(team.difficulty is not None) + int(team.meeting_place is not None)
     team_share = (team_filled / 2) * 10
@@ -310,7 +321,9 @@ def compute_team_progress(team: schemas_raid.RaidTeam) -> float:
     return team_share + (captain + second) * 0.45
 
 
-def count_total_required_documents(participant: schemas_raid.RaidParticipant) -> int:
+def count_total_required_documents(
+    participant: schemas_raid.RaidParticipantRestricted,
+) -> int:
     """Number of upload slots required for this participant's profile."""
     return sum(
         1
@@ -319,7 +332,9 @@ def count_total_required_documents(participant: schemas_raid.RaidParticipant) ->
     )
 
 
-def count_accepted_documents(participant: schemas_raid.RaidParticipant) -> int:
+def count_accepted_documents(
+    participant: schemas_raid.RaidParticipantRestricted,
+) -> int:
     """Number of required uploads that are currently in the `accepted` state."""
     return sum(
         1

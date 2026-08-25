@@ -22,6 +22,7 @@ from app.modules.raid.dependencies_raid import (
     ensure_user_is_not_participant_in_edition,
     ensure_user_is_not_volunteer_in_edition,
     get_current_raid_edition,
+    get_participant_complete_or_404,
     get_participant_or_404,
     get_volunteer_or_404,
 )
@@ -192,32 +193,36 @@ async def delete_edition(
 
 
 @module.router.get(
-    "/raid/participants/{user_id}",
+    "/raid/participants/me",
     response_model=schemas_raid.RaidParticipant,
     status_code=200,
 )
-async def get_participant_by_id(
-    user_id: str,
+async def get_my_participant(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    is_owner = user.id == user_id
-    is_raid_admin = await has_user_permission(
-        user,
-        RaidPermissions.manage_raid,
-        db,
-    )
 
-    if not is_owner and not is_raid_admin:
-        raise HTTPException(
-            status_code=403,
-            detail="You can not get data of another user",
-        )
+    return await get_participant_complete_or_404(user.id, edition.id, db)
 
-    return await get_participant_or_404(user_id, edition.id, db, not is_owner)
+
+@module.router.get(
+    "/raid/participants/{user_id}",
+    response_model=schemas_raid.RaidParticipantRestricted,
+    status_code=200,
+)
+async def get_participant_by_id(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.manage_raid]),
+    ),
+    edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
+):
+
+    return await get_participant_or_404(user_id, edition.id, db)
 
 
 @module.router.post(
@@ -257,7 +262,7 @@ async def create_participant(
         is_minor=is_minor,
     )
     await cruds_raid.create_participant(participant_create, db)
-    return await get_participant_or_404(user.id, edition.id, db, True)
+    return await get_participant_complete_or_404(user.id, edition.id, db)
 
 
 @module.router.patch(
@@ -396,7 +401,11 @@ async def validate_participant(
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    participant = await get_participant_or_404(user_id, edition.id, db, True)
+    participant = await get_participant_complete_or_404(
+        user_id,
+        edition.id,
+        db,
+    )
 
     await check_participant_validation_consistency(participant, edition.id, db)
     await cruds_raid.update_participant_status(
@@ -515,7 +524,7 @@ async def get_all_teams(
 
 @module.router.get(
     "/raid/teams/{team_id}",
-    response_model=schemas_raid.RaidTeam,
+    response_model=schemas_raid.RaidTeamComplete,
     status_code=200,
 )
 async def get_team_by_id(
@@ -525,10 +534,23 @@ async def get_team_by_id(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
 ):
-    team = await cruds_raid.get_team_by_id(team_id, db)
+    team = await cruds_raid.get_team_including_security_file_by_id(team_id, db)
     if not team:
         raise HTTPException(status_code=404, detail="Team not found.")
-    return team
+    return schemas_raid.RaidTeamComplete(
+        name=team.name,
+        id=team.id,
+        edition_id=team.edition_id,
+        number=team.number,
+        captain_id=team.captain_id,
+        second_id=team.second_id,
+        difficulty=team.difficulty,
+        meeting_place=team.meeting_place,
+        file_id=team.file_id,
+        captain=team.captain,
+        second=team.second,
+        validation_progress=team.validation_progress,
+    )
 
 
 @module.router.patch(

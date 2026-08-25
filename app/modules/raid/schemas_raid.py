@@ -122,7 +122,11 @@ class RaidParticipantPreview(RaidParticipantBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class RaidParticipant(RaidParticipantPreview):
+class RaidParticipantRestricted(RaidParticipantPreview):
+    """
+    The security file is not included in this schema
+    """
+
     address: str | None = None
     other_school: str | None = None
     company: str | None = None
@@ -132,7 +136,6 @@ class RaidParticipant(RaidParticipantPreview):
     medical_certificate_id: str | None = None
     medical_certificate: Document | None = None
     security_file_id: str | None = None
-    security_file: SecurityFile | None = None
     student_card_id: str | None = None
     student_card: Document | None = None
     raid_rules_id: str | None = None
@@ -144,11 +147,6 @@ class RaidParticipant(RaidParticipantPreview):
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def validation_progress(self) -> float:
-        return compute_participant_progress(self)
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
     def number_of_document(self) -> int:
         return count_total_required_documents(self)
 
@@ -156,6 +154,20 @@ class RaidParticipant(RaidParticipantPreview):
     @property
     def number_of_validated_document(self) -> int:
         return count_accepted_documents(self)
+
+
+class RaidParticipantRestrictedComplete(RaidParticipantPreview):
+    # Use compute_participant_progress to  compute the validation progress
+    validation_progress: float
+
+
+class RaidParticipant(RaidParticipantRestricted):
+    security_file: SecurityFile | None = None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def validation_progress(self) -> float:
+        return compute_participant_progress(self)
 
 
 class RaidParticipantUpdate(BaseModel):
@@ -240,14 +252,24 @@ class RaidTeam(RaidTeamBase):
     edition_id: UUID
     number: int | None = None
     captain_id: str
-    captain: RaidParticipant
     second_id: str | None = None
-    second: RaidParticipant | None = None
     difficulty: Difficulty | None = None
     meeting_place: MeetingPlace | None = None
     file_id: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+    captain: RaidParticipantRestricted
+    second: RaidParticipantRestricted | None = None
+
+
+class RaidTeamComplete(RaidTeam):
+    validation_progress: float
+
+
+class RaidTeamIncludingSecurityFile(RaidTeam):
+    captain: RaidParticipant
+    second: RaidParticipant | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property

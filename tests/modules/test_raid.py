@@ -297,7 +297,7 @@ def test_delete_edition_with_participants_rejected(client: TestClient) -> None:
 
 def test_get_participant_self(client: TestClient) -> None:
     r = client.get(
-        f"/raid/participants/{user_captain.id}",
+        "/raid/participants/me",
         headers={"Authorization": f"Bearer {token_captain}"},
     )
     assert r.status_code == 200
@@ -557,6 +557,7 @@ def test_admin_reopen_to_draft(client: TestClient) -> None:
         f"/raid/participants/{user_captain.id}",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
+    assert r2.status_code == 200
     assert r2.json()["status"] == "draft"
 
 
@@ -567,9 +568,10 @@ def test_cancel_by_self(client: TestClient) -> None:
     )
     assert r.status_code == 204
     r2 = client.get(
-        f"/raid/participants/{user_solo.id}",
+        "/raid/participants/me",
         headers={"Authorization": f"Bearer {token_solo}"},
     )
+    assert r2.status_code == 200
     assert r2.json()["status"] == "cancelled"
 
 
@@ -606,10 +608,12 @@ def test_get_team_by_participant(client: TestClient) -> None:
 
 
 def test_update_team_by_captain(client: TestClient) -> None:
-    team = client.get(
+    r = client.get(
         f"/raid/participants/{user_captain.id}/team",
         headers={"Authorization": f"Bearer {token_captain}"},
-    ).json()
+    )
+    assert r.status_code == 200
+    team = r.json()
     r = client.patch(
         f"/raid/teams/{team['id']}",
         json={"name": "MainTeam-Renamed"},

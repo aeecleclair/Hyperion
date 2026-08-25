@@ -28,13 +28,29 @@ async def get_participant_or_404(
     user_id: str,
     edition_id: UUID,
     db: AsyncSession = Depends(get_db),
-    include_security_file: bool = False,
-) -> schemas_raid.RaidParticipant:
+) -> schemas_raid.RaidParticipantRestricted:
     participant = await cruds_raid.get_participant_by_user_id(
         user_id,
         edition_id,
         db,
-        include_security_file,
+    )
+    if participant is None:
+        raise HTTPException(status_code=404, detail="Participant not found")
+    return participant
+
+
+async def get_participant_complete_or_404(
+    user_id: str,
+    edition_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> schemas_raid.RaidParticipant:
+    """
+    Include the participant's security file
+    """
+    participant = await cruds_raid.get_participant_complete_by_user_id(
+        user_id,
+        edition_id,
+        db,
     )
     if participant is None:
         raise HTTPException(status_code=404, detail="Participant not found")
