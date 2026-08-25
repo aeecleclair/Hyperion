@@ -257,8 +257,8 @@ async def init_objects() -> None:
 # region: Team
 
 
-async def test_get_teams(client: TestClient):
-    response = client.get(
+async def test_get_teams(client_no_raise: TestClient):
+    response = client_no_raise.get(
         "/documents/teams/",
         headers={"Authorization": f"Bearer {user_admin_token}"},
     )
@@ -266,16 +266,16 @@ async def test_get_teams(client: TestClient):
     assert len(response.json()) == 2
 
 
-async def test_get_teams_as_lambda(client: TestClient):
-    response = client.get(
+async def test_get_teams_as_lambda(client_no_raise: TestClient):
+    response = client_no_raise.get(
         "/documents/teams",
         headers={"Authorization": f"Bearer {user_lambda_token}"},
     )
     assert response.status_code == 403
 
 
-async def test_get_user_teams(client: TestClient):
-    response = client.get(
+async def test_get_user_teams(client_no_raise: TestClient):
+    response = client_no_raise.get(
         "/documents/teams/me",
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
@@ -292,8 +292,8 @@ async def test_get_user_teams(client: TestClient):
     assert templates[0]["statistics"]["total_rejected_documents"] == 1
 
 
-async def test_create_team_existing_group(client: TestClient):
-    response = client.post(
+async def test_create_team_existing_group(client_no_raise: TestClient):
+    response = client_no_raise.post(
         "/documents/teams/",
         json={
             "team_id": 4,
@@ -305,7 +305,7 @@ async def test_create_team_existing_group(client: TestClient):
     )
     assert response.status_code == 400
 
-    response = client.get(
+    response = client_no_raise.get(
         "/documents/teams/",
         headers={"Authorization": f"Bearer {user_admin_token}"},
     )
@@ -313,8 +313,8 @@ async def test_create_team_existing_group(client: TestClient):
     assert len(response.json()) == 2
 
 
-async def test_create_team_existing_name(client: TestClient):
-    response = client.post(
+async def test_create_team_existing_name(client_no_raise: TestClient):
+    response = client_no_raise.post(
         "/documents/teams/",
         json={
             "team_id": 5,
@@ -326,7 +326,7 @@ async def test_create_team_existing_name(client: TestClient):
     )
     assert response.status_code == 400
 
-    response = client.get(
+    response = client_no_raise.get(
         "/documents/teams/",
         headers={"Authorization": f"Bearer {user_admin_token}"},
     )
@@ -334,8 +334,8 @@ async def test_create_team_existing_name(client: TestClient):
     assert len(response.json()) == 2
 
 
-async def test_create_team_invalid_api_key(client: TestClient):
-    response = client.post(
+async def test_create_team_invalid_api_key(client_no_raise: TestClient):
+    response = client_no_raise.post(
         "/documents/teams/",
         json={
             "team_id": 6,
@@ -350,7 +350,7 @@ async def test_create_team_invalid_api_key(client: TestClient):
         "Failed to connect to Documenso with the provided API key:",
     )
 
-    response = client.get(
+    response = client_no_raise.get(
         "/documents/teams/",
         headers={"Authorization": f"Bearer {user_admin_token}"},
     )
@@ -359,14 +359,14 @@ async def test_create_team_invalid_api_key(client: TestClient):
 
 
 async def test_create_team_no_folder(
-    client: TestClient,
+    client_no_raise: TestClient,
     mocker: MockerFixture,
 ):
     mocker.patch(
         "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.find_folders",
         return_value=[],
     )
-    response = client.post(
+    response = client_no_raise.post(
         "/documents/teams/",
         json={
             "team_id": 6,
@@ -382,7 +382,7 @@ async def test_create_team_no_folder(
         == "No folders found in Documenso for the provided API key"
     )
 
-    response = client.get(
+    response = client_no_raise.get(
         "/documents/teams/",
         headers={"Authorization": f"Bearer {user_admin_token}"},
     )
@@ -391,7 +391,7 @@ async def test_create_team_no_folder(
 
 
 async def test_create_team(
-    client: TestClient,
+    client_no_raise: TestClient,
     mocker: MockerFixture,
 ):
     mocker.patch(
@@ -411,7 +411,7 @@ async def test_create_team(
             ),
         ],
     )
-    response = client.post(
+    response = client_no_raise.post(
         "/documents/teams/",
         json={
             "group_id": group3.id,
@@ -422,7 +422,7 @@ async def test_create_team(
     )
     assert response.status_code == 201
 
-    teams = client.get(
+    teams = client_no_raise.get(
         "/documents/teams/",
         headers={"Authorization": f"Bearer {user_admin_token}"},
     )
@@ -432,8 +432,8 @@ async def test_create_team(
     assert new_team is not None
 
 
-async def test_update_team_not_found(client: TestClient):
-    response = client.patch(
+async def test_update_team_not_found(client_no_raise: TestClient):
+    response = client_no_raise.patch(
         f"/documents/teams/{uuid4()}",
         json={
             "name": "Team Not Found",
@@ -445,8 +445,8 @@ async def test_update_team_not_found(client: TestClient):
     assert response.status_code == 404
 
 
-async def test_update_team_existing_name(client: TestClient):
-    response = client.patch(
+async def test_update_team_existing_name(client_no_raise: TestClient):
+    response = client_no_raise.patch(
         f"/documents/teams/{team1.id}",
         json={
             "name": "Team 2",
@@ -455,7 +455,7 @@ async def test_update_team_existing_name(client: TestClient):
     )
     assert response.status_code == 400
 
-    response = client.get(
+    response = client_no_raise.get(
         "/documents/teams",
         headers={"Authorization": f"Bearer {user_admin_token}"},
     )
@@ -466,8 +466,8 @@ async def test_update_team_existing_name(client: TestClient):
     assert team1_data["name"] == "Team 1"
 
 
-async def test_update_team_existing_group(client: TestClient):
-    response = client.patch(
+async def test_update_team_existing_group(client_no_raise: TestClient):
+    response = client_no_raise.patch(
         f"/documents/teams/{team1.id}",
         json={
             "group_id": group2.id,
@@ -476,7 +476,7 @@ async def test_update_team_existing_group(client: TestClient):
     )
     assert response.status_code == 400
 
-    response = client.get(
+    response = client_no_raise.get(
         "/documents/teams",
         headers={"Authorization": f"Bearer {user_admin_token}"},
     )
@@ -487,8 +487,8 @@ async def test_update_team_existing_group(client: TestClient):
     assert team1_data["group_id"] == str(group1.id)
 
 
-async def test_update_team_invalid_api_key(client: TestClient):
-    response = client.patch(
+async def test_update_team_invalid_api_key(client_no_raise: TestClient):
+    response = client_no_raise.patch(
         f"/documents/teams/{team1.id}",
         json={
             "api_key": "wrong_api_key",
@@ -500,7 +500,7 @@ async def test_update_team_invalid_api_key(client: TestClient):
         "Failed to connect to Documenso with the provided API key:",
     )
 
-    response = client.get(
+    response = client_no_raise.get(
         "/documents/teams",
         headers={"Authorization": f"Bearer {user_admin_token}"},
     )
@@ -512,14 +512,14 @@ async def test_update_team_invalid_api_key(client: TestClient):
 
 
 async def test_update_team_no_folder(
-    client: TestClient,
+    client_no_raise: TestClient,
     mocker: MockerFixture,
 ):
     mocker.patch(
         "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.find_folders",
         return_value=[],
     )
-    response = client.patch(
+    response = client_no_raise.patch(
         f"/documents/teams/{team1.id}",
         json={
             "name": "Team 1 Updated",
@@ -534,7 +534,7 @@ async def test_update_team_no_folder(
         == "No folders found in Documenso for the provided API key"
     )
 
-    response = client.get(
+    response = client_no_raise.get(
         "/documents/teams",
         headers={"Authorization": f"Bearer {user_admin_token}"},
     )
@@ -546,7 +546,7 @@ async def test_update_team_no_folder(
 
 
 async def test_update_team_different_documenso_team(
-    client: TestClient,
+    client_no_raise: TestClient,
     mocker: MockerFixture,
 ):
     mocker.patch(
@@ -566,7 +566,7 @@ async def test_update_team_different_documenso_team(
             ),
         ],
     )
-    response = client.patch(
+    response = client_no_raise.patch(
         f"/documents/teams/{team1.id}",
         json={
             "api_key": "api_key_1_updated",
@@ -579,7 +579,7 @@ async def test_update_team_different_documenso_team(
         == "The provided API key corresponds to a different Documenso team than the one being updated"
     )
 
-    response = client.get(
+    response = client_no_raise.get(
         "/documents/teams",
         headers={"Authorization": f"Bearer {user_admin_token}"},
     )
@@ -591,7 +591,7 @@ async def test_update_team_different_documenso_team(
 
 
 async def test_update_team(
-    client: TestClient,
+    client_no_raise: TestClient,
     mocker: MockerFixture,
 ):
     mocker.patch(
@@ -611,7 +611,7 @@ async def test_update_team(
             ),
         ],
     )
-    response = client.patch(
+    response = client_no_raise.patch(
         f"/documents/teams/{team1.id}",
         json={
             "name": "Team 1 Updated",
@@ -622,7 +622,7 @@ async def test_update_team(
     )
     assert response.status_code == 204, response.text
 
-    response = client.get(
+    response = client_no_raise.get(
         "/documents/teams",
         headers={"Authorization": f"Bearer {user_admin_token}"},
     )
@@ -634,22 +634,22 @@ async def test_update_team(
     assert team1_data["group_id"] == str(group4.id)
     assert team1_data["api_key"] == "api_key_1_updated"
 
-    client.patch(
+    client_no_raise.patch(
         f"/documents/teams/{team1.id}",
         json={"name": "Team 1", "group_id": group1.id},
         headers={"Authorization": f"Bearer {user_admin_token}"},
     )
 
 
-async def test_delete_team_not_found(client: TestClient):
-    response = client.delete(
+async def test_delete_team_not_found(client_no_raise: TestClient):
+    response = client_no_raise.delete(
         f"/documents/teams/{uuid4()}",
         headers={"Authorization": f"Bearer {user_admin_token}"},
     )
     assert response.status_code == 404
 
 
-async def test_delete_team(client: TestClient):
+async def test_delete_team(client_no_raise: TestClient):
     new_team = DocumentTeam(
         id=uuid4(),
         team_id=6,
@@ -659,13 +659,13 @@ async def test_delete_team(client: TestClient):
     )
     await add_object_to_db(new_team)
 
-    response = client.delete(
+    response = client_no_raise.delete(
         f"/documents/teams/{new_team.id}",
         headers={"Authorization": f"Bearer {user_admin_token}"},
     )
     assert response.status_code == 204
 
-    response = client.get(
+    response = client_no_raise.get(
         "/documents/teams",
         headers={"Authorization": f"Bearer {user_admin_token}"},
     )
@@ -679,8 +679,8 @@ async def test_delete_team(client: TestClient):
 # region: Template
 
 
-async def test_get_team_templates(client: TestClient):
-    response = client.get(
+async def test_get_team_templates(client_no_raise: TestClient):
+    response = client_no_raise.get(
         f"/documents/teams/{team2.id}/templates",
         headers={"Authorization": f"Bearer {user_team2_token}"},
     )
@@ -694,16 +694,16 @@ async def test_get_team_templates(client: TestClient):
     assert templates[0]["statistics"]["total_rejected_documents"] == 0
 
 
-async def test_get_team_templates_not_found(client: TestClient):
-    response = client.get(
+async def test_get_team_templates_not_found(client_no_raise: TestClient):
+    response = client_no_raise.get(
         f"/documents/teams/{uuid4()}/templates",
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
     assert response.status_code == 404
 
 
-async def test_get_team_templates_as_lambda(client: TestClient):
-    response = client.get(
+async def test_get_team_templates_as_lambda(client_no_raise: TestClient):
+    response = client_no_raise.get(
         f"/documents/teams/{team1.id}/templates",
         headers={"Authorization": f"Bearer {user_lambda_token}"},
     )
@@ -714,8 +714,8 @@ async def test_get_team_templates_as_lambda(client: TestClient):
     )
 
 
-async def test_get_template_as_lambda(client: TestClient):
-    response = client.get(
+async def test_get_template_as_lambda(client_no_raise: TestClient):
+    response = client_no_raise.get(
         f"/documents/templates/{templateTeam1.id}",
         headers={"Authorization": f"Bearer {user_lambda_token}"},
     )
@@ -725,8 +725,8 @@ async def test_get_template_as_lambda(client: TestClient):
     )
 
 
-async def test_get_template_as_team_member(client: TestClient):
-    response = client.get(
+async def test_get_template_as_team_member(client_no_raise: TestClient):
+    response = client_no_raise.get(
         f"/documents/templates/{templateTeam1.id}",
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
@@ -734,8 +734,8 @@ async def test_get_template_as_team_member(client: TestClient):
     assert len(response.json()["documents"]) == 6
 
 
-async def test_get_template_not_found(client: TestClient):
-    response = client.get(
+async def test_get_template_not_found(client_no_raise: TestClient):
+    response = client_no_raise.get(
         f"/documents/templates/{uuid4()}",
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
@@ -748,7 +748,7 @@ class MockFolderFindFoldersData(BaseModel):
 
 
 async def test_update_template_directory(
-    client: TestClient,
+    client_no_raise: TestClient,
     mocker: MockerFixture,
 ):
     final_id = "directory_id"
@@ -770,14 +770,14 @@ async def test_update_template_directory(
         ],
     )
     new_directory_path = "new_directory/test/subdirectory"
-    response = client.patch(
+    response = client_no_raise.patch(
         f"/documents/templates/{templateTeam1.id}",
         json={"document_directory_path": new_directory_path},
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
     assert response.status_code == 204
 
-    response = client.get(
+    response = client_no_raise.get(
         f"/documents/templates/{templateTeam1.id}",
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
@@ -785,8 +785,8 @@ async def test_update_template_directory(
     assert response.json()["document_directory_id"] == final_id
 
 
-async def test_update_template_directory_not_found(client: TestClient):
-    response = client.patch(
+async def test_update_template_directory_not_found(client_no_raise: TestClient):
+    response = client_no_raise.patch(
         f"/documents/templates/{uuid4()}",
         json={"document_directory_id": "new_directory_id"},
         headers={"Authorization": f"Bearer {user_team1_token}"},
@@ -795,7 +795,7 @@ async def test_update_template_directory_not_found(client: TestClient):
 
 
 async def test_update_template_directory_unknown_directory(
-    client: TestClient,
+    client_no_raise: TestClient,
     mocker: MockerFixture,
 ):
     mocker.patch(
@@ -816,7 +816,7 @@ async def test_update_template_directory_unknown_directory(
         ],
     )
 
-    response = client.patch(
+    response = client_no_raise.patch(
         f"/documents/templates/{templateTeam1.id}",
         json={"document_directory_path": "unknown_directory_path"},
         headers={"Authorization": f"Bearer {user_team1_token}"},
@@ -828,8 +828,8 @@ async def test_update_template_directory_unknown_directory(
     )
 
 
-async def test_update_template_directory_as_lambda(client: TestClient):
-    response = client.patch(
+async def test_update_template_directory_as_lambda(client_no_raise: TestClient):
+    response = client_no_raise.patch(
         f"/documents/templates/{templateTeam1.id}",
         json={"document_directory_id": "new_directory_id"},
         headers={"Authorization": f"Bearer {user_lambda_token}"},
@@ -845,8 +845,8 @@ async def test_update_template_directory_as_lambda(client: TestClient):
 # region: Document
 
 
-def test_get_user_documents(client: TestClient):
-    response = client.get(
+def test_get_user_documents(client_no_raise: TestClient):
+    response = client_no_raise.get(
         "/documents/me",
         headers={"Authorization": f"Bearer {user_lambda_token}"},
     )
@@ -855,8 +855,8 @@ def test_get_user_documents(client: TestClient):
     assert len(documents) == 7
 
 
-def test_get_document_token(client: TestClient):
-    response = client.get(
+def test_get_document_token(client_no_raise: TestClient):
+    response = client_no_raise.get(
         f"/documents/{documentTemplate1.id}/token",
         headers={"Authorization": f"Bearer {user_lambda_token}"},
     )
@@ -865,16 +865,16 @@ def test_get_document_token(client: TestClient):
     assert token_data["signing_token"] == documentTemplate1.signing_token
 
 
-def test_get_document_token_not_found(client: TestClient):
-    response = client.get(
+def test_get_document_token_not_found(client_no_raise: TestClient):
+    response = client_no_raise.get(
         f"/documents/{uuid4()}/token",
         headers={"Authorization": f"Bearer {user_lambda_token}"},
     )
     assert response.status_code == 404
 
 
-def test_get_document_token_as_other_user(client: TestClient):
-    response = client.get(
+def test_get_document_token_as_other_user(client_no_raise: TestClient):
+    response = client_no_raise.get(
         f"/documents/{documentTemplate1.id}/token",
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
@@ -882,8 +882,8 @@ def test_get_document_token_as_other_user(client: TestClient):
     assert response.json()["detail"] == "Access forbidden"
 
 
-def test_download_document_unknown_document(client: TestClient):
-    response = client.get(
+def test_download_document_unknown_document(client_no_raise: TestClient):
+    response = client_no_raise.get(
         f"/documents/{uuid4()}/download",
         headers={"Authorization": f"Bearer {user_lambda_token}"},
     )
@@ -891,8 +891,8 @@ def test_download_document_unknown_document(client: TestClient):
     assert response.json()["detail"] == "Document not found"
 
 
-def test_download_document_not_completed(client: TestClient):
-    response = client.get(
+def test_download_document_not_completed(client_no_raise: TestClient):
+    response = client_no_raise.get(
         f"/documents/{documentPending.id}/download",
         headers={"Authorization": f"Bearer {user_lambda_token}"},
     )
@@ -903,8 +903,8 @@ def test_download_document_not_completed(client: TestClient):
     )
 
 
-def test_download_document_as_other_user(client: TestClient):
-    response = client.get(
+def test_download_document_as_other_user(client_no_raise: TestClient):
+    response = client_no_raise.get(
         f"/documents/{documentCompleted.id}/download",
         headers={"Authorization": f"Bearer {user_team2_token}"},
     )
@@ -912,7 +912,7 @@ def test_download_document_as_other_user(client: TestClient):
     assert response.json()["detail"] == "Access forbidden"
 
 
-def test_download_document_as_user(client: TestClient, mocker: MockerFixture):
+def test_download_document_as_user(client_no_raise: TestClient, mocker: MockerFixture):
     mocker.patch(
         "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.download_document",
         return_value=DocumentDownloadResponse(
@@ -921,7 +921,7 @@ def test_download_document_as_user(client: TestClient, mocker: MockerFixture):
         ),
     )
 
-    response = client.get(
+    response = client_no_raise.get(
         f"/documents/{documentCompleted.id}/download",
         headers={"Authorization": f"Bearer {user_lambda_token}"},
     )
@@ -929,7 +929,10 @@ def test_download_document_as_user(client: TestClient, mocker: MockerFixture):
     assert response.content == b"PDF content"
 
 
-def test_download_document_as_group_admin(client: TestClient, mocker: MockerFixture):
+def test_download_document_as_group_admin(
+    client_no_raise: TestClient,
+    mocker: MockerFixture,
+):
     mocker.patch(
         "app.core.documents.documenso_api_wrapper.DocumensoAPIWrapper.download_document",
         return_value=DocumentDownloadResponse(
@@ -938,7 +941,7 @@ def test_download_document_as_group_admin(client: TestClient, mocker: MockerFixt
         ),
     )
 
-    response = client.get(
+    response = client_no_raise.get(
         f"/documents/{documentCompleted.id}/download",
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
@@ -946,8 +949,8 @@ def test_download_document_as_group_admin(client: TestClient, mocker: MockerFixt
     assert response.content == b"PDF content"
 
 
-def test_get_template_documents(client: TestClient):
-    response = client.get(
+def test_get_template_documents(client_no_raise: TestClient):
+    response = client_no_raise.get(
         f"/documents/templates/{templateTeam1.id}/documents",
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
@@ -956,16 +959,16 @@ def test_get_template_documents(client: TestClient):
     assert len(documents) == 6
 
 
-def test_get_template_documents_not_found(client: TestClient):
-    response = client.get(
+def test_get_template_documents_not_found(client_no_raise: TestClient):
+    response = client_no_raise.get(
         f"/documents/templates/{uuid4()}/documents",
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
     assert response.status_code == 404
 
 
-def test_get_template_documents_as_lambda(client: TestClient):
-    response = client.get(
+def test_get_template_documents_as_lambda(client_no_raise: TestClient):
+    response = client_no_raise.get(
         f"/documents/templates/{templateTeam1.id}/documents",
         headers={"Authorization": f"Bearer {user_lambda_token}"},
     )
@@ -987,9 +990,9 @@ class MockedTemplateUseResponse(BaseModel):
 
 
 async def test_use_template_not_found(
-    client: TestClient,
+    client_no_raise: TestClient,
 ):
-    response = client.post(
+    response = client_no_raise.post(
         f"/documents/templates/{uuid4()}/documents/",
         json={"recipients": [user_lambda.email]},
         headers={"Authorization": f"Bearer {user_team1_token}"},
@@ -998,9 +1001,9 @@ async def test_use_template_not_found(
 
 
 async def test_use_template_as_lambda(
-    client: TestClient,
+    client_no_raise: TestClient,
 ):
-    response = client.post(
+    response = client_no_raise.post(
         f"/documents/templates/{templateTeam1.id}/documents/",
         json={"recipients": [user_lambda.email]},
         headers={"Authorization": f"Bearer {user_lambda_token}"},
@@ -1012,9 +1015,9 @@ async def test_use_template_as_lambda(
 
 
 async def test_use_template_invalid_destination_folder(
-    client: TestClient,
+    client_no_raise: TestClient,
 ):
-    response = client.post(
+    response = client_no_raise.post(
         f"/documents/templates/{templateTeam2.id}/documents/",
         json={
             "recipients": [user_lambda.email],
@@ -1029,7 +1032,7 @@ async def test_use_template_invalid_destination_folder(
 
 
 async def test_use_template_for_a_recipient_generate_email(
-    client: TestClient,
+    client_no_raise: TestClient,
 ):
     emailTemplate = DocumentTemplate(
         id=uuid4(),
@@ -1044,7 +1047,7 @@ async def test_use_template_for_a_recipient_generate_email(
     )
     await add_object_to_db(emailTemplate)
 
-    response = client.post(
+    response = client_no_raise.post(
         f"/documents/templates/{emailTemplate.id}/documents/",
         json={"recipients": [user_lambda.email]},
         headers={"Authorization": f"Bearer {user_team1_token}"},
@@ -1058,9 +1061,9 @@ async def test_use_template_for_a_recipient_generate_email(
 
 
 async def test_use_template_for_a_recipient_user_not_found(
-    client: TestClient,
+    client_no_raise: TestClient,
 ):
-    response = client.post(
+    response = client_no_raise.post(
         f"/documents/templates/{templateTeam1.id}/documents/",
         json={"recipients": ["test@test.fr"]},
         headers={"Authorization": f"Bearer {user_team1_token}"},
@@ -1071,9 +1074,9 @@ async def test_use_template_for_a_recipient_user_not_found(
 
 
 async def test_use_template_for_a_recipient_duplicate(
-    client: TestClient,
+    client_no_raise: TestClient,
 ):
-    response = client.post(
+    response = client_no_raise.post(
         f"/documents/templates/{templateTeam1.id}/documents/",
         json={"recipients": [user_lambda.email]},
         headers={"Authorization": f"Bearer {user_team1_token}"},
@@ -1087,7 +1090,7 @@ async def test_use_template_for_a_recipient_duplicate(
 
 
 async def test_use_template_for_a_recipient(
-    client: TestClient,
+    client_no_raise: TestClient,
     mocker: MockerFixture,
 ):
     mocked_id = uuid4()
@@ -1103,7 +1106,7 @@ async def test_use_template_for_a_recipient(
             title="Mocked Document Title",
         ),
     )
-    response = client.post(
+    response = client_no_raise.post(
         f"/documents/templates/{templateTeam1.id}/documents/",
         json={
             "recipients": [user_lambda.email],
@@ -1116,7 +1119,7 @@ async def test_use_template_for_a_recipient(
     assert len(response_data["errors"]) == 0
     assert len(response_data["documents"]) == 1
 
-    documents = client.get(
+    documents = client_no_raise.get(
         f"/documents/templates/{templateTeam1.id}/documents",
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
@@ -1127,7 +1130,7 @@ async def test_use_template_for_a_recipient(
 # endregion: Document
 # region: Webhook
 async def test_webhook_template_creation_invalid_secret(
-    client: TestClient,
+    client_no_raise: TestClient,
 ):
     json = {
         "event": "TEMPLATE_CREATED",
@@ -1145,7 +1148,7 @@ async def test_webhook_template_creation_invalid_secret(
         "createdAt": "2026-06-16T13:44:00.631Z",
         "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
     }
-    response = client.post(
+    response = client_no_raise.post(
         "/documents/webhook/",
         json=json,
         headers={
@@ -1157,12 +1160,12 @@ async def test_webhook_template_creation_invalid_secret(
 
 
 async def test_webhook_template_creation_invalid_payload(
-    client: TestClient,
+    client_no_raise: TestClient,
 ):
     json = {
         "event": "TEMPLATE_CREATED",
     }
-    response = client.post(
+    response = client_no_raise.post(
         "/documents/webhook/",
         json=json,
         headers={
@@ -1174,7 +1177,7 @@ async def test_webhook_template_creation_invalid_payload(
 
 
 async def test_webhook_template_creation_unknown_team(
-    client: TestClient,
+    client_no_raise: TestClient,
     mocker: MockerFixture,
 ):
     mocked_creation = mocker.patch(
@@ -1197,7 +1200,7 @@ async def test_webhook_template_creation_unknown_team(
         "createdAt": "2026-06-16T13:44:00.631Z",
         "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
     }
-    response = client.post(
+    response = client_no_raise.post(
         "/documents/webhook/",
         json=json,
         headers={
@@ -1211,7 +1214,7 @@ async def test_webhook_template_creation_unknown_team(
 
 
 async def test_webhook_template_creation_multiple_recipients(
-    client: TestClient,
+    client_no_raise: TestClient,
     mocker: MockerFixture,
 ):
     mocked_creation = mocker.patch(
@@ -1237,7 +1240,7 @@ async def test_webhook_template_creation_multiple_recipients(
         "createdAt": "2026-06-16T13:44:00.631Z",
         "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
     }
-    response = client.post(
+    response = client_no_raise.post(
         "/documents/webhook/",
         json=json,
         headers={
@@ -1251,7 +1254,7 @@ async def test_webhook_template_creation_multiple_recipients(
 
 
 async def test_webhook_template_creation_missing_team(
-    client: TestClient,
+    client_no_raise: TestClient,
     mocker: MockerFixture,
 ):
     mocked_creation = mocker.patch(
@@ -1274,7 +1277,7 @@ async def test_webhook_template_creation_missing_team(
         "createdAt": "2026-06-16T13:44:00.631Z",
         "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
     }
-    response = client.post(
+    response = client_no_raise.post(
         "/documents/webhook/",
         json=json,
         headers={
@@ -1288,7 +1291,7 @@ async def test_webhook_template_creation_missing_team(
 
 
 async def test_webhook_template_creation(
-    client: TestClient,
+    client_no_raise: TestClient,
 ):
     json = {
         "event": "TEMPLATE_CREATED",
@@ -1306,7 +1309,7 @@ async def test_webhook_template_creation(
         "createdAt": "2026-06-16T13:44:00.631Z",
         "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
     }
-    response = client.post(
+    response = client_no_raise.post(
         "/documents/webhook/",
         json=json,
         headers={
@@ -1316,7 +1319,7 @@ async def test_webhook_template_creation(
     )
     assert response.status_code == 200
 
-    templates = client.get(
+    templates = client_no_raise.get(
         f"/documents/teams/{team1.id}/templates",
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
@@ -1327,7 +1330,7 @@ async def test_webhook_template_creation(
 
 
 async def test_webhook_template_update_unknown_template(
-    client: TestClient,
+    client_no_raise: TestClient,
     mocker: MockerFixture,
 ):
     mocked_update = mocker.patch(
@@ -1350,7 +1353,7 @@ async def test_webhook_template_update_unknown_template(
         "createdAt": "2026-06-16T13:44:05.967Z",
         "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
     }
-    response = client.post(
+    response = client_no_raise.post(
         "/documents/webhook/",
         json=json,
         headers={
@@ -1364,7 +1367,7 @@ async def test_webhook_template_update_unknown_template(
 
 
 async def test_webhook_template_update(
-    client: TestClient,
+    client_no_raise: TestClient,
 ):
     template = DocumentTemplate(
         id=uuid4(),
@@ -1398,7 +1401,7 @@ async def test_webhook_template_update(
         "createdAt": "2026-06-16T13:44:05.967Z",
         "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
     }
-    response = client.post(
+    response = client_no_raise.post(
         "/documents/webhook/",
         json=json,
         headers={
@@ -1408,7 +1411,7 @@ async def test_webhook_template_update(
     )
     assert response.status_code == 200
 
-    templates = client.get(
+    templates = client_no_raise.get(
         f"/documents/teams/{team1.id}/templates",
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
@@ -1422,7 +1425,7 @@ async def test_webhook_template_update(
 
 
 async def test_webhook_template_deletion_unknown_template(
-    client: TestClient,
+    client_no_raise: TestClient,
     mocker: MockerFixture,
 ):
     mocked_deletion = mocker.patch(
@@ -1445,7 +1448,7 @@ async def test_webhook_template_deletion_unknown_template(
         "createdAt": "2026-06-16T13:44:09.725Z",
         "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
     }
-    response = client.post(
+    response = client_no_raise.post(
         "/documents/webhook/",
         json=json,
         headers={
@@ -1459,7 +1462,7 @@ async def test_webhook_template_deletion_unknown_template(
 
 
 async def test_webhook_template_deletion(
-    client: TestClient,
+    client_no_raise: TestClient,
 ):
     template = DocumentTemplate(
         id=uuid4(),
@@ -1490,7 +1493,7 @@ async def test_webhook_template_deletion(
         "createdAt": "2026-06-16T13:44:09.725Z",
         "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
     }
-    response = client.post(
+    response = client_no_raise.post(
         "/documents/webhook/",
         json=json,
         headers={
@@ -1500,7 +1503,7 @@ async def test_webhook_template_deletion(
     )
     assert response.status_code == 200
 
-    templates = client.get(
+    templates = client_no_raise.get(
         f"/documents/teams/{team1.id}/templates",
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
@@ -1522,7 +1525,7 @@ async def callback(
 
 
 async def test_webhook_document_completed_empty_external_id(
-    client: TestClient,
+    client_no_raise: TestClient,
     mocker: MockerFixture,
 ):
     mocked_update = mocker.patch(
@@ -1546,7 +1549,7 @@ async def test_webhook_document_completed_empty_external_id(
         "createdAt": "2026-06-16T13:44:25.475Z",
         "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
     }
-    response = client.post(
+    response = client_no_raise.post(
         "/documents/webhook/",
         json=json,
         headers={
@@ -1560,7 +1563,7 @@ async def test_webhook_document_completed_empty_external_id(
 
 
 async def test_webhook_document_completed_unknown_document(
-    client: TestClient,
+    client_no_raise: TestClient,
     mocker: MockerFixture,
 ):
     mocked_update = mocker.patch(
@@ -1584,7 +1587,7 @@ async def test_webhook_document_completed_unknown_document(
         "createdAt": "2026-06-16T13:44:25.475Z",
         "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
     }
-    response = client.post(
+    response = client_no_raise.post(
         "/documents/webhook/",
         json=json,
         headers={
@@ -1598,7 +1601,7 @@ async def test_webhook_document_completed_unknown_document(
 
 
 async def test_webhook_document_completed_already_completed(
-    client: TestClient,
+    client_no_raise: TestClient,
     mocker: MockerFixture,
 ):
     mocked_update = mocker.patch(
@@ -1622,7 +1625,7 @@ async def test_webhook_document_completed_already_completed(
         "createdAt": "2026-06-16T13:44:25.475Z",
         "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
     }
-    response = client.post(
+    response = client_no_raise.post(
         "/documents/webhook/",
         json=json,
         headers={
@@ -1636,7 +1639,7 @@ async def test_webhook_document_completed_already_completed(
 
 
 async def test_webhook_document_completed(
-    client: TestClient,
+    client_no_raise: TestClient,
     mocker: MockerFixture,
 ):
     mocked_callback = mocker.patch(
@@ -1672,7 +1675,7 @@ async def test_webhook_document_completed(
         "createdAt": "2026-06-16T13:44:25.475Z",
         "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
     }
-    response = client.post(
+    response = client_no_raise.post(
         "/documents/webhook/",
         json=json,
         headers={
@@ -1689,7 +1692,7 @@ async def test_webhook_document_completed(
 
 
 async def test_webhook_document_rejected_empty_external_id(
-    client: TestClient,
+    client_no_raise: TestClient,
     mocker: MockerFixture,
 ):
     mocked_update = mocker.patch(
@@ -1712,7 +1715,7 @@ async def test_webhook_document_rejected_empty_external_id(
         "createdAt": "2026-06-16T13:44:33.055Z",
         "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
     }
-    response = client.post(
+    response = client_no_raise.post(
         "/documents/webhook/",
         json=json,
         headers={
@@ -1726,7 +1729,7 @@ async def test_webhook_document_rejected_empty_external_id(
 
 
 async def test_webhook_document_rejected_unknown_document(
-    client: TestClient,
+    client_no_raise: TestClient,
     mocker: MockerFixture,
 ):
     mocked_update = mocker.patch(
@@ -1749,7 +1752,7 @@ async def test_webhook_document_rejected_unknown_document(
         "createdAt": "2026-06-16T13:44:33.055Z",
         "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
     }
-    response = client.post(
+    response = client_no_raise.post(
         "/documents/webhook/",
         json=json,
         headers={
@@ -1763,7 +1766,7 @@ async def test_webhook_document_rejected_unknown_document(
 
 
 async def test_webhook_document_rejected_already_rejected(
-    client: TestClient,
+    client_no_raise: TestClient,
     mocker: MockerFixture,
 ):
     mocked_update = mocker.patch(
@@ -1786,7 +1789,7 @@ async def test_webhook_document_rejected_already_rejected(
         "createdAt": "2026-06-16T13:44:33.055Z",
         "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
     }
-    response = client.post(
+    response = client_no_raise.post(
         "/documents/webhook/",
         json=json,
         headers={
@@ -1800,7 +1803,7 @@ async def test_webhook_document_rejected_already_rejected(
 
 
 async def test_webhook_document_rejected(
-    client: TestClient,
+    client_no_raise: TestClient,
     mocker: MockerFixture,
 ):
     mocked_callback = mocker.patch(
@@ -1835,7 +1838,7 @@ async def test_webhook_document_rejected(
         "createdAt": "2026-06-16T13:44:33.055Z",
         "webhookEndpoint": "https://webhook.site/a2056231-ff10-4818-9d70-9b112739f9bd",
     }
-    response = client.post(
+    response = client_no_raise.post(
         "/documents/webhook/",
         json=json,
         headers={
