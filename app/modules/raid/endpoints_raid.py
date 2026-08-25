@@ -210,7 +210,7 @@ async def get_my_participant(
 
 @module.router.get(
     "/raid/participants/{user_id}",
-    response_model=schemas_raid.RaidParticipantRestricted,
+    response_model=schemas_raid.RaidParticipantRestrictedComplete,
     status_code=200,
 )
 async def get_participant_by_id(
@@ -222,7 +222,20 @@ async def get_participant_by_id(
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
 
-    return await get_participant_or_404(user_id, edition.id, db)
+    participant = await get_participant_complete_or_404(user_id, edition.id, db)
+
+    return schemas_raid.RaidParticipantRestrictedComplete(
+        user_id=participant.user_id,
+        edition_id=participant.edition_id,
+        status=participant.status,
+        bike_size=participant.bike_size,
+        t_shirt_size=participant.t_shirt_size,
+        situation=participant.situation,
+        payment=participant.payment,
+        t_shirt_payment=participant.t_shirt_payment,
+        user=participant.user,
+        validation_progress=participant.validation_progress,
+    )
 
 
 @module.router.post(
