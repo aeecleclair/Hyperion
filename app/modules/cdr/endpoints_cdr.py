@@ -53,7 +53,9 @@ from app.modules.cdr.types_cdr import (
 from app.modules.cdr.utils_cdr import (
     check_request_consistency,
     construct_dataframe_from_users_purchases,
+    document_callback,
     is_user_in_a_seller_group,
+    start_signature_flow,
     validate_payment,
 )
 from app.types.exceptions import ObjectExpectedInDbNotFoundError
@@ -78,10 +80,13 @@ class CdrPermissions(ModulePermissions):
     manage_cdr = "manage_cdr"
 
 
+MODULE_ROOT = "cdr"
+
 module = Module(
-    root="cdr",
+    root=MODULE_ROOT,
     tag="Cdr",
     payment_callback=validate_payment,
+    document_callback=document_callback,
     default_allowed_account_types=list(AccountType),
     factory=None,
     permissions=CdrPermissions,
@@ -1356,6 +1361,7 @@ async def create_document(
         id=uuid4(),
         seller_id=seller_id,
         name=document.name,
+        document_template_id=document.document_template_id,
     )
 
     cruds_cdr.create_document(db, db_document)
@@ -1662,6 +1668,7 @@ async def create_purchase(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Create a purchase.
@@ -1700,6 +1707,13 @@ async def create_purchase(
     if not (user_id == user.id and product.available_online):
         await is_user_in_a_seller_group(product.seller_id, user=user, db=db)
 
+    client_user = await cruds_users.get_user_by_id_schema(db=db, user_id=user_id)
+    if client_user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found.",
+        )
+
     existing_db_purchase = await cruds_cdr.get_purchase_by_id(
         db=db,
         user_id=user_id,
@@ -1735,6 +1749,17 @@ async def create_purchase(
     cruds_cdr.create_purchase(db, db_purchase)
     cruds_cdr.create_action(db, db_action)
     await db.flush()
+
+    # If the product requires document signatures, we will trigger the signature flow
+    if product.document_constraints:
+        await start_signature_flow(
+            product=product,
+            client_user=client_user,
+            MODULE_ROOT=MODULE_ROOT,
+            db=db,
+            settings=settings,
+        )
+
     return db_purchase
 
 
@@ -1749,6 +1774,7 @@ async def create_purchase_batch(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Create a purchase for a list of user.
@@ -1788,7 +1814,7 @@ async def create_purchase_batch(
     await is_user_in_a_seller_group(product.seller_id, user=user, db=db)
 
     for email in batch.user_emails:
-        user_db = await cruds_users.get_user_by_email(db=db, email=email)
+        user_db = await cruds_users.get_user_by_email_schema(db=db, email=email)
 
         if user_db is not None:
             existing_db_purchase = await cruds_cdr.get_purchase_by_id(
@@ -1825,6 +1851,16 @@ async def create_purchase_batch(
 
             cruds_cdr.create_purchase(db, db_purchase)
             cruds_cdr.create_action(db, db_action)
+
+            # If the product requires document signatures, we will trigger the signature flow
+            if product.document_constraints:
+                await start_signature_flow(
+                    product=product,
+                    client_user=user_db,
+                    MODULE_ROOT=MODULE_ROOT,
+                    db=db,
+                    settings=settings,
+                )
         # If the user does not exist, we will pass silently
     await db.flush()
 
@@ -1992,7 +2028,7 @@ async def mark_purchase_as_validated(
                 user_id=user_id,
                 document_id=document_constraint.id,
             )
-            if not signature:
+            if signature is None or signature.validated is False:
                 raise HTTPException(
                     status_code=403,
                     detail=f"Document signature constraint {document_constraint.name} not satisfied.",
@@ -2280,7 +2316,7 @@ async def create_signature(
     """
     Create a signature.
 
-    **User must sign numerically or be part of the seller's group to use this endpoint**
+    **User must be part of the seller's group to use this endpoint**
     """
     status = await get_core_data(coredata_cdr.Status, db)
     if status.status == CdrStatus.pending:
@@ -2301,33 +2337,38 @@ async def create_signature(
 
     sellers_groups = [str(seller.group_id) for seller in sellers]
     if not (
-        (
-            user_id == user.id
-            and signature.signature_type == DocumentSignatureType.numeric
-        )
-        or is_user_member_of_any_group(user=user, allowed_groups=sellers_groups)
+        is_user_member_of_any_group(user=user, allowed_groups=sellers_groups)
         or await has_user_permission(user, CdrPermissions.manage_cdr, db)
     ):
         raise HTTPException(
             status_code=403,
             detail="You're not allowed to make this signature.",
         )
-    if (
-        signature.signature_type == DocumentSignatureType.numeric
-        and not signature.numeric_signature_id
-    ):
+    if signature.signature_type != DocumentSignatureType.material:
         raise HTTPException(
-            status_code=403,
-            detail="Numeric signature must include signature id.",
+            status_code=400,
+            detail="Only material signatures can be created manually.",
         )
+    existing_signature = await cruds_cdr.get_signature_by_id(
+        db=db,
+        user_id=user_id,
+        document_id=document_id,
+    )
+    if existing_signature is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Signature already exists.",
+        )
+
     db_signature = models_cdr.Signature(
         user_id=user_id,
         document_id=document_id,
         signature_type=signature.signature_type,
-        numeric_signature_id=signature.numeric_signature_id,
+        validated=signature.validated,
+        numeric_signature_id=None,
     )
 
-    cruds_cdr.create_signature(db, db_signature)
+    await cruds_cdr.create_signature(db, db_signature)
     await db.flush()
     return db_signature
 

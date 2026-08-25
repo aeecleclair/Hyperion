@@ -3,6 +3,7 @@
 from collections.abc import Sequence
 from datetime import datetime, timedelta
 from uuid import UUID
+from warnings import deprecated
 
 from sqlalchemy import ForeignKey, and_, delete, not_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -103,6 +104,7 @@ async def get_users(
     return result.scalars().all()
 
 
+@deprecated("Use get_user_by_id_schema instead")
 async def get_user_by_id(
     db: AsyncSession,
     user_id: str,
@@ -120,6 +122,31 @@ async def get_user_by_id(
     return result.scalars().first()
 
 
+async def get_user_by_id_schema(
+    db: AsyncSession,
+    user_id: str,
+) -> schemas_users.CoreUser | None:
+    """Return user with id from database as a schema"""
+
+    user = await get_user_by_id(db, user_id)
+    if not user:
+        return None
+    return schemas_users.CoreUser(
+        id=user.id,
+        name=user.name,
+        firstname=user.firstname,
+        email=user.email,
+        account_type=user.account_type,
+        school_id=user.school_id,
+        birthday=user.birthday,
+        phone=user.phone,
+        promo=user.promo,
+        floor=user.floor,
+        created_on=user.created_on,
+    )
+
+
+@deprecated("Use get_user_by_id_schema instead")
 async def get_user_by_email(
     db: AsyncSession,
     email: str,
@@ -136,6 +163,30 @@ async def get_user_by_email(
         ),
     )
     return result.scalars().first()
+
+
+async def get_user_by_email_schema(
+    db: AsyncSession,
+    email: str,
+) -> schemas_users.CoreUser | None:
+    """Return user with email from database as a schema"""
+
+    user = await get_user_by_email(db, email)
+    if not user:
+        return None
+    return schemas_users.CoreUser(
+        id=user.id,
+        name=user.name,
+        firstname=user.firstname,
+        email=user.email,
+        account_type=user.account_type,
+        school_id=user.school_id,
+        birthday=user.birthday,
+        phone=user.phone,
+        promo=user.promo,
+        floor=user.floor,
+        created_on=user.created_on,
+    )
 
 
 async def get_users_by_ids(

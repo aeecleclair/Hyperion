@@ -641,7 +641,36 @@ async def get_signature_by_id(
     return result.scalars().first()
 
 
-def create_signature(
+async def get_signature_by_numeric_signature_id(
+    db: AsyncSession,
+    numeric_signature_id: UUID,
+) -> models_cdr.Signature | None:
+    result = await db.execute(
+        select(models_cdr.Signature).where(
+            models_cdr.Signature.numeric_signature_id == numeric_signature_id,
+        ),
+    )
+    return result.scalars().first()
+
+
+async def edit_signature_validated(
+    db: AsyncSession,
+    user_id: str,
+    document_id: UUID,
+    validated: bool,
+) -> models_cdr.Signature | None:
+    result = await db.execute(
+        update(models_cdr.Signature)
+        .where(
+            models_cdr.Signature.user_id == user_id,
+            models_cdr.Signature.document_id == document_id,
+        )
+        .values(validated=validated),
+    )
+    return result.scalars().first()
+
+
+async def create_signature(
     db: AsyncSession,
     signature: models_cdr.Signature,
 ):
