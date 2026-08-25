@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 import psycopg
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.app import get_application
@@ -68,22 +69,24 @@ def worker_database(worker_id: str) -> Generator[None]:
         conn.execute(f'DROP DATABASE "{worker_db}" WITH (FORCE)')
 
 
-@pytest.fixture(scope="module", autouse=True)
-def client(request, worker_id: str) -> Generator[TestClient]:
+@pytest.fixture(scope="module")
+def test_app(request, worker_id: str) -> FastAPI:
     """
-    TestClient fixture.
+    test_app fixture.
 
-    A parameter `use_attribute` can be passed to the fixture using:
+    A parameters can be passed to the fixture using indirect parameterization:
+     - `use_factory`: Whether to use factories when creating test data (default: False)
+
     ```python
-    @pytest.mark.parametrize("client", [True], indirect=True)
+    @pytest.mark.parametrize("test_app", [True], indirect=True)
     async def test_example(client: TestClient):
         ...
     ```
     """
-    try:
-        use_factory = request.__getattribute__("param")
-    except AttributeError:
-        use_factory = False
+    use_factory = False
+
+    if hasattr(request, "param"):
+        use_factory = request.param
 
     commons.SETTINGS = create_test_settings(
         USE_FACTORIES=use_factory,
@@ -98,6 +101,24 @@ def client(request, worker_id: str) -> Generator[TestClient]:
     test_app.dependency_overrides[init_state] = override_init_state
     test_app.dependency_overrides[get_settings] = override_get_settings
 
+    return test_app
+
+
+@pytest.fixture(scope="module", autouse=True)
+def client(test_app: FastAPI) -> Generator[TestClient]:
+    """
+    TestClient fixture.
+
+    A parameters can be passed to the fixture using indirect parameterization:
+     - `use_factory`: Whether to use factories when creating test data (default: False)
+
+    ```python
+    @pytest.mark.parametrize("test_app", [True], indirect=True)
+    async def test_example(client: TestClient):
+        ...
+    ```
+    """
+
     # The TestClient should be used as a context manager in order for the lifespan to be called
     # See https://www.starlette.io/lifespan/#running-lifespan-in-tests
     #
@@ -110,3 +131,32 @@ def client(request, worker_id: str) -> Generator[TestClient]:
         TestClient(test_app, raise_server_exceptions=False) as client,
     ):
         yield client
+
+
+@pytest.fixture(scope="module", autouse=True)
+def client_no_raise(test_app: FastAPI) -> Generator[TestClient]:
+    """
+    TestClient fixture. This client does not raise exceptions on server errors, and instead returns a proper 500 Internal Server Error response.
+
+    A parameters can be passed to the fixture using indirect parameterization:
+     - `use_factory`: Whether to use factories when creating test data (default: False)
+
+    ```python
+    @pytest.mark.parametrize("test_app", [True], indirect=True)
+    async def test_example(client: TestClient):
+        ...
+    ```
+    """
+
+    # The TestClient should be used as a context manager in order for the lifespan to be called.
+    # See https://www.starlette.io/lifespan/#running-lifespan-in-tests
+    # Here we DO NOT want the lifespan to be called, as it should only be called once, and it is already called by the `client` fixture.
+    #
+    # Patch get_number_of_workers to return 1 so that use_lock_for_workers always runs
+    # init_db directly. Without this, xdist workers are seen as siblings of the pytest
+    # controller's children, causing get_number_of_workers() to return N > 1 and the
+    # locking logic to skip init_db on all but one worker, leaving DBs without tables.
+    with (
+        patch("app.utils.initialization.get_number_of_workers", return_value=1),
+    ):
+        yield TestClient(test_app, raise_server_exceptions=False)
