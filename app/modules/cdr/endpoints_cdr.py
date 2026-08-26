@@ -507,6 +507,19 @@ async def generate_and_send_results(
 
     excel_io = BytesIO()
 
+    curriculums_by_id = {
+        curriculum.id: curriculum.name
+        for curriculum in await cruds_cdr.get_curriculums(db=db)
+    }
+
+    users_curriculum = {
+        membership.user_id: curriculums_by_id.get(
+            membership.curriculum_id,
+            "",
+        )
+        for membership in await cruds_cdr.get_cdr_users_curriculum(db)
+    }
+
     construct_dataframe_from_users_purchases(
         users_purchases=purchases_by_users,
         users=list(users),
@@ -514,6 +527,7 @@ async def generate_and_send_results(
         variants=variants,
         data_fields=product_fields,
         users_answers=users_answers,
+        users_curriculum=users_curriculum,
         export_io=excel_io,
     )
 
@@ -567,9 +581,12 @@ async def send_seller_results(
 
     res = await generate_and_send_results(seller_id=seller_id, db=db)
 
+    exported_at = datetime.now(UTC).strftime("%Y-%m-%d_%H-%M-%S")
+
     headers = {
-        "Content-Disposition": f'attachment; filename="results_{seller_id}.xlsx"',
+        "Content-Disposition": f'attachment; filename="results_{seller_id}_{exported_at}.xlsx"',
     }
+
     return Response(
         res,
         headers=headers,

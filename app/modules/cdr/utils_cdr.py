@@ -28,6 +28,16 @@ from app.utils.tools import (
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
+CDR_EXPORT_FIXED_COLUMNS = [
+    "Nom",
+    "Prénom",
+    "Surnom",
+    "Email",
+    "Étage",
+    "Cursus",
+    "Promo",
+]
+
 
 class CdrPermissions(ModulePermissions):
     manage_cdr = "manage_cdr"
@@ -316,8 +326,7 @@ def build_product_structure(
     for v in variants:
         variants_by_product.setdefault(v.product_id, []).append(v)
 
-    fixed_columns = ["Nom", "Prénom", "Surnom", "Email"]
-    col_idx = len(fixed_columns)
+    col_idx = len(CDR_EXPORT_FIXED_COLUMNS)
 
     product_structure = []
     for product in products:
@@ -370,6 +379,7 @@ def build_data_rows(
     users: list[models_users.CoreUser],
     users_purchases: dict[str, list[models_cdr.Purchase]],
     users_answers: dict[str, list[models_cdr.CustomData]],
+    users_curriculum: dict[str, str],
     product_structure: dict,
     col_idx: int,
 ):
@@ -380,6 +390,9 @@ def build_data_rows(
         row[1] = user.firstname
         row[2] = user.nickname or ""
         row[3] = user.email
+        row[4] = user.floor or ""
+        row[5] = users_curriculum.get(user.id, "")
+        row[6] = user.promo if user.promo is not None else ""
 
         answers = users_answers.get(user.id, [])
         answers_map = {a.field_id: a.value for a in answers}
@@ -392,6 +405,7 @@ def build_data_rows(
                 p = purchases_map.get(vinfo["variant"].id)
                 if p and p.quantity > 0:
                     row[vinfo["qty_col"]] = p.quantity
+
                     if (
                         prod_struct["needs_validation"]
                         and vinfo["valid_col"] is not None
@@ -416,7 +430,7 @@ def write_fixed_headers(
     formats: dict,
 ):
     for col, title in enumerate(fixed_columns):
-        worksheet.merge_range(0, col, 2, col, title, formats["header"]["base"])
+        worksheet.merge_range(0, col, 3, col, title, formats["header"]["base"])
 
 
 def write_product_headers(
@@ -467,6 +481,7 @@ def write_product_headers(
 
         for vinfo in variants_info:
             qty_col = vinfo["qty_col"]
+
             if needs_validation:
                 worksheet.merge_range(
                     1,
@@ -512,14 +527,41 @@ def write_product_headers(
                 max_lens[c] = max(max_lens[c], info_comp_len)
 
         for vinfo in variants_info:
-            worksheet.write(2, vinfo["qty_col"], "Quantité", formats["header"]["base"])
+            price = vinfo["variant"].price / 100
+
+            worksheet.write_number(
+                2,
+                vinfo["qty_col"],
+                price,
+                formats["header"]["base"],
+            )
+            max_lens[vinfo["qty_col"]] = max(
+                max_lens[vinfo["qty_col"]],
+                len(str(price)),
+            )
+
+            if needs_validation and vinfo["valid_col"] is not None:
+                worksheet.write_blank(
+                    2,
+                    vinfo["valid_col"],
+                    None,
+                    formats["header"]["base"],
+                )
+
+            worksheet.write(
+                3,
+                vinfo["qty_col"],
+                "Quantité",
+                formats["header"]["base"],
+            )
             max_lens[vinfo["qty_col"]] = max(
                 max_lens[vinfo["qty_col"]],
                 len("Quantité"),
             )
+
             if needs_validation and vinfo["valid_col"] is not None:
                 worksheet.write(
-                    2,
+                    3,
                     vinfo["valid_col"],
                     "Validé",
                     formats["header"]["base"],
@@ -530,8 +572,22 @@ def write_product_headers(
                 )
 
         for i, field in enumerate(fields):
-            worksheet.write(2, custom_cols[i], field.name, formats["header"]["base"])
-            max_lens[custom_cols[i]] = max(max_lens[custom_cols[i]], len(field.name))
+            worksheet.write_blank(
+                2,
+                custom_cols[i],
+                None,
+                formats["header"]["base"],
+            )
+            worksheet.write(
+                3,
+                custom_cols[i],
+                field.name,
+                formats["header"]["base"],
+            )
+            max_lens[custom_cols[i]] = max(
+                max_lens[custom_cols[i]],
+                len(field.name),
+            )
 
         for c in range(start_col, end_col + 1):
             max_lens[c] = max(max_lens[c], len(product.name_fr))
@@ -546,7 +602,7 @@ def write_data_rows(
     variant_end_cols: list[int],
     formats: dict,
     max_lens: list[int],
-    start_row: int = 3,
+    start_row: int = 4,
 ):
     for row_idx, row in enumerate(data_rows, start=start_row):
         is_last_row = row_idx == start_row + len(data_rows) - 1
@@ -623,7 +679,7 @@ def write_to_excel(
         max_lens,
     )
     autosize_columns(worksheet, max_lens)
-    worksheet.freeze_panes(3, len(fixed_columns))
+    worksheet.freeze_panes(4, len(fixed_columns))
 
 
 def construct_dataframe_from_users_purchases(
@@ -633,9 +689,9 @@ def construct_dataframe_from_users_purchases(
     products: list[models_cdr.CdrProduct],
     variants: list[models_cdr.ProductVariant],
     data_fields: dict[UUID, list[models_cdr.CustomDataField]],
+    users_curriculum: dict[str, str],
     export_io: BytesIO,
 ):
-    fixed_columns = ["Nom", "Prénom", "Surnom", "Email"]
 
     product_structure, col_idx = build_product_structure(
         products,
@@ -647,6 +703,7 @@ def construct_dataframe_from_users_purchases(
         users_to_write,
         users_purchases,
         users_answers,
+        users_curriculum,
         product_structure,
         col_idx,
     )
@@ -657,7 +714,7 @@ def construct_dataframe_from_users_purchases(
     write_to_excel(
         workbook,
         "Données",
-        fixed_columns,
+        CDR_EXPORT_FIXED_COLUMNS,
         product_structure,
         data_rows,
         col_idx,
