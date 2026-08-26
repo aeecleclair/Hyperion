@@ -28,6 +28,16 @@ from app.utils.tools import (
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
+CDR_EXPORT_FIXED_COLUMNS = [
+    "Nom",
+    "Prénom",
+    "Surnom",
+    "Email",
+    "Étage",
+    "Cursus",
+    "Promo",
+]
+
 
 class CdrPermissions(ModulePermissions):
     manage_cdr = "manage_cdr"
@@ -316,8 +326,7 @@ def build_product_structure(
     for v in variants:
         variants_by_product.setdefault(v.product_id, []).append(v)
 
-    fixed_columns = ["Nom", "Prénom", "Surnom", "Email", "Étage", "Curriculum"]
-    col_idx = len(fixed_columns)
+    col_idx = len(CDR_EXPORT_FIXED_COLUMNS)
 
     product_structure = []
     for product in products:
@@ -383,6 +392,7 @@ def build_data_rows(
         row[3] = user.email
         row[4] = user.floor or ""
         row[5] = users_curriculum.get(user.id, "")
+        row[6] = user.promo if user.promo is not None else ""
 
         answers = users_answers.get(user.id, [])
         answers_map = {a.field_id: a.value for a in answers}
@@ -682,7 +692,6 @@ def construct_dataframe_from_users_purchases(
     users_curriculum: dict[str, str],
     export_io: BytesIO,
 ):
-    fixed_columns = ["Nom", "Prénom", "Surnom", "Email", "Étage", "Curriculum"]
 
     product_structure, col_idx = build_product_structure(
         products,
@@ -705,7 +714,7 @@ def construct_dataframe_from_users_purchases(
     write_to_excel(
         workbook,
         "Données",
-        fixed_columns,
+        CDR_EXPORT_FIXED_COLUMNS,
         product_structure,
         data_rows,
         col_idx,
