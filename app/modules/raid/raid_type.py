@@ -33,10 +33,10 @@ class Difficulty(StrEnum):  # the difficulty of the raid
 
 
 class Situation(StrEnum):  # the situation of the participant
-    centrale = "centrale"
-    otherSchool = "otherSchool"
-    corporatePartner = "corporatePartner"
-    other = "other"
+    centrale = "centrale"  # student from Centrale Lyon
+    otherSchool = "otherSchool"  # student from another school
+    corporatePartner = "corporatePartner"  # enterprise team
+    other = "other"  # anything else
 
 
 class DocumentValidation(StrEnum):
@@ -44,3 +44,10 @@ class DocumentValidation(StrEnum):
     accepted = "accepted"
     refused = "refused"
     temporary = "temporary"
+
+
+class RaidRegistrationStatus(StrEnum):
+    draft = "draft"
+    submitted = "submitted"
+    validated = "validated"
+    cancelled = "cancelled"

@@ -81,6 +81,8 @@ class TemplateUpdate(BaseModel):
 class TemplateDocumensoUpdate(BaseModel):
     name: str | None = None
     deleted: bool | None = None
+    recipient_id: int | None = None
+    generate_email: bool | None = None
 
 
 class TemplateUse(BaseModel):

@@ -832,6 +832,17 @@ async def create_product(
             status_code=403,
             detail="CDR is closed. You cant add a new product.",
         )
+    if product.related_membership_id:
+        related_membership = await cruds_memberships.get_association_membership_by_id(
+            db=db,
+            membership_id=product.related_membership_id,
+        )
+        if not related_membership:
+            raise HTTPException(
+                status_code=404,
+                detail="Related membership not found.",
+            )
+
     db_product = models_cdr.CdrProduct(
         id=uuid4(),
         seller_id=seller_id,
@@ -841,9 +852,7 @@ async def create_product(
         needs_validation=product.needs_validation,
         description_fr=product.description_fr,
         description_en=product.description_en,
-        related_membership_id=product.related_membership.id
-        if product.related_membership
-        else None,
+        related_membership_id=product.related_membership_id,
         year=cdr_year.year,
     )
 
@@ -914,20 +923,53 @@ async def update_product(
         user,
         db=db,
     )
-    await check_request_consistency(
+    db_product = await check_request_consistency(
         db=db,
         seller_id=seller_id,
         product_id=product_id,
     )
-    variants = await cruds_cdr.get_product_variants(
-        db=db,
-        product_id=product_id,
-    )
-    if variants and product.related_membership:
+    if not db_product:
         raise HTTPException(
-            status_code=403,
-            detail="You can't link or unlink this product to a membership if it has variant in it.",
+            status_code=404,
+            detail="Product not found.",
         )
+    if (
+        "related_membership_id" in product.model_fields_set
+        and db_product.related_membership_id != product.related_membership_id
+    ):
+        purchases = await cruds_cdr.get_product_validated_purchases(
+            db=db,
+            product_id=product_id,
+        )
+        if purchases:
+            raise HTTPException(
+                status_code=403,
+                detail="You can't change the related membership of a product that has validated purchases.",
+            )
+        if product.related_membership_id is not None:
+            related_membership = (
+                await cruds_memberships.get_association_membership_by_id(
+                    db=db,
+                    membership_id=product.related_membership_id,
+                )
+            )
+            if not related_membership:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Related membership not found.",
+                )
+            for variant in await cruds_cdr.get_product_variants(
+                db=db,
+                product_id=product_id,
+            ):
+                if variant.related_membership_added_duration is None:
+                    await cruds_cdr.update_product_variant(
+                        variant_id=variant.id,
+                        product_variant=schemas_cdr.ProductVariantEdit(
+                            related_membership_added_duration="P1Y",
+                        ),
+                        db=db,
+                    )
 
     await cruds_cdr.update_product(
         product_id=product_id,
@@ -2801,6 +2843,7 @@ async def delete_payment(
     status_code=200,
 )
 async def get_payment_url(
+    payment_request: schemas_cdr.PaymentUrlRequest | None = None,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
@@ -2813,14 +2856,40 @@ async def get_payment_url(
     Get payment url
     """
 
+    target_user_id = (
+        payment_request.target_user_id if payment_request is not None else None
+    )
+
+    target_user = user
+
+    if target_user_id is not None and target_user_id != user.id:
+        if not await has_user_permission(user, CdrPermissions.manage_cdr, db):
+            raise HTTPException(
+                status_code=403,
+                detail="You're not allowed to create a payment for another user.",
+            )
+
+        requested_user = await get_user_by_id(
+            db=db,
+            user_id=target_user_id,
+        )
+
+        if requested_user is None:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found.",
+            )
+
+        target_user = requested_user
+
     purchases = await cruds_cdr.get_purchases_by_user_id(
         db=db,
-        user_id=user.id,
+        user_id=target_user.id,
         cdr_year=cdr_year.year,
     )
     payments = await cruds_cdr.get_payments_by_user_id(
         db=db,
-        user_id=user.id,
+        user_id=target_user.id,
         cdr_year=cdr_year.year,
     )
 
@@ -2836,28 +2905,30 @@ async def get_payment_url(
             status_code=403,
             detail="Please give an amount in cents, greater than 1€.",
         )
+
     user_schema = schemas_users.CoreUser(
-        account_type=user.account_type,
-        school_id=user.school_id,
-        email=user.email,
-        birthday=user.birthday,
-        promo=user.promo,
-        floor=user.floor,
-        phone=user.phone,
-        created_on=user.created_on,
+        account_type=target_user.account_type,
+        school_id=target_user.school_id,
+        email=target_user.email,
+        birthday=target_user.birthday,
+        promo=target_user.promo,
+        floor=target_user.floor,
+        phone=target_user.phone,
+        created_on=target_user.created_on,
         groups=[
             schemas_groups.CoreGroupSimple(
                 id=group.id,
                 name=group.name,
                 description=group.description,
             )
-            for group in user.groups
+            for group in target_user.groups
         ],
-        id=user.id,
-        name=user.name,
-        firstname=user.firstname,
-        nickname=user.nickname,
+        id=target_user.id,
+        name=target_user.name,
+        firstname=target_user.firstname,
+        nickname=target_user.nickname,
     )
+
     checkout = await payment_tool.init_checkout(
         module=module.root,
         checkout_amount=amount,
@@ -2870,7 +2941,7 @@ async def get_payment_url(
         db=db,
         checkout=models_cdr.Checkout(
             id=uuid4(),
-            user_id=user.id,
+            user_id=target_user.id,
             checkout_id=checkout.id,
         ),
     )

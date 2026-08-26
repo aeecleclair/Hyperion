@@ -18,12 +18,6 @@ class RaidInformation(core_data.BaseCoreData):
     raid_information_id: str | None = None
 
 
-class RaidDriveFolders(core_data.BaseCoreData):
-    parent_folder_id: str | None = None
-    registering_folder_id: str | None = None
-    security_folder_id: str | None = None
-
-
 class RaidPrice(core_data.BaseCoreData):
     student_price: int | None = None
     partner_price: int | None = None

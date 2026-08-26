@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import GroupType
 from app.core.permissions import cruds_permissions, schemas_permissions
+from app.core.permissions.factory_permissions import CorePermissionsFactory
 from app.dependencies import (
     get_db,
     is_user,
@@ -30,7 +31,7 @@ core_module = CoreModule(
     root="permissions",
     tag="Permissions",
     router=router,
-    factory=None,
+    factory=CorePermissionsFactory(),
 )
 
 hyperion_security_logger = logging.getLogger("hyperion.security")
