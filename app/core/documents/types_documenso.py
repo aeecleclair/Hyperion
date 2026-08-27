@@ -63,7 +63,6 @@ class SendStatus(StrEnum):
 
 
 class WebhookEvent(StrEnum):
-    DOCUMENT_CREATED = "DOCUMENT_CREATED"
     DOCUMENT_COMPLETED = "DOCUMENT_COMPLETED"
     DOCUMENT_REJECTED = "DOCUMENT_REJECTED"
     TEMPLATE_CREATED = "TEMPLATE_CREATED"
@@ -183,44 +182,25 @@ class BaseDocumensoPayload(BaseModel):
     model_config = {"populate_by_name": True}
 
 
-class DocumentCreatedPayload(BaseDocumensoPayload):
-    status: Literal[DocumentStatus.DRAFT] = DocumentStatus.DRAFT
-    source: Literal[DocumentSource.DOCUMENT] = DocumentSource.DOCUMENT
-
-
 class DocumentCompletedPayload(BaseDocumensoPayload):
     status: Literal[DocumentStatus.COMPLETED] = DocumentStatus.COMPLETED
-    source: Literal[DocumentSource.DOCUMENT] = DocumentSource.DOCUMENT
     completed_at: datetime = Field(alias="completedAt")
 
 
 class DocumentRejectedPayload(BaseDocumensoPayload):
     status: Literal[DocumentStatus.PENDING] = DocumentStatus.PENDING
-    source: Literal[DocumentSource.DOCUMENT] = DocumentSource.DOCUMENT
 
 
 class TemplateCreatedPayload(BaseDocumensoPayload):
     status: Literal[DocumentStatus.DRAFT] = DocumentStatus.DRAFT
-    source: Literal[DocumentSource.TEMPLATE] = DocumentSource.TEMPLATE
 
 
 class TemplateUpdatedPayload(BaseDocumensoPayload):
     status: Literal[DocumentStatus.DRAFT] = DocumentStatus.DRAFT
-    source: Literal[DocumentSource.TEMPLATE] = DocumentSource.TEMPLATE
 
 
 class TemplateDeletedPayload(BaseDocumensoPayload):
     status: Literal[DocumentStatus.DRAFT] = DocumentStatus.DRAFT
-    source: Literal[DocumentSource.TEMPLATE] = DocumentSource.TEMPLATE
-
-
-class DocumentCreatedWebhook(BaseModel):
-    event: Literal[WebhookEvent.DOCUMENT_CREATED]
-    payload: DocumentCreatedPayload
-    created_at: datetime = Field(alias="createdAt")
-    webhook_endpoint: str = Field(alias="webhookEndpoint")
-
-    model_config = {"populate_by_name": True}
 
 
 class DocumentCompletedWebhook(BaseModel):
@@ -269,8 +249,7 @@ class TemplateDeletedWebhook(BaseModel):
 
 
 DocumensoWebhook = Annotated[
-    DocumentCreatedWebhook
-    | DocumentCompletedWebhook
+    DocumentCompletedWebhook
     | DocumentRejectedWebhook
     | TemplateCreatedWebhook
     | TemplateUpdatedWebhook
