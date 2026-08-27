@@ -496,6 +496,49 @@ async def create_team(
 
 
 @module.router.get(
+    "/raid/participants/me/team",
+    response_model=schemas_raid.RaidTeamComplete,
+    status_code=200,
+)
+async def get_my_team(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.access_raid]),
+    ),
+    edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
+):
+    participant_team = await cruds_raid.get_team_by_participant_id(
+        user.id,
+        edition.id,
+        db,
+    )
+    if not participant_team:
+        raise HTTPException(status_code=404, detail="You do not have a team.")
+
+    team = await cruds_raid.get_team_including_security_file_by_id(
+        participant_team.id,
+        db,
+    )
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found.")
+
+    return schemas_raid.RaidTeamComplete(
+        name=team.name,
+        id=team.id,
+        edition_id=team.edition_id,
+        number=team.number,
+        captain_id=team.captain_id,
+        second_id=team.second_id,
+        difficulty=team.difficulty,
+        meeting_place=team.meeting_place,
+        file_id=team.file_id,
+        captain=team.captain,
+        second=team.second,
+        validation_progress=team.validation_progress,
+    )
+
+
+@module.router.get(
     "/raid/participants/{user_id}/team",
     response_model=schemas_raid.RaidTeam,
     status_code=200,
