@@ -201,11 +201,6 @@ async def get_payment_total_by_seller(
 
     **User must be a CDR Admin to use this endpoint**
     """
-    if not (await has_user_permission(user, CdrPermissions.manage_cdr, db)):
-        raise HTTPException(
-            status_code=403,
-            detail="You're not allowed to see this.",
-        )
     return await cruds_cdr.get_payment_total_by_seller(
         db=db,
         cdr_year=cdr_year.year,
