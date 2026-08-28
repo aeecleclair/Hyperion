@@ -484,12 +484,16 @@ async def get_purchases_by_ids(
     db: AsyncSession,
     user_id: str,
     product_variant_id: list[UUID],
+    validated: bool | None = None,
 ) -> Sequence[models_cdr.Purchase]:
+    constraints = [
+        models_cdr.Purchase.user_id == user_id,
+        models_cdr.Purchase.product_variant_id.in_(product_variant_id),
+    ]
+    if validated is not None:
+        constraints.append(models_cdr.Purchase.validated == validated)
     result = await db.execute(
-        select(models_cdr.Purchase).where(
-            models_cdr.Purchase.user_id == user_id,
-            models_cdr.Purchase.product_variant_id.in_(product_variant_id),
-        ),
+        select(models_cdr.Purchase).where(*constraints),
     )
     return result.scalars().all()
 
