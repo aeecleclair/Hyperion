@@ -1,30 +1,63 @@
-Version 4
+Version 5
 
 # CGU {payment_name}
 
-## Objet des CGU
-Les présentes Conditions Générales d’Utilisation (CGU) ont pour objet de définir les modalités et conditions d’utilisation de la solution de paiement dématérialisée {payment_name}, éditée par {entity_name}, destinée aux élèves et étudiants de {school_name}.
+## 1. Objet des CGU
 
-## Présentation de {payment_name}
-{payment_name} est une solution de paiement virtuel et dématérialisé utilisable au sein de {school_name} exclusivement, avec les associations participantes. Elle repose sur une monnaie virtuelle appelée MyCoin, qui n’a aucune valeur légale et ne constitue pas une monnaie électronique au sens du Code monétaire et financier. Un (1) euro correspond à un (1) MyCoin.
+Les présentes Conditions Générales d’Utilisation (CGU) ont pour objet de définir les modalités et conditions d’utilisation de la solution de paiement dématérialisée {payment_name}, éditée par {entity_name}, exclusivement destinée aux élèves et étudiants de {school_name}.
 
-## Fonctionnement du portefeuille virtuel
-Lors de son inscription, l’utilisateur se voit attribuer un portefeuille numérique personnel plafonné. Il s’engage à ne pas tenter de dépasser ce plafond par quelque moyen que ce soit. En validant son inscription, l’utilisateur reconnaît renoncer expressément à son droit de rétractation, conformément à l’article L221-28 du Code de la Consommation.
-La monnaie virtuelle ne peut pas être convertie en euros ou en toute autre devise à cours légal. Elle est non remboursable, non réversible, et ne peut pas être cédée ou transférée à d’autres utilisateurs. Un portefeuille ne peut jamais être en solde négatif.
+## 2. Présentation du service et Cadre Réglementaire
 
-## Recharge du portefeuille via HelloAsso
+{payment_name} est un instrument de paiement reposant sur une valeur monétaire stockée sous forme électronique (monnaie électronique), appelée MyCoin (ʍ). Un (1) euro correspond à un (1) MyCoin.
+
+Conformément aux articles L. 521-3 et L. 525-5 du Code monétaire et financier, ce service est fourni sous le régime de l’exemption de réseau limité. L'utilisation de MyCoin est strictement limitée à l’enceinte de {school_name} et aux événements organisés par les associations partenaires ayant conclu un mandat d’encaissement avec {bank_account_holder}.
+
+## 3. Fonctionnement du portefeuille virtuel et Plafonds
+
+Lors de son inscription, l’utilisateur se voit attribuer un portefeuille numérique personnel. Pour respecter les seuils de vigilance relatifs à la lutte contre le blanchiment et le financement du terrorisme (LCB-FT), le portefeuille est soumis aux limites suivantes :
+
+- Le solde du compte ne peut excéder {mypayment_max_balance} ʍ.
+- Un portefeuille ne peut jamais être en solde négatif.
+- La monnaie virtuelle ne peut pas être cédée ou transférée à d’autres utilisateurs.
+
+## 4. Recharge du portefeuille via HelloAsso
+
 L’utilisateur peut recharger son portefeuille par carte bancaire via la plateforme HelloAsso. Les fonds seront versés directement sur le compte bancaire de l’association {bank_account_holder}, et un équivalent en est crédité sur le portefeuille numérique de l’utilisateur.
+
 HelloAsso est une plateforme française de paiement pour les associations, fonctionnant sur un modèle solidaire, garantissant que 100 % de votre paiement sera versé à l’association choisie.
 Elle se finance uniquement par des 'contribution volontaire' et par défaut, HelloAsso proposera à l’utilisateur de faire une 'contribution volontaire', qui peut librement refuser sans que cela empêche la transaction. Si vous choisissez de faire cette contribution, celle-ci soutiendra l’aide qu’HelloAsso apporte aux associations et seul HelloAsso en bénéficiera.
 
-## Utilisation des fonds et paiements
-Le paiement avec {payment_name} est uniquement possible auprès des associations partenaires. L’utilisateur doit préalablement activer son appareil par un lien unique reçu par email. Chaque paiement est validé par une vérification biométrique effectuée localement par l’appareil de l’utilisateur.
+Conformément à l'article L221-28 du Code de la consommation, les paiements en ligne pour des prestations de services de billetterie ou de consommation immédiate sont fermes et définitifs. Toutefois, le stockage de la valeur sur le portefeuille {payment_name} reste remboursable selon les conditions de l’Article 5.
 
-## Sécurité, responsabilité et données personnelles
-L’utilisateur est responsable de la sécurité de son appareil et de son accès à {payment_name}. Toute utilisation frauduleuse, perte ou vol doit être signalée sans délai. Le compte pourra alors être suspendu temporairement. Il est interdit de prêter ou partager son compte.
-{payment_name} respecte le Règlement Général sur la Protection des Données (RGPD). Les données collectées sont strictement nécessaires au fonctionnement du service : identifiants, email, historique de transactions, identifiant de l’appareil. Aucune donnée bancaire n’est collectée ni conservée par {payment_name}.
-{payment_name} fait partie de la plateforme {application_name}, en utilisant le service, l’utilisateur reconnait et accepte les conditions générales d’utilisations et la politique de confidentialité de {application_name}
+## 5. Droit au remboursement
 
-## Modifications des CGU
-{entity_name} se réserve le droit de modifier les présentes CGU à tout moment. L’utilisation du service après notification est conditionné par l’acceptation des nouvelles CGU.
+Conformément à la réglementation applicable à la monnaie électronique, l’utilisateur dispose d’un droit au remboursement de son solde à tout moment, à sa valeur nominale.
+
+L'utilisateur peut à tout moment demander le remboursement de son solde via l'application. Le remboursement sera effectué par virement bancaire sur le compte bancaire de l’utilisateur, dans un délai maximum de 30 jours.
+
+Les frais bancaires éventuels liés au virement seront à la charge de l’utilisateur.
+Cette demande de remboursement équivaut à la fermeture définitive du compte {payment_name} de l'utilisateur.
+
+## 6. Utilisation des fonds et Interdictions
+
+Le paiement avec {payment_name} est uniquement possible auprès des associations partenaires pour l’acquisition de biens et services liés à la vie du campus.
+
+- Interdiction de transfert (P2P) : La cession ou le transfert de MyCoins entre utilisateurs est strictement interdit afin de garantir l'étanchéité du circuit de paiement.
+- Interdiction de retrait : La conversion du crédit MyCoin en espèces (cash-out) est interdite, hors procédure de remboursement exceptionnel définie à l'Article 5.
+
+## 7. Sécurité, responsabilité et données personnelles
+
+L’utilisateur est responsable de la sécurité de son accès. Chaque paiement est validé par une vérification biométrique locale effectuée par l’appareil de l’utilisateur. Aucune donnée biométrique n'est collectée, transmise ou stockée par {payment_name} ou {entity_name}.
+{payment_name} respecte le RGPD. Les données collectées (email, historique de transactions, identifiant d'appareil) sont strictement nécessaires au service.
+
+Dans le cadre du remboursement, l'IBAN fourni lors de la demande est utilisé exclusivement pour l'exécution du virement et n'est pas conservé au-delà du traitement comptable.
+
+Aucune autre donnée bancaire n’est conservée par l’association {bank_account_holder}, cette gestion étant déléguée aux prestataires de services de paiement agréés de HelloAsso.
+
+{payment_name} fait partie de la plateforme {application_name}. En utilisant le service, l’utilisateur reconnait et accepte les conditions générales d’utilisations et la politique de confidentialité de {application_name}
+
+## 8. Modifications des CGU
+
+{entity_name} se réserve le droit de modifier les présentes CGU à tout moment. L’utilisateur sera notifié de toute modification majeure.
+
 Pour toute question, demande d’assistance ou réclamation, l’utilisateur peut contacter : {entity_email}.
