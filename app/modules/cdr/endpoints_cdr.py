@@ -2023,7 +2023,7 @@ async def mark_purchase_as_validated(
                         detail=f"Product constraint {product_constraint.name_fr} not satisfied.",
                     )
         for document_constraint in product.document_constraints:
-            signature = await cruds_cdr.get_signature_by_id(
+            signature = await cruds_cdr.get_signature_by_user_id_and_document_id(
                 db=db,
                 user_id=user_id,
                 document_id=document_constraint.id,
@@ -2349,7 +2349,7 @@ async def create_signature(
             status_code=400,
             detail="Only material signatures can be created manually.",
         )
-    existing_signature = await cruds_cdr.get_signature_by_id(
+    existing_signature = await cruds_cdr.get_signature_by_user_id_and_document_id(
         db=db,
         user_id=user_id,
         document_id=document_id,
@@ -2390,7 +2390,7 @@ async def delete_signature(
 
     **User must be CDR Admin to use this endpoint**
     """
-    db_signature = await cruds_cdr.get_signature_by_id(
+    db_signature = await cruds_cdr.get_signature_by_user_id_and_document_id(
         user_id=user_id,
         document_id=document_id,
         db=db,

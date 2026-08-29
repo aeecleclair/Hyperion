@@ -627,7 +627,7 @@ async def get_signatures_by_user_id_by_seller_id(
     return result.scalars().all()
 
 
-async def get_signature_by_id(
+async def get_signature_by_user_id_and_document_id(
     db: AsyncSession,
     user_id: str,
     document_id: UUID,

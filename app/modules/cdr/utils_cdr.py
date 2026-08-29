@@ -236,7 +236,7 @@ async def start_signature_flow(
 ):
 
     for cdr_document in product.document_constraints:
-        existing_signature = await cruds_cdr.get_signature_by_id(
+        existing_signature = await cruds_cdr.get_signature_by_user_id_and_document_id(
             db=db,
             user_id=client_user.id,
             document_id=cdr_document.id,
