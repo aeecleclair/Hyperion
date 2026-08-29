@@ -14,6 +14,7 @@ from app.core.groups import models_groups
 from app.core.groups.groups_type import AccountType
 from app.core.schools.schools_type import SchoolType
 from app.core.users import models_users, schemas_users
+from app.core.users.utils_users import user_model_to_schema
 
 
 async def count_users(db: AsyncSession) -> int:
@@ -131,19 +132,7 @@ async def get_user_by_id_schema(
     user = await get_user_by_id(db, user_id)
     if not user:
         return None
-    return schemas_users.CoreUser(
-        id=user.id,
-        name=user.name,
-        firstname=user.firstname,
-        email=user.email,
-        account_type=user.account_type,
-        school_id=user.school_id,
-        birthday=user.birthday,
-        phone=user.phone,
-        promo=user.promo,
-        floor=user.floor,
-        created_on=user.created_on,
-    )
+    return user_model_to_schema(user)
 
 
 @deprecated("Use get_user_by_id_schema instead")
@@ -174,19 +163,7 @@ async def get_user_by_email_schema(
     user = await get_user_by_email(db, email)
     if not user:
         return None
-    return schemas_users.CoreUser(
-        id=user.id,
-        name=user.name,
-        firstname=user.firstname,
-        email=user.email,
-        account_type=user.account_type,
-        school_id=user.school_id,
-        birthday=user.birthday,
-        phone=user.phone,
-        promo=user.promo,
-        floor=user.floor,
-        created_on=user.created_on,
-    )
+    return user_model_to_schema(user)
 
 
 async def get_users_by_ids(
