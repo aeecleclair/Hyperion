@@ -1,10 +1,13 @@
 from anyio import Path
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import FileResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.core_endpoints import schemas_core
+from app.core.mypayment.utils_mypayment import patch_payment_identity_in_text
 from app.core.utils.config import Settings
 from app.dependencies import (
+    get_db,
     get_settings,
 )
 from app.types.module import CoreModule
@@ -74,13 +77,17 @@ async def read_terms_and_conditions(settings: Settings = Depends(get_settings)):
     "/mypayment-terms-of-service",
     status_code=200,
 )
-async def read_mypayment_tos(settings: Settings = Depends(get_settings)):
+async def read_mypayment_tos(
+    settings: Settings = Depends(get_settings),
+    db: AsyncSession = Depends(get_db),
+):
     """
     Return MyPayment latest ToS
     """
-    return patch_identity_in_text(
+    return await patch_payment_identity_in_text(
         await Path("assets/mypayment-terms-of-service.txt").read_text(encoding="utf-8"),
         settings,
+        db,
     )
 
 

@@ -7,6 +7,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.mypayment import cruds_mypayment
+from app.core.mypayment.coredata_mypayment import MyPaymentBankAccountHolder
 from app.core.mypayment.integrity_mypayment import (
     format_transfer_log,
     format_user_fusion_log,
@@ -21,12 +22,15 @@ from app.core.mypayment.types_mypayment import (
     TransferTotalDontMatchInCallbackError,
 )
 from app.core.payment import schemas_payment
+from app.core.utils.config import Settings
+from app.types.exceptions import CoreDataNotFoundError
+from app.utils.tools import get_core_data, patch_identity_in_text
 
 hyperion_security_logger = logging.getLogger("hyperion.security")
 hyperion_mypayment_logger = logging.getLogger("hyperion.mypayment")
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
-LATEST_TOS = 4
+LATEST_TOS = 5
 QRCODE_EXPIRATION = 5  # minutes
 MYPAYMENT_LOGS_S3_SUBFOLDER = "logs"
 RETENTION_DURATION = 10 * 365  # 10 years in days
@@ -143,4 +147,36 @@ async def validate_transfer_callback(
             "s3_subfolder": MYPAYMENT_LOGS_S3_SUBFOLDER,
             "s3_retention": RETENTION_DURATION,
         },
+    )
+
+
+async def patch_payment_identity_in_text(
+    text: str,
+    settings: Settings,
+    db: AsyncSession,
+) -> str:
+    """
+    Replace placeholders in the text with the corresponding values from the settings.
+    """
+    try:
+        bank_account_holder = await get_core_data(
+            MyPaymentBankAccountHolder,
+            db=db,
+        )
+        structure = await cruds_mypayment.get_structure_by_id(
+            db=db,
+            structure_id=bank_account_holder.holder_structure_id,
+        )
+    except CoreDataNotFoundError:
+        structure = None
+    text = patch_identity_in_text(
+        text,
+        settings=settings,
+    )
+    return text.replace(
+        "{mypayment_max_balance}",
+        "%.2f" % (settings.MYPAYMENT_MAXIMUM_WALLET_BALANCE / 100.0),
+    ).replace(
+        "{bank_account_holder}",
+        structure.name if structure else "N/A",
     )

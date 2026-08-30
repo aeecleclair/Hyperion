@@ -15,6 +15,8 @@ def test_get_privacy(client: TestClient) -> None:
         "/privacy",
     )
     assert response.status_code == 200
+    assert "{" not in response.text
+    assert "}" not in response.text
 
 
 def test_get_terms_and_conditions(client: TestClient) -> None:
@@ -22,6 +24,8 @@ def test_get_terms_and_conditions(client: TestClient) -> None:
         "/terms-and-conditions",
     )
     assert response.status_code == 200
+    assert "{" not in response.text
+    assert "}" not in response.text
 
 
 def test_get_mypayment_tos(client: TestClient) -> None:
@@ -29,6 +33,8 @@ def test_get_mypayment_tos(client: TestClient) -> None:
         "/mypayment-terms-of-service",
     )
     assert response.status_code == 200
+    assert "{" not in response.text
+    assert "}" not in response.text
 
 
 def test_get_support(client: TestClient) -> None:
@@ -36,6 +42,8 @@ def test_get_support(client: TestClient) -> None:
         "/support",
     )
     assert response.status_code == 200
+    assert "{" not in response.text
+    assert "}" not in response.text
 
 
 def test_get_security_txt(client: TestClient) -> None:
@@ -43,6 +51,8 @@ def test_get_security_txt(client: TestClient) -> None:
         "/security.txt",
     )
     assert response.status_code == 200
+    assert "{" not in response.text
+    assert "}" not in response.text
 
 
 def test_get_wellknown_security_txt(client: TestClient) -> None:
@@ -50,6 +60,8 @@ def test_get_wellknown_security_txt(client: TestClient) -> None:
         "/.well-known/security.txt",
     )
     assert response.status_code == 200
+    assert "{" not in response.text
+    assert "}" not in response.text
 
 
 def test_get_favicon(client: TestClient) -> None:
