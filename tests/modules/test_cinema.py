@@ -54,7 +54,7 @@ async def init_objects() -> None:
         duration=194,
         overview="Southampton, 10 avril 1912. Le paquebot le plus grand et le plus moderne du monde, réputé pour son insubmersibilité, le « Titanic », appareille pour son premier voyage. Quatre jours plus tard, il heurte un iceberg. À son bord, un artiste pauvre et une grande bourgeoise tombent amoureux.",
         genre="Drame, Romance",
-        tagline="Rien sur cette terre ne saurait les séparer.",
+        year="1997",
     )
     await add_object_to_db(session)
 
