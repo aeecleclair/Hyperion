@@ -84,7 +84,7 @@ async def read_mypayment_tos(
     """
     Return MyPayment latest ToS
     """
-    return patch_payment_identity_in_text(
+    return await patch_payment_identity_in_text(
         await Path("assets/mypayment-terms-of-service.txt").read_text(encoding="utf-8"),
         settings,
         db,
