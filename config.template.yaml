@@ -93,6 +93,13 @@ AUTH_CLIENTS:
       - http://localhost:8000/docs/oauth2-redirect
       - http://127.0.0.1:8000/docs/oauth2-redirect
     auth_client: APIToolAuthClient
+  Enceladus:
+    secret: null
+    redirect_uri:
+      - "http://rentree.localhost:3000/fr/login"
+      - "http://pmf.localhost:3000/fr/login"
+      - "http://raid.localhost:3000/fr/login"
+    auth_client: SiarnaqAuthClient
 
 #####################
 # Hyperion settings #
