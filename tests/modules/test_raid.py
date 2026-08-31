@@ -622,6 +622,15 @@ def test_update_team_by_captain(client: TestClient) -> None:
     assert r.status_code == 204
 
 
+def test_update_my_team_as_captain(client: TestClient) -> None:
+    r = client.get(
+        "/raid/participants/me/team",
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 200
+    assert r.json()["captain"]["user_id"] == user_captain.id
+
+
 # ---------------------------------------------------------------------------
 # Documents
 # ---------------------------------------------------------------------------
