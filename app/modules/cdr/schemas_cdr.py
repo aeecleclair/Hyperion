@@ -287,6 +287,10 @@ class TicketSecret(BaseModel):
     qr_code_secret: UUID
 
 
+class MyPaymentPaymentMessage(BaseModel):
+    user_id: str
+
+
 class NewUserWSMessageModel(WSMessageModel):
     command: Literal["NEW_USER"] = "NEW_USER"
     data: CdrUser
@@ -295,6 +299,11 @@ class NewUserWSMessageModel(WSMessageModel):
 class UpdateUserWSMessageModel(WSMessageModel):
     command: Literal["UPDATE_USER"] = "UPDATE_USER"
     data: CdrUser
+
+
+class MyPaymentPaymentWSMessageModel(WSMessageModel):
+    command: Literal["MYPAYMENT_PAYMENT"] = "MYPAYMENT_PAYMENT"
+    data: MyPaymentPaymentMessage
 
 
 class CustomDataFieldBase(BaseModel):

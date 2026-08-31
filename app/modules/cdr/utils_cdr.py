@@ -13,13 +13,16 @@ from app.core.payment import schemas_payment
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users
 from app.dependencies import (
+    get_websocket_connection_manager,
     hyperion_access_logger,
 )
-from app.modules.cdr import coredata_cdr, cruds_cdr, models_cdr
+from app.modules.cdr import coredata_cdr, cruds_cdr, models_cdr, schemas_cdr
 from app.modules.cdr.types_cdr import (
     CdrLogActionType,
+    CdrStatus,
     PaymentType,
 )
+from app.types.websocket import HyperionWebsocketsRoom
 from app.utils.tools import (
     get_core_data,
     has_user_permission,
@@ -81,6 +84,23 @@ async def validate_payment(
     cruds_cdr.create_payment(db=db, payment=db_payment)
     cruds_cdr.create_action(db=db, action=db_action)
     await db.flush()
+
+    cdr_status = await get_core_data(coredata_cdr.Status, db)
+    if cdr_status.status == CdrStatus.onsite:
+        try:
+            ws_manager = get_websocket_connection_manager()
+            await ws_manager.send_message_to_room(
+                message=schemas_cdr.MyPaymentPaymentWSMessageModel(
+                    data=schemas_cdr.MyPaymentPaymentMessage(
+                        user_id=checkout.user_id,
+                    ),
+                ),
+                room_id=HyperionWebsocketsRoom.CDR,
+            )
+        except Exception:
+            hyperion_error_logger.exception(
+                f"Error while sending a message to the room {HyperionWebsocketsRoom.CDR}",
+            )
 
 
 async def is_user_in_a_seller_group(
