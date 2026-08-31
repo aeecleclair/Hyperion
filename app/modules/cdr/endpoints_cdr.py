@@ -3736,6 +3736,18 @@ async def delete_customdata(
     )
 
 
+@module.router.get(
+    "/cdr/dummy-payment-message/",
+    response_model=schemas_cdr.MyPaymentPaymentMessage,
+    status_code=200,
+)
+async def dummy_payment_message():
+    raise HTTPException(
+        status_code=403,
+        detail="This endpoint should not be called",
+    )
+
+
 @module.router.websocket("/cdr/users/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
