@@ -1964,12 +1964,17 @@ async def mark_purchase_as_validated(
             minimal_end_date=date(datetime.now(UTC).year, 9, 5),
         )
         for product_constraint in product.product_constraints:
+            # When we validate a product, we want to check for already existing memberships
+            # If someone purchase a product that gives the required membership, this product must be validated first.
             purchases = await cruds_cdr.get_purchases_by_ids(
                 db=db,
                 user_id=user_id,
                 product_variant_id=[
                     variant.id for variant in product_constraint.variants
                 ],
+                # In case we want to allow validating products
+                # considering non-validated purchases we may remove this additional filter
+                validated=True,
             )
             if not purchases:
                 if product_constraint.related_membership:
