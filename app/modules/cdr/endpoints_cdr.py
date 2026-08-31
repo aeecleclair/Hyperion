@@ -6,6 +6,7 @@ from io import BytesIO
 from uuid import UUID, uuid4
 
 import calypsso
+from calypsso import TypeMessage
 from fastapi import (
     Depends,
     HTTPException,
@@ -2929,12 +2930,19 @@ async def get_payment_url(
         nickname=target_user.nickname,
     )
 
+    redirection_uri = None
+    if target_user_id is not None and target_user_id != user.id:
+        redirection_uri = calypsso.get_message_relative_url(
+            message_type=TypeMessage.payment_success,
+        )
+
     checkout = await payment_tool.init_checkout(
         module=module.root,
         checkout_amount=amount,
         checkout_name="Chaine de rentrée",
         payer_user=user_schema,
         db=db,
+        redirection_uri=redirection_uri,
     )
     hyperion_error_logger.info(f"CDR: Logging Checkout id {checkout.id}")
     cruds_cdr.create_checkout(
