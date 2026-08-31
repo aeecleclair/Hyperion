@@ -177,6 +177,38 @@ async def get_team_by_participant_id(
     return schemas_raid.RaidTeam.model_validate(model) if model else None
 
 
+async def get_team_including_security_files_by_participant_id(
+    user_id: str,
+    edition_id: UUID,
+    db: AsyncSession,
+) -> schemas_raid.RaidTeamIncludingSecurityFile | None:
+    team = await db.execute(
+        select(models_raid.RaidTeam)
+        .where(
+            models_raid.RaidTeam.edition_id == edition_id,
+            or_(
+                models_raid.RaidTeam.captain_id == user_id,
+                models_raid.RaidTeam.second_id == user_id,
+            ),
+        )
+        .options(
+            *TEAM_DATA_TO_SELECT,
+            selectinload(models_raid.RaidTeam.captain).selectinload(
+                models_raid.RaidParticipant.security_file,
+            ),
+            selectinload(models_raid.RaidTeam.second).selectinload(
+                models_raid.RaidParticipant.security_file,
+            ),
+        ),
+    )
+    model = team.scalars().first()
+    return (
+        schemas_raid.RaidTeamIncludingSecurityFile.model_validate(model)
+        if model
+        else None
+    )
+
+
 async def get_all_teams(
     edition_id: UUID,
     db: AsyncSession,
