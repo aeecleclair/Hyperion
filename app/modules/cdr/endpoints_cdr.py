@@ -2932,7 +2932,7 @@ async def get_payment_url(
 
     redirection_uri = None
     if target_user_id is not None and target_user_id != user.id:
-        redirection_uri = calypsso.get_message_relative_url(
+        redirection_uri = settings.CLIENT_URL + calypsso.get_message_relative_url(
             message_type=TypeMessage.payment_success,
         )
 
