@@ -1453,7 +1453,7 @@ async def get_purchases_by_user_id(
                             purchased_on=purchase.purchased_on,
                             quantity=purchase.quantity,
                             price=product_variant.price,
-                            product=schemas_cdr.ProductComplete(
+                            product=schemas_cdr.ProductSimple(
                                 id=product.id,
                                 year=product.year,
                                 seller_id=product.seller_id,
@@ -1537,7 +1537,7 @@ async def get_all_my_purchases(
                             purchased_on=purchase.purchased_on,
                             quantity=purchase.quantity,
                             price=product_variant.price,
-                            product=schemas_cdr.ProductComplete(
+                            product=schemas_cdr.ProductSimple(
                                 id=product.id,
                                 year=product.year,
                                 seller_id=product.seller_id,
@@ -1619,7 +1619,7 @@ async def get_purchases_by_user_id_by_seller_id(
                             purchased_on=purchase.purchased_on,
                             quantity=purchase.quantity,
                             price=product_variant.price,
-                            product=schemas_cdr.ProductComplete(
+                            product=schemas_cdr.ProductSimple(
                                 id=product.id,
                                 year=product.year,
                                 seller_id=product.seller_id,
