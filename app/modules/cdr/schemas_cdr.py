@@ -136,7 +136,7 @@ class ProductBase(BaseModel):
     document_constraints: list[UUID]
 
 
-class ProductCompleteNoConstraint(BaseModel):
+class ProductSimple(BaseModel):
     name_fr: str
     name_en: str | None = None
     description_fr: str | None = None
@@ -148,26 +148,19 @@ class ProductCompleteNoConstraint(BaseModel):
     seller_id: UUID
     variants: list[ProductVariantComplete] = []
     related_membership: schemas_memberships.MembershipSimple | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProductCompleteNoConstraint(ProductSimple):
     tickets: list[GenerateTicketComplete]
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class ProductComplete(BaseModel):
-    name_fr: str
-    name_en: str | None = None
-    description_fr: str | None = None
-    description_en: str | None = None
-    available_online: bool
-    needs_validation: bool
-    id: UUID
-    year: int
-    seller_id: UUID
-    variants: list[ProductVariantComplete] = []
-    related_membership: schemas_memberships.MembershipSimple | None = None
+class ProductComplete(ProductCompleteNoConstraint):
     product_constraints: list[ProductCompleteNoConstraint] = []
     document_constraints: list[DocumentComplete] = []
-    tickets: list[GenerateTicketComplete] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -217,7 +210,7 @@ class PurchaseComplete(PurchaseBase):
 
 class PurchaseReturn(PurchaseComplete):
     price: int
-    product: ProductComplete
+    product: ProductSimple
     seller: SellerComplete
 
     model_config = ConfigDict(from_attributes=True)
