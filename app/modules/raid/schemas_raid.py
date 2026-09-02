@@ -156,7 +156,7 @@ class RaidParticipantRestricted(RaidParticipantPreview):
         return count_accepted_documents(self)
 
 
-class RaidParticipantRestrictedComplete(RaidParticipantPreview):
+class RaidParticipantRestrictedComplete(RaidParticipantRestricted):
     # Use compute_participant_progress to  compute the validation progress
     validation_progress: float
 

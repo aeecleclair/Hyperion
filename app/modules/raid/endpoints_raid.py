@@ -235,6 +235,8 @@ async def get_participant_by_id(
         t_shirt_payment=participant.t_shirt_payment,
         user=participant.user,
         validation_progress=participant.validation_progress,
+        attestation_on_honour=participant.attestation_on_honour,
+        is_minor=participant.is_minor,
     )
 
 
