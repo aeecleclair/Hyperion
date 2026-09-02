@@ -20,6 +20,7 @@ from app.core.memberships.factory_memberships import CoreMembershipsFactory
 from app.core.memberships.utils_memberships import (
     MODULE_ROOT,
     add_membership_to_user,
+    membership_document_callback,
     remove_membership_from_user,
     renew_membership_documents,
     validate_user_new_membership,
@@ -42,6 +43,7 @@ core_module = CoreModule(
     tag="Memberships",
     router=router,
     factory=CoreMembershipsFactory(),
+    document_callback=membership_document_callback,
 )
 
 
