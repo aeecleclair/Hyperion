@@ -17,3 +17,13 @@ class ProductAssociationMembershipNotFoundError(Exception):
         super().__init__(
             f"Product with ID {product_id} not found for the association membership.",
         )
+
+
+class SignatureNotFoundError(Exception):
+    """Raised when a signature is not found for a document."""
+
+    def __init__(self, document_id: UUID):
+
+        super().__init__(
+            f"Signature with numeric_signature_id {document_id} not found.",
+        )

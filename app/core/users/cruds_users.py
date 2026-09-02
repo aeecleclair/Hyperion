@@ -3,6 +3,7 @@
 from collections.abc import Sequence
 from datetime import datetime, timedelta
 from uuid import UUID
+from warnings import deprecated
 
 from sqlalchemy import ForeignKey, and_, delete, not_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +14,7 @@ from app.core.groups import models_groups
 from app.core.groups.groups_type import AccountType
 from app.core.schools.schools_type import SchoolType
 from app.core.users import models_users, schemas_users
+from app.core.users.utils_users import user_model_to_schema
 
 
 async def count_users(db: AsyncSession) -> int:
@@ -103,6 +105,7 @@ async def get_users(
     return result.scalars().all()
 
 
+@deprecated("Use get_user_by_id_schema instead")
 async def get_user_by_id(
     db: AsyncSession,
     user_id: str,
@@ -120,6 +123,19 @@ async def get_user_by_id(
     return result.scalars().first()
 
 
+async def get_user_by_id_schema(
+    db: AsyncSession,
+    user_id: str,
+) -> schemas_users.CoreUser | None:
+    """Return user with id from database as a schema"""
+
+    user = await get_user_by_id(db, user_id)
+    if not user:
+        return None
+    return user_model_to_schema(user)
+
+
+@deprecated("Use get_user_by_id_schema instead")
 async def get_user_by_email(
     db: AsyncSession,
     email: str,
@@ -136,6 +152,18 @@ async def get_user_by_email(
         ),
     )
     return result.scalars().first()
+
+
+async def get_user_by_email_schema(
+    db: AsyncSession,
+    email: str,
+) -> schemas_users.CoreUser | None:
+    """Return user with email from database as a schema"""
+
+    user = await get_user_by_email(db, email)
+    if not user:
+        return None
+    return user_model_to_schema(user)
 
 
 async def get_users_by_ids(
