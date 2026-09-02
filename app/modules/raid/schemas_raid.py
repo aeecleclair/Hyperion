@@ -266,6 +266,9 @@ class RaidTeam(RaidTeamBase):
 class RaidTeamComplete(RaidTeam):
     validation_progress: float
 
+    captain: RaidParticipantRestrictedComplete
+    second: RaidParticipantRestrictedComplete | None = None
+
 
 class RaidTeamIncludingSecurityFile(RaidTeam):
     captain: RaidParticipant
