@@ -322,7 +322,7 @@ async def update_cdr_user(
             db=db,
             user_id=user_id,
             user_update=schemas_users.CoreUserUpdateAdmin(
-                **user_update.model_dump(exclude_unset=True),
+                **user_update.model_dump(exclude_unset=True, exclude={"email"}),
             ),
         )
     await db.flush()
