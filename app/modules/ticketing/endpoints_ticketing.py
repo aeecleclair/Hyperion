@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.groups.groups_type import GroupType
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users
+from app.core.users.schemas_users import CoreUserSimple
 from app.dependencies import get_db, get_redis_client, is_user, is_user_allowed_to
 from app.modules.ticketing import cache_ticketing, cruds_ticketing, schemas_ticketing
 from app.modules.ticketing.factory_ticketing import TicketingFactory
@@ -744,6 +745,14 @@ async def create_ticket(
         status="pending",
         nb_scan=0,
         created_at=datetime.now(UTC),
+        user=CoreUserSimple(
+            id=user.id,
+            firstname=user.firstname,
+            name=user.name,
+            nickname=user.nickname,
+            account_type=user.account_type,
+            school_id=user.school.id if user.school else None,
+        ),
     )
 
     # Verify quota from cache given event_id, category_id and session_id to prevent overbooking in case of concurrent ticket purchases across multiple workers
