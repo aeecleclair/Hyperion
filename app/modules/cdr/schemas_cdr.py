@@ -2,7 +2,7 @@ from datetime import date, datetime, timedelta
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, StringConstraints, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
 from app.core.memberships import schemas_memberships
 from app.core.users.schemas_users import CoreUserSimple
@@ -16,6 +16,9 @@ from app.utils import validators
 
 class DocumentBase(BaseModel):
     name: str
+    document_template_id: UUID = Field(
+        description="The ID of the Document template to use for this document.",
+    )
 
 
 class DocumentComplete(DocumentBase):
@@ -222,12 +225,13 @@ class PurchaseEdit(BaseModel):
 
 class SignatureBase(BaseModel):
     signature_type: DocumentSignatureType
-    numeric_signature_id: str | None = None
+    validated: bool
 
 
 class SignatureComplete(SignatureBase):
     user_id: str
     document_id: UUID
+    numeric_signature_id: UUID | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

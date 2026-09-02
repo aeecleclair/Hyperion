@@ -1,6 +1,7 @@
 import logging
 import uuid
 from datetime import UTC, datetime
+from uuid import UUID
 
 from documenso_sdk import TemplateCreateDocumentFromTemplateRecipientRequest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -361,3 +362,13 @@ async def handle_document_callback(
         hyperion_error_logger.exception(
             f"Documents: call to module {document_module} document callback for document (document_id: {document_id}, status: {status}) failed",
         )
+
+
+async def get_document_template_by_id(
+    db: AsyncSession,
+    template_id: UUID,
+) -> schemas_documents.TemplateCompleteWithDocuments | None:
+    return await cruds_documents.get_template_by_id(
+        db=db,
+        template_id=template_id,
+    )

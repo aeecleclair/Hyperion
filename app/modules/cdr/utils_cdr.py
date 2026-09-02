@@ -9,19 +9,25 @@ from fastapi import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.documents import utils_documents
+from app.core.documents.types_documenso import DocumentStatus
 from app.core.payment import schemas_payment
 from app.core.permissions.type_permissions import ModulePermissions
-from app.core.users import models_users
+from app.core.users import models_users, schemas_users
+from app.core.utils.config import Settings
 from app.dependencies import (
     get_websocket_connection_manager,
     hyperion_access_logger,
 )
 from app.modules.cdr import coredata_cdr, cruds_cdr, models_cdr, schemas_cdr
+from app.modules.cdr.exception_cdr import SignatureNotFoundError
 from app.modules.cdr.types_cdr import (
     CdrLogActionType,
     CdrStatus,
+    DocumentSignatureType,
     PaymentType,
 )
+from app.types.exceptions import ObjectExpectedInDbNotFoundError
 from app.types.websocket import HyperionWebsocketsRoom
 from app.utils.tools import (
     get_core_data,
@@ -197,6 +203,83 @@ async def check_request_consistency(
                 detail="Document is not related to this seller.",
             )
     return db_product
+
+
+async def document_callback(
+    document_id: UUID,
+    document_status: DocumentStatus,
+    db: AsyncSession,
+):
+    signature = await cruds_cdr.get_signature_by_numeric_signature_id(
+        db=db,
+        numeric_signature_id=document_id,
+    )
+
+    if signature is None:
+        raise SignatureNotFoundError(document_id)
+
+    if document_status == DocumentStatus.COMPLETED:
+        await cruds_cdr.edit_signature_validated(
+            db=db,
+            user_id=signature.user_id,
+            document_id=signature.document_id,
+            validated=True,
+        )
+
+
+async def start_signature_flow(
+    product: models_cdr.CdrProduct,
+    client_user: schemas_users.CoreUser,
+    MODULE_ROOT: str,
+    db: AsyncSession,
+    settings: Settings,
+):
+
+    for cdr_document in product.document_constraints:
+        existing_signature = await cruds_cdr.get_signature_by_user_id_and_document_id(
+            db=db,
+            user_id=client_user.id,
+            document_id=cdr_document.id,
+        )
+        if existing_signature is not None:
+            # The user was already asked to sign this document, we will not trigger the signature flow again
+            continue
+
+        documents_template = await utils_documents.get_document_template_by_id(
+            db=db,
+            template_id=cdr_document.document_template_id,
+        )
+
+        if documents_template is None:
+            raise ObjectExpectedInDbNotFoundError(
+                "DocumentTemplate",
+                cdr_document.document_template_id,
+            )
+
+        documents_documenso = utils_documents.configure_documenso_api_wrapper(
+            api_key=documents_template.team.api_key,
+            settings=settings,
+        )
+
+        created_documents_document = await utils_documents.use_template_for_user(
+            user=client_user,
+            template=documents_template,
+            module=MODULE_ROOT,
+            db=db,
+            documenso=documents_documenso,
+        )
+
+        # We create a non-validated numeric signature for the user in db
+        await cruds_cdr.create_signature(
+            db=db,
+            signature=models_cdr.Signature(
+                user_id=client_user.id,
+                document_id=cdr_document.id,
+                signature_type=DocumentSignatureType.numeric,
+                validated=False,
+                numeric_signature_id=created_documents_document.id,
+            ),
+        )
 
 
 def generate_format(workbook: xlsxwriter.Workbook):

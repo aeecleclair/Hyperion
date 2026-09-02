@@ -6,12 +6,13 @@ from fastapi.testclient import TestClient
 from pydantic import BaseModel
 from pytest_mock import MockerFixture
 
-from app.core.documents import models_documents
+from app.core.documents import models_documents, schemas_documents
+from app.core.documents.types_documenso import DocumentStatus
 from app.core.groups import models_groups
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import models_memberships
 from app.core.users import models_users
-from app.modules.cdr import models_cdr
+from app.modules.cdr import cruds_cdr, models_cdr
 from app.modules.cdr.coredata_cdr import CdrYear
 from app.modules.cdr.endpoints_cdr import CdrPermissions
 from app.modules.cdr.types_cdr import (
@@ -25,6 +26,7 @@ from tests.commons import (
     create_api_access_token,
     create_groups_with_permissions,
     create_user_with_groups,
+    get_TestingSessionLocal,
     mocked_checkout_id,
 )
 
@@ -54,6 +56,7 @@ usable_product: models_cdr.CdrProduct
 ticket_product: models_cdr.CdrProduct
 
 document: models_cdr.Document
+document_2: models_cdr.Document
 unused_document: models_cdr.Document
 other_document: models_cdr.Document
 
@@ -78,6 +81,8 @@ payment: models_cdr.Payment
 
 document_team: models_documents.DocumentTeam
 template: models_documents.DocumentTemplate
+document_document: models_documents.DocumentDocument
+
 
 association_membership: models_memberships.CoreAssociationMembership
 user_membership: models_memberships.CoreAssociationUserMembership
@@ -160,7 +165,7 @@ async def init_objects():
     )
     await add_object_to_db(empty_seller)
 
-    global document_team, template
+    global document_team, template, document_document
     document_team = models_documents.DocumentTeam(
         id=uuid.uuid4(),
         team_id=1,
@@ -183,6 +188,20 @@ async def init_objects():
         document_directory_id="1",
     )
     await add_object_to_db(template)
+
+    document_document = models_documents.DocumentDocument(
+        id=uuid.uuid4(),
+        documenso_id=1,
+        name="Document",
+        template_id=template.id,
+        module="CDR",
+        user_id=user_admin.id,
+        signing_token="token",
+        status=DocumentStatus.PENDING,
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    await add_object_to_db(document_document)
 
     global association_membership, user_membership
     association_membership = models_memberships.CoreAssociationMembership(
@@ -260,14 +279,25 @@ async def init_objects():
         id=uuid.uuid4(),
         seller_id=seller.id,
         name="Document à signer",
+        document_template_id=template.id,
     )
     await add_object_to_db(document)
+
+    global document_2
+    document_2 = models_cdr.Document(
+        id=uuid.uuid4(),
+        seller_id=seller.id,
+        name="Document à signer 2",
+        document_template_id=template.id,
+    )
+    await add_object_to_db(document_2)
 
     global unused_document
     unused_document = models_cdr.Document(
         id=uuid.uuid4(),
         seller_id=seller.id,
         name="Document non utilisé",
+        document_template_id=template.id,
     )
     await add_object_to_db(unused_document)
 
@@ -276,13 +306,14 @@ async def init_objects():
         id=uuid.uuid4(),
         seller_id=online_seller.id,
         name="Document non utilisé",
+        document_template_id=template.id,
     )
     await add_object_to_db(other_document)
 
     global document_constraint
     document_constraint = models_cdr.DocumentConstraint(
         product_id=product.id,
-        document_id=document.id,
+        document_id=document_2.id,
     )
     await add_object_to_db(document_constraint)
 
@@ -383,7 +414,8 @@ async def init_objects():
         user_id=user.id,
         document_id=document.id,
         signature_type=DocumentSignatureType.numeric,
-        numeric_signature_id="somedocumensoid",
+        numeric_signature_id=None,
+        validated=True,
     )
     await add_object_to_db(signature)
 
@@ -1253,6 +1285,7 @@ def test_create_document_seller(client: TestClient):
         f"/cdr/sellers/{seller.id}/documents/",
         json={
             "name": "Document créé",
+            "document_template_id": str(template.id),
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
@@ -1272,6 +1305,7 @@ def test_create_document_user(client: TestClient):
         f"/cdr/sellers/{seller.id}/documents/",
         json={
             "name": "Document créé par user",
+            "document_template_id": str(template.id),
         },
         headers={"Authorization": f"Bearer {token_user}"},
     )
@@ -1448,6 +1482,7 @@ def test_create_signature_cdr_not_started(client: TestClient):
         f"/cdr/users/{user_admin.id}/signatures/{document.id}/",
         json={
             "signature_type": DocumentSignatureType.material,
+            "validated": True,
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
@@ -1586,7 +1621,23 @@ def test_create_purchase_user(client: TestClient):
     assert str(variant.id) not in [x["product_variant_id"] for x in response.json()]
 
 
-def test_create_purchase_seller(client: TestClient):
+def test_create_purchase_seller(client: TestClient, mocker: MockerFixture):
+
+    mocked_use_template_for_user = mocker.patch(
+        "app.core.documents.utils_documents.use_template_for_user",
+        return_value=schemas_documents.Document(
+            template_id=template.id,
+            name=template.name,
+            module="CDR",
+            user_id=user_admin.id,
+            id=document_document.id,
+            documenso_id=1,
+            status=DocumentStatus.DRAFT,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        ),
+    )
+
     response = client.post(
         f"/cdr/users/{user_admin.id}/purchases/{variant.id}/",
         json={
@@ -1595,6 +1646,8 @@ def test_create_purchase_seller(client: TestClient):
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 201
+
+    mocked_use_template_for_user.assert_called_once()
 
     response = client.get(
         f"/cdr/users/{user_admin.id}/purchases/",
@@ -1626,7 +1679,9 @@ def test_create_purchase_other_user(client: TestClient):
     assert response.status_code == 404
 
 
-def test_patch_purchase_seller(client: TestClient):
+def test_patch_purchase_seller(
+    client: TestClient,
+):
     response = client.post(
         f"/cdr/users/{user_admin.id}/purchases/{variant.id}/",
         json={
@@ -1685,28 +1740,60 @@ def test_create_signature_user(client: TestClient):
         f"/cdr/users/{user.id}/signatures/{document.id}/",
         json={
             "signature_type": DocumentSignatureType.material,
+            "validated": True,
         },
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 403
-
-    response = client.get(
-        f"/cdr/users/{user_admin.id}/signatures/",
-        headers={"Authorization": f"Bearer {token_admin}"},
-    )
-    assert response.status_code == 200
-    assert str(document.id) not in [x["document_id"] for x in response.json()]
+    assert response.json()["detail"] == "You're not allowed to make this signature."
 
 
-def test_create_signature_seller(client: TestClient):
+def test_create_signature_seller_existing_signature(client: TestClient):
+
     response = client.post(
         f"/cdr/users/{user_admin.id}/signatures/{document.id}/",
         json={
             "signature_type": DocumentSignatureType.material,
+            "validated": True,
+        },
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Signature already exists."
+
+
+def test_create_signature_seller(client: TestClient):
+    response = client.post(
+        f"/cdr/users/{user.id}/signatures/{document_2.id}/",
+        json={
+            "signature_type": DocumentSignatureType.material,
+            "validated": True,
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 201
+
+    response = client.get(
+        f"/cdr/users/{user.id}/signatures/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert str(document_2.id) in [x["document_id"] for x in response.json()]
+
+
+def test_create_numeric_signature_seller(client: TestClient):
+    response = client.post(
+        f"/cdr/users/{user_admin.id}/signatures/{document.id}/",
+        json={
+            "signature_type": DocumentSignatureType.numeric,
+            "validated": True,
+        },
+        headers={"Authorization": f"Bearer {token_bde}"},
+    )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"] == "Only material signatures can be created manually."
+    )
 
     response = client.get(
         f"/cdr/users/{user_admin.id}/signatures/",
@@ -1734,15 +1821,29 @@ def test_validate_purchase_seller(client: TestClient):
             assert not x["validated"]
 
 
-def test_validate_purchase_admin(client: TestClient):
+def test_validate_purchase_admin_with_non_validated_signature(client: TestClient):
     response = client.patch(
         f"/cdr/users/{user_admin.id}/purchases/{variant.id}/validated/?validated=True",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
+    assert (
+        response.json()["detail"]
+        == "Document signature constraint Document à signer not satisfied."
+    )
+    assert response.status_code == 403
+
+
+def test_validate_purchase_admin(client: TestClient):
+
+    response = client.patch(
+        f"/cdr/users/{user.id}/purchases/{variant.id}/validated/?validated=True",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+
     assert response.status_code == 204
 
     response = client.get(
-        f"/cdr/users/{user_admin.id}/purchases/",
+        f"/cdr/users/{user.id}/purchases/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
@@ -1754,13 +1855,13 @@ def test_validate_purchase_admin(client: TestClient):
 
 def test_delete_purchase_validates(client: TestClient):
     response = client.delete(
-        f"/cdr/users/{user_admin.id}/purchases/{variant.id}/",
+        f"/cdr/users/{user.id}/purchases/{variant.id}/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 403
 
     response = client.get(
-        f"/cdr/users/{user_admin.id}/purchases/",
+        f"/cdr/users/{user.id}/purchases/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
@@ -1899,21 +2000,11 @@ def test_create_signature_wrong_document(client: TestClient):
         f"/cdr/users/{user_admin.id}/signatures/{uuid.uuid4()}/",
         json={
             "signature_type": DocumentSignatureType.material,
+            "validated": True,
         },
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 404
-
-
-def test_create_signature_numeric_no_id(client: TestClient):
-    response = client.post(
-        f"/cdr/users/{user_admin.id}/signatures/{document.id}/",
-        json={
-            "signature_type": DocumentSignatureType.numeric,
-        },
-        headers={"Authorization": f"Bearer {token_bde}"},
-    )
-    assert response.status_code == 403
 
 
 def test_delete_signature_not_admin(client: TestClient):
@@ -2241,9 +2332,7 @@ def test_create_product_variant_closed(client: TestClient):
 def test_create_document_closed(client: TestClient):
     response = client.post(
         f"/cdr/sellers/{seller.id}/documents/",
-        json={
-            "name": "Document créé",
-        },
+        json={"name": "Document créé", "document_template_id": str(template.id)},
         headers={"Authorization": f"Bearer {token_bde}"},
     )
     assert response.status_code == 403
@@ -2848,6 +2937,15 @@ async def test_customdata_deletion_on_purchase_deletion(client: TestClient):
         value="Edit",
     )
     await add_object_to_db(customdata)
+
+    async with get_TestingSessionLocal()() as db:
+        await cruds_cdr.mark_purchase_as_validated(
+            db=db,
+            user_id=user.id,
+            product_variant_id=variant.id,
+            validated=False,
+        )
+        await db.commit()
 
     response = client.delete(
         f"/cdr/users/{user.id}/purchases/{variant.id}/",

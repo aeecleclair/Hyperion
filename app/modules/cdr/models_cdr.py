@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -187,6 +188,9 @@ class Document(Base):
     seller_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("cdr_seller.id"),
     )
+    document_template_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("document_template.id"),
+    )
     name: Mapped[str]
 
 
@@ -226,7 +230,10 @@ class Signature(Base):
     signature_type: Mapped[DocumentSignatureType] = mapped_column(
         index=True,
     )
-    numeric_signature_id: Mapped[str | None]
+    validated: Mapped[bool]
+    numeric_signature_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("document_document.id"),
+    )
 
 
 class Payment(Base):
