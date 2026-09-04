@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.documents import utils_documents
 from app.core.documents.types_documenso import DocumentStatus
+from app.core.memberships.utils_memberships import membership_model_to_schema
 from app.core.payment import schemas_payment
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users, schemas_users
@@ -421,7 +422,7 @@ def generate_format(workbook: xlsxwriter.Workbook):
 
 
 def build_product_structure(
-    products: list[models_cdr.CdrProduct],
+    products: list[schemas_cdr.ProductComplete],
     variants: list[models_cdr.ProductVariant],
     data_fields: dict[UUID, list[models_cdr.CustomDataField]],
 ):
@@ -789,7 +790,7 @@ def construct_dataframe_from_users_purchases(
     users_purchases: dict[str, list[models_cdr.Purchase]],
     users_answers: dict[str, list[models_cdr.CustomData]],
     users: list[models_users.CoreUser],
-    products: list[models_cdr.CdrProduct],
+    products: list[schemas_cdr.ProductComplete],
     variants: list[models_cdr.ProductVariant],
     data_fields: dict[UUID, list[models_cdr.CustomDataField]],
     users_curriculum: dict[str, str],
@@ -824,3 +825,72 @@ def construct_dataframe_from_users_purchases(
         formats,
     )
     workbook.close()
+
+
+def product_model_to_schema_no_constaint(product_model: models_cdr.CdrProduct):
+    return schemas_cdr.ProductCompleteNoConstraint(
+        name_fr=product_model.name_fr,
+        name_en=product_model.name_en,
+        description_fr=product_model.description_fr,
+        description_en=product_model.description_en,
+        available_online=product_model.available_online,
+        needs_validation=product_model.needs_validation,
+        year=product_model.year,
+        id=product_model.id,
+        seller_id=product_model.seller_id,
+        variants=[
+            variant_model_to_schema(variant) for variant in product_model.variants
+        ],
+        related_membership=membership_model_to_schema(product_model.related_membership)
+        if product_model.related_membership
+        else None,
+        tickets=[
+            ticket_generator_model_to_schema(generator)
+            for generator in product_model.tickets
+        ],
+    )
+
+
+def ticket_generator_model_to_schema(generator_model: models_cdr.TicketGenerator):
+    return schemas_cdr.GenerateTicketComplete(
+        name=generator_model.name,
+        max_use=generator_model.max_use,
+        expiration=generator_model.expiration,
+        id=generator_model.id,
+    )
+
+
+def variant_model_to_schema(variant_model: models_cdr.ProductVariant):
+    return schemas_cdr.ProductVariantComplete(
+        id=variant_model.id,
+        year=variant_model.year,
+        product_id=variant_model.product_id,
+        name_fr=variant_model.name_fr,
+        name_en=variant_model.name_en,
+        description_fr=variant_model.description_fr,
+        description_en=variant_model.description_en,
+        price=variant_model.price,
+        enabled=variant_model.enabled,
+        unique=variant_model.unique,
+        allowed_curriculum=[
+            curriculum_model_to_schema(curriculum)
+            for curriculum in variant_model.allowed_curriculum
+        ],
+        related_membership_added_duration=variant_model.related_membership_added_duration,
+    )
+
+
+def document_model_to_schema(document_model: models_cdr.Document):
+    return schemas_cdr.DocumentComplete(
+        name=document_model.name,
+        id=document_model.id,
+        seller_id=document_model.seller_id,
+        document_template_id=document_model.document_template_id,
+    )
+
+
+def curriculum_model_to_schema(curriculum_model: models_cdr.Curriculum):
+    return schemas_cdr.CurriculumComplete(
+        name=curriculum_model.name,
+        id=curriculum_model.id,
+    )
