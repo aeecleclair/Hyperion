@@ -529,7 +529,7 @@ async def generate_and_send_results(
     construct_dataframe_from_users_purchases(
         users_purchases=purchases_by_users,
         users=list(users),
-        products=list(products),
+        products=products,
         variants=variants,
         data_fields=product_fields,
         users_answers=users_answers,

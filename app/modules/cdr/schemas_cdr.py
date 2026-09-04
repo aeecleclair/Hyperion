@@ -76,7 +76,7 @@ class GenerateTicketBase(BaseModel):
 
 class GenerateTicketComplete(GenerateTicketBase):
     id: UUID
-
+    scan_count: int | None = None
     model_config = ConfigDict(from_attributes=True)
 
 

@@ -2969,7 +2969,7 @@ async def test_pay_admin_for_user(client: TestClient):
         headers={"Authorization": f"Bearer {token_admin}"},
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 200, response.text
     assert response.json()["url"] == "https://some.url.fr/checkout"
 
 
