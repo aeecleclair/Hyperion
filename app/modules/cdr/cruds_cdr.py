@@ -1,12 +1,12 @@
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import noload, selectinload
 
 from app.core.users.models_users import CoreUser
-from app.modules.cdr import models_cdr, schemas_cdr
+from app.modules.cdr import models_cdr, schemas_cdr, utils_cdr
 
 
 async def get_cdr_users_curriculum(
@@ -133,25 +133,92 @@ async def get_products_by_seller_id(
     seller_id: UUID,
     cdr_year: int,
 ) -> Sequence[models_cdr.CdrProduct]:
-    result = await db.execute(
-        select(models_cdr.CdrProduct).where(
-            models_cdr.CdrProduct.seller_id == seller_id,
-            models_cdr.CdrProduct.year == cdr_year,
-        ),
+    products = (
+        (
+            await db.execute(
+                select(models_cdr.CdrProduct).where(
+                    models_cdr.CdrProduct.seller_id == seller_id,
+                    models_cdr.CdrProduct.year == cdr_year,
+                ),
+            )
+        )
+        .unique()
+        .scalars()
+        .all()
     )
-    return result.unique().scalars().all()
-
-
-async def get_all_products_by_seller_id(
-    db: AsyncSession,
-    seller_id: UUID,
-) -> Sequence[models_cdr.CdrProduct]:
-    result = await db.execute(
-        select(models_cdr.CdrProduct).where(
-            models_cdr.CdrProduct.seller_id == seller_id,
-        ),
+    scan_counts = (
+        (
+            await db.execute(
+                select(
+                    models_cdr.TicketGenerator.id,
+                    func().count(models_cdr.Ticket) * models_cdr.TicketGenerator.max_use
+                    - func().sum(models_cdr.Ticket.scan_left),
+                )
+                .select_from(models_cdr.CdrProduct)
+                .join(
+                    models_cdr.TicketGenerator,
+                    models_cdr.TicketGenerator.product_id == models_cdr.CdrProduct.id,
+                )
+                .join(
+                    models_cdr.Ticket,
+                    models_cdr.Ticket.generator_id == models_cdr.TicketGenerator.id,
+                )
+                .group_by(models_cdr.TicketGenerator.id),
+            )
+        )
+        .unique()
+        .all()
     )
-    return result.unique().scalars().all()
+    schemas_products = []
+    for product in products:
+        generators = []
+        for generator in product.tickets:
+            count = next(
+                (
+                    scan_count
+                    for scan_count in scan_counts
+                    if scan_count[0] == generator.id
+                ),
+                None,
+            )
+            if count is not None:
+                generators.append(
+                    schemas_cdr.GenerateTicketComplete(
+                        name=generator.name,
+                        id=generator.id,
+                        max_use=generator.max_use,
+                        expiration=generator.expiration,
+                        scan_count=count[1],
+                    ),
+                )
+        schemas_products.append(
+            schemas_cdr.ProductComplete(
+                name_en=product.name_en,
+                name_fr=product.name_fr,
+                description_en=product.description_en,
+                description_fr=product.description_fr,
+                available_online=product.available_online,
+                needs_validation=product.needs_validation,
+                id=product.id,
+                year=product.year,
+                seller_id=product.seller_id,
+                variants=[
+                    utils_cdr.variant_crud_to_schema(variant)
+                    for variant in product.variants
+                ],
+                related_membership=product.related_membership,
+                product_constraints=[
+                    utils_cdr.product_crud_to_schema(constraint)
+                    for constraint in product.product_constraints
+                ],
+                document_constraints=[
+                    utils_cdr.document_crud_to_schema(document)
+                    for document in product.document_constraints
+                ],
+                tickets=generators,
+            ),
+        )
+    return schemas_products
 
 
 async def get_online_products_by_seller_id(
