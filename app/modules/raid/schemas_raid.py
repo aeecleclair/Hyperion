@@ -63,6 +63,8 @@ class SecurityFileBase(BaseModel):
     emergency_person_name: str | None = None
     emergency_person_phone: str | None = None
     file_id: str | None = None
+    consent_given: bool = False
+    consent_given_at: datetime | None = None
 
 
 class SecurityFile(SecurityFileBase):
@@ -120,7 +122,11 @@ class RaidParticipantPreview(RaidParticipantBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class RaidParticipant(RaidParticipantPreview):
+class RaidParticipantRestricted(RaidParticipantPreview):
+    """
+    The security file is not included in this schema
+    """
+
     address: str | None = None
     other_school: str | None = None
     company: str | None = None
@@ -130,7 +136,6 @@ class RaidParticipant(RaidParticipantPreview):
     medical_certificate_id: str | None = None
     medical_certificate: Document | None = None
     security_file_id: str | None = None
-    security_file: SecurityFile | None = None
     student_card_id: str | None = None
     student_card: Document | None = None
     raid_rules_id: str | None = None
@@ -142,11 +147,6 @@ class RaidParticipant(RaidParticipantPreview):
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def validation_progress(self) -> float:
-        return compute_participant_progress(self)
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
     def number_of_document(self) -> int:
         return count_total_required_documents(self)
 
@@ -154,6 +154,20 @@ class RaidParticipant(RaidParticipantPreview):
     @property
     def number_of_validated_document(self) -> int:
         return count_accepted_documents(self)
+
+
+class RaidParticipantRestrictedComplete(RaidParticipantRestricted):
+    # Use compute_participant_progress to  compute the validation progress
+    validation_progress: float
+
+
+class RaidParticipant(RaidParticipantRestricted):
+    security_file: SecurityFile | None = None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def validation_progress(self) -> float:
+        return compute_participant_progress(self)
 
 
 class RaidParticipantUpdate(BaseModel):
@@ -238,14 +252,27 @@ class RaidTeam(RaidTeamBase):
     edition_id: UUID
     number: int | None = None
     captain_id: str
-    captain: RaidParticipant
     second_id: str | None = None
-    second: RaidParticipant | None = None
     difficulty: Difficulty | None = None
     meeting_place: MeetingPlace | None = None
     file_id: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+    captain: RaidParticipantRestricted
+    second: RaidParticipantRestricted | None = None
+
+
+class RaidTeamComplete(RaidTeam):
+    validation_progress: float
+
+    captain: RaidParticipantRestrictedComplete
+    second: RaidParticipantRestrictedComplete | None = None
+
+
+class RaidTeamIncludingSecurityFile(RaidTeam):
+    captain: RaidParticipant
+    second: RaidParticipant | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -304,6 +331,14 @@ class RaidParticipantCheckout(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class RaidVolunteerCheckout(BaseModel):
+    volunteer_user_id: str
+    edition_id: UUID
+    checkout_id: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class RaidEditionBase(BaseModel):
     name: str
     year: int
@@ -349,6 +384,8 @@ class RaidVolunteerBase(BaseModel):
     is_special_driver: bool = False
     is_utility_vehicle_driver: bool = False
     is_parcours_helper: bool = False
+    payment: bool = False
+    t_shirt_payment: bool = False
 
 
 def _validate_car_seats(self):
@@ -368,6 +405,8 @@ class RaidVolunteerCreate(RaidVolunteerBase):
     created_at: datetime
     validated: bool = False
     cancelled: bool = False
+    payment: bool = False
+    t_shirt_payment: bool = False
 
     _check_car_seats_consistency = model_validator(mode="after")(_validate_car_seats)
 
@@ -378,6 +417,8 @@ class RaidVolunteer(RaidVolunteerBase):
     created_at: datetime
     validated: bool
     cancelled: bool
+    payment: bool
+    t_shirt_payment: bool
     user: CoreUser
 
     model_config = ConfigDict(from_attributes=True)

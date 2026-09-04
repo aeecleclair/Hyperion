@@ -22,6 +22,7 @@ from app.modules.raid.dependencies_raid import (
     ensure_user_is_not_participant_in_edition,
     ensure_user_is_not_volunteer_in_edition,
     get_current_raid_edition,
+    get_participant_complete_or_404,
     get_participant_or_404,
     get_volunteer_or_404,
 )
@@ -34,6 +35,7 @@ from app.modules.raid.raid_type import (
 )
 from app.modules.raid.utils.utils_raid import (
     calculate_raid_payment,
+    calculate_volunteer_payment,
     get_all_security_files_zip,
     get_all_team_files_zip,
     validate_payment,
@@ -57,11 +59,13 @@ from app.utils.tools import (
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
+hyperion_security_logger = logging.getLogger("hyperion.security")
 
 
 class RaidPermissions(ModulePermissions):
     access_raid = "access_raid"
     manage_raid = "manage_raid"
+    read_medical_data = "read_medical_data"
 
 
 module = Module(
@@ -190,28 +194,51 @@ async def delete_edition(
 
 
 @module.router.get(
-    "/raid/participants/{user_id}",
+    "/raid/participants/me",
     response_model=schemas_raid.RaidParticipant,
     status_code=200,
 )
-async def get_participant_by_id(
-    user_id: str,
+async def get_my_participant(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    if user_id != user.id and not await has_user_permission(
-        user,
-        RaidPermissions.manage_raid,
-        db,
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You can not get data of another user",
-        )
-    return await get_participant_or_404(user_id, edition.id, db)
+
+    return await get_participant_complete_or_404(user.id, edition.id, db)
+
+
+@module.router.get(
+    "/raid/participants/{user_id}",
+    response_model=schemas_raid.RaidParticipantRestrictedComplete,
+    status_code=200,
+)
+async def get_participant_by_id(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.manage_raid]),
+    ),
+    edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
+):
+
+    participant = await get_participant_complete_or_404(user_id, edition.id, db)
+
+    return schemas_raid.RaidParticipantRestrictedComplete(
+        user_id=participant.user_id,
+        edition_id=participant.edition_id,
+        status=participant.status,
+        bike_size=participant.bike_size,
+        t_shirt_size=participant.t_shirt_size,
+        situation=participant.situation,
+        payment=participant.payment,
+        t_shirt_payment=participant.t_shirt_payment,
+        user=participant.user,
+        validation_progress=participant.validation_progress,
+        attestation_on_honour=participant.attestation_on_honour,
+        is_minor=participant.is_minor,
+    )
 
 
 @module.router.post(
@@ -251,7 +278,7 @@ async def create_participant(
         is_minor=is_minor,
     )
     await cruds_raid.create_participant(participant_create, db)
-    return await get_participant_or_404(user.id, edition.id, db)
+    return await get_participant_complete_or_404(user.id, edition.id, db)
 
 
 @module.router.patch(
@@ -269,10 +296,10 @@ async def update_participant(
 ):
     saved_participant = await get_participant_or_404(user_id, edition.id, db)
 
-    is_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
-    if user.id != user_id and not is_admin:
+    is_raid_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
+    if user.id != user_id and not is_raid_admin:
         raise HTTPException(status_code=403, detail="You are not the participant.")
-    if not is_admin and saved_participant.status != RaidRegistrationStatus.draft:
+    if not is_raid_admin and saved_participant.status != RaidRegistrationStatus.draft:
         raise HTTPException(
             status_code=400,
             detail="Participant is not in draft state; reopen first",
@@ -361,11 +388,11 @@ async def reopen_participant(
     db: AsyncSession = Depends(get_db),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    is_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
-    if user_id != user.id and not is_admin:
+    is_raid_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
+    if user_id != user.id and not is_raid_admin:
         raise HTTPException(status_code=403, detail="You are not the participant.")
     participant = await get_participant_or_404(user_id, edition.id, db)
-    if participant.status == RaidRegistrationStatus.validated and not is_admin:
+    if participant.status == RaidRegistrationStatus.validated and not is_raid_admin:
         raise HTTPException(
             status_code=403,
             detail="Cannot reopen a validated participant",
@@ -390,7 +417,12 @@ async def validate_participant(
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    participant = await get_participant_or_404(user_id, edition.id, db)
+    participant = await get_participant_complete_or_404(
+        user_id,
+        edition.id,
+        db,
+    )
+
     await check_participant_validation_consistency(participant, edition.id, db)
     await cruds_raid.update_participant_status(
         user_id,
@@ -412,11 +444,11 @@ async def cancel_participant(
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    is_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
+    is_raid_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
     participant = await get_participant_or_404(user_id, edition.id, db)
-    if user_id != user.id and not is_admin:
+    if user_id != user.id and not is_raid_admin:
         raise HTTPException(status_code=403, detail="You are not the participant.")
-    if participant.status == RaidRegistrationStatus.validated and not is_admin:
+    if participant.status == RaidRegistrationStatus.validated and not is_raid_admin:
         raise HTTPException(
             status_code=403,
             detail="Only admins can cancel a validated participant",
@@ -467,6 +499,50 @@ async def create_team(
 
 
 @module.router.get(
+    "/raid/participants/me/team",
+    response_model=schemas_raid.RaidTeamComplete,
+    status_code=200,
+)
+async def get_my_team(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.access_raid]),
+    ),
+    edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
+):
+    participant_team = (
+        await cruds_raid.get_team_including_security_files_by_participant_id(
+            user.id,
+            edition.id,
+            db,
+        )
+    )
+    if not participant_team:
+        raise HTTPException(status_code=404, detail="You do not have a team.")
+
+    return schemas_raid.RaidTeamComplete(
+        name=participant_team.name,
+        id=participant_team.id,
+        edition_id=participant_team.edition_id,
+        number=participant_team.number,
+        captain_id=participant_team.captain_id,
+        second_id=participant_team.second_id,
+        difficulty=participant_team.difficulty,
+        meeting_place=participant_team.meeting_place,
+        file_id=participant_team.file_id,
+        captain=schemas_raid.RaidParticipantRestrictedComplete(
+            **participant_team.captain.model_dump(),
+        ),
+        second=schemas_raid.RaidParticipantRestrictedComplete(
+            **participant_team.second.model_dump(),
+        )
+        if participant_team.second
+        else None,
+        validation_progress=participant_team.validation_progress,
+    )
+
+
+@module.router.get(
     "/raid/participants/{user_id}/team",
     response_model=schemas_raid.RaidTeam,
     status_code=200,
@@ -508,7 +584,7 @@ async def get_all_teams(
 
 @module.router.get(
     "/raid/teams/{team_id}",
-    response_model=schemas_raid.RaidTeam,
+    response_model=schemas_raid.RaidTeamComplete,
     status_code=200,
 )
 async def get_team_by_id(
@@ -518,10 +594,29 @@ async def get_team_by_id(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
 ):
-    team = await cruds_raid.get_team_by_id(team_id, db)
+    team = await cruds_raid.get_team_including_security_file_by_id(team_id, db)
     if not team:
         raise HTTPException(status_code=404, detail="Team not found.")
-    return team
+    return schemas_raid.RaidTeamComplete(
+        name=team.name,
+        id=team.id,
+        edition_id=team.edition_id,
+        number=team.number,
+        captain_id=team.captain_id,
+        second_id=team.second_id,
+        difficulty=team.difficulty,
+        meeting_place=team.meeting_place,
+        file_id=team.file_id,
+        captain=schemas_raid.RaidParticipantRestrictedComplete(
+            **team.captain.model_dump(),
+        ),
+        second=schemas_raid.RaidParticipantRestrictedComplete(
+            **team.second.model_dump(),
+        )
+        if team.second
+        else None,
+        validation_progress=team.validation_progress,
+    )
 
 
 @module.router.patch(
@@ -538,10 +633,10 @@ async def update_team(
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
     existing_team = await cruds_raid.get_team_by_participant_id(user.id, edition.id, db)
-    is_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
-    if existing_team is None and not is_admin:
+    is_raid_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
+    if existing_team is None and not is_raid_admin:
         raise HTTPException(status_code=404, detail="Team not found.")
-    if existing_team is not None and existing_team.id != team_id and not is_admin:
+    if existing_team is not None and existing_team.id != team_id and not is_raid_admin:
         raise HTTPException(status_code=403, detail="You can only edit your own team.")
     await cruds_raid.update_team(team_id, team, db)
 
@@ -678,8 +773,8 @@ async def read_document(
             detail="Participant owning the document not found.",
         )
 
-    is_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
-    if not is_admin:
+    is_raid_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
+    if not is_raid_admin:
         # Self or teammate can read
         user_team = await cruds_raid.get_team_by_participant_id(
             user.id,
@@ -740,23 +835,16 @@ async def set_security_file(
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    """Submit or replace the security file of a participant (self or teammate)."""
-    is_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
-    if user.id != participant_id and not is_admin:
-        user_team = await cruds_raid.get_team_by_participant_id(
-            user.id,
-            edition.id,
-            db,
-        )
-        target_team = await cruds_raid.get_team_by_participant_id(
-            participant_id,
-            edition.id,
-            db,
-        )
-        if user_team is None or target_team is None or user_team.id != target_team.id:
-            raise HTTPException(status_code=403, detail="You are not the participant.")
+    if user.id != participant_id:
+        raise HTTPException(status_code=403, detail="You are not the participant.")
 
     participant = await get_participant_or_404(participant_id, edition.id, db)
+
+    if not security_file.consent_given:
+        raise HTTPException(
+            status_code=400,
+            detail="Consent must be given to register medical data",
+        )
 
     if participant.security_file_id:
         await cruds_raid.update_security_file(
@@ -787,6 +875,8 @@ async def set_security_file(
         emergency_person_name=security_file.emergency_person_name,
         emergency_person_phone=security_file.emergency_person_phone,
         file_id=security_file.file_id,
+        consent_given=security_file.consent_given,
+        consent_given_at=datetime.now(UTC),
     )
     await cruds_raid.add_security_file(security_file_schema, edition.id, db)
     await cruds_raid.assign_security_file(
@@ -841,6 +931,43 @@ async def confirm_t_shirt_payment(
     ):
         raise HTTPException(status_code=400, detail="T shirt size not set.")
     await cruds_raid.confirm_t_shirt_payment(user_id, edition.id, db)
+
+
+@module.router.post(
+    "/raid/volunteer/{user_id}/payment",
+    status_code=204,
+)
+async def confirm_volunteer_payment(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.manage_raid]),
+    ),
+    edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
+):
+    await cruds_raid.confirm_volunteer_payment(user_id, edition.id, db)
+
+
+@module.router.post(
+    "/raid/volunteer/{user_id}/t_shirt_payment",
+    status_code=204,
+)
+async def confirm_volunteer_t_shirt_payment(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.manage_raid]),
+    ),
+    edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
+):
+    volunteer = await cruds_raid.get_volunteer_by_user_id(user_id, edition.id, db)
+    if (
+        not volunteer
+        or not volunteer.t_shirt_size
+        or volunteer.t_shirt_size == Size.None_
+    ):
+        raise HTTPException(status_code=400, detail="T shirt size not set.")
+    await cruds_raid.confirm_volunteer_t_shirt_payment(user_id, edition.id, db)
 
 
 @module.router.post(
@@ -1141,6 +1268,49 @@ async def get_payment_url(
     return schemas_raid.PaymentUrl(url=checkout.payment_url)
 
 
+@module.router.get(
+    "/raid/volunteers/pay",
+    response_model=schemas_raid.PaymentUrl,
+    status_code=201,
+)
+async def get_volunteer_payment_url(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.access_raid]),
+    ),
+    payment_tool: PaymentTool = Depends(get_payment_tool(HelloAssoConfigName.RAID)),
+    edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
+):
+    raid_prices = await get_core_data(coredata_raid.RaidPrice, db)
+    if not raid_prices.volunteer_price or not raid_prices.t_shirt_price:
+        raise HTTPException(status_code=404, detail="Volunteer prices not set.")
+
+    volunteer = await cruds_raid.get_volunteer_by_user_id(user.id, edition.id, db)
+    if not volunteer:
+        raise HTTPException(status_code=403, detail="You are not a volunteer.")
+    price, checkout_name = calculate_volunteer_payment(volunteer, raid_prices)
+
+    user_dict = {k: v for k, v in user.__dict__.items() if not k.startswith("_")}
+    user_dict.pop("school", None)
+    checkout = await payment_tool.init_checkout(
+        module=module.root,
+        checkout_amount=price,
+        checkout_name=checkout_name,
+        payer_user=schemas_users.CoreUser(**user_dict),
+        db=db,
+    )
+    hyperion_error_logger.info(f"RAID Volunteer: Logging Checkout id {checkout.id}")
+    await cruds_raid.create_volunteer_checkout(
+        schemas_raid.RaidVolunteerCheckout(
+            volunteer_user_id=user.id,
+            edition_id=edition.id,
+            checkout_id=str(checkout.id),
+        ),
+        db=db,
+    )
+    return schemas_raid.PaymentUrl(url=checkout.payment_url)
+
+
 # ---------------------------------------------------------------------------
 # Bulk downloads
 # ---------------------------------------------------------------------------
@@ -1158,8 +1328,30 @@ async def download_security_files_zip(
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
+    has_medical_permission = await has_user_permission(
+        user,
+        RaidPermissions.read_medical_data,
+        db,
+    )
+
+    if not has_medical_permission:
+        raise HTTPException(
+            status_code=403,
+            detail="You don't have the permisison to have the data of the participants.",
+        )
+
     information = await get_core_data(coredata_raid.RaidInformation, db)
     zip_file_path = await get_all_security_files_zip(db, information, edition.id)
+
+    hyperion_security_logger.info(
+        "Medical data access",
+        extra={
+            "accessed_by_user_id": user.id,
+            "edition_id": str(edition.id),
+            "access_type": "download",
+        },
+    )
+
     return FileResponse(
         zip_file_path,
         media_type="application/zip",
@@ -1291,11 +1483,11 @@ async def update_volunteer(
     db: AsyncSession = Depends(get_db),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    is_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
-    if user.id != user_id and not is_admin:
+    is_raid_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
+    if user.id != user_id and not is_raid_admin:
         raise HTTPException(status_code=403, detail="You are not the volunteer.")
     existing = await get_volunteer_or_404(user_id, edition.id, db)
-    if existing.validated and not is_admin:
+    if existing.validated and not is_raid_admin:
         raise HTTPException(
             status_code=400,
             detail="Volunteer is validated; admin-only update",
@@ -1332,8 +1524,8 @@ async def cancel_volunteer(
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    is_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
-    if user.id != user_id and not is_admin:
+    is_raid_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
+    if user.id != user_id and not is_raid_admin:
         raise HTTPException(status_code=403, detail="You are not the volunteer.")
     await get_volunteer_or_404(user_id, edition.id, db)
     await cruds_raid.update_volunteer_cancellation(user_id, edition.id, True, db)
@@ -1351,11 +1543,11 @@ async def delete_volunteer(
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    is_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
-    if user.id != user_id and not is_admin:
+    is_raid_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
+    if user.id != user_id and not is_raid_admin:
         raise HTTPException(status_code=403, detail="You are not the volunteer.")
     existing = await get_volunteer_or_404(user_id, edition.id, db)
-    if existing.validated and not is_admin:
+    if existing.validated and not is_raid_admin:
         raise HTTPException(
             status_code=403,
             detail="Cannot remove a validated volunteer (admin-only)",

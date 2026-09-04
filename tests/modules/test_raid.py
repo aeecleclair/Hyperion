@@ -7,7 +7,6 @@ birthday/phone) now live on `CoreUser`; tests set them via `update_user` so
 the participant/volunteer payloads stay small and mirror the real API shape.
 """
 
-import asyncio
 import datetime
 import uuid
 
@@ -298,7 +297,7 @@ def test_delete_edition_with_participants_rejected(client: TestClient) -> None:
 
 def test_get_participant_self(client: TestClient) -> None:
     r = client.get(
-        f"/raid/participants/{user_captain.id}",
+        "/raid/participants/me",
         headers={"Authorization": f"Bearer {token_captain}"},
     )
     assert r.status_code == 200
@@ -442,7 +441,9 @@ def test_admin_validate_fails_before_prerequisites(client: TestClient) -> None:
     assert r.status_code == 400
 
 
-async def _prepare_full_validation_state() -> None:
+async def test_admin_validate_full_happy_path(
+    client: TestClient,
+) -> None:
     """Promote captain + second to every prerequisite (except difficulty/meeting)."""
     async with get_TestingSessionLocal()() as db:
         docs = {}
@@ -506,20 +507,17 @@ async def _prepare_full_validation_state() -> None:
             )
         await db.commit()
 
-
-def test_admin_validate_full_happy_path(client: TestClient) -> None:
-    asyncio.get_event_loop().run_until_complete(_prepare_full_validation_state())
-
     r = client.patch(
         f"/raid/participants/{user_captain.id}/validate",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
-    assert r.status_code == 204, r.json()
+    assert r.status_code == 204
 
     r = client.get(
         f"/raid/participants/{user_captain.id}",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
+    assert r.status_code == 200
     assert r.json()["status"] == "validated"
 
 
@@ -559,6 +557,7 @@ def test_admin_reopen_to_draft(client: TestClient) -> None:
         f"/raid/participants/{user_captain.id}",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
+    assert r2.status_code == 200
     assert r2.json()["status"] == "draft"
 
 
@@ -569,9 +568,10 @@ def test_cancel_by_self(client: TestClient) -> None:
     )
     assert r.status_code == 204
     r2 = client.get(
-        f"/raid/participants/{user_solo.id}",
+        "/raid/participants/me",
         headers={"Authorization": f"Bearer {token_solo}"},
     )
+    assert r2.status_code == 200
     assert r2.json()["status"] == "cancelled"
 
 
@@ -608,16 +608,27 @@ def test_get_team_by_participant(client: TestClient) -> None:
 
 
 def test_update_team_by_captain(client: TestClient) -> None:
-    team = client.get(
+    r = client.get(
         f"/raid/participants/{user_captain.id}/team",
         headers={"Authorization": f"Bearer {token_captain}"},
-    ).json()
+    )
+    assert r.status_code == 200
+    team = r.json()
     r = client.patch(
         f"/raid/teams/{team['id']}",
         json={"name": "MainTeam-Renamed"},
         headers={"Authorization": f"Bearer {token_captain}"},
     )
     assert r.status_code == 204
+
+
+def test_update_my_team_as_captain(client: TestClient) -> None:
+    r = client.get(
+        "/raid/participants/me/team",
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 200
+    assert r.json()["captain"]["user_id"] == user_captain.id
 
 
 # ---------------------------------------------------------------------------
@@ -776,22 +787,20 @@ def test_update_volunteer_self(client: TestClient) -> None:
     assert r.status_code == 204
 
 
-def test_validate_volunteer_fails_with_car_but_no_seats(
+async def test_validate_volunteer_fails_with_car_but_no_seats(
     client: TestClient,
 ) -> None:
-    async def _break_car():
-        async with get_TestingSessionLocal()() as db:
-            await db.execute(
-                update(models_raid.RaidVolunteer)
-                .where(
-                    models_raid.RaidVolunteer.user_id == user_volunteer.id,
-                    models_raid.RaidVolunteer.edition_id == active_edition.id,
-                )
-                .values(has_car=True, car_seats=None),
-            )
-            await db.commit()
 
-    asyncio.get_event_loop().run_until_complete(_break_car())
+    async with get_TestingSessionLocal()() as db:
+        await db.execute(
+            update(models_raid.RaidVolunteer)
+            .where(
+                models_raid.RaidVolunteer.user_id == user_volunteer.id,
+                models_raid.RaidVolunteer.edition_id == active_edition.id,
+            )
+            .values(has_car=True, car_seats=None),
+        )
+        await db.commit()
 
     r = client.patch(
         f"/raid/volunteers/{user_volunteer.id}/validate",
@@ -801,20 +810,18 @@ def test_validate_volunteer_fails_with_car_but_no_seats(
     assert "car_seats" in r.json()["detail"]
 
 
-def test_validate_volunteer_success(client: TestClient) -> None:
-    async def _restore():
-        async with get_TestingSessionLocal()() as db:
-            await db.execute(
-                update(models_raid.RaidVolunteer)
-                .where(
-                    models_raid.RaidVolunteer.user_id == user_volunteer.id,
-                    models_raid.RaidVolunteer.edition_id == active_edition.id,
-                )
-                .values(has_car=True, car_seats=4),
-            )
-            await db.commit()
+async def test_validate_volunteer_success(client: TestClient) -> None:
 
-    asyncio.get_event_loop().run_until_complete(_restore())
+    async with get_TestingSessionLocal()() as db:
+        await db.execute(
+            update(models_raid.RaidVolunteer)
+            .where(
+                models_raid.RaidVolunteer.user_id == user_volunteer.id,
+                models_raid.RaidVolunteer.edition_id == active_edition.id,
+            )
+            .values(has_car=True, car_seats=4),
+        )
+        await db.commit()
 
     r = client.patch(
         f"/raid/volunteers/{user_volunteer.id}/validate",

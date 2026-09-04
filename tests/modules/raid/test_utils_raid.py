@@ -328,7 +328,7 @@ async def test_get_all_security_files_zip_no_teams(mocker: MockerFixture) -> Non
     edition_id = uuid4()
 
     mocker.patch(
-        "app.modules.raid.cruds_raid.get_all_teams",
+        "app.modules.raid.cruds_raid.get_all_teams_including_security_files",
         new=AsyncMock(return_value=[]),
     )
 
@@ -347,7 +347,7 @@ async def test_get_all_team_files_zip_no_teams(mocker: MockerFixture) -> None:
     edition_id = uuid4()
 
     mocker.patch(
-        "app.modules.raid.cruds_raid.get_all_teams",
+        "app.modules.raid.cruds_raid.get_all_teams_including_security_files",
         new=AsyncMock(return_value=[]),
     )
 

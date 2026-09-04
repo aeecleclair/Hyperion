@@ -60,43 +60,87 @@ async def validate_payment(
     checkout_id = checkout_payment.checkout_id
     hyperion_error_logger.info(f"RAID: Callback Checkout id {checkout_id}")
 
+    # Try participant checkout first
     participant_checkout = await cruds_raid.get_participant_checkout_by_checkout_id(
         str(checkout_id),
         db,
     )
-    if not participant_checkout:
-        raise RaidPayementError(checkout_id)
-    participant_user_id = participant_checkout.participant_user_id
-    edition_id = participant_checkout.edition_id
-    prices = await get_core_data(coredata_raid.RaidPrice, db)
-    if (prices.student_price and paid_amount == prices.student_price) or (
-        prices.external_price and paid_amount == prices.external_price
-    ):
-        await cruds_raid.confirm_payment(participant_user_id, edition_id, db)
-    elif prices.t_shirt_price and paid_amount == prices.t_shirt_price:
-        await cruds_raid.confirm_t_shirt_payment(
-            participant_user_id,
-            edition_id,
-            db,
-        )
-    elif prices.t_shirt_price and (
-        (
-            prices.student_price
-            and paid_amount == prices.student_price + prices.t_shirt_price
-        )
-        or (
-            prices.external_price
-            and paid_amount == prices.external_price + prices.t_shirt_price
-        )
-    ):
-        await cruds_raid.confirm_payment(participant_user_id, edition_id, db)
-        await cruds_raid.confirm_t_shirt_payment(
-            participant_user_id,
-            edition_id,
-            db,
-        )
-    else:
-        hyperion_error_logger.error("Invalid payment amount")
+    if participant_checkout:
+        participant_user_id = participant_checkout.participant_user_id
+        edition_id = participant_checkout.edition_id
+        prices = await get_core_data(coredata_raid.RaidPrice, db)
+        if (prices.student_price and paid_amount == prices.student_price) or (
+            prices.external_price and paid_amount == prices.external_price
+        ):
+            await cruds_raid.confirm_payment(participant_user_id, edition_id, db)
+        elif prices.t_shirt_price and paid_amount == prices.t_shirt_price:
+            await cruds_raid.confirm_t_shirt_payment(
+                participant_user_id,
+                edition_id,
+                db,
+            )
+        elif prices.t_shirt_price and (
+            (
+                prices.student_price
+                and paid_amount == prices.student_price + prices.t_shirt_price
+            )
+            or (
+                prices.external_price
+                and paid_amount == prices.external_price + prices.t_shirt_price
+            )
+        ):
+            await cruds_raid.confirm_payment(participant_user_id, edition_id, db)
+            await cruds_raid.confirm_t_shirt_payment(
+                participant_user_id,
+                edition_id,
+                db,
+            )
+        else:
+            hyperion_error_logger.error("Invalid payment amount")
+        return
+
+    # Try volunteer checkout
+    volunteer_checkout = await cruds_raid.get_volunteer_checkout_by_checkout_id(
+        str(checkout_id),
+        db,
+    )
+    if volunteer_checkout:
+        volunteer_user_id = volunteer_checkout.volunteer_user_id
+        edition_id = volunteer_checkout.edition_id
+        prices = await get_core_data(coredata_raid.RaidPrice, db)
+        if prices.volunteer_price and paid_amount == prices.volunteer_price:
+            await cruds_raid.confirm_volunteer_payment(
+                volunteer_user_id,
+                edition_id,
+                db,
+            )
+        elif prices.t_shirt_price and paid_amount == prices.t_shirt_price:
+            await cruds_raid.confirm_volunteer_t_shirt_payment(
+                volunteer_user_id,
+                edition_id,
+                db,
+            )
+        elif (
+            prices.t_shirt_price
+            and prices.volunteer_price
+            and (paid_amount == prices.volunteer_price + prices.t_shirt_price)
+        ):
+            await cruds_raid.confirm_volunteer_payment(
+                volunteer_user_id,
+                edition_id,
+                db,
+            )
+            await cruds_raid.confirm_volunteer_t_shirt_payment(
+                volunteer_user_id,
+                edition_id,
+                db,
+            )
+        else:
+            hyperion_error_logger.error("Invalid payment amount")
+        return
+
+    hyperion_error_logger.error(f"No checkout found for id {checkout_id}")
+    raise RaidPayementError(checkout_id)
 
 
 async def set_team_number(
@@ -123,7 +167,9 @@ async def set_team_number(
     await cruds_raid.update_team(team.id, updated_team, db)
 
 
-def _participant_pdf_context(participant: schemas_raid.RaidParticipant) -> dict:
+def _participant_pdf_context(
+    participant: schemas_raid.RaidParticipantRestricted,
+) -> dict:
     """Build a template context with identity fields pulled from CoreUser."""
     ctx = participant.model_dump()
     if participant.user is not None:
@@ -151,6 +197,9 @@ async def generate_security_file_pdf(
         "volunteer_responsible": information.volunteer_responsible.__dict__
         if information.volunteer_responsible
         else None,
+        "course_responsible": information.course_responsible.__dict__
+        if information.course_responsible
+        else None,
         "team_number": team_number,
     }
 
@@ -165,7 +214,7 @@ async def generate_security_file_pdf(
 
 
 async def generate_recap_file_pdf(
-    team: schemas_raid.RaidTeam,
+    team: schemas_raid.RaidTeamIncludingSecurityFile,
 ):
     context = {
         "team_name": team.name,
@@ -193,7 +242,7 @@ async def get_all_security_files_zip(
     information: coredata_raid.RaidInformation,
     edition_id: UUID,
 ) -> str:
-    teams = await cruds_raid.get_all_teams(edition_id, db)
+    teams = await cruds_raid.get_all_teams_including_security_files(edition_id, db)
     hyperion_error_logger.info(
         f"RAID: Generating ZIP for {len(teams)} security files",
     )
@@ -231,7 +280,7 @@ async def get_all_team_files_zip(
     information: coredata_raid.RaidInformation,
     edition_id: UUID,
 ) -> str:
-    teams = await cruds_raid.get_all_teams(edition_id, db)
+    teams = await cruds_raid.get_all_teams_including_security_files(edition_id, db)
     hyperion_error_logger.info(
         f"RAID: Generating ZIP for {len(teams)} team recap files",
     )
@@ -265,7 +314,7 @@ async def get_participant(
     user_id: str,
     edition_id: UUID,
     db: AsyncSession,
-) -> schemas_raid.RaidParticipant:
+) -> schemas_raid.RaidParticipantRestricted:
     participant = await cruds_raid.get_participant_by_user_id(user_id, edition_id, db)
     if not participant:
         raise HTTPException(status_code=404, detail="Participant not found.")
@@ -273,7 +322,7 @@ async def get_participant(
 
 
 def calculate_raid_payment(
-    participant: schemas_raid.RaidParticipant,
+    participant: schemas_raid.RaidParticipantRestricted,
     raid_prices: coredata_raid.RaidPrice,
 ):
     if (
@@ -305,4 +354,29 @@ def calculate_raid_payment(
         if not checkout_name:
             checkout_name += " + "
         checkout_name += "T Shirt taille" + participant.t_shirt_size.value
+    return price, checkout_name
+
+
+def calculate_volunteer_payment(
+    volunteer: schemas_raid.RaidVolunteer,
+    raid_prices: coredata_raid.RaidPrice,
+):
+    if not raid_prices.volunteer_price or not raid_prices.t_shirt_price:
+        raise HTTPException(status_code=404, detail="Volunteer prices not set.")
+
+    price = 0
+    checkout_name = ""
+
+    if not volunteer.payment:
+        price += raid_prices.volunteer_price
+        checkout_name = "Inscription Raid - Bénévole"
+    if (
+        volunteer.t_shirt_size
+        and volunteer.t_shirt_size != Size.None_
+        and not volunteer.t_shirt_payment
+    ):
+        price += raid_prices.t_shirt_price
+        if not checkout_name:
+            checkout_name += " + "
+        checkout_name += "T Shirt taille" + volunteer.t_shirt_size.value
     return price, checkout_name

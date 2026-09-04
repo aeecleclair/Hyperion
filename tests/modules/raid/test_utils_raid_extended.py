@@ -145,6 +145,9 @@ async def test_validate_payment_raised_when_checkout_not_found():
         mock_cruds.get_participant_checkout_by_checkout_id = AsyncMock(
             return_value=None,
         )
+        mock_cruds.get_volunteer_checkout_by_checkout_id = AsyncMock(
+            return_value=None,
+        )
 
         with pytest.raises(RaidPayementError) as exc_info:
             await validate_payment(checkout_payment, AsyncMock())

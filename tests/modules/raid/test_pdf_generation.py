@@ -67,6 +67,7 @@ def _create_mock_information() -> MagicMock:
     info.rescue = None
     info.security_responsible = None
     info.volunteer_responsible = None
+    info.course_responsible = None
     return info
 
 
@@ -141,7 +142,7 @@ class TestPDFGenerationFilename:
 
         with (
             patch(
-                "app.modules.raid.utils.utils_raid.cruds_raid.get_all_teams",
+                "app.modules.raid.utils.utils_raid.cruds_raid.get_all_teams_including_security_files",
                 new=AsyncMock(return_value=[team]),
             ),
             patch(
@@ -171,7 +172,7 @@ class TestPDFGenerationFilename:
 
         with (
             patch(
-                "app.modules.raid.utils.utils_raid.cruds_raid.get_all_teams",
+                "app.modules.raid.utils.utils_raid.cruds_raid.get_all_teams_including_security_files",
                 new=AsyncMock(return_value=[team]),
             ),
             patch(
