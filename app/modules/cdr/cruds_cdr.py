@@ -151,8 +151,9 @@ async def get_products_by_seller_id(
             await db.execute(
                 select(
                     models_cdr.TicketGenerator.id,
-                    func().count(models_cdr.Ticket) * models_cdr.TicketGenerator.max_use
-                    - func().sum(models_cdr.Ticket.scan_left),
+                    func.count(models_cdr.Ticket.id)
+                    * models_cdr.TicketGenerator.max_use
+                    - func.sum(models_cdr.Ticket.scan_left),
                 )
                 .select_from(models_cdr.CdrProduct)
                 .join(

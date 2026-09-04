@@ -422,7 +422,7 @@ def generate_format(workbook: xlsxwriter.Workbook):
 
 
 def build_product_structure(
-    products: list[models_cdr.CdrProduct],
+    products: list[schemas_cdr.ProductComplete],
     variants: list[models_cdr.ProductVariant],
     data_fields: dict[UUID, list[models_cdr.CustomDataField]],
 ):
@@ -790,7 +790,7 @@ def construct_dataframe_from_users_purchases(
     users_purchases: dict[str, list[models_cdr.Purchase]],
     users_answers: dict[str, list[models_cdr.CustomData]],
     users: list[models_users.CoreUser],
-    products: list[models_cdr.CdrProduct],
+    products: list[schemas_cdr.ProductComplete],
     variants: list[models_cdr.ProductVariant],
     data_fields: dict[UUID, list[models_cdr.CustomDataField]],
     users_curriculum: dict[str, str],
@@ -827,7 +827,7 @@ def construct_dataframe_from_users_purchases(
     workbook.close()
 
 
-def product_model_to_schema_no_constaint(product_model=models_cdr.CdrProduct):
+def product_model_to_schema_no_constaint(product_model: models_cdr.CdrProduct):
     return schemas_cdr.ProductCompleteNoConstraint(
         name_fr=product_model.name_fr,
         name_en=product_model.name_en,
@@ -841,7 +841,9 @@ def product_model_to_schema_no_constaint(product_model=models_cdr.CdrProduct):
         variants=[
             variant_model_to_schema(variant) for variant in product_model.variants
         ],
-        related_membership=membership_model_to_schema(product_model.related_membership),
+        related_membership=membership_model_to_schema(product_model.related_membership)
+        if product_model.related_membership
+        else None,
         tickets=[
             ticket_generator_model_to_schema(generator)
             for generator in product_model.tickets
@@ -849,7 +851,7 @@ def product_model_to_schema_no_constaint(product_model=models_cdr.CdrProduct):
     )
 
 
-def ticket_generator_model_to_schema(generator_model=models_cdr.TicketGenerator):
+def ticket_generator_model_to_schema(generator_model: models_cdr.TicketGenerator):
     return schemas_cdr.GenerateTicketComplete(
         name=generator_model.name,
         max_use=generator_model.max_use,
@@ -858,7 +860,7 @@ def ticket_generator_model_to_schema(generator_model=models_cdr.TicketGenerator)
     )
 
 
-def variant_model_to_schema(variant_model=models_cdr.ProductVariant):
+def variant_model_to_schema(variant_model: models_cdr.ProductVariant):
     return schemas_cdr.ProductVariantComplete(
         id=variant_model.id,
         year=variant_model.year,
@@ -878,7 +880,7 @@ def variant_model_to_schema(variant_model=models_cdr.ProductVariant):
     )
 
 
-def document_model_to_schema(document_model=models_cdr.Document):
+def document_model_to_schema(document_model: models_cdr.Document):
     return schemas_cdr.DocumentComplete(
         name=document_model.name,
         id=document_model.id,
@@ -887,7 +889,7 @@ def document_model_to_schema(document_model=models_cdr.Document):
     )
 
 
-def curriculum_model_to_schema(curriculum_model=models_cdr.Curriculum):
+def curriculum_model_to_schema(curriculum_model: models_cdr.Curriculum):
     return schemas_cdr.CurriculumComplete(
         name=curriculum_model.name,
         id=curriculum_model.id,
