@@ -132,7 +132,7 @@ async def get_products_by_seller_id(
     db: AsyncSession,
     seller_id: UUID,
     cdr_year: int,
-) -> Sequence[models_cdr.CdrProduct]:
+) -> list[schemas_cdr.ProductComplete]:
     products = (
         (
             await db.execute(
@@ -203,22 +203,34 @@ async def get_products_by_seller_id(
                 year=product.year,
                 seller_id=product.seller_id,
                 variants=[
-                    utils_cdr.variant_crud_to_schema(variant)
+                    utils_cdr.variant_model_to_schema(variant)
                     for variant in product.variants
                 ],
                 related_membership=product.related_membership,
                 product_constraints=[
-                    utils_cdr.product_crud_to_schema(constraint)
+                    utils_cdr.product_model_to_schema_no_constaint(constraint)
                     for constraint in product.product_constraints
                 ],
                 document_constraints=[
-                    utils_cdr.document_crud_to_schema(document)
+                    utils_cdr.document_model_to_schema(document)
                     for document in product.document_constraints
                 ],
                 tickets=generators,
             ),
         )
     return schemas_products
+
+
+async def get_all_products_by_seller_id(
+    db: AsyncSession,
+    seller_id: UUID,
+) -> Sequence[models_cdr.CdrProduct]:
+    result = await db.execute(
+        select(models_cdr.CdrProduct).where(
+            models_cdr.CdrProduct.seller_id == seller_id,
+        ),
+    )
+    return result.unique().scalars().all()
 
 
 async def get_online_products_by_seller_id(

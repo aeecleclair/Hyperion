@@ -883,6 +883,7 @@ def document_model_to_schema(document_model=models_cdr.Document):
         name=document_model.name,
         id=document_model.id,
         seller_id=document_model.seller_id,
+        document_template_id=document_model.document_template_id,
     )
 
 
