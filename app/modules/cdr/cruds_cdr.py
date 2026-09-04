@@ -182,16 +182,15 @@ async def get_products_by_seller_id(
                 ),
                 None,
             )
-            if count is not None:
-                generators.append(
-                    schemas_cdr.GenerateTicketComplete(
-                        name=generator.name,
-                        id=generator.id,
-                        max_use=generator.max_use,
-                        expiration=generator.expiration,
-                        scan_count=count[1],
-                    ),
-                )
+            generators.append(
+                schemas_cdr.GenerateTicketComplete(
+                    name=generator.name,
+                    id=generator.id,
+                    max_use=generator.max_use,
+                    expiration=generator.expiration,
+                    scan_count=count[1] if count is not None else None,
+                ),
+            )
         schemas_products.append(
             schemas_cdr.ProductComplete(
                 name_en=product.name_en,
