@@ -331,6 +331,14 @@ class RaidParticipantCheckout(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class RaidVolunteerCheckout(BaseModel):
+    volunteer_user_id: str
+    edition_id: UUID
+    checkout_id: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class RaidEditionBase(BaseModel):
     name: str
     year: int
@@ -376,6 +384,8 @@ class RaidVolunteerBase(BaseModel):
     is_special_driver: bool = False
     is_utility_vehicle_driver: bool = False
     is_parcours_helper: bool = False
+    payment: bool = False
+    t_shirt_payment: bool = False
 
 
 def _validate_car_seats(self):
@@ -395,6 +405,8 @@ class RaidVolunteerCreate(RaidVolunteerBase):
     created_at: datetime
     validated: bool = False
     cancelled: bool = False
+    payment: bool = False
+    t_shirt_payment: bool = False
 
     _check_car_seats_consistency = model_validator(mode="after")(_validate_car_seats)
 
@@ -405,6 +417,8 @@ class RaidVolunteer(RaidVolunteerBase):
     created_at: datetime
     validated: bool
     cancelled: bool
+    payment: bool
+    t_shirt_payment: bool
     user: CoreUser
 
     model_config = ConfigDict(from_attributes=True)

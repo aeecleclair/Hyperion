@@ -35,6 +35,7 @@ from app.modules.raid.raid_type import (
 )
 from app.modules.raid.utils.utils_raid import (
     calculate_raid_payment,
+    calculate_volunteer_payment,
     get_all_security_files_zip,
     get_all_team_files_zip,
     validate_payment,
@@ -529,8 +530,14 @@ async def get_my_team(
         difficulty=participant_team.difficulty,
         meeting_place=participant_team.meeting_place,
         file_id=participant_team.file_id,
-        captain=participant_team.captain,
-        second=participant_team.second,
+        captain=schemas_raid.RaidParticipantRestrictedComplete(
+            **participant_team.captain.model_dump(),
+        ),
+        second=schemas_raid.RaidParticipantRestrictedComplete(
+            **participant_team.second.model_dump(),
+        )
+        if participant_team.second
+        else None,
         validation_progress=participant_team.validation_progress,
     )
 
@@ -600,8 +607,14 @@ async def get_team_by_id(
         difficulty=team.difficulty,
         meeting_place=team.meeting_place,
         file_id=team.file_id,
-        captain=team.captain,
-        second=team.second,
+        captain=schemas_raid.RaidParticipantRestrictedComplete(
+            **team.captain.model_dump(),
+        ),
+        second=schemas_raid.RaidParticipantRestrictedComplete(
+            **team.second.model_dump(),
+        )
+        if team.second
+        else None,
         validation_progress=team.validation_progress,
     )
 
@@ -921,6 +934,43 @@ async def confirm_t_shirt_payment(
 
 
 @module.router.post(
+    "/raid/volunteer/{user_id}/payment",
+    status_code=204,
+)
+async def confirm_volunteer_payment(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.manage_raid]),
+    ),
+    edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
+):
+    await cruds_raid.confirm_volunteer_payment(user_id, edition.id, db)
+
+
+@module.router.post(
+    "/raid/volunteer/{user_id}/t_shirt_payment",
+    status_code=204,
+)
+async def confirm_volunteer_t_shirt_payment(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.manage_raid]),
+    ),
+    edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
+):
+    volunteer = await cruds_raid.get_volunteer_by_user_id(user_id, edition.id, db)
+    if (
+        not volunteer
+        or not volunteer.t_shirt_size
+        or volunteer.t_shirt_size == Size.None_
+    ):
+        raise HTTPException(status_code=400, detail="T shirt size not set.")
+    await cruds_raid.confirm_volunteer_t_shirt_payment(user_id, edition.id, db)
+
+
+@module.router.post(
     "/raid/participant/{user_id}/honour",
     status_code=204,
 )
@@ -1210,6 +1260,49 @@ async def get_payment_url(
     await cruds_raid.create_participant_checkout(
         schemas_raid.RaidParticipantCheckout(
             participant_user_id=user.id,
+            edition_id=edition.id,
+            checkout_id=str(checkout.id),
+        ),
+        db=db,
+    )
+    return schemas_raid.PaymentUrl(url=checkout.payment_url)
+
+
+@module.router.get(
+    "/raid/volunteers/pay",
+    response_model=schemas_raid.PaymentUrl,
+    status_code=201,
+)
+async def get_volunteer_payment_url(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.access_raid]),
+    ),
+    payment_tool: PaymentTool = Depends(get_payment_tool(HelloAssoConfigName.RAID)),
+    edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
+):
+    raid_prices = await get_core_data(coredata_raid.RaidPrice, db)
+    if not raid_prices.volunteer_price or not raid_prices.t_shirt_price:
+        raise HTTPException(status_code=404, detail="Volunteer prices not set.")
+
+    volunteer = await cruds_raid.get_volunteer_by_user_id(user.id, edition.id, db)
+    if not volunteer:
+        raise HTTPException(status_code=403, detail="You are not a volunteer.")
+    price, checkout_name = calculate_volunteer_payment(volunteer, raid_prices)
+
+    user_dict = {k: v for k, v in user.__dict__.items() if not k.startswith("_")}
+    user_dict.pop("school", None)
+    checkout = await payment_tool.init_checkout(
+        module=module.root,
+        checkout_amount=price,
+        checkout_name=checkout_name,
+        payer_user=schemas_users.CoreUser(**user_dict),
+        db=db,
+    )
+    hyperion_error_logger.info(f"RAID Volunteer: Logging Checkout id {checkout.id}")
+    await cruds_raid.create_volunteer_checkout(
+        schemas_raid.RaidVolunteerCheckout(
+            volunteer_user_id=user.id,
             edition_id=edition.id,
             checkout_id=str(checkout.id),
         ),

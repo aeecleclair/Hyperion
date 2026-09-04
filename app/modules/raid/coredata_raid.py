@@ -24,3 +24,4 @@ class RaidPrice(core_data.BaseCoreData):
     partner_price: int | None = None
     external_price: int | None = None
     t_shirt_price: int | None = None
+    volunteer_price: int | None = None

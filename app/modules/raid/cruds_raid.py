@@ -687,6 +687,38 @@ async def confirm_t_shirt_payment(
     await db.flush()
 
 
+async def confirm_volunteer_payment(
+    user_id: str,
+    edition_id: UUID,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_raid.RaidVolunteer)
+        .where(
+            models_raid.RaidVolunteer.user_id == user_id,
+            models_raid.RaidVolunteer.edition_id == edition_id,
+        )
+        .values(payment=True),
+    )
+    await db.flush()
+
+
+async def confirm_volunteer_t_shirt_payment(
+    user_id: str,
+    edition_id: UUID,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_raid.RaidVolunteer)
+        .where(
+            models_raid.RaidVolunteer.user_id == user_id,
+            models_raid.RaidVolunteer.edition_id == edition_id,
+        )
+        .values(t_shirt_payment=True),
+    )
+    await db.flush()
+
+
 async def validate_attestation_on_honour(
     user_id: str,
     edition_id: UUID,
@@ -901,6 +933,34 @@ async def get_participant_checkout_by_checkout_id(
     return schemas_raid.RaidParticipantCheckout.model_validate(model) if model else None
 
 
+async def create_volunteer_checkout(
+    checkout: schemas_raid.RaidVolunteerCheckout,
+    db: AsyncSession,
+) -> None:
+    db.add(
+        models_raid.RaidVolunteerCheckout(
+            id=str(uuid.uuid4()),
+            volunteer_user_id=checkout.volunteer_user_id,
+            edition_id=checkout.edition_id,
+            checkout_id=checkout.checkout_id,
+        ),
+    )
+    await db.flush()
+
+
+async def get_volunteer_checkout_by_checkout_id(
+    checkout_id: str,
+    db: AsyncSession,
+) -> schemas_raid.RaidVolunteerCheckout | None:
+    checkout = await db.execute(
+        select(models_raid.RaidVolunteerCheckout).where(
+            models_raid.RaidVolunteerCheckout.checkout_id == checkout_id,
+        ),
+    )
+    model = checkout.scalars().first()
+    return schemas_raid.RaidVolunteerCheckout.model_validate(model) if model else None
+
+
 # --- Edition CRUDs ------------------------------------------------------
 
 
@@ -1050,6 +1110,8 @@ async def create_volunteer(
             is_special_driver=volunteer.is_special_driver,
             is_utility_vehicle_driver=volunteer.is_utility_vehicle_driver,
             is_parcours_helper=volunteer.is_parcours_helper,
+            payment=volunteer.payment,
+            t_shirt_payment=volunteer.t_shirt_payment,
         ),
     )
     await db.flush()
