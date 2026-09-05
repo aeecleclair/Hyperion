@@ -40,6 +40,14 @@ class RedisKeysList:
     def event(event_id: UUID) -> str:
         return f"ticketing:event:{event_id}"
 
+    @staticmethod
+    def managed_event_user_permission(event_id: UUID, user_id: str) -> str:
+        return f"ticketing:event:{event_id}:user:{user_id}:can_manage"
+
+    @staticmethod
+    def scan_permission_for_seller(event_id: UUID, user_id: str) -> str:
+        return f"ticketing:event:{event_id}:user:{user_id}:can_scan"
+
     # @staticmethod
     # def categories(event_id: UUID) -> str:
     #     return f"ticketing:event:{event_id}:categories"
@@ -211,4 +219,59 @@ async def get_category_remaining_quota_with_cache(
         expire=6 * 3_600,
         db=db,
         category_id=category_id,
+    )
+
+
+
+async def get_boolean_from_cache_or_none(
+    redis: Redis | None,
+    key: str,
+) -> bool | None:
+    """Get a boolean value from the cache, or None if not found/error."""
+    if redis is None or not isinstance(redis, Redis):
+        return None
+
+    result = await redis.get(key)
+    if result is None:
+        return None
+
+    try:
+        return bool(int(result))
+    except (ValueError, TypeError):
+        return None
+
+
+async def get_manage_event_permission_with_cache(
+    redis: Redis | None,
+    user_id: str,
+    event_id: UUID,
+) -> bool | None:
+    """
+    Check if the user has permission to manage the event.
+    Returns:
+    - True/False if the user has/does not have permission,
+    - None if key not found or error occurs.
+    """
+    # Use a cache layer to avoid multiple queries for the same event_id and user_id
+    return await get_boolean_from_cache_or_none(
+        redis=redis,
+        key=RedisKeysList.managed_event_user_permission(event_id, user_id),
+    )
+
+
+async def get_scan_permission_for_seller_with_cache(
+    redis: Redis | None,
+    user_id: str,
+    event_id: UUID,
+) -> bool | None:
+    """
+    Check if the user has permission to scan tickets for the event.
+    Returns:
+    - True/False if the user has/does not have permission,
+    - None if key not found or error occurs.
+    """
+    # Use a cache layer to avoid multiple queries for the same event_id and user_id
+    return await get_boolean_from_cache_or_none(
+        redis=redis,
+        key=RedisKeysList.scan_permission_for_seller(event_id, user_id),
     )

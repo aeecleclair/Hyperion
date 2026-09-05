@@ -6,6 +6,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.users import schemas_users
 from app.modules.ticketing import models_ticketing, schemas_ticketing
+from app.modules.ticketing.types_ticketing import TicketStatus
 
 
 async def get_organisers(
@@ -617,8 +618,24 @@ async def get_category_remaining_quota(
 async def get_categories_by_session_id(
     session_id: UUID,
     db: AsyncSession,
+    user_groups: list[UUID] | None = None,
 ) -> list[schemas_ticketing.CategorySimple]:
     """Get all categories for a specific session."""
+
+    query = (
+        select(models_ticketing.TicketingCategory)
+        .join(models_ticketing.CategorySessionAssociation)
+        .where(
+            models_ticketing.CategorySessionAssociation.session_id == session_id,
+        )
+    )
+    if user_groups is not None:
+        query = query.where(
+            models_ticketing.TicketingCategory.required_mebership.is_(None)
+            | models_ticketing.TicketingCategory.required_mebership.in_(
+                user_groups,
+            ),
+        )
 
     return [
         schemas_ticketing.CategorySimple(
@@ -633,12 +650,7 @@ async def get_categories_by_session_id(
         )
         for category in (
             await db.execute(
-                select(models_ticketing.TicketingCategory)
-                .join(models_ticketing.CategorySessionAssociation)
-                .where(
-                    models_ticketing.CategorySessionAssociation.session_id
-                    == session_id,
-                ),
+                query,
             )
         )
         .scalars()
@@ -649,8 +661,20 @@ async def get_categories_by_session_id(
 async def get_categories_by_event_id(
     event_id: UUID,
     db: AsyncSession,
+    user_groups: list[UUID] | None = None,
 ) -> list[schemas_ticketing.CategorySimple]:
     """Get all categories for a specific event."""
+
+    query = select(models_ticketing.TicketingCategory).where(
+        models_ticketing.TicketingCategory.event_id == event_id,
+    )
+    if user_groups is not None:
+        query = query.where(
+            models_ticketing.TicketingCategory.required_mebership.is_(None)
+            | models_ticketing.TicketingCategory.required_mebership.in_(
+                user_groups,
+            ),
+        )
 
     return [
         schemas_ticketing.CategorySimple(
@@ -665,9 +689,7 @@ async def get_categories_by_event_id(
         )
         for category in (
             await db.execute(
-                select(models_ticketing.TicketingCategory).where(
-                    models_ticketing.TicketingCategory.event_id == event_id,
-                ),
+                query,
             )
         )
         .scalars()
@@ -749,10 +771,15 @@ async def increment_used_quota_category(
 
 async def get_tickets(
     db: AsyncSession,
+    status: list[TicketStatus] | None = None,
 ) -> list[schemas_ticketing.TicketSimple]:
     """Get all tickets."""
 
-    tickets = await db.execute(select(models_ticketing.TicketingTicket))
+    query = select(models_ticketing.TicketingTicket)
+    if status is not None:
+        query = query.where(models_ticketing.TicketingTicket.status.in_(status))
+
+    tickets = await db.execute(query)
     return [
         schemas_ticketing.TicketSimple(
             id=ticket.id,
@@ -780,14 +807,17 @@ async def get_tickets(
 async def get_tickets_by_event_id(
     event_id: UUID,
     db: AsyncSession,
+    status: list[TicketStatus] | None = None,
 ) -> list[schemas_ticketing.TicketSimple]:
     """Get all tickets for a specific event."""
 
-    tickets = await db.execute(
-        select(models_ticketing.TicketingTicket).where(
-            models_ticketing.TicketingTicket.event_id == event_id,
-        ),
+    query = select(models_ticketing.TicketingTicket).where(
+        models_ticketing.TicketingTicket.event_id == event_id,
     )
+    if status is not None:
+        query = query.where(models_ticketing.TicketingTicket.status.in_(status))
+
+    tickets = await db.execute(query)
     return [
         schemas_ticketing.TicketSimple(
             id=ticket.id,
@@ -815,13 +845,16 @@ async def get_tickets_by_event_id(
 async def get_tickets_by_category_id(
     category_id: UUID,
     db: AsyncSession,
+    status: list[TicketStatus] | None = None,
 ) -> list[schemas_ticketing.TicketSimple]:
     """Get all tickets for a specific category."""
-    tickets = await db.execute(
-        select(models_ticketing.TicketingTicket).where(
-            models_ticketing.TicketingTicket.category_id == category_id,
-        ),
+    query = select(models_ticketing.TicketingTicket).where(
+        models_ticketing.TicketingTicket.category_id == category_id,
     )
+    if status is not None:
+        query = query.where(models_ticketing.TicketingTicket.status.in_(status))
+
+    tickets = await db.execute(query)
     return [
         schemas_ticketing.TicketSimple(
             id=ticket.id,
@@ -849,14 +882,17 @@ async def get_tickets_by_category_id(
 async def get_tickets_by_session_id(
     session_id: UUID,
     db: AsyncSession,
+    status: list[TicketStatus] | None = None,
 ) -> list[schemas_ticketing.TicketSimple]:
     """Get all tickets for a specific session."""
 
-    tickets = await db.execute(
-        select(models_ticketing.TicketingTicket).where(
-            models_ticketing.TicketingTicket.session_id == session_id,
-        ),
+    query = select(models_ticketing.TicketingTicket).where(
+        models_ticketing.TicketingTicket.session_id == session_id,
     )
+    if status is not None:
+        query = query.where(models_ticketing.TicketingTicket.status.in_(status))
+
+    tickets = await db.execute(query)
     return [
         schemas_ticketing.TicketSimple(
             id=ticket.id,
@@ -884,14 +920,17 @@ async def get_tickets_by_session_id(
 async def get_tickets_by_user_id(
     user_id: str,
     db: AsyncSession,
+    status: list[TicketStatus] | None = None,
 ) -> list[schemas_ticketing.TicketSimple]:
     """Get all tickets for a specific user."""
 
-    tickets = await db.execute(
-        select(models_ticketing.TicketingTicket).where(
-            models_ticketing.TicketingTicket.user_id == user_id,
-        ),
+    query = select(models_ticketing.TicketingTicket).where(
+        models_ticketing.TicketingTicket.user_id == user_id,
     )
+    if status is not None:
+        query = query.where(models_ticketing.TicketingTicket.status.in_(status))
+
+    tickets = await db.execute(query)
     return [
         schemas_ticketing.TicketSimple(
             id=ticket.id,
@@ -919,20 +958,17 @@ async def get_tickets_by_user_id(
 async def get_ticket_by_id(
     ticket_id: UUID,
     db: AsyncSession,
+    status: list[TicketStatus] | None = None,
 ) -> schemas_ticketing.TicketComplete | None:
     """Get a ticket by its ID."""
 
-    ticket = (
-        (
-            await db.execute(
-                select(models_ticketing.TicketingTicket).where(
-                    models_ticketing.TicketingTicket.id == ticket_id,
-                ),
-            )
-        )
-        .scalars()
-        .first()
+    query = select(models_ticketing.TicketingTicket).where(
+        models_ticketing.TicketingTicket.id == ticket_id,
     )
+    if status is not None:
+        query = query.where(models_ticketing.TicketingTicket.status.in_(status))
+
+    ticket = (await db.execute(query)).scalars().first()
 
     return (
         schemas_ticketing.TicketComplete(
@@ -1014,6 +1050,35 @@ async def update_ticket(
         update(models_ticketing.TicketingTicket)
         .where(models_ticketing.TicketingTicket.id == ticket_id)
         .values(**ticket_update.model_dump(exclude_unset=True)),
+    )
+    await db.flush()
+
+
+async def increment_ticket_scan_count(
+    db: AsyncSession,
+    ticket_id: UUID,
+) -> None:
+    """Increment the scan count of a ticket."""
+
+    await db.execute(
+        update(models_ticketing.TicketingTicket)
+        .where(models_ticketing.TicketingTicket.id == ticket_id)
+        .values(nb_scan=models_ticketing.TicketingTicket.nb_scan + 1),
+    )
+    await db.flush()
+
+
+async def change_ticket_status(
+    db: AsyncSession,
+    ticket_id: UUID,
+    new_status: TicketStatus,
+) -> None:
+    """Change the status of an existing ticket."""
+
+    await db.execute(
+        update(models_ticketing.TicketingTicket)
+        .where(models_ticketing.TicketingTicket.id == ticket_id)
+        .values(status=new_status),
     )
     await db.flush()
 

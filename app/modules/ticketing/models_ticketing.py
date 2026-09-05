@@ -6,6 +6,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.users import models_users
+from app.modules.ticketing.types_ticketing import TicketStatus
 from app.types.sqlalchemy import Base, PrimaryKey
 
 if TYPE_CHECKING:
@@ -144,7 +145,7 @@ class TicketingTicket(Base):
     )
     total: Mapped[int]
     created_at: Mapped[datetime]
-    status: Mapped[str]  # TODO: Enum
+    status: Mapped[TicketStatus]
     nb_scan: Mapped[int]
 
     user: Mapped[models_users.CoreUser] = relationship(
