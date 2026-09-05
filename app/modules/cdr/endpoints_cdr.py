@@ -311,13 +311,18 @@ async def update_cdr_user(
                 settings=settings,
             )
 
-    if user_update.floor or user_update.nickname:
+    if (
+        user_update.floor
+        or user_update.nickname
+        or user_update.promo
+        or user_update.birthday
+        or user_update.phone
+    ):
         await cruds_users.update_user(
             db=db,
             user_id=user_id,
-            user_update=schemas_users.CoreUserUpdate(
-                nickname=user_update.nickname,
-                floor=user_update.floor,
+            user_update=schemas_users.CoreUserUpdateAdmin(
+                **user_update.model_dump(exclude_unset=True, exclude={"email"}),
             ),
         )
     await db.flush()
@@ -1147,7 +1152,7 @@ async def update_product_variant(
     seller_id: UUID,
     product_id: UUID,
     variant_id: UUID,
-    product_variant: schemas_cdr.ProductVariantEdit,
+    product_variant_edit: schemas_cdr.ProductVariantEdit,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
@@ -1159,7 +1164,7 @@ async def update_product_variant(
     **User must be part of the seller's group to use this endpoint**
     """
 
-    if not bool(product_variant.model_fields_set):
+    if not bool(product_variant_edit.model_fields_set):
         raise HTTPException(
             status_code=400,
             detail="You must specify at least one field to update",
@@ -1177,18 +1182,25 @@ async def update_product_variant(
         product_id=product_id,
         variant_id=variant_id,
     )
+    db_variant = await cruds_cdr.get_product_variant_by_id(
+        db=db,
+        variant_id=variant_id,
+    )
     purchases = await cruds_cdr.get_purchases_by_variant_id(
         db=db,
         product_variant_id=variant_id,
     )
-    if purchases and "price" in product_variant.model_fields_set:
+    if purchases and "price" in product_variant_edit.model_fields_set:
         raise HTTPException(
             status_code=403,
             detail="You can't edit the price of this variant because it has already been purchased.",
         )
     if (
         purchases
-        and "related_membership_added_duration" in product_variant.model_fields_set
+        and db_variant
+        and "related_membership_added_duration" in product_variant_edit.model_fields_set
+        and db_variant.related_membership_added_duration
+        != product_variant_edit.related_membership_added_duration
     ):
         raise HTTPException(
             status_code=403,
@@ -1198,16 +1210,16 @@ async def update_product_variant(
     if (
         db_product
         and not db_product.related_membership
-        and product_variant.related_membership_added_duration
+        and product_variant_edit.related_membership_added_duration
     ):
         raise HTTPException(
             status_code=403,
             detail="This product has no related membership. You can't specify a membership duration.",
         )
     if (
-        product_variant.price is not None
+        product_variant_edit.price is not None
         and db_product
-        and (not db_product.needs_validation and product_variant.price != 0)
+        and (not db_product.needs_validation and product_variant_edit.price != 0)
     ):
         raise HTTPException(
             status_code=403,
@@ -1216,12 +1228,12 @@ async def update_product_variant(
 
     await cruds_cdr.update_product_variant(
         variant_id=variant_id,
-        product_variant=product_variant,
+        product_variant=product_variant_edit,
         db=db,
     )
-    if product_variant.allowed_curriculum is not None:
+    if product_variant_edit.allowed_curriculum is not None:
         await cruds_cdr.delete_allowed_curriculums(db=db, variant_id=variant_id)
-        for c in product_variant.allowed_curriculum:
+        for c in product_variant_edit.allowed_curriculum:
             cruds_cdr.create_allowed_curriculum(
                 db,
                 models_cdr.AllowedCurriculum(
