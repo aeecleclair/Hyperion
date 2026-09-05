@@ -275,3 +275,35 @@ async def get_scan_permission_for_seller_with_cache(
         redis=redis,
         key=RedisKeysList.scan_permission_for_seller(event_id, user_id),
     )
+
+
+async def set_manage_event_permission_cache(
+    redis: Redis | None,
+    user_id: str,
+    event_id: UUID,
+    has_permission: bool,
+    expire: int | None = 300,
+) -> None:
+    """Set the cache for manage event permission."""
+    if redis is not None and isinstance(redis, Redis):
+        await redis.set(
+            RedisKeysList.managed_event_user_permission(event_id, user_id),
+            int(has_permission),
+            ex=expire,
+        )
+
+
+async def set_scan_permission_for_seller_cache(
+    redis: Redis | None,
+    user_id: str,
+    event_id: UUID,
+    has_permission: bool,
+    expire: int | None = 300,
+) -> None:
+    """Set the cache for scan permission for seller."""
+    if redis is not None and isinstance(redis, Redis):
+        await redis.set(
+            RedisKeysList.scan_permission_for_seller(event_id, user_id),
+            int(has_permission),
+            ex=expire,
+        )
