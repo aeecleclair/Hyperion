@@ -4,6 +4,7 @@ Create Date: 2026-03-19 17:38:31.400400
 """
 
 from collections.abc import Sequence
+from enum import Enum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -16,7 +17,7 @@ from app.types.sqlalchemy import TZDateTime
 
 # revision identifiers, used by Alembic.
 revision: str = "8ccdd1f377c9"
-down_revision: str | None = "7dbe3290e145"
+down_revision: str | None = "320892a84fd8"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
