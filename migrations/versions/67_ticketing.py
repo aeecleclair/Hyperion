@@ -107,6 +107,7 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("nb_scan", sa.Integer(), nullable=False),
+        sa.Column("secret", sa.Uuid(), nullable=False),
         sa.ForeignKeyConstraint(["category_id"], ["ticketing_category.id"]),
         sa.ForeignKeyConstraint(["event_id"], ["ticketing_event.id"]),
         sa.ForeignKeyConstraint(["session_id"], ["ticketing_session.id"]),

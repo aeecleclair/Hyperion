@@ -19,7 +19,7 @@ from app.dependencies import (
 from app.modules.ticketing import cache_ticketing, cruds_ticketing, schemas_ticketing
 from app.modules.ticketing.factory_ticketing import TicketingFactory
 from app.modules.ticketing.types_ticketing import TicketStatus
-from app.modules.ticketing.utils_ticketing import (
+from app.modules.ticketing.utils.permissions_check_ticketing import (
     check_manage_event_for_organiser_by_user,
     check_manage_event_permission_for_user,
     check_scan_permission_for_seller,
@@ -870,6 +870,31 @@ async def get_my_tickets(
 
 
 @module.router.get(
+    "/ticketing/users/me/tickets/{ticket_id}/secret/",
+    summary="Get the ticket secret for the current user",
+    response_model=schemas_ticketing.TicketSecret,
+    status_code=200,
+)
+async def get_my_ticket_secret(
+    ticket_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([TicketingPermissions.access_ticketing]),
+    ),
+) -> schemas_ticketing.TicketSecret:
+    """Get the ticket secret for the current user."""
+    ticket_secret = await cruds_ticketing.get_ticket_secret(ticket_id=ticket_id, db=db)
+    if ticket_secret is None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    if ticket_secret.user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Users can only access their own tickets secret",
+        )
+    return ticket_secret
+
+
+@module.router.get(
     "/ticketing/users/{user_id}/tickets/",
     summary="Get all tickets for a user",
     response_model=list[schemas_ticketing.TicketSimple],
@@ -1171,13 +1196,14 @@ async def delete_ticket(
 
 
 @module.router.get(
-    "/ticketing/tickets/{ticket_id}/scan/",
+    "/ticketing/tickets/{ticket_id}/scan/{secret}",
     summary="Scan a ticket",
     response_model=None,
     status_code=200,
 )
 async def scan_ticket(
     ticket_id: UUID,
+    secret: UUID,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis | None = Depends(get_redis_client),
     user: models_users.CoreUser = Depends(
@@ -1185,9 +1211,14 @@ async def scan_ticket(
     ),
 ) -> None:
     """Scan a ticket."""
-    stored_ticket = await cruds_ticketing.get_ticket_by_id(ticket_id=ticket_id, db=db)
+    stored_ticket = await cruds_ticketing.get_ticket_by_secret(secret=secret, db=db)
     if stored_ticket is None:
         raise HTTPException(status_code=404, detail="Ticket not found")
+    if stored_ticket.id != ticket_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Ticket ID does not match the secret",
+        )
     # Check seller permissions to scan the ticket
     await check_scan_permission_for_seller(
         db=db,

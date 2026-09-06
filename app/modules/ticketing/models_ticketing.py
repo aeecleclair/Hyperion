@@ -147,6 +147,7 @@ class TicketingTicket(Base):
     created_at: Mapped[datetime]
     status: Mapped[TicketStatus]
     nb_scan: Mapped[int]
+    secret: Mapped[UUID]
 
     user: Mapped[models_users.CoreUser] = relationship(
         "CoreUser",

@@ -148,3 +148,9 @@ class TicketComplete(TicketSimple):
     session: SessionSimple | None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class TicketSecret(BaseModel):
+    secret: UUID
+    user_id: str
+    ticket_id: UUID
