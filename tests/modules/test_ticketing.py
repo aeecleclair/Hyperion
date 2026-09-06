@@ -1599,7 +1599,9 @@ async def test_get_event_cache(client: TestClient):
 
 async def test_use_or_set_cache_with_crud_function(client: TestClient):
     # This test is to directly test the get_or_set_cache function used in the endpoints
-    from app.modules.ticketing.cache_ticketing import use_or_set_cache_with_crud
+    from app.modules.ticketing.cache_ticketing import (  # noqa: PLC0415
+        use_or_set_cache_with_crud,
+    )
 
     cache_key = f"test_cache_event_key_{uuid4()}"
     cache_value = schemas_ticketing.EventSimple(
@@ -1645,7 +1647,9 @@ async def test_use_or_set_cache_with_crud_function(client: TestClient):
 
 async def test_cache_expiration(client: TestClient):
     # This test will check if the cache is invalidated after updating an event
-    from app.modules.ticketing.cache_ticketing import use_or_set_cache_with_crud
+    from app.modules.ticketing.cache_ticketing import (  # noqa: PLC0415
+        use_or_set_cache_with_crud,
+    )
 
     cache_key = f"test_cache_event_key_{uuid4()}"
     cache_value = schemas_ticketing.EventSimple(

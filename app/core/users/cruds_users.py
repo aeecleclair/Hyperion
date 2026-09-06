@@ -474,7 +474,7 @@ async def fusion_users(
             a. If it doesn't, we update the row
             b. If it does, we delete the row
     """
-    from app.core.mypayment.utils_mypayment import (
+    from app.core.mypayment.utils_mypayment import (  # noqa: PLC0415
         fuse_mypayment_users_utils,
     )
 

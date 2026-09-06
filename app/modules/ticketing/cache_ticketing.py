@@ -65,7 +65,7 @@ class RedisKeysList:
     #     return f"ticketing:session:{session_id}"
 
 
-async def use_or_set_cache_with_crud(
+async def use_or_set_cache_with_crud[**CrudFuncT, SchemaT: BaseModel](
     redis: Redis | None,
     key: str,
     crud_func: Callable[CrudFuncT, Awaitable[SchemaT]],
@@ -96,7 +96,7 @@ async def use_or_set_cache_with_crud(
     return value
 
 
-async def use_or_set_cache_with_crud_int(
+async def use_or_set_cache_with_crud_int[**CrudFuncT](
     redis: Redis | None,
     key: str,
     crud_func: Callable[CrudFuncT, Coroutine[Any, Any, int | None]],

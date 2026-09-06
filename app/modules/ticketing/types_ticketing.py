@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class TicketStatus(str, Enum):
+class TicketStatus(StrEnum):
     PENDING = (
         "pending"  # The ticket has been created but not yet confirmed or paid for.
     )
