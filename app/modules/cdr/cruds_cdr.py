@@ -1097,7 +1097,10 @@ async def delete_customdata(db: AsyncSession, field_id: UUID, user_id: str):
     )
 
 
-async def get_pending_validation_users(db: AsyncSession) -> Sequence[CoreUser]:
+async def get_pending_validation_users(
+    db: AsyncSession,
+    year: int,
+) -> Sequence[CoreUser]:
     result = await db.execute(
         select(models_cdr.Purchase)
         .join(
@@ -1111,6 +1114,7 @@ async def get_pending_validation_users(db: AsyncSession) -> Sequence[CoreUser]:
         .where(
             models_cdr.Purchase.validated.is_(False),
             models_cdr.CdrProduct.needs_validation.is_(True),
+            models_cdr.CdrProduct.year == year,
         ),
     )
     user_ids = set(purchase.user_id for purchase in result.scalars().all())

@@ -141,6 +141,7 @@ async def get_cdr_users_pending_validation(
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get all users that have non-validated purchases.
@@ -158,7 +159,7 @@ async def get_cdr_users_pending_validation(
             status_code=403,
             detail="You must be a seller to use this endpoint.",
         )
-    core_users = await cruds_cdr.get_pending_validation_users(db=db)
+    core_users = await cruds_cdr.get_pending_validation_users(db=db, year=cdr_year.year)
 
     # We construct a dict of {curriculum_id: curriculum}
     curriculum_mapping = {c.id: c for c in await cruds_cdr.get_curriculums(db=db)}
