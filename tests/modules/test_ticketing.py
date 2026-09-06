@@ -263,6 +263,7 @@ async def init_objects():
         user_id=student_user.id,
         status=types_ticketing.TicketStatus.CONFIRMED,
         nb_scan=0,
+        secret=uuid4(),
         total=1,
         created_at=datetime.now(UTC),
     )
@@ -276,6 +277,7 @@ async def init_objects():
         user_id=student_user.id,
         status=types_ticketing.TicketStatus.CONFIRMED,
         nb_scan=0,
+        secret=uuid4(),
         total=1,
         created_at=datetime.now(UTC),
     )
@@ -514,6 +516,7 @@ async def test_deleted_as_admin_with_tickets(client: TestClient):
         user_id=student_user.id,
         status=types_ticketing.TicketStatus.CONFIRMED,
         nb_scan=0,
+        secret=uuid4(),
         total=1,
         created_at=datetime.now(UTC),
     )
@@ -746,6 +749,7 @@ async def test_delete_session_as_admin_with_tickets(client: TestClient):
         user_id=student_user.id,
         status=types_ticketing.TicketStatus.CONFIRMED,
         nb_scan=0,
+        secret=uuid4(),
         total=1,
         created_at=datetime.now(UTC),
     )
@@ -1052,6 +1056,7 @@ async def test_delete_category_as_admin_with_tickets(client: TestClient):
         user_id=student_user.id,
         status=types_ticketing.TicketStatus.CONFIRMED,
         nb_scan=0,
+        secret=uuid4(),
         total=1,
         created_at=datetime.now(UTC),
     )
@@ -1212,6 +1217,7 @@ async def test_get_ticket_without_perms(client: TestClient):
         user_id=other_user.id,
         status=types_ticketing.TicketStatus.CONFIRMED,
         nb_scan=0,
+        secret=uuid4(),
         total=1,
         created_at=datetime.now(UTC),
     )
@@ -1239,6 +1245,7 @@ async def test_get_ticket_as_admin(client: TestClient):
         user_id=other_user.id,
         status=types_ticketing.TicketStatus.CONFIRMED,
         nb_scan=0,
+        secret=uuid4(),
         total=1,
         created_at=datetime.now(UTC),
     )
@@ -1469,6 +1476,7 @@ async def test_update_confirmed_ticket(client: TestClient):
         user_id=student_user.id,
         status=types_ticketing.TicketStatus.CONFIRMED,
         nb_scan=0,
+        secret=uuid4(),
         total=1,
         created_at=datetime.now(UTC),
     )
@@ -1498,6 +1506,7 @@ async def test_update_ticket(client: TestClient):
         user_id=student_user.id,
         status=types_ticketing.TicketStatus.PENDING,
         nb_scan=0,
+        secret=uuid4(),
         total=1,
         created_at=datetime.now(UTC),
     )
@@ -1550,6 +1559,7 @@ async def test_delete_ticket(client: TestClient):
         user_id=student_user.id,
         status=types_ticketing.TicketStatus.PENDING,
         nb_scan=0,
+        secret=uuid4(),
         total=1,
         created_at=datetime.now(UTC),
     )
