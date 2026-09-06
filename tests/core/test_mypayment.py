@@ -814,7 +814,7 @@ async def test_delete_structure_administrator_as_manager(client: TestClient):
     assert sellers.json()[0]["can_cancel"] is False
     assert sellers.json()[0]["can_manage_sellers"] is False
     assert sellers.json()[0]["can_see_history"] is True
-    assert sellers.json()[0]["can_manage_ticketing"] is True
+    assert sellers.json()[0]["can_manage_ticketing"] is False
 
 
 async def test_transfer_non_existing_structure_manager(client: TestClient):
