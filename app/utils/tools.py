@@ -386,7 +386,7 @@ async def generate_pdf_from_template(
     See [WeasyPrint security consideration](https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#security)
     """
     # We only import Weasyprint here to be able to launch Hyperion without installing the module
-    from weasyprint import CSS, HTML  # noqa: PLC0415
+    from weasyprint import CSS, HTML
 
     templates = Environment(
         loader=FileSystemLoader("assets/templates"),

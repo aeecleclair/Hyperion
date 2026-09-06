@@ -11,7 +11,7 @@ from app.core.memberships import models_memberships
 from app.core.mypayment import models_mypayment
 from app.core.mypayment.types_mypayment import WalletType
 from app.core.users import models_users
-from app.modules.ticketing import models_ticketing, schemas_ticketing
+from app.modules.ticketing import models_ticketing, schemas_ticketing, types_ticketing
 
 # We need to import event_loop for pytest-asyncio routine defined bellow
 from app.modules.ticketing.endpoints_ticketing import TicketingPermissions
@@ -37,6 +37,12 @@ store_wallet: models_mypayment.Wallet
 store: models_mypayment.Store
 
 organiser: models_ticketing.Organiser
+
+seller_manager_user: models_users.CoreUser
+seller_manager_user_token: str
+
+seller_user: models_users.CoreUser
+seller_token: str
 
 student_user: models_users.CoreUser
 
@@ -65,7 +71,7 @@ async def init_objects():
 
     global bde_group
     bde_group = await create_groups_with_permissions(
-        [TicketingPermissions.manage_events],
+        [TicketingPermissions.access_ticketing],
         "BDE Group",
     )
 
@@ -124,6 +130,33 @@ async def init_objects():
         store_id=store.id,
     )
     await add_object_to_db(organiser)
+
+    global seller_manager_user, seller_manager_user_token
+    seller_manager_user = await create_user_with_groups(groups=[bde_group.id])
+    seller_manager_user_token = create_api_access_token(seller_manager_user)
+    seller_manager = models_mypayment.Seller(
+        user_id=seller_manager_user.id,
+        store_id=store.id,
+        can_bank=True,
+        can_see_history=True,
+        can_cancel=True,
+        can_manage_sellers=True,
+        # TODO : Add can_manage_tickets permission to the seller model and set it to True here
+    )
+    await add_object_to_db(seller_manager)
+
+    global seller_user, seller_token
+    seller_user = await create_user_with_groups(groups=[bde_group.id])
+    seller_token = create_api_access_token(seller_user)
+    seller = models_mypayment.Seller(
+        user_id=seller_user.id,
+        store_id=store.id,
+        can_bank=True,  # Can bank gives the ability to scan tickets only
+        can_see_history=False,
+        can_cancel=False,
+        can_manage_sellers=False,
+    )
+    await add_object_to_db(seller)
 
     # Create events
     global event1, event2
@@ -214,11 +247,6 @@ async def init_objects():
     )
     # await add_object_to_db(student_group)
 
-    # manage_group = await create_groups_with_permissions(
-    #     [TicketingPermissions.manage_events],
-    #     "Group 2",
-    # )
-
     global student_user, student_token
     student_user = await create_user_with_groups(
         groups=[student_group.id],
@@ -233,7 +261,7 @@ async def init_objects():
         session_id=session1.id,
         category_id=category1.id,
         user_id=student_user.id,
-        status="active",
+        status=types_ticketing.TicketStatus.CONFIRMED,
         nb_scan=0,
         total=1,
         created_at=datetime.now(UTC),
@@ -246,7 +274,7 @@ async def init_objects():
         session_id=session2.id,
         category_id=category1.id,
         user_id=student_user.id,
-        status="active",
+        status=types_ticketing.TicketStatus.CONFIRMED,
         nb_scan=0,
         total=1,
         created_at=datetime.now(UTC),
@@ -341,7 +369,7 @@ async def test_create_event(client: TestClient):
     response = client.post(
         "/ticketing/events",
         json=new_event_data,
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 201
     created_event = response.json()
@@ -352,7 +380,7 @@ async def test_create_event(client: TestClient):
 # create event without perms
 async def test_create_event_without_perms(client: TestClient):
     new_event_data = {
-        "name": "New Event",
+        "name": "New Event zdzadzada",
         "open_date": "2024-01-01T00:00:00Z",
         "close_date": "2200-12-31T23:59:59Z",
         "quota": 10,
@@ -379,7 +407,7 @@ async def test_create_event_with_invalid_organiser(client: TestClient):
     response = client.post(
         "/ticketing/events",
         json=new_event_data,
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 400
 
@@ -393,7 +421,7 @@ async def test_update_event_as_admin(client: TestClient):
     response = client.patch(
         f"/ticketing/events/{event1.id}",
         json=update_data,
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 204
 
@@ -419,7 +447,7 @@ async def test_update_event_with_invalid_id(client: TestClient):
     response = client.patch(
         f"/ticketing/events/{uuid4()}",
         json=update_data,
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 404
 
@@ -432,7 +460,7 @@ async def test_update_event_with_quota_less_than_used_quota(client: TestClient):
     response = client.patch(
         f"/ticketing/events/{event1.id}",
         json=update_data,
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 400
 
@@ -464,13 +492,13 @@ async def test_delete_event_as_admin(client: TestClient):
     await add_object_to_db(to_delete_event)
     response = client.delete(
         f"/ticketing/events/{to_delete_event.id}",
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 204
     # Verify that the event is actually deleted
     response = client.get(
         f"/ticketing/events/{to_delete_event.id}",
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 404
 
@@ -484,7 +512,7 @@ async def test_deleted_as_admin_with_tickets(client: TestClient):
         session_id=session1.id,
         category_id=category1.id,
         user_id=student_user.id,
-        status="active",
+        status=types_ticketing.TicketStatus.CONFIRMED,
         nb_scan=0,
         total=1,
         created_at=datetime.now(UTC),
@@ -493,7 +521,7 @@ async def test_deleted_as_admin_with_tickets(client: TestClient):
     # Try to delete the event with existing tickets
     response = client.delete(
         f"/ticketing/events/{event1.id}",
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 400
 
@@ -546,7 +574,7 @@ async def test_create_session(client: TestClient):
     response = client.post(
         "/ticketing/sessions",
         json=new_session_data,
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 201
     created_session = response.json()
@@ -583,7 +611,7 @@ async def test_create_session_with_date_before_event_open_date(client: TestClien
     response = client.post(
         "/ticketing/sessions",
         json=new_session_data,
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 400
 
@@ -600,7 +628,7 @@ async def test_create_session_with_date_after_event_close_date(client: TestClien
     response = client.post(
         "/ticketing/sessions",
         json=new_session_data,
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 400
 
@@ -617,7 +645,7 @@ async def test_create_session_with_negative_quota(client: TestClient):
     response = client.post(
         "/ticketing/sessions",
         json=new_session_data,
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 422
 
@@ -631,7 +659,7 @@ async def test_update_session_as_admin(client: TestClient):
     response = client.patch(
         f"/ticketing/sessions/{session1.id}",
         json=update_data,
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 204
 
@@ -659,7 +687,7 @@ async def test_update_session_with_invalid_id(client: TestClient):
     response = client.patch(
         f"/ticketing/sessions/{uuid4()}",
         json=update_data,
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 404
 
@@ -672,7 +700,7 @@ async def test_update_session_with_quota_less_than_used_quota(client: TestClient
     response = client.patch(
         f"/ticketing/sessions/{session2.id}",
         json=update_data,
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 400
 
@@ -702,7 +730,7 @@ async def test_delete_session_as_admin(client: TestClient):
     await add_object_to_db(to_delete_session)
     response = client.delete(
         f"/ticketing/sessions/{to_delete_session.id}",
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 204
 
@@ -716,7 +744,7 @@ async def test_delete_session_as_admin_with_tickets(client: TestClient):
         session_id=session2.id,
         category_id=category1.id,
         user_id=student_user.id,
-        status="active",
+        status=types_ticketing.TicketStatus.CONFIRMED,
         nb_scan=0,
         total=1,
         created_at=datetime.now(UTC),
@@ -725,7 +753,7 @@ async def test_delete_session_as_admin_with_tickets(client: TestClient):
     # Try to delete the session with existing tickets
     response = client.delete(
         f"/ticketing/sessions/{session2.id}",
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 400
 
@@ -744,7 +772,7 @@ async def test_delete_session_with_categories(client: TestClient):
     # session1 is linked to category1, so deleting it should fail
     response = client.delete(
         f"/ticketing/sessions/{session1.id}",
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 400
 
@@ -804,7 +832,7 @@ async def test_create_category(client: TestClient):
     response = client.post(
         "/ticketing/categories",
         json=new_category_data,
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 201
     created_category = response.json()
@@ -841,7 +869,7 @@ async def test_create_category_with_incorrect_event_id(client: TestClient):
     response = client.post(
         "/ticketing/categories",
         json=new_category_data,
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 404
 
@@ -859,7 +887,7 @@ async def test_create_category_with_incorrect_sessions_ids(client: TestClient):
     response = client.post(
         "/ticketing/categories",
         json=new_category_data,
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 404
 
@@ -892,7 +920,7 @@ async def test_create_category_with_sessions_from_different_event(client: TestCl
     response = client.post(
         "/ticketing/categories",
         json=new_category_data,
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 404
 
@@ -909,7 +937,7 @@ async def test_create_category_with_negative_price(client: TestClient):
     response = client.post(
         "/ticketing/categories",
         json=new_category_data,
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 422
 
@@ -923,7 +951,7 @@ async def test_update_category_as_admin(client: TestClient):
     response = client.patch(
         f"/ticketing/categories/{category1.id}",
         json=update_data,
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 204
 
@@ -951,7 +979,7 @@ async def test_update_category_with_invalid_id(client: TestClient):
     response = client.patch(
         f"/ticketing/categories/{uuid4()}",
         json=update_data,
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 404
 
@@ -964,7 +992,7 @@ async def test_update_category_with_negative_price(client: TestClient):
     response = client.patch(
         f"/ticketing/categories/{category1.id}",
         json=update_data,
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 422
 
@@ -977,7 +1005,7 @@ async def test_update_category_with_quota_less_than_used_quota(client: TestClien
     response = client.patch(
         f"/ticketing/categories/{category1.id}",
         json=update_data,
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 400
 
@@ -1008,7 +1036,7 @@ async def test_delete_category_as_admin(client: TestClient):
     await add_object_to_db(to_delete_category)
     response = client.delete(
         f"/ticketing/categories/{to_delete_category.id}",
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 204
 
@@ -1022,7 +1050,7 @@ async def test_delete_category_as_admin_with_tickets(client: TestClient):
         session_id=session1.id,
         category_id=category1.id,
         user_id=student_user.id,
-        status="active",
+        status=types_ticketing.TicketStatus.CONFIRMED,
         nb_scan=0,
         total=1,
         created_at=datetime.now(UTC),
@@ -1031,7 +1059,7 @@ async def test_delete_category_as_admin_with_tickets(client: TestClient):
     # Try to delete the category with existing tickets
     response = client.delete(
         f"/ticketing/categories/{category1.id}",
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 400
 
@@ -1040,7 +1068,7 @@ async def test_delete_category_as_admin_with_tickets(client: TestClient):
 async def test_delete_category_with_invalid_id(client: TestClient):
     response = client.delete(
         f"/ticketing/categories/{uuid4()}",
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 404
 
@@ -1048,7 +1076,7 @@ async def test_delete_category_with_invalid_id(client: TestClient):
 # -------------------------- Test ticket basic cruds -------------------------- #
 
 
-async def test_get_all_tickets(client: TestClient):
+async def test_get_all_tickets_as_admin(client: TestClient):
     response = client.get(
         "/ticketing/tickets",
         headers={"Authorization": f"Bearer {admin_user_token}"},
@@ -1059,10 +1087,18 @@ async def test_get_all_tickets(client: TestClient):
     assert len(tickets) >= 2  # We created 2 tickets for the student
 
 
+async def test_get_all_tickets_as_seller_manager(client: TestClient):
+    response = client.get(
+        "/ticketing/tickets",
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
+    )
+    assert response.status_code == 403
+
+
 async def test_get_tickets_by_event(client: TestClient):
     response = client.get(
         f"/ticketing/events/{event1.id}/tickets",
-        headers={"Authorization": f"Bearer {student_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 200
     tickets = response.json()
@@ -1071,18 +1107,15 @@ async def test_get_tickets_by_event(client: TestClient):
 
     response_fake_event = client.get(
         f"/ticketing/events/{uuid4()}/tickets",
-        headers={"Authorization": f"Bearer {student_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
-    assert response_fake_event.status_code == 200
-    assert (
-        response_fake_event.json() == []
-    )  # No tickets for fake event, should return empty list
+    assert response_fake_event.status_code == 404
 
 
 async def test_get_tickets_by_session(client: TestClient):
     response = client.get(
         f"/ticketing/sessions/{session1.id}/tickets",
-        headers={"Authorization": f"Bearer {student_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 200
     tickets = response.json()
@@ -1091,18 +1124,15 @@ async def test_get_tickets_by_session(client: TestClient):
 
     response_fake_session = client.get(
         f"/ticketing/sessions/{uuid4()}/tickets",
-        headers={"Authorization": f"Bearer {student_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
-    assert response_fake_session.status_code == 200
-    assert (
-        response_fake_session.json() == []
-    )  # No tickets for fake session, should return empty list
+    assert response_fake_session.status_code == 404
 
 
 async def test_get_tickets_by_category(client: TestClient):
     response = client.get(
         f"/ticketing/categories/{category1.id}/tickets",
-        headers={"Authorization": f"Bearer {student_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 200
     tickets = response.json()
@@ -1111,18 +1141,15 @@ async def test_get_tickets_by_category(client: TestClient):
 
     response_fake_category = client.get(
         f"/ticketing/categories/{uuid4()}/tickets",
-        headers={"Authorization": f"Bearer {student_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
-    assert response_fake_category.status_code == 200
-    assert (
-        response_fake_category.json() == []
-    )  # No tickets for fake category, should return empty list
+    assert response_fake_category.status_code == 404
 
 
-async def test_get_tickets_by_user(client: TestClient):
+async def test_get_tickets_by_user_as_admin(client: TestClient):
     response = client.get(
-        f"/ticketing/users/{student_user.id}/tickets",
-        headers={"Authorization": f"Bearer {student_token}"},
+        f"/ticketing/users/{student_user.id}/tickets/",
+        headers={"Authorization": f"Bearer {admin_user_token}"},
     )
     assert response.status_code == 200
     tickets = response.json()
@@ -1130,18 +1157,23 @@ async def test_get_tickets_by_user(client: TestClient):
     assert len(tickets) >= 2  # We created 2 tickets for the student
 
     response_fake_user = client.get(
-        f"/ticketing/users/{uuid4()}/tickets",
-        headers={"Authorization": f"Bearer {student_token}"},
+        f"/ticketing/users/{uuid4()}/tickets/",
+        headers={"Authorization": f"Bearer {admin_user_token}"},
     )
-    assert response_fake_user.status_code == 200
-    assert (
-        response_fake_user.json() == []
-    )  # No tickets for fake user, should return empty list
+    assert response_fake_user.status_code == 404
+
+
+async def test_get_tickets_by_user_as_seller_manager(client: TestClient):
+    response = client.get(
+        f"/ticketing/users/{student_user.id}/tickets/",
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
+    )
+    assert response.status_code == 403
 
 
 async def test_get_my_tickets(client: TestClient):
     response = client.get(
-        "/ticketing/users/me/tickets",
+        "/ticketing/users/me/tickets/",
         headers={"Authorization": f"Bearer {student_token}"},
     )
     assert response.status_code == 200
@@ -1178,19 +1210,19 @@ async def test_get_ticket_without_perms(client: TestClient):
         session_id=session1.id,
         category_id=category1.id,
         user_id=other_user.id,
-        status="active",
+        status=types_ticketing.TicketStatus.CONFIRMED,
         nb_scan=0,
         total=1,
         created_at=datetime.now(UTC),
     )
     await add_object_to_db(other_ticket)
 
-    # Try to get the other user's ticket, should return 404 since the student doesn't have permission to see it
+    # Try to get the other user's ticket, should return 403 since the student doesn't have permission to see it
     response = client.get(
         f"/ticketing/tickets/{other_ticket.id}",
         headers={"Authorization": f"Bearer {student_token}"},
     )
-    assert response.status_code == 404
+    assert response.status_code == 403
 
 
 async def test_get_ticket_as_admin(client: TestClient):
@@ -1205,7 +1237,7 @@ async def test_get_ticket_as_admin(client: TestClient):
         session_id=session1.id,
         category_id=category1.id,
         user_id=other_user.id,
-        status="active",
+        status=types_ticketing.TicketStatus.CONFIRMED,
         nb_scan=0,
         total=1,
         created_at=datetime.now(UTC),
@@ -1215,7 +1247,7 @@ async def test_get_ticket_as_admin(client: TestClient):
     # Try to get the other user's ticket as admin, should succeed
     response = client.get(
         f"/ticketing/tickets/{other_ticket.id}",
-        headers={"Authorization": f"Bearer {admin_user_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 200
 
@@ -1307,7 +1339,7 @@ async def test_create_ticket_as_student_with_user_quota_exceeded(client: TestCli
         user_quota=1,  # user_quota=1, so the student can only have 1 ticket for this event
         used_quota=0,
         disabled=False,
-        creator_id=str(admin_user.id),
+        creator_id=str(seller_manager_user.id),
         organiser_id=organiser.id,
     )
     await add_object_to_db(new_event)
@@ -1428,14 +1460,14 @@ async def test_create_ticket_with_session_from_different_event(client: TestClien
     assert response.status_code == 400
 
 
-async def test_update_ticket(client: TestClient):
+async def test_update_confirmed_ticket(client: TestClient):
     to_update_ticket = models_ticketing.TicketingTicket(
         id=uuid4(),
         event_id=event1.id,
         session_id=session1.id,
         category_id=category1.id,
         user_id=student_user.id,
-        status="active",
+        status=types_ticketing.TicketStatus.CONFIRMED,
         nb_scan=0,
         total=1,
         created_at=datetime.now(UTC),
@@ -1452,13 +1484,42 @@ async def test_update_ticket(client: TestClient):
     response = client.patch(
         f"/ticketing/tickets/{to_update_ticket.id}",
         json=update_data,
-        headers={"Authorization": f"Bearer {student_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
+    )
+    assert response.status_code == 400
+
+
+async def test_update_ticket(client: TestClient):
+    to_update_ticket = models_ticketing.TicketingTicket(
+        id=uuid4(),
+        event_id=event1.id,
+        session_id=session1.id,
+        category_id=category1.id,
+        user_id=student_user.id,
+        status=types_ticketing.TicketStatus.PENDING,
+        nb_scan=0,
+        total=1,
+        created_at=datetime.now(UTC),
+    )
+    await add_object_to_db(to_update_ticket)
+
+    update_data = {
+        "user_id": str(student_user.id),
+        "event_id": str(event1.id),
+        "session_id": str(session1.id),
+        "category_id": str(category1.id),
+        "total": 2,
+    }
+    response = client.patch(
+        f"/ticketing/tickets/{to_update_ticket.id}",
+        json=update_data,
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 204
 
     response = client.get(
         f"/ticketing/tickets/{to_update_ticket.id}",
-        headers={"Authorization": f"Bearer {student_token}"},
+        headers={"Authorization": f"Bearer {seller_manager_user_token}"},
     )
     assert response.status_code == 200
     assert response.json()["total"] == update_data["total"]
@@ -1487,7 +1548,7 @@ async def test_delete_ticket(client: TestClient):
         session_id=session1.id,
         category_id=category1.id,
         user_id=student_user.id,
-        status="active",
+        status=types_ticketing.TicketStatus.PENDING,
         nb_scan=0,
         total=1,
         created_at=datetime.now(UTC),

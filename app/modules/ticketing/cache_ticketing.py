@@ -222,7 +222,6 @@ async def get_category_remaining_quota_with_cache(
     )
 
 
-
 async def get_boolean_from_cache_or_none(
     redis: Redis | None,
     key: str,
@@ -231,7 +230,7 @@ async def get_boolean_from_cache_or_none(
     if redis is None or not isinstance(redis, Redis):
         return None
 
-    result = await redis.get(key)
+    result = redis.get(key)
     if result is None:
         return None
 
@@ -286,7 +285,7 @@ async def set_manage_event_permission_cache(
 ) -> None:
     """Set the cache for manage event permission."""
     if redis is not None and isinstance(redis, Redis):
-        await redis.set(
+        redis.set(
             RedisKeysList.managed_event_user_permission(event_id, user_id),
             int(has_permission),
             ex=expire,
@@ -302,7 +301,7 @@ async def set_scan_permission_for_seller_cache(
 ) -> None:
     """Set the cache for scan permission for seller."""
     if redis is not None and isinstance(redis, Redis):
-        await redis.set(
+        redis.set(
             RedisKeysList.scan_permission_for_seller(event_id, user_id),
             int(has_permission),
             ex=expire,

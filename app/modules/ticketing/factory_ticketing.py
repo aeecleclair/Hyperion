@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.groups import groups_type
 from app.core.memberships.factory_memberships import CoreMembershipsFactory
 from app.core.mypayment.factory_mypayment import MyPaymentFactory
 from app.core.users import schemas_users
@@ -164,7 +165,7 @@ class TicketingFactory(Factory):
                         id=user_id,
                         name=f"Raizor-{_i}",
                         firstname=f"Raiz-{_i}",
-                        account_type=schemas_users.AccountType.student,
+                        account_type=groups_type.AccountType.student,
                         school_id=CoreMembershipsFactory.memberships_ids[0],
                     ),
                 ),

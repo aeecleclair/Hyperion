@@ -1,14 +1,13 @@
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.params import Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import GroupType
 from app.core.permissions.type_permissions import ModulePermissions
-from app.core.users import models_users
+from app.core.users import cruds_users, models_users
 from app.core.users.schemas_users import CoreUserSimple
 from app.dependencies import (
     get_db,
@@ -166,6 +165,7 @@ async def get_event_by_id(
 async def create_event(
     event: schemas_ticketing.EventBase,
     db: AsyncSession = Depends(get_db),
+    redis: Redis | None = Depends(get_redis_client),
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([TicketingPermissions.access_ticketing]),
     ),
@@ -177,6 +177,7 @@ async def create_event(
     # check if the user has permission to create an event for the organiser
     await check_manage_event_for_organiser_by_user(
         db=db,
+        redis=redis,
         user=user,
         organiser_id=event.organiser_id,
     )
@@ -403,6 +404,7 @@ async def update_session(
     session_id: UUID,
     session_update: schemas_ticketing.SessionUpdate,
     db: AsyncSession = Depends(get_db),
+    redis: Redis | None = Depends(get_redis_client),
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([TicketingPermissions.access_ticketing]),
     ),
@@ -414,6 +416,7 @@ async def update_session(
     await check_manage_event_permission_for_user(
         user=user,
         db=db,
+        redis=redis,
         event_id=session.event_id,
     )
     used_quota = await cruds_ticketing.get_session_used_quota(
@@ -462,6 +465,8 @@ async def delete_session(
         db=db,
         session_id=session_id,
     )
+    if used_quota is None:
+        raise HTTPException(status_code=404, detail="Session not found")
     if used_quota > 0:
         raise HTTPException(
             status_code=400,
@@ -540,7 +545,7 @@ async def get_categories_by_event(
         is_user_allowed_to([TicketingPermissions.access_ticketing]),
     ),
     display_all: bool = Query(
-        False,
+        default=False,
         description="Display all categories, even if the member has not the correct memberships",
     ),
 ) -> list[schemas_ticketing.CategorySimple]:
@@ -570,7 +575,7 @@ async def get_categories_by_session(
         is_user_allowed_to([TicketingPermissions.access_ticketing]),
     ),
     display_all: bool = Query(
-        False,
+        default=False,
         description="Display all categories, even if the member has not the correct memberships",
     ),
 ) -> list[schemas_ticketing.CategorySimple]:
@@ -728,6 +733,7 @@ async def delete_category(
 async def get_ticket_by_id(
     ticket_id: UUID,
     db: AsyncSession = Depends(get_db),
+    redis: Redis | None = Depends(get_redis_client),
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([TicketingPermissions.access_ticketing]),
     ),
@@ -743,6 +749,7 @@ async def get_ticket_by_id(
     await check_scan_permission_for_seller(
         user=user,
         db=db,
+        redis=redis,
         ticket=ticket,
     )
     return ticket
@@ -757,7 +764,7 @@ async def get_ticket_by_id(
 async def get_all_tickets(
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(
-        is_user_in([GroupType.admin]),
+        is_user_in(GroupType.admin),
     ),
 ) -> list[schemas_ticketing.TicketSimple]:
     """Get all tickets. Admins only."""
@@ -845,21 +852,7 @@ async def get_tickets_by_category(
     )
 
 
-@module.router.get(
-    "/ticketing/users/{user_id}/tickets/",
-    summary="Get all tickets for a user",
-    response_model=list[schemas_ticketing.TicketSimple],
-    status_code=200,
-)
-async def get_tickets_by_user(
-    user_id: str,
-    db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
-) -> list[schemas_ticketing.TicketSimple]:
-    """Get all tickets for a user. Only accessible by admins."""
-    return await cruds_ticketing.get_tickets_by_user_id(user_id=user_id, db=db)
-
-
+# users/me/tickets should be declared before /users/{user_id}/tickets to avoid path conflicts with FastAPI
 @module.router.get(
     "/ticketing/users/me/tickets/",
     summary="Get all tickets for the current user",
@@ -874,6 +867,24 @@ async def get_my_tickets(
 ) -> list[schemas_ticketing.TicketSimple]:
     """Get all tickets for the current user."""
     return await cruds_ticketing.get_tickets_by_user_id(user_id=user.id, db=db)
+
+
+@module.router.get(
+    "/ticketing/users/{user_id}/tickets/",
+    summary="Get all tickets for a user",
+    response_model=list[schemas_ticketing.TicketSimple],
+    status_code=200,
+)
+async def get_tickets_by_user(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+) -> list[schemas_ticketing.TicketSimple]:
+    """Get all tickets for a user. Only accessible by admins."""
+    target_user = await cruds_users.get_user_by_id_schema(user_id=user_id, db=db)
+    if target_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return await cruds_ticketing.get_tickets_by_user_id(user_id=user_id, db=db)
 
 
 @module.router.post(
@@ -891,7 +902,7 @@ async def create_ticket(
     """Create a new ticket."""
 
     if user.id != ticket.user_id and not await is_user_in(
-        [GroupType.admin],
+        GroupType.admin,
     )(user):
         raise HTTPException(
             status_code=403,
@@ -1145,7 +1156,7 @@ async def delete_ticket(
         new_status=TicketStatus.CANCELLED,
     )
     # Then we give back the quota to the event, category and session
-    await cache_ticketing.update_cache_for_new_ticket(
+    cache_ticketing.update_cache_for_new_ticket(
         redis=redis_client,
         event_id=stored.event_id,
         category_id=stored.category_id,
@@ -1168,6 +1179,7 @@ async def delete_ticket(
 async def scan_ticket(
     ticket_id: UUID,
     db: AsyncSession = Depends(get_db),
+    redis_client: Redis | None = Depends(get_redis_client),
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([TicketingPermissions.access_ticketing]),
     ),
@@ -1179,6 +1191,7 @@ async def scan_ticket(
     # Check seller permissions to scan the ticket
     await check_scan_permission_for_seller(
         db=db,
+        redis=redis_client,
         user=user,
         ticket=stored_ticket,
     )

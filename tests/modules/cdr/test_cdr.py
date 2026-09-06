@@ -1622,7 +1622,6 @@ def test_create_purchase_user(client: TestClient):
 
 
 def test_create_purchase_seller(client: TestClient, mocker: MockerFixture):
-
     mocked_use_template_for_user = mocker.patch(
         "app.core.documents.utils_documents.use_template_for_user",
         return_value=schemas_documents.Document(
@@ -1749,7 +1748,6 @@ def test_create_signature_user(client: TestClient):
 
 
 def test_create_signature_seller_existing_signature(client: TestClient):
-
     response = client.post(
         f"/cdr/users/{user_admin.id}/signatures/{document.id}/",
         json={
@@ -1834,7 +1832,6 @@ def test_validate_purchase_admin_with_non_validated_signature(client: TestClient
 
 
 def test_validate_purchase_admin(client: TestClient):
-
     response = client.patch(
         f"/cdr/users/{user.id}/purchases/{variant.id}/validated/?validated=True",
         headers={"Authorization": f"Bearer {token_admin}"},

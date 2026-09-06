@@ -618,7 +618,7 @@ async def get_category_remaining_quota(
 async def get_categories_by_session_id(
     session_id: UUID,
     db: AsyncSession,
-    user_groups: list[UUID] | None = None,
+    user_groups: list[str] | None = None,
 ) -> list[schemas_ticketing.CategorySimple]:
     """Get all categories for a specific session."""
 
@@ -661,7 +661,7 @@ async def get_categories_by_session_id(
 async def get_categories_by_event_id(
     event_id: UUID,
     db: AsyncSession,
-    user_groups: list[UUID] | None = None,
+    user_groups: list[str] | None = None,
 ) -> list[schemas_ticketing.CategorySimple]:
     """Get all categories for a specific event."""
 

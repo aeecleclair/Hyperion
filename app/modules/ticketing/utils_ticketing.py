@@ -94,11 +94,30 @@ async def check_manage_event_permission_for_user(
     )
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found")
-    await check_manage_event_for_organiser_by_user(
-        db=db,
+
+    try:
+        await check_manage_event_for_organiser_by_user(
+            db=db,
+            redis=redis,
+            user=user,
+            organiser_id=event.organiser_id,
+        )
+    except HTTPException:
+        await cache_ticketing.set_manage_event_permission_cache(
+            redis=redis,
+            user_id=user.id,
+            event_id=event.id,
+            has_permission=False,
+        )
+        raise
+    except Exception:
+        raise
+
+    await cache_ticketing.set_manage_event_permission_cache(
         redis=redis,
-        user=user,
-        organiser_id=event.organiser_id,
+        user_id=user.id,
+        event_id=event.id,
+        has_permission=True,
     )
 
 
@@ -129,20 +148,7 @@ async def check_manage_event_for_organiser_by_user(
     )
 
     if seller is None:  # TODO: check if : or not seller.can_manage_events
-        await cache_ticketing.set_manage_event_permission_cache(
-            redis=redis,
-            user_id=user.id,
-            organiser_id=organiser_id,
-            has_permission=False,
-        )
         raise HTTPException(
             status_code=403,
             detail="User does not have permission to manage this organiser",
         )
-
-    await cache_ticketing.set_manage_event_permission_cache(
-        redis=redis,
-        user_id=user.id,
-        organiser_id=organiser_id,
-        has_permission=True,
-    )

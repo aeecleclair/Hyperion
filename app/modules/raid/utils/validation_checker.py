@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
 
-from app.modules.raid import cruds_raid
 from app.modules.raid.raid_type import (
     DocumentValidation,
     RaidRegistrationStatus,
@@ -132,6 +131,8 @@ async def _check_team_complete(
     participant: schemas_raid.RaidParticipant,
     db: AsyncSession,
 ) -> None:
+    from app.modules.raid import cruds_raid
+
     team = await cruds_raid.get_team_by_participant_id(
         participant.user_id,
         participant.edition_id,
