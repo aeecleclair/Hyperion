@@ -512,7 +512,7 @@ def is_user_allowed_to(
         * make sure the user has the permission with the given name
         * return the corresponding user `models_users.CoreUser` object
 
-    The user need to have at least ONE of the permissions in the list to be allowed to access the endpoint.
+    The query is a _logical OR_: the user needs to have at least ONE of the permissions in the list to be allowed to access the endpoint.
     """
 
     async def is_user_allowed_to(
