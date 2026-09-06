@@ -5,7 +5,7 @@ from app.module import all_modules
 from tests.commons import get_TestingSessionLocal
 
 
-@pytest.mark.parametrize("client", [True], indirect=True)
+@pytest.mark.parametrize("test_app", [True], indirect=True)
 async def test_factories(client: TestClient) -> None:
     async with get_TestingSessionLocal()() as db:
         factories = [
