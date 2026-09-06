@@ -147,7 +147,9 @@ async def check_manage_event_for_organiser_by_user(
         db=db,
     )
 
-    if seller is None:  # TODO: check if : or not seller.can_manage_events
+    if (
+        seller is None or not seller.can_manage_ticketing
+    ):  # TODO: check if : or not seller.can_manage_events
         raise HTTPException(
             status_code=403,
             detail="User does not have permission to manage this organiser",

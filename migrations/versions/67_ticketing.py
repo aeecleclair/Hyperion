@@ -114,6 +114,19 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["user_id"], ["core_user.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
+    # add can_manage_ticketing column to mypayment_seller table
+    op.add_column(
+        "mypayment_seller",
+        sa.Column("can_manage_ticketing", sa.Boolean(), nullable=True),
+    )
+    op.execute(
+        "UPDATE mypayment_seller SET can_manage_ticketing = false",
+    )
+    op.alter_column(
+        "mypayment_seller",
+        "can_manage_ticketing",
+        nullable=False,
+    )
     # ### end Alembic commands ###
 
 
@@ -126,6 +139,7 @@ def downgrade() -> None:
     op.drop_table("ticketing_event")
     op.drop_table("ticketing_organiser")
     ticket_status_enum.drop(op.get_bind())
+    op.drop_column("mypayment_seller", "can_manage_ticketing")
     # ### end Alembic commands ###
 
 

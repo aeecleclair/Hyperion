@@ -141,7 +141,7 @@ async def init_objects():
         can_see_history=True,
         can_cancel=True,
         can_manage_sellers=True,
-        # TODO : Add can_manage_tickets permission to the seller model and set it to True here
+        can_manage_ticketing=True,
     )
     await add_object_to_db(seller_manager)
 
@@ -155,6 +155,7 @@ async def init_objects():
         can_see_history=False,
         can_cancel=False,
         can_manage_sellers=False,
+        can_manage_ticketing=False,
     )
     await add_object_to_db(seller)
 
