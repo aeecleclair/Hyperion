@@ -10,7 +10,7 @@ from app.core.mypayment.factory_mypayment import MyPaymentFactory
 from app.core.users import schemas_users
 from app.core.users.factory_users import CoreUsersFactory
 from app.core.utils.config import Settings
-from app.modules.ticketing import cruds_ticketing, schemas_ticketing
+from app.modules.ticketing import cruds_ticketing, schemas_ticketing, types_ticketing
 from app.types.factory import Factory
 
 
@@ -160,7 +160,7 @@ class TicketingFactory(Factory):
                     total=1500 if category_id == cls.category1_id else 2000,
                     created_at=datetime.now(UTC),
                     nb_scan=0,
-                    status="valid",
+                    status=types_ticketing.TicketStatus.CONFIRMED,
                     user=schemas_users.CoreUserSimple(
                         id=user_id,
                         name=f"Raizor-{_i}",
