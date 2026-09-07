@@ -289,7 +289,7 @@ async def update_user(
     await db.execute(
         update(models_users.CoreUser)
         .where(models_users.CoreUser.id == user_id)
-        .values(**user_update.model_dump(exclude_none=True)),
+        .values(**user_update.model_dump(exclude_unset=True)),
     )
 
 
