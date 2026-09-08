@@ -54,21 +54,22 @@ class RaidFactory(Factory):
             db=db,
             group_name="raid_admin",
         )
-        if db_group is not None or db_group_name is not None:
-            return
-        raid_admin_group = CoreGroup(
-            id=RAID_ADMIN_GROUP_ID,
-            name="raid_admin",
-            description="Raid organizers with manage_raid permission",
-        )
-        await cruds_groups.create_group(db=db, group=raid_admin_group)
-        await cruds_permissions.create_group_permission(
-            permission=schemas_permissions.CoreGroupPermission(
-                permission_name="manage_raid",
-                group_id=RAID_ADMIN_GROUP_ID,
-            ),
-            db=db,
-        )
+        if db_group is None and db_group_name is None:
+            raid_admin_group = CoreGroup(
+                id=RAID_ADMIN_GROUP_ID,
+                name="raid_admin",
+                description="Raid organizers with manage_raid permission",
+            )
+            await cruds_groups.create_group(db=db, group=raid_admin_group)
+            await cruds_permissions.create_group_permission(
+                permission=schemas_permissions.CoreGroupPermission(
+                    permission_name="manage_raid",
+                    group_id=RAID_ADMIN_GROUP_ID,
+                ),
+                db=db,
+            )
+        if db_group is None and db_group_name is not None:
+            RAID_ADMIN_GROUP_ID = db_group_name.id
 
         admin_user = await cruds_users.get_user_by_email(
             db=db,
