@@ -39,7 +39,8 @@ class RaidFactory(Factory):
 
     @classmethod
     async def should_run(cls, db: AsyncSession) -> bool:
-        return await cruds_raid.get_all_editions(db) == []
+        # return await cruds_raid.get_all_editions(db) == []
+        return False # BUG: Please fix that
 
     @classmethod
     async def _ensure_raid_admin_group(cls, db: AsyncSession) -> None:
