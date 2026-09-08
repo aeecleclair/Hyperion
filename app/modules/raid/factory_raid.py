@@ -46,9 +46,10 @@ class RaidFactory(Factory):
         """Create the raid_admin group + permission and grant it to the
         admin demo user if config.yaml defined one."""
         # Check if group already exists
+        raid_admin_group_id = RAID_ADMIN_GROUP_ID
         db_group = await cruds_groups.get_group_by_id(
             db=db,
-            group_id=RAID_ADMIN_GROUP_ID,
+            group_id=raid_admin_group_id,
         )
         db_group_name = await cruds_groups.get_group_by_name(
             db=db,
@@ -56,7 +57,7 @@ class RaidFactory(Factory):
         )
         if db_group is None and db_group_name is None:
             raid_admin_group = CoreGroup(
-                id=RAID_ADMIN_GROUP_ID,
+                id=raid_admin_group_id,
                 name="raid_admin",
                 description="Raid organizers with manage_raid permission",
             )
@@ -64,12 +65,12 @@ class RaidFactory(Factory):
             await cruds_permissions.create_group_permission(
                 permission=schemas_permissions.CoreGroupPermission(
                     permission_name="manage_raid",
-                    group_id=RAID_ADMIN_GROUP_ID,
+                    group_id=raid_admin_group_id,
                 ),
                 db=db,
             )
         if db_group is None and db_group_name is not None:
-            RAID_ADMIN_GROUP_ID = db_group_name.id
+            raid_admin_group_id = db_group_name.id
 
         admin_user = await cruds_users.get_user_by_email(
             db=db,
@@ -79,7 +80,7 @@ class RaidFactory(Factory):
             await cruds_groups.create_membership(
                 db=db,
                 membership=CoreMembership(
-                    group_id=RAID_ADMIN_GROUP_ID,
+                    group_id=raid_admin_group_id,
                     user_id=admin_user.id,
                     description=None,
                 ),
