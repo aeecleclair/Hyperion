@@ -117,7 +117,12 @@ def upgrade() -> None:
     # add can_manage_ticketing column to mypayment_seller table
     op.add_column(
         "mypayment_seller",
-        sa.Column("can_manage_ticketing", sa.Boolean(), nullable=False, server_default=sa.false()),
+        sa.Column(
+            "can_manage_ticketing",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.false(),
+        ),
     )
     # ### end Alembic commands ###
 
