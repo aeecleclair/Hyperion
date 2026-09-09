@@ -3009,7 +3009,7 @@ async def test_get_payment_total_by_seller_as_admin(client: TestClient):
 
 async def test_get_payment_total_by_seller_as_user(client: TestClient):
     response = client.get(
-        "/cdr/stats/payment_total_by_seller/,",
+        "/cdr/stats/payment_total_by_seller/",
         headers={"Authorization": f"Bearer {token_user}"},
     )
     assert response.status_code == 403
