@@ -3002,7 +3002,7 @@ async def test_get_payment_total_by_seller(client: TestClient):
         "/cdr/stats/payment_total_by_seller/,",
         headers={"Authorization": f"Bearer {token_user}"},
     )
-    assert response.status_code == 403
+    assert response.status_code == 404
 
 
 async def test_get_payment_total_per_type(client: TestClient):
@@ -3016,4 +3016,4 @@ async def test_get_payment_total_per_type(client: TestClient):
         "/cdr/stats/payment_total_per_type/",
         headers={"Authorization": f"Bearer {token_user}"},
     )
-    assert response.status_code == 403
+    assert response.status_code == 404
