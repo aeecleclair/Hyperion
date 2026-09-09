@@ -2984,7 +2984,7 @@ def test_pay_other_user_forbidden(client: TestClient):
     assert response.status_code == 404
 
 
-async def test_get_payment_total(client: TestClient, user_id: uuid.UUID):
+async def test_get_payment_total(client: TestClient):
     response = client.get(
         "//cdr/stats/payment_total/",
         headers={"Authorization": f"Bearer {token_admin}"},
