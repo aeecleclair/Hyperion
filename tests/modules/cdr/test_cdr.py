@@ -478,13 +478,14 @@ async def init_objects():
     )
     await add_object_to_db(ticket)
 
+
 def test_get_payment_total_as_admin(client: TestClient):
     response = client.get(
         "/cdr/stats/payment_total/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
-    assert response.json() == {5000}
+    assert response.json() == 5000
 
 
 def test_get_payment_total_as_user(client: TestClient):
@@ -518,7 +519,7 @@ def test_get_payment_total_per_type_as_admin(client: TestClient):
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
-    assert response.json() == {"total": 5000, "payment_type": "card"}
+    assert response.json() == {"total": 5000, "payment_type": "cash"}
 
 
 def test_get_payment_total_per_type_as_user(client: TestClient):
@@ -3031,5 +3032,3 @@ def test_pay_other_user_forbidden(client: TestClient):
     )
 
     assert response.status_code == 403
-
-
