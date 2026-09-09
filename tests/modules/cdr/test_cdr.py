@@ -505,6 +505,10 @@ def test_get_payment_total_by_seller_as_admin(client: TestClient):
     assert response.json() == {"total_amounts": []}
 
     purchase.validated = True
+    response = client.get(
+        "/cdr/stats/payment_total_by_seller/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
     assert response.json() == {"total_amounts": [{"name": "BDE", "total_amount": 5000}]}
     purchase.validated = False
 
