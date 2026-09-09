@@ -478,6 +478,56 @@ async def init_objects():
     )
     await add_object_to_db(ticket)
 
+def test_get_payment_total_as_admin(client: TestClient):
+    response = client.get(
+        "/cdr/stats/payment_total/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert response.json() == {5000}
+
+
+def test_get_payment_total_as_user(client: TestClient):
+    response = client.get(
+        "/cdr/stats/payment_total/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
+
+def test_get_payment_total_by_seller_as_admin(client: TestClient):
+    response = client.get(
+        "/cdr/stats/payment_total_by_seller/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"total_amounts": [{"name": "BDE", "total_amount": 5000}]}
+
+
+def test_get_payment_total_by_seller_as_user(client: TestClient):
+    response = client.get(
+        "/cdr/stats/payment_total_by_seller/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
+
+def test_get_payment_total_per_type_as_admin(client: TestClient):
+    response = client.get(
+        "/cdr/stats/payment_total_per_type/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"total": 5000, "payment_type": "card"}
+
+
+def test_get_payment_total_per_type_as_user(client: TestClient):
+    response = client.get(
+        "/cdr/stats/payment_total_per_type/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
 
 def test_get_all_cdr_users_seller(client: TestClient):
     response = client.get(
@@ -2983,52 +3033,3 @@ def test_pay_other_user_forbidden(client: TestClient):
     assert response.status_code == 403
 
 
-async def test_get_payment_total_as_admin(client: TestClient):
-    response = client.get(
-        "/cdr/stats/payment_total/",
-        headers={"Authorization": f"Bearer {token_admin}"},
-    )
-    assert response.status_code == 200
-    assert response.json() == {5000}
-
-
-async def test_get_payment_total_as_user(client: TestClient):
-    response = client.get(
-        "/cdr/stats/payment_total/",
-        headers={"Authorization": f"Bearer {token_user}"},
-    )
-    assert response.status_code == 403
-
-
-async def test_get_payment_total_by_seller_as_admin(client: TestClient):
-    response = client.get(
-        "/cdr/stats/payment_total_by_seller/",
-        headers={"Authorization": f"Bearer {token_admin}"},
-    )
-    assert response.status_code == 200
-    assert response.json() == {"total_amounts": [{"name": "BDE", "total_amount": 5000}]}
-
-
-async def test_get_payment_total_by_seller_as_user(client: TestClient):
-    response = client.get(
-        "/cdr/stats/payment_total_by_seller/",
-        headers={"Authorization": f"Bearer {token_user}"},
-    )
-    assert response.status_code == 403
-
-
-async def test_get_payment_total_per_type_as_admin(client: TestClient):
-    response = client.get(
-        "/cdr/stats/payment_total_per_type/",
-        headers={"Authorization": f"Bearer {token_admin}"},
-    )
-    assert response.status_code == 200
-    assert response.json() == {"total": 5000, "payment_type": "card"}
-
-
-async def test_get_payment_total_per_type_as_user(client: TestClient):
-    response = client.get(
-        "/cdr/stats/payment_total_per_type/",
-        headers={"Authorization": f"Bearer {token_user}"},
-    )
-    assert response.status_code == 403
