@@ -902,7 +902,7 @@ async def delete_payment(
     )
 
 
-async def get_payment_products_by_seller(
+async def get_payment_total_by_seller(
     db: AsyncSession,
     cdr_year: int,
 ) -> list[schemas_cdr.TotalPurchaseValidatedBySeller]:
@@ -941,7 +941,7 @@ async def get_payment_products_by_seller(
     ]
 
 
-async def get_total_payment_types(
+async def get_payment_total_by_type(
     db: AsyncSession,
     cdr_year: int,
 ) -> list[schemas_cdr.PaymentBase]:
@@ -963,10 +963,10 @@ async def get_total_payment_types(
     ]
 
 
-async def get_total_payment(
+async def get_payment_total(
     db: AsyncSession,
     cdr_year: int,
-):
+) -> int:
 
     result = await db.execute(
         select(
