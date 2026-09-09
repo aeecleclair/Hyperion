@@ -343,6 +343,10 @@ class BatchValidation(BaseModel):
     validated: bool
 
 
-class TotalPurchaseValidatedBySeller(BaseModel):
+class TotalPaymentOfSeller(BaseModel):
     name: str
-    total_validated: int
+    total_amount: int
+
+
+class TotalPaymentBySeller(BaseModel):
+    total_amounts: list[TotalPaymentOfSeller]

@@ -905,7 +905,7 @@ async def delete_payment(
 async def get_payment_total_by_seller(
     db: AsyncSession,
     cdr_year: int,
-) -> list[schemas_cdr.TotalPurchaseValidatedBySeller]:
+) -> schemas_cdr.TotalPaymentBySeller:
     result = await db.execute(
         select(
             models_cdr.Seller.name,
@@ -932,13 +932,15 @@ async def get_payment_total_by_seller(
         .group_by(models_cdr.Seller.id),
     )
 
-    return [
-        schemas_cdr.TotalPurchaseValidatedBySeller(
-            total_validated=row.total_amount,
-            name=row.name,
-        )
-        for row in result.all()
-    ]
+    return schemas_cdr.TotalPaymentBySeller(
+        total_amounts=[
+            schemas_cdr.TotalPaymentOfSeller(
+                total_amount=row.total_amount,
+                name=row.name,
+            )
+            for row in result.all()
+        ],
+    )
 
 
 async def get_payment_total_by_type(
@@ -975,7 +977,7 @@ async def get_payment_total(
     )
     total = result.scalar()
 
-    return total // 100 if total is not None else 0
+    return total if total is not None else 0
 
 
 def create_action(

@@ -2981,3 +2981,46 @@ def test_pay_other_user_forbidden(client: TestClient):
     )
 
     assert response.status_code == 403
+    assert response.status_code == 404
+
+
+async def test_get_payment_total(client: TestClient, user_id: uuid.UUID):
+    response = client.get(
+        f"/cdr/users/{user_id}/payments/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+
+    response = client.get(
+        f"/cdr/users/{user_id}/payments/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
+
+async def test_get_payment_total_by_seller(client: TestClient):
+    response = client.get(
+        "/cdr/stats/payment_total_by_seller/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+
+    response = client.get(
+        "/cdr/stats/payment_total_by_seller/,",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
+
+async def test_get_payment_total_per_type(client: TestClient):
+    response = client.get(
+        "/cdr/stats/payment_total_per_type/",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert response.status_code == 200
+
+    response = client.get(
+        "/cdr/stats/payment_total_per_type/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
