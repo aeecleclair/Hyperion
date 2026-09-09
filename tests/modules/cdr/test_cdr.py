@@ -404,7 +404,7 @@ async def init_objects():
         user_id=user.id,
         product_variant_id=variant.id,
         quantity=1,
-        validated=False,
+        validated=True,
         purchased_on=datetime.now(UTC),
     )
     await add_object_to_db(purchase)
