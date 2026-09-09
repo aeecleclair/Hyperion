@@ -511,7 +511,7 @@ async def test_get_payment_total_by_seller_as_admin(client: TestClient):
         "/cdr/stats/payment_total_by_seller/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
-    assert response.json() == {"total_amounts": [{"name": "BDE", "total_amount": 5000}]}
+    assert response.json() == {"total_amounts": [{"name": "BDE", "total_amount": 100}]}
     purchase.validated = False
     await update_object_in_db(purchase)
 

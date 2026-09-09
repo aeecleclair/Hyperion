@@ -344,7 +344,7 @@ async def update_object_in_db(db_object: Base) -> None:
             raise FailedToUpdateObjectInDB from error
         finally:
             await db.close()
-            
+
 
 async def add_coredata_to_db(
     core_data: core_data.BaseCoreData,
