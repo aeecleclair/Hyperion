@@ -502,7 +502,11 @@ def test_get_payment_total_by_seller_as_admin(client: TestClient):
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
+    assert response.json() == {"total_amounts": []}
+
+    purchase.validated = True
     assert response.json() == {"total_amounts": [{"name": "BDE", "total_amount": 5000}]}
+    purchase.validated = False
 
 
 def test_get_payment_total_by_seller_as_user(client: TestClient):
@@ -519,7 +523,7 @@ def test_get_payment_total_per_type_as_admin(client: TestClient):
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
-    assert response.json() == {"total": 5000, "payment_type": "cash"}
+    assert response.json() == [{"total": 5000, "payment_type": "cash"}]
 
 
 def test_get_payment_total_per_type_as_user(client: TestClient):
