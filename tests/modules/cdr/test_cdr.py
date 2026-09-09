@@ -28,6 +28,7 @@ from tests.commons import (
     create_user_with_groups,
     get_TestingSessionLocal,
     mocked_checkout_id,
+    update_object_in_db,
 )
 
 year = datetime.now(UTC).year
@@ -404,7 +405,7 @@ async def init_objects():
         user_id=user.id,
         product_variant_id=variant.id,
         quantity=1,
-        validated=True,
+        validated=False,
         purchased_on=datetime.now(UTC),
     )
     await add_object_to_db(purchase)
@@ -496,7 +497,7 @@ def test_get_payment_total_as_user(client: TestClient):
     assert response.status_code == 403
 
 
-def test_get_payment_total_by_seller_as_admin(client: TestClient):
+async def test_get_payment_total_by_seller_as_admin(client: TestClient):
     response = client.get(
         "/cdr/stats/payment_total_by_seller/",
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -505,12 +506,14 @@ def test_get_payment_total_by_seller_as_admin(client: TestClient):
     assert response.json() == {"total_amounts": []}
 
     purchase.validated = True
+    await update_object_in_db(purchase)
     response = client.get(
         "/cdr/stats/payment_total_by_seller/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.json() == {"total_amounts": [{"name": "BDE", "total_amount": 5000}]}
     purchase.validated = False
+    await update_object_in_db(purchase)
 
 
 def test_get_payment_total_by_seller_as_user(client: TestClient):

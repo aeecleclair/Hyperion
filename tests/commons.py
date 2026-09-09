@@ -44,6 +44,10 @@ class FailedToAddObjectToDB(Exception):
     """Exception raised when an object cannot be added to the database."""
 
 
+class FailedToUpdateObjectInDB(Exception):
+    """Exception raised when an object cannot be updated in the database."""
+
+
 async def override_init_state(
     app: FastAPI,
     settings: Settings,
@@ -326,6 +330,21 @@ async def add_object_to_db(db_object: Base) -> None:
         finally:
             await db.close()
 
+
+async def update_object_in_db(db_object: Base) -> None:
+    """
+    Update an existing object in the database
+    """
+    async with TestingSessionLocal() as db:
+        try:
+            await db.merge(db_object)
+            await db.commit()
+        except Exception as error:
+            await db.rollback()
+            raise FailedToUpdateObjectInDB from error
+        finally:
+            await db.close()
+            
 
 async def add_coredata_to_db(
     core_data: core_data.BaseCoreData,
