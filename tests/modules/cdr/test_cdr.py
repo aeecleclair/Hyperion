@@ -2983,7 +2983,7 @@ def test_pay_other_user_forbidden(client: TestClient):
     assert response.status_code == 403
 
 
-async def test_get_payment_total(client: TestClient):
+async def test_get_payment_total_as_admin(client: TestClient):
     response = client.get(
         "/cdr/stats/payment_total/",
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -2991,27 +2991,39 @@ async def test_get_payment_total(client: TestClient):
     assert response.status_code == 200
 
 
-async def test_get_payment_total_by_seller(client: TestClient):
+async def test_get_payment_total_as_user(client: TestClient):
+    response = client.get(
+        "/cdr/stats/payment_total/",
+        headers={"Authorization": f"Bearer {token_user}"},
+    )
+    assert response.status_code == 403
+
+
+async def test_get_payment_total_by_seller_as_admin(client: TestClient):
     response = client.get(
         "/cdr/stats/payment_total_by_seller/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
 
+
+async def test_get_payment_total_by_seller_as_user(client: TestClient):
     response = client.get(
         "/cdr/stats/payment_total_by_seller/,",
         headers={"Authorization": f"Bearer {token_user}"},
     )
-    assert response.status_code == 404
+    assert response.status_code == 403
 
 
-async def test_get_payment_total_per_type(client: TestClient):
+async def test_get_payment_total_per_type_as_admin(client: TestClient):
     response = client.get(
         "/cdr/stats/payment_total_per_type/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
 
+
+async def test_get_payment_total_per_type_as_user(client: TestClient):
     response = client.get(
         "/cdr/stats/payment_total_per_type/",
         headers={"Authorization": f"Bearer {token_user}"},
