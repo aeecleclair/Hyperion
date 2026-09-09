@@ -2986,7 +2986,7 @@ def test_pay_other_user_forbidden(client: TestClient):
 
 async def test_get_payment_total(client: TestClient, user_id: uuid.UUID):
     response = client.get(
-        f"//cdr/stats/payment_total/",
+        "//cdr/stats/payment_total/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
