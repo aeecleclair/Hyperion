@@ -9,7 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.payment import schemas_payment
 from app.modules.raid import coredata_raid, cruds_raid, schemas_raid
-from app.modules.raid.raid_type import Difficulty, Situation, Size
+from app.modules.raid.raid_type import (
+    Difficulty,
+    DocumentValidation,
+    Situation,
+    Size,
+)
 from app.modules.raid.utils.pdf.conversion_utils import (
     get_difficulty_label,
     get_meeting_place_label,
@@ -69,9 +74,16 @@ async def validate_payment(
         participant_user_id = participant_checkout.participant_user_id
         edition_id = participant_checkout.edition_id
         prices = await get_core_data(coredata_raid.RaidPrice, db)
-        if (prices.student_price and paid_amount == prices.student_price) or (
-            prices.external_price and paid_amount == prices.external_price
-        ):
+        inscription_prices = [
+            price
+            for price in (
+                prices.student_price,
+                prices.external_price,
+                prices.scholarship_price,
+            )
+            if price
+        ]
+        if any(paid_amount == price for price in inscription_prices):
             await cruds_raid.confirm_payment(participant_user_id, edition_id, db)
         elif prices.t_shirt_price and paid_amount == prices.t_shirt_price:
             await cruds_raid.confirm_t_shirt_payment(
@@ -79,15 +91,8 @@ async def validate_payment(
                 edition_id,
                 db,
             )
-        elif prices.t_shirt_price and (
-            (
-                prices.student_price
-                and paid_amount == prices.student_price + prices.t_shirt_price
-            )
-            or (
-                prices.external_price
-                and paid_amount == prices.external_price + prices.t_shirt_price
-            )
+        elif prices.t_shirt_price and any(
+            paid_amount == price + prices.t_shirt_price for price in inscription_prices
         ):
             await cruds_raid.confirm_payment(participant_user_id, edition_id, db)
             await cruds_raid.confirm_t_shirt_payment(
@@ -329,19 +334,32 @@ def calculate_raid_payment(
         not raid_prices.student_price
         or not raid_prices.t_shirt_price
         or not raid_prices.external_price
+        or not raid_prices.scholarship_price
     ):
         raise HTTPException(status_code=404, detail="Prices not set.")
 
     price = 0
     checkout_name = ""
 
+    # The scholarship rate only applies once the school authorization document
+    # has been accepted by an admin; the flag alone is not enough.
+    has_validated_scholarship = (
+        participant.has_scholarship
+        and participant.school_authorization is not None
+        and participant.school_authorization.validation == DocumentValidation.accepted
+    )
+
     if not participant.payment:
-        if (
+        if has_validated_scholarship:
+            price += raid_prices.scholarship_price
+            checkout_name = "Inscription Raid - Tarif boursier"
+        elif (
             participant.situation in (Situation.centrale, Situation.otherSchool)
             and participant.student_card_id is not None
         ):
             price += raid_prices.student_price
             checkout_name = "Inscription Raid - Tarif étudiant"
+
         else:
             price += raid_prices.external_price
             checkout_name = "Inscription Raid - Tarif externe"
