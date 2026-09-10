@@ -397,6 +397,7 @@ async def create_structure_administrator(
                 can_see_history=True,
                 can_cancel=True,
                 can_manage_sellers=True,
+                can_manage_ticketing=True,
                 db=db,
             )
         else:
@@ -408,6 +409,7 @@ async def create_structure_administrator(
                     can_see_history=True,
                     can_cancel=True,
                     can_manage_sellers=True,
+                    can_manage_ticketing=True,
                 ),
                 db=db,
             )
@@ -475,6 +477,7 @@ async def delete_structure_administrator(
             seller_update=schemas_mypayment.SellerUpdate(
                 can_cancel=False,
                 can_manage_sellers=False,
+                can_manage_ticketing=False,
             ),
             db=db,
         )
@@ -617,6 +620,7 @@ async def confirm_structure_manager_transfer(
                 can_see_history=True,
                 can_cancel=True,
                 can_manage_sellers=True,
+                can_manage_ticketing=True,
                 db=db,
             )
         else:
@@ -628,6 +632,7 @@ async def confirm_structure_manager_transfer(
                     can_see_history=True,
                     can_cancel=True,
                     can_manage_sellers=True,
+                    can_manage_ticketing=True,
                 ),
                 db=db,
             )
@@ -715,6 +720,7 @@ async def create_store(
         can_see_history=True,
         can_cancel=True,
         can_manage_sellers=True,
+        can_manage_ticketing=True,
         db=db,
     )
     for admin in structure.administrators:
@@ -725,6 +731,7 @@ async def create_store(
             can_see_history=True,
             can_cancel=True,
             can_manage_sellers=True,
+            can_manage_ticketing=True,
             db=db,
         )
 
@@ -1014,6 +1021,7 @@ async def get_user_stores(
                     can_see_history=seller.can_see_history,
                     can_cancel=seller.can_cancel,
                     can_manage_sellers=seller.can_manage_sellers,
+                    can_manage_ticketing=seller.can_manage_ticketing,
                 ),
             )
 
@@ -1164,6 +1172,7 @@ async def create_store_seller(
     - can_see_history
     - can_cancel
     - can_manage_sellers
+    - can_manage_ticketing
 
     **The user must have the `can_manage_sellers` permission for this store**
     """
@@ -1206,6 +1215,7 @@ async def create_store_seller(
         can_see_history=seller.can_see_history,
         can_cancel=seller.can_cancel,
         can_manage_sellers=seller.can_manage_sellers,
+        can_manage_ticketing=seller.can_manage_ticketing,
         db=db,
     )
 
