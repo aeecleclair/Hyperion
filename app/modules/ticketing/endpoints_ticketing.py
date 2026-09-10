@@ -245,6 +245,10 @@ async def update_event(
         event_update=event_update,
         db=db,
     )
+    await cache_ticketing.invalidate_key_cache(
+        cache_ticketing.RedisKeysList.event_remaining_quota(event_id),
+        redis,
+    )
 
 
 @module.router.delete(
@@ -290,6 +294,10 @@ async def delete_event(
             detail="Cannot delete an event with associated sessions",
         )
     await cruds_ticketing.delete_event(event_id=event_id, db=db)
+    await cache_ticketing.invalidate_key_cache(
+        cache_ticketing.RedisKeysList.event_remaining_quota(event_id),
+        redis,
+    )
 
 
 @module.router.get(
@@ -449,6 +457,10 @@ async def update_session(
         session_update=session_update,
         db=db,
     )
+    await cache_ticketing.invalidate_key_cache(
+        cache_ticketing.RedisKeysList.session_remaining_quota(session_id),
+        redis,
+    )
 
 
 @module.router.delete(
@@ -505,6 +517,10 @@ async def delete_session(
             detail="Cannot delete a session with associated tickets",
         )
     await cruds_ticketing.delete_session(session_id=session_id, db=db)
+    await cache_ticketing.invalidate_key_cache(
+        cache_ticketing.RedisKeysList.session_remaining_quota(session_id),
+        redis,
+    )
 
 
 @module.router.get(
@@ -698,6 +714,10 @@ async def update_category(
         category_update=category_update,
         db=db,
     )
+    await cache_ticketing.invalidate_key_cache(
+        cache_ticketing.RedisKeysList.category_remaining_quota(category_id),
+        redis,
+    )
 
 
 @module.router.delete(
@@ -736,6 +756,10 @@ async def delete_category(
             detail="Cannot delete a category with used quota",
         )
     await cruds_ticketing.delete_category(category_id=category_id, db=db)
+    await cache_ticketing.invalidate_key_cache(
+        cache_ticketing.RedisKeysList.category_remaining_quota(category_id),
+        redis,
+    )
 
 
 @module.router.get(
