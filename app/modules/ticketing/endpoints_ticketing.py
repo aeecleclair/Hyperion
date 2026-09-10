@@ -19,6 +19,7 @@ from app.dependencies import (
 from app.modules.ticketing import cache_ticketing, cruds_ticketing, schemas_ticketing
 from app.modules.ticketing.factory_ticketing import TicketingFactory
 from app.modules.ticketing.types_ticketing import TicketStatus
+from app.modules.ticketing.utils import ticket_constraints_check
 from app.modules.ticketing.utils.permissions_check_ticketing import (
     check_manage_event_for_organiser_by_user,
     check_manage_event_permission_for_user,
@@ -154,6 +155,19 @@ async def get_event_by_id(
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found")
     return event
+
+
+@module.router.get(
+    "/ticketing/events/categories/count/",
+    summary="Get the count of categories for each event",
+    response_model=list[schemas_ticketing.EventCategoriesCount],
+    status_code=200,
+)
+async def get_categories_count_by_events(
+    db: AsyncSession = Depends(get_db),
+) -> list[schemas_ticketing.EventCategoriesCount]:
+    """Get the count of categories for each event."""
+    return await cruds_ticketing.get_categories_count_by_events(db=db)
 
 
 @module.router.post(
@@ -980,18 +994,29 @@ async def create_ticket(
     )
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found")
+    if event.disabled:
+        raise HTTPException(status_code=400, detail="Event is disabled")
+    if event.open_date is not None and ticket_simple.created_at < event.open_date:
+        raise HTTPException(
+            status_code=400,
+            detail="Ticket creation date cannot be before event open date",
+        )
     category = await cruds_ticketing.get_category_by_id(
         category_id=ticket_simple.category_id,
         db=db,
     )
     if category is None:
         raise HTTPException(status_code=404, detail="Category not found")
+    if category.disabled:
+        raise HTTPException(status_code=400, detail="Category is disabled")
     session = await cruds_ticketing.get_session_by_id(
         session_id=ticket_simple.session_id,
         db=db,
     )
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
+    if session.disabled:
+        raise HTTPException(status_code=400, detail="Session is disabled")
 
     if category.event_id != event.id:
         raise HTTPException(
@@ -1009,45 +1034,13 @@ async def create_ticket(
             detail="Session is not available for category",
         )
 
-    # Check if the user has already reached the user quota for the event, category and session
-    user_tickets = await cruds_ticketing.get_tickets_by_user_id(
-        user_id=ticket_simple.user_id,
+    await ticket_constraints_check.check_user_quotas(
         db=db,
+        user_id=user.id,
+        event=event,
+        category=category,
+        session=session,
     )
-    user_event_tickets = [
-        ticket for ticket in user_tickets if ticket.event_id == ticket_simple.event_id
-    ]
-    user_category_tickets = [
-        ticket
-        for ticket in user_tickets
-        if ticket.category_id == ticket_simple.category_id
-    ]
-    user_session_tickets = [
-        ticket
-        for ticket in user_tickets
-        if ticket.session_id == ticket_simple.session_id
-    ]
-    if event.user_quota is not None and len(user_event_tickets) >= event.user_quota:
-        raise HTTPException(
-            status_code=400,
-            detail="User event quota exceeded",
-        )
-    if (
-        category.user_quota is not None
-        and len(user_category_tickets) >= category.user_quota
-    ):
-        raise HTTPException(
-            status_code=400,
-            detail="User category quota exceeded",
-        )
-    if (
-        session.user_quota is not None
-        and len(user_session_tickets) >= session.user_quota
-    ):
-        raise HTTPException(
-            status_code=400,
-            detail="User session quota exceeded",
-        )
 
     # Check membership requirements for the ticket category, if any
     if category.required_mebership is not None:
@@ -1059,26 +1052,15 @@ async def create_ticket(
 
     await cruds_ticketing.create_ticket(ticket=ticket_simple, db=db)
 
-    # TODO: Add redis cache update for event quota
-    cache_ticketing.update_cache_for_new_ticket(
+    # We should not update the quota if the event, category or session has no quota defined (None)
+    # which correspond to unlimited quota.
+    await cache_ticketing.update_cached_quota_for_new_ticket(
         redis=redis_client,
-        event_id=ticket_simple.event_id,
-        category_id=ticket_simple.category_id,
-        session_id=ticket_simple.session_id,
+        event_id=ticket_simple.event_id if event.quota is not None else None,
+        category_id=ticket_simple.category_id if category.quota is not None else None,
+        session_id=ticket_simple.session_id if session.quota is not None else None,
     )
 
-    await cruds_ticketing.increment_used_quota_event(
-        event_id=ticket_simple.event_id,
-        db=db,
-    )
-    await cruds_ticketing.increment_used_quota_category(
-        category_id=ticket_simple.category_id,
-        db=db,
-    )
-    await cruds_ticketing.increment_used_quota_session(
-        session_id=ticket_simple.session_id,
-        db=db,
-    )
     ticket_complete = await cruds_ticketing.get_ticket_by_id(
         ticket_id=ticket_simple.id,
         db=db,
@@ -1086,11 +1068,13 @@ async def create_ticket(
 
     if ticket_complete is None:
         await db.rollback()
-        await cache_ticketing.update_cache_for_new_ticket(
+        await cache_ticketing.update_cached_quota_for_new_ticket(
             redis=redis_client,
-            event_id=ticket_simple.event_id,
-            category_id=ticket_simple.category_id,
-            session_id=ticket_simple.session_id,
+            event_id=ticket_simple.event_id if event.quota is not None else None,
+            category_id=ticket_simple.category_id
+            if category.quota is not None
+            else None,
+            session_id=ticket_simple.session_id if session.quota is not None else None,
             amount=-1,
         )
         raise HTTPException(status_code=500, detail="Ticket creation failed")
@@ -1181,11 +1165,11 @@ async def delete_ticket(
         new_status=TicketStatus.CANCELLED,
     )
     # Then we give back the quota to the event, category and session
-    cache_ticketing.update_cache_for_new_ticket(
+    await cache_ticketing.update_cached_quota_for_new_ticket(
         redis=redis_client,
-        event_id=stored.event_id,
-        category_id=stored.category_id,
-        session_id=stored.session_id,
+        event_id=stored.event_id if stored.event_id is not None else None,
+        category_id=stored.category_id if stored.category_id is not None else None,
+        session_id=stored.session_id if stored.session_id is not None else None,
         amount=-1,  # We add -1 to the quota to give back the quota to the event, category and session
     )
 

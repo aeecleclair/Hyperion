@@ -1,6 +1,6 @@
 from uuid import UUID, uuid4
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -158,20 +158,22 @@ async def get_event_remaining_quota(
 ) -> int | None:
     """Get the remaining quota for an event."""
 
-    return (
-        (
-            await db.execute(
-                select(
-                    models_ticketing.TicketingEvent.quota
-                    - models_ticketing.TicketingEvent.used_quota,
-                ).where(
-                    models_ticketing.TicketingEvent.id == event_id,
-                ),
-            )
+    result = (
+        await db.execute(
+            select(
+                models_ticketing.TicketingEvent.quota,
+                models_ticketing.TicketingEvent.used_quota,
+            ).where(
+                models_ticketing.TicketingEvent.id == event_id,
+            ),
         )
-        .scalars()
-        .first()
-    )
+    ).first()
+    if result is not None:
+        quota, used_quota = result.tuple()
+        if quota is None:
+            return None
+        return quota - used_quota
+    return None
 
 
 async def get_event_by_name(
@@ -201,6 +203,27 @@ async def get_event_by_name(
         if event
         else None
     )
+
+
+async def get_categories_count_by_events(
+    db: AsyncSession,
+) -> list[schemas_ticketing.EventCategoriesCount]:
+    """Get the number of categories for a specific event."""
+
+    return [
+        schemas_ticketing.EventCategoriesCount(
+            event_id=event_id,
+            categories_count=categories_count,
+        )
+        for event_id, categories_count in (
+            await db.execute(
+                select(
+                    models_ticketing.TicketingCategory.event_id,
+                    func.count(models_ticketing.TicketingCategory.id),
+                ).group_by(models_ticketing.TicketingCategory.event_id),
+            )
+        ).all()
+    ]
 
 
 async def create_event(
@@ -343,20 +366,22 @@ async def get_session_remaining_quota(
 ) -> int | None:
     """Get the remaining quota for a session."""
 
-    return (
-        (
-            await db.execute(
-                select(
-                    models_ticketing.TicketingSession.quota
-                    - models_ticketing.TicketingSession.used_quota,
-                ).where(
-                    models_ticketing.TicketingSession.id == session_id,
-                ),
-            )
+    result = (
+        await db.execute(
+            select(
+                models_ticketing.TicketingSession.quota,
+                models_ticketing.TicketingSession.used_quota,
+            ).where(
+                models_ticketing.TicketingSession.id == session_id,
+            ),
         )
-        .scalars()
-        .first()
-    )
+    ).first()
+    if result is not None:
+        quota, used_quota = result.tuple()
+        if quota is None:
+            return None
+        return quota - used_quota
+    return None
 
 
 async def get_sessions_by_ids(
@@ -496,22 +521,25 @@ async def get_category_remaining_quota(
     db: AsyncSession,
     category_id: UUID,
 ) -> int | None:
-    """Get the remaining quota for a category."""
+    """Get the remaining quota for a category. None if quota is unlimited (None)."""
 
-    return (
-        (
-            await db.execute(
-                select(
-                    models_ticketing.TicketingCategory.quota
-                    - models_ticketing.TicketingCategory.used_quota,
-                ).where(
-                    models_ticketing.TicketingCategory.id == category_id,
-                ),
-            )
+    # select the quota and used_quota of the category, then calculate the remaining quota
+    result = (
+        await db.execute(
+            select(
+                models_ticketing.TicketingCategory.quota,
+                models_ticketing.TicketingCategory.used_quota,
+            ).where(
+                models_ticketing.TicketingCategory.id == category_id,
+            ),
         )
-        .scalars()
-        .first()
-    )
+    ).first()
+    if result is not None:
+        quota, used_quota = result.tuple()
+        if quota is None:
+            return None
+        return quota - used_quota
+    return None
 
 
 async def get_categories_by_session_id(

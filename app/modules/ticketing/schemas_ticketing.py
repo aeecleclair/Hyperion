@@ -57,6 +57,11 @@ class EventUpdate(BaseModel):
     disabled: bool | None = None
 
 
+class EventCategoriesCount(BaseModel):
+    event_id: UUID
+    categories_count: int
+
+
 class SessionBase(BaseModel):
     event_id: UUID
     date: datetime

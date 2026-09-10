@@ -96,7 +96,7 @@ async def use_or_set_cache_with_crud[**CrudFuncT, SchemaT: BaseModel](
     return value
 
 
-async def use_or_set_cache_with_crud_int[**CrudFuncT](
+async def use_or_set_cache_with_crud_int_nullable[**CrudFuncT](
     redis: Redis | None,
     key: str,
     crud_func: Callable[CrudFuncT, Coroutine[Any, Any, int | None]],
@@ -110,6 +110,8 @@ async def use_or_set_cache_with_crud_int[**CrudFuncT](
         return await crud_func(*args, **kwargs)
     cached_value: str | bytes | None = redis.get(key)
     if cached_value is not None:
+        if cached_value in (b"None", "None"):
+            return None
         try:
             return int(cached_value)
         except Exception:
@@ -138,26 +140,28 @@ def invalidate_key_cache(redis: Redis | None, key: str):
         redis.delete(key)
 
 
-def update_cache_for_new_ticket(
+def update_cached_quota_for_new_ticket(
     redis: Redis | None,
-    event_id: UUID,
-    category_id: UUID,
+    event_id: UUID | None,
+    category_id: UUID | None,
     session_id: UUID | None,
     amount: int = 1,  # Increase the used quota by this amount (default is 1 for a single ticket)
 ):
-    """Update the cache for a new ticket."""
+    """Update the cached quota for a new ticket."""
     if redis is not None and isinstance(redis, Redis):
         # Increment the used quota for the event, category, and session
-        increment_key_cache(
-            redis,
-            RedisKeysList.event_remaining_quota(event_id),
-            -amount,
-        )
-        increment_key_cache(
-            redis,
-            RedisKeysList.category_remaining_quota(category_id),
-            -amount,
-        )
+        if event_id is not None:
+            increment_key_cache(
+                redis,
+                RedisKeysList.event_remaining_quota(event_id),
+                -amount,
+            )
+        if category_id is not None:
+            increment_key_cache(
+                redis,
+                RedisKeysList.category_remaining_quota(category_id),
+                -amount,
+            )
         if session_id is not None:
             increment_key_cache(
                 redis,
@@ -180,11 +184,11 @@ async def get_event_remaining_quota_with_cache(
     event_id: UUID,
 ) -> int | None:
     """Get the remaining quota for an event."""
-    return await use_or_set_cache_with_crud_int(
+    return await use_or_set_cache_with_crud_int_nullable(
         redis=redis,
         key=RedisKeysList.event_remaining_quota(event_id),
         crud_func=cruds_ticketing.get_event_remaining_quota,
-        expire=6 * 3_600,
+        expire=300,
         db=db,
         event_id=event_id,
     )
@@ -196,11 +200,11 @@ async def get_session_remaining_quota_with_cache(
     session_id: UUID,
 ) -> int | None:
     """Get the remaining quota for a session."""
-    return await use_or_set_cache_with_crud_int(
+    return await use_or_set_cache_with_crud_int_nullable(
         redis=redis,
         key=RedisKeysList.session_remaining_quota(session_id),
         crud_func=cruds_ticketing.get_session_remaining_quota,
-        expire=6 * 3_600,
+        expire=300,
         db=db,
         session_id=session_id,
     )
@@ -212,11 +216,11 @@ async def get_category_remaining_quota_with_cache(
     category_id: UUID,
 ) -> int | None:
     """Get the remaining quota for a category."""
-    return await use_or_set_cache_with_crud_int(
+    return await use_or_set_cache_with_crud_int_nullable(
         redis=redis,
         key=RedisKeysList.category_remaining_quota(category_id),
         crud_func=cruds_ticketing.get_category_remaining_quota,
-        expire=6 * 3_600,
+        expire=300,
         db=db,
         category_id=category_id,
     )
