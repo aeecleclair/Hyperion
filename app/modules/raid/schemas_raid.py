@@ -102,10 +102,12 @@ class RaidParticipantCreate(BaseModel):
     student_card_id: str | None = None
     raid_rules_id: str | None = None
     parent_authorization_id: str | None = None
+    school_authorization_id: str | None = None
     attestation_on_honour: bool = False
     payment: bool = False
     t_shirt_payment: bool = False
     is_minor: bool = False
+    has_scholarship: bool = False
 
 
 class RaidParticipantPreview(RaidParticipantBase):
@@ -142,8 +144,11 @@ class RaidParticipantRestricted(RaidParticipantPreview):
     raid_rules: Document | None = None
     parent_authorization_id: str | None = None
     parent_authorization: Document | None = None
+    school_authorization_id: str | None = None
+    school_authorization: Document | None = None
     attestation_on_honour: bool
     is_minor: bool
+    has_scholarship: bool
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -185,6 +190,8 @@ class RaidParticipantUpdate(BaseModel):
     student_card_id: str | None = None
     raid_rules_id: str | None = None
     parent_authorization_id: str | None = None
+    school_authorization_id: str | None = None
+    has_scholarship: bool | None = None
 
     @field_validator("situation", mode="before")
     @classmethod
