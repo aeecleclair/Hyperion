@@ -116,6 +116,11 @@ def _check_all_documents_accepted(
             participant.parent_authorization,
             "parent authorization",
         )
+    if participant.has_scholarship:
+        _check_document_accepted(
+            participant.school_authorization,
+            "school authorization",
+        )
 
 
 def _check_document_accepted(
@@ -208,6 +213,7 @@ class _ParticipantContext:
 
     situation: Situation | None
     is_minor: bool
+    has_scholarship: bool = False
 
 
 @dataclass(frozen=True)
@@ -253,6 +259,11 @@ _DOCUMENT_RULES: tuple[_DocumentRule, ...] = (
         applies=lambda c: c.is_minor,
         counts_temporary=True,
     ),
+    _DocumentRule(
+        "school_authorization",
+        applies=lambda c: c.has_scholarship,
+        counts_temporary=True,
+    ),
 )
 
 # Profile fields that each count one slot when set on the participant.
@@ -271,6 +282,7 @@ def _context(
     return _ParticipantContext(
         situation=participant.situation,
         is_minor=participant.is_minor,
+        has_scholarship=participant.has_scholarship,
     )
 
 
