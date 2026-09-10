@@ -246,8 +246,8 @@ async def update_event(
         db=db,
     )
     await cache_ticketing.invalidate_key_cache(
-        cache_ticketing.RedisKeysList.event_remaining_quota(event_id),
-        redis,
+        redis=redis,
+        key=cache_ticketing.RedisKeysList.event_remaining_quota(event_id),
     )
 
 
@@ -295,8 +295,8 @@ async def delete_event(
         )
     await cruds_ticketing.delete_event(event_id=event_id, db=db)
     await cache_ticketing.invalidate_key_cache(
-        cache_ticketing.RedisKeysList.event_remaining_quota(event_id),
-        redis,
+        redis=redis,
+        key=cache_ticketing.RedisKeysList.event_remaining_quota(event_id),
     )
 
 
@@ -458,8 +458,8 @@ async def update_session(
         db=db,
     )
     await cache_ticketing.invalidate_key_cache(
-        cache_ticketing.RedisKeysList.session_remaining_quota(session_id),
-        redis,
+        redis=redis,
+        key=cache_ticketing.RedisKeysList.session_remaining_quota(session_id),
     )
 
 
@@ -518,8 +518,8 @@ async def delete_session(
         )
     await cruds_ticketing.delete_session(session_id=session_id, db=db)
     await cache_ticketing.invalidate_key_cache(
-        cache_ticketing.RedisKeysList.session_remaining_quota(session_id),
-        redis,
+        key=cache_ticketing.RedisKeysList.session_remaining_quota(session_id),
+        redis=redis,
     )
 
 
@@ -715,8 +715,8 @@ async def update_category(
         db=db,
     )
     await cache_ticketing.invalidate_key_cache(
-        cache_ticketing.RedisKeysList.category_remaining_quota(category_id),
-        redis,
+        redis=redis,
+        key=cache_ticketing.RedisKeysList.category_remaining_quota(category_id),
     )
 
 
@@ -757,8 +757,8 @@ async def delete_category(
         )
     await cruds_ticketing.delete_category(category_id=category_id, db=db)
     await cache_ticketing.invalidate_key_cache(
-        cache_ticketing.RedisKeysList.category_remaining_quota(category_id),
-        redis,
+        redis=redis,
+        key=cache_ticketing.RedisKeysList.category_remaining_quota(category_id),
     )
 
 
