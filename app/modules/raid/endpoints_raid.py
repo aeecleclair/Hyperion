@@ -225,20 +225,7 @@ async def get_participant_by_id(
 
     participant = await get_participant_complete_or_404(user_id, edition.id, db)
 
-    return schemas_raid.RaidParticipantRestrictedComplete(
-        user_id=participant.user_id,
-        edition_id=participant.edition_id,
-        status=participant.status,
-        bike_size=participant.bike_size,
-        t_shirt_size=participant.t_shirt_size,
-        situation=participant.situation,
-        payment=participant.payment,
-        t_shirt_payment=participant.t_shirt_payment,
-        user=participant.user,
-        validation_progress=participant.validation_progress,
-        attestation_on_honour=participant.attestation_on_honour,
-        is_minor=participant.is_minor,
-    )
+    return schemas_raid.RaidParticipantRestrictedComplete(**participant.model_dump())
 
 
 @module.router.post(
@@ -317,6 +304,7 @@ async def update_participant(
         ("student_card_id", "student_card"),
         ("raid_rules_id", "raid_rules"),
         ("parent_authorization_id", "parent_authorization"),
+        ("school_authorization_id", "school_authorization"),
     ):
         doc_id = getattr(participant_update, attr)
         if doc_id and not await cruds_raid.get_document_by_id(doc_id, db):
@@ -727,6 +715,7 @@ async def upload_document(
             DocumentType.studentCard: "student_card_id",
             DocumentType.raidRules: "raid_rules_id",
             DocumentType.parentAuthorization: "parent_authorization_id",
+            DocumentType.schoolAuthorization: "school_authorization_id",
         }[document_type]
         await cruds_raid.assign_document(
             user.id,
@@ -1239,6 +1228,7 @@ async def get_payment_url(
         not raid_prices.student_price
         or not raid_prices.t_shirt_price
         or not raid_prices.external_price
+        or not raid_prices.scholarship_price
     ):
         raise HTTPException(status_code=404, detail="Prices not set.")
 
