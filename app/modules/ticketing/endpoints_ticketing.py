@@ -245,7 +245,7 @@ async def update_event(
         event_update=event_update,
         db=db,
     )
-    await cache_ticketing.invalidate_key_cache(
+    cache_ticketing.invalidate_key_cache(
         redis=redis,
         key=cache_ticketing.RedisKeysList.event_remaining_quota(event_id),
     )
@@ -294,7 +294,7 @@ async def delete_event(
             detail="Cannot delete an event with associated sessions",
         )
     await cruds_ticketing.delete_event(event_id=event_id, db=db)
-    await cache_ticketing.invalidate_key_cache(
+    cache_ticketing.invalidate_key_cache(
         redis=redis,
         key=cache_ticketing.RedisKeysList.event_remaining_quota(event_id),
     )
@@ -457,7 +457,7 @@ async def update_session(
         session_update=session_update,
         db=db,
     )
-    await cache_ticketing.invalidate_key_cache(
+    cache_ticketing.invalidate_key_cache(
         redis=redis,
         key=cache_ticketing.RedisKeysList.session_remaining_quota(session_id),
     )
@@ -517,7 +517,7 @@ async def delete_session(
             detail="Cannot delete a session with associated tickets",
         )
     await cruds_ticketing.delete_session(session_id=session_id, db=db)
-    await cache_ticketing.invalidate_key_cache(
+    cache_ticketing.invalidate_key_cache(
         key=cache_ticketing.RedisKeysList.session_remaining_quota(session_id),
         redis=redis,
     )
@@ -714,7 +714,7 @@ async def update_category(
         category_update=category_update,
         db=db,
     )
-    await cache_ticketing.invalidate_key_cache(
+    cache_ticketing.invalidate_key_cache(
         redis=redis,
         key=cache_ticketing.RedisKeysList.category_remaining_quota(category_id),
     )
@@ -756,7 +756,7 @@ async def delete_category(
             detail="Cannot delete a category with used quota",
         )
     await cruds_ticketing.delete_category(category_id=category_id, db=db)
-    await cache_ticketing.invalidate_key_cache(
+    cache_ticketing.invalidate_key_cache(
         redis=redis,
         key=cache_ticketing.RedisKeysList.category_remaining_quota(category_id),
     )
@@ -1078,7 +1078,7 @@ async def create_ticket(
 
     # We should not update the quota if the event, category or session has no quota defined (None)
     # which correspond to unlimited quota.
-    await cache_ticketing.update_cached_quota_for_new_ticket(
+    cache_ticketing.update_cached_quota_for_new_ticket(
         redis=redis_client,
         event_id=ticket_simple.event_id if event.quota is not None else None,
         category_id=ticket_simple.category_id if category.quota is not None else None,
@@ -1092,7 +1092,7 @@ async def create_ticket(
 
     if ticket_complete is None:
         await db.rollback()
-        await cache_ticketing.update_cached_quota_for_new_ticket(
+        cache_ticketing.update_cached_quota_for_new_ticket(
             redis=redis_client,
             event_id=ticket_simple.event_id if event.quota is not None else None,
             category_id=ticket_simple.category_id
@@ -1189,7 +1189,7 @@ async def delete_ticket(
         new_status=TicketStatus.CANCELLED,
     )
     # Then we give back the quota to the event, category and session
-    await cache_ticketing.update_cached_quota_for_new_ticket(
+    cache_ticketing.update_cached_quota_for_new_ticket(
         redis=redis_client,
         event_id=stored.event_id if stored.event_id is not None else None,
         category_id=stored.category_id if stored.category_id is not None else None,
