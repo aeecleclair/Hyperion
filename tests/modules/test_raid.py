@@ -13,9 +13,10 @@ import uuid
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from sqlalchemy import update
+from sqlalchemy import delete, update
 
 from app.core.groups import models_groups
+from app.core.payment import cruds_payment, models_payment
 from app.core.users import cruds_users, models_users, schemas_users
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
 from app.modules.raid.endpoints_raid import RaidPermissions
@@ -28,6 +29,7 @@ from app.modules.raid.raid_type import (
     Situation,
     Size,
 )
+from app.utils.tools import save_bytes_as_data
 from tests.commons import (
     add_coredata_to_db,
     add_object_to_db,
@@ -35,6 +37,7 @@ from tests.commons import (
     create_groups_with_permissions,
     create_user_with_groups,
     get_TestingSessionLocal,
+    mocked_checkout_id,
 )
 
 # ---------------------------------------------------------------------------
@@ -102,6 +105,7 @@ async def init_objects() -> None:
             t_shirt_price=15,
             partner_price=70,
             external_price=90,
+            scholarship_price=25,
         ),
     )
     await add_coredata_to_db(coredata_raid.RaidInformation())
@@ -412,6 +416,18 @@ def test_update_participant_invalid_document(client: TestClient) -> None:
     assert r.status_code == 404
 
 
+def test_update_participant_with_unknown_school_authorization(
+    client: TestClient,
+) -> None:
+    """PATCH /participants validates the school authorization document too."""
+    r = client.patch(
+        f"/raid/participants/{user_captain.id}",
+        json={"school_authorization_id": "does-not-exist"},
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 404
+
+
 def test_submit_without_attestation_400(client: TestClient) -> None:
     r = client.post(
         f"/raid/participants/{user_captain.id}/submit",
@@ -645,6 +661,24 @@ def test_upload_document(client: TestClient) -> None:
     assert r.status_code == 201
 
 
+def test_upload_school_authorization_document(client: TestClient) -> None:
+    """Uploading a school authorization assigns it to the participant."""
+    r = client.post(
+        "/raid/document/schoolAuthorization",
+        files={"file": ("school_auth.pdf", b"blob", "application/pdf")},
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 201
+    doc_id = r.json()["id"]
+
+    r = client.get(
+        "/raid/participants/me",
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 200
+    assert r.json()["school_authorization_id"] == doc_id
+
+
 def test_validate_document_requires_admin(client: TestClient) -> None:
     r = client.post(
         f"/raid/document/{doc_pending.id}/validate?validation=accepted",
@@ -852,6 +886,446 @@ def test_get_volunteer_me_after_delete(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token_volunteer}"},
     )
     assert r.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Scholarship flow (has_scholarship + school_authorization document)
+# ---------------------------------------------------------------------------
+
+
+async def _setup_scholarship_participant(
+    user: models_users.CoreUser,
+) -> None:
+    """Promote an existing participant to a scholarship participant ready to validate."""
+    # Team completeness requires a second member; give the team a bare one.
+    second_user = await create_user_with_groups([])
+    await _set_user_identity(
+        second_user.id,
+        "+33672000099",
+        datetime.date(2000, 1, 31),
+    )
+
+    async with get_TestingSessionLocal()() as db:
+        docs = {}
+        for doc_type in (
+            DocumentType.idCard,
+            DocumentType.medicalCertificate,
+            DocumentType.raidRules,
+            DocumentType.studentCard,
+            DocumentType.schoolAuthorization,
+        ):
+            doc = models_raid.Document(
+                id=str(uuid.uuid4()),
+                edition_id=active_edition.id,
+                name=f"{doc_type.value}.pdf",
+                uploaded_at=datetime.datetime.now(tz=datetime.UTC).date(),
+                type=doc_type,
+                validation=DocumentValidation.accepted,
+            )
+            db.add(doc)
+            docs[doc_type] = doc
+
+        security = models_raid.SecurityFile(
+            id=str(uuid.uuid4()),
+            edition_id=active_edition.id,
+            allergy=None,
+            asthma=False,
+            intensive_care_unit=None,
+            intensive_care_unit_when=None,
+            ongoing_treatment=None,
+            sicknesses=None,
+            hospitalization=None,
+            surgical_operation=None,
+            trauma=None,
+            family=None,
+            emergency_person_firstname="Jane",
+            emergency_person_name="Doe",
+            emergency_person_phone="0600000000",
+            file_id=None,
+        )
+        db.add(security)
+
+        db.add(
+            models_raid.RaidParticipant(
+                user_id=second_user.id,
+                edition_id=active_edition.id,
+                status=RaidRegistrationStatus.draft,
+                situation=Situation.other,
+                is_minor=False,
+            ),
+        )
+        await db.flush()
+
+        team = models_raid.RaidTeam(
+            id=str(uuid.uuid4()),
+            edition_id=active_edition.id,
+            name=f"ScholarTeam-{user.id}",
+            difficulty=Difficulty.sports,
+            meeting_place=MeetingPlace.centrale,
+            captain_id=user.id,
+            second_id=second_user.id,
+        )
+        db.add(team)
+        await db.flush()
+
+        await db.execute(
+            update(models_raid.RaidParticipant)
+            .where(
+                models_raid.RaidParticipant.user_id == user.id,
+                models_raid.RaidParticipant.edition_id == active_edition.id,
+            )
+            .values(
+                status=RaidRegistrationStatus.submitted,
+                situation=Situation.other,  # scholarship applies without student card
+                has_scholarship=True,
+                id_card_id=docs[DocumentType.idCard].id,
+                medical_certificate_id=docs[DocumentType.medicalCertificate].id,
+                raid_rules_id=docs[DocumentType.raidRules].id,
+                school_authorization_id=docs[DocumentType.schoolAuthorization].id,
+                security_file_id=security.id,
+                attestation_on_honour=True,
+                payment=True,
+                t_shirt_payment=True,
+                is_minor=False,
+            ),
+        )
+        await db.commit()
+
+
+async def test_scholarship_participant_can_be_validated(client: TestClient) -> None:
+    """A scholarship participant with an accepted school authorization validates."""
+    user = await create_user_with_groups([])
+    await _set_user_identity(user.id, "+33671000001", datetime.date(2000, 1, 1))
+    token = create_api_access_token(user)
+
+    r = client.post(
+        "/raid/participants",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 201
+
+    await _setup_scholarship_participant(user)
+
+    r = client.patch(
+        f"/raid/participants/{user.id}/validate",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 204, r.json()
+
+    r = client.get(
+        f"/raid/participants/{user.id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["status"] == "validated"
+    assert body["has_scholarship"] is True
+    assert body["school_authorization_id"] is not None
+
+
+async def test_scholarship_participant_rejected_without_school_authorization(
+    client: TestClient,
+) -> None:
+    """Admin validation fails while the school authorization is missing."""
+    user = await create_user_with_groups([])
+    await _set_user_identity(user.id, "+33671000002", datetime.date(2000, 2, 2))
+    token = create_api_access_token(user)
+
+    r = client.post(
+        "/raid/participants",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 201
+
+    await _setup_scholarship_participant(user)
+
+    async with get_TestingSessionLocal()() as db:
+        await db.execute(
+            update(models_raid.RaidParticipant)
+            .where(
+                models_raid.RaidParticipant.user_id == user.id,
+                models_raid.RaidParticipant.edition_id == active_edition.id,
+            )
+            .values(school_authorization_id=None),
+        )
+        await db.commit()
+
+    r = client.patch(
+        f"/raid/participants/{user.id}/validate",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 400
+    assert r.json()["detail"] == "Missing school authorization"
+
+
+async def test_school_authorization_lazy_load_does_not_break_read(
+    client: TestClient,
+) -> None:
+    """Reading a participant with a school authorization must not lazy-load."""
+    user = await create_user_with_groups([])
+    await _set_user_identity(user.id, "+33671000003", datetime.date(2000, 3, 3))
+    token = create_api_access_token(user)
+
+    r = client.post(
+        "/raid/participants",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 201
+
+    await _setup_scholarship_participant(user)
+
+    r = client.get(
+        f"/raid/participants/{user.id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["school_authorization_id"] is not None
+    assert body["school_authorization"]["validation"] == "accepted"
+
+
+async def _reset_mocked_checkout() -> None:
+    """The mocked payment tool reuses a single checkout row without updating
+    its amount; purge it so each /raid/pay test observes its own charge."""
+    async with get_TestingSessionLocal()() as db:
+        await db.execute(
+            delete(models_raid.RaidParticipantCheckout).where(
+                models_raid.RaidParticipantCheckout.checkout_id
+                == str(mocked_checkout_id),
+            ),
+        )
+        await db.execute(
+            delete(models_payment.Checkout).where(
+                models_payment.Checkout.id == mocked_checkout_id,
+            ),
+        )
+        await db.commit()
+
+
+async def test_pay_endpoint_uses_scholarship_price(client: TestClient) -> None:
+    """POST /raid/pay charges the scholarship price for scholars."""
+    user = await create_user_with_groups([])
+    await _set_user_identity(user.id, "+33671000004", datetime.date(2000, 4, 4))
+    token = create_api_access_token(user)
+
+    r = client.post(
+        "/raid/participants",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 201
+
+    await _setup_scholarship_participant(user)
+    # The helper sets payment=True; the pay endpoint needs an unpaid participant.
+    async with get_TestingSessionLocal()() as db:
+        await db.execute(
+            update(models_raid.RaidParticipant)
+            .where(
+                models_raid.RaidParticipant.user_id == user.id,
+                models_raid.RaidParticipant.edition_id == active_edition.id,
+            )
+            .values(payment=False, t_shirt_payment=True),
+        )
+        await db.commit()
+
+    r = client.get(
+        "/raid/pay",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 201, r.json()
+    url = r.json()["url"]
+    assert url
+
+    # The mocked checkout stores the amount charged for this participant.
+    async with get_TestingSessionLocal()() as db:
+        checkout = await cruds_payment.get_checkout_by_id(mocked_checkout_id, db)
+        assert checkout is not None
+        assert checkout.name == "Inscription Raid - Tarif boursier"
+        assert checkout.amount == 25
+
+
+async def test_participant_can_set_scholarship_flag(client: TestClient) -> None:
+    """PATCH /participants accepts has_scholarship from the participant itself."""
+    r = client.patch(
+        f"/raid/participants/{user_second.id}",
+        json={"has_scholarship": True},
+        headers={"Authorization": f"Bearer {token_second}"},
+    )
+    assert r.status_code == 204, r.json()
+
+    r = client.get(
+        f"/raid/participants/{user_second.id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 200
+    assert r.json()["has_scholarship"] is True
+
+    # Revoke it back so later tests are unaffected.
+    r = client.patch(
+        f"/raid/participants/{user_second.id}",
+        json={"has_scholarship": False},
+        headers={"Authorization": f"Bearer {token_second}"},
+    )
+    assert r.status_code == 204
+
+
+async def test_scholarship_price_requires_accepted_school_authorization(
+    client: TestClient,
+) -> None:
+    """Self-declared scholarship does not unlock the discounted price."""
+    await _reset_mocked_checkout()
+    user = await create_user_with_groups([])
+    await _set_user_identity(user.id, "+33671000005", datetime.date(2000, 5, 5))
+    token = create_api_access_token(user)
+
+    r = client.post(
+        "/raid/participants",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 201
+
+    # Declare scholarship but upload no school authorization document.
+    r = client.patch(
+        f"/raid/participants/{user.id}",
+        json={"has_scholarship": True},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 204
+
+    r = client.get(
+        "/raid/pay",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 201, r.json()
+
+    async with get_TestingSessionLocal()() as db:
+        checkout = await cruds_payment.get_checkout_by_id(mocked_checkout_id, db)
+        assert checkout is not None
+        # No accepted document: falls back to the external price.
+        assert checkout.name == "Inscription Raid - Tarif externe"
+        assert checkout.amount == 90
+
+
+async def test_scholarship_price_applies_with_accepted_school_authorization(
+    client: TestClient,
+) -> None:
+    """Scholar price only once the school authorization is accepted."""
+    await _reset_mocked_checkout()
+    user = await create_user_with_groups([])
+    await _set_user_identity(user.id, "+33671000006", datetime.date(2000, 6, 6))
+    token = create_api_access_token(user)
+
+    r = client.post(
+        "/raid/participants",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 201
+
+    # Upload + assign a pending school authorization, declare the scholarship.
+    upload = client.post(
+        "/raid/document/schoolAuthorization",
+        files={"file": ("school_auth.pdf", b"blob", "application/pdf")},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert upload.status_code == 201
+
+    r = client.patch(
+        f"/raid/participants/{user.id}",
+        json={"has_scholarship": True},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 204
+
+    r = client.get(
+        "/raid/pay",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 201
+    async with get_TestingSessionLocal()() as db:
+        checkout = await cruds_payment.get_checkout_by_id(mocked_checkout_id, db)
+        assert checkout is not None
+        # Pending document is not enough: still the external price.
+        assert checkout.amount == 90
+
+    # The mocked payment tool does not update an existing checkout row.
+    await _reset_mocked_checkout()
+
+    # Admin accepts the document: the scholar price now applies.
+    async with get_TestingSessionLocal()() as db:
+        participant = await cruds_raid.get_participant_by_user_id(
+            user.id,
+            active_edition.id,
+            db,
+        )
+        assert participant is not None
+        assert participant.school_authorization_id is not None
+        await cruds_raid.update_document_validation(
+            participant.school_authorization_id,
+            DocumentValidation.accepted,
+            db,
+        )
+        await db.commit()
+
+    r = client.get(
+        "/raid/pay",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 201
+    async with get_TestingSessionLocal()() as db:
+        checkout = await cruds_payment.get_checkout_by_id(mocked_checkout_id, db)
+        assert checkout is not None
+        assert checkout.name == "Inscription Raid - Tarif boursier"
+        assert checkout.amount == 25
+
+
+async def test_school_authorization_document_is_readable_by_owner(
+    client: TestClient,
+) -> None:
+    """GET /raid/document/{id} resolves ownership of a school authorization."""
+    doc_id = str(uuid.uuid4())
+    await save_bytes_as_data(
+        file_bytes=b"%PDF-1.4 school authorization",
+        directory="raid",
+        filename=doc_id,
+        extension="pdf",
+    )
+    doc = models_raid.Document(
+        id=doc_id,
+        edition_id=active_edition.id,
+        name="school_auth.pdf",
+        uploaded_at=datetime.datetime.now(tz=datetime.UTC).date(),
+        type=DocumentType.schoolAuthorization,
+        validation=DocumentValidation.pending,
+    )
+    await add_object_to_db(doc)
+
+    async with get_TestingSessionLocal()() as db:
+        await db.execute(
+            update(models_raid.RaidParticipant)
+            .where(
+                models_raid.RaidParticipant.user_id == user_captain.id,
+                models_raid.RaidParticipant.edition_id == active_edition.id,
+            )
+            .values(school_authorization_id=doc_id),
+        )
+        await db.commit()
+
+    r = client.get(
+        f"/raid/document/{doc_id}",
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 200
+
+    # Cleanup for later tests.
+    async with get_TestingSessionLocal()() as db:
+        await db.execute(
+            update(models_raid.RaidParticipant)
+            .where(
+                models_raid.RaidParticipant.user_id == user_captain.id,
+                models_raid.RaidParticipant.edition_id == active_edition.id,
+            )
+            .values(school_authorization_id=None),
+        )
+        await db.commit()
 
 
 # ---------------------------------------------------------------------------

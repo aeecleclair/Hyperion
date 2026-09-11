@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from anyio import Path
 from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.groups.groups_type import AccountType
@@ -1033,10 +1034,8 @@ async def join_team(
         raise HTTPException(status_code=400, detail="Invite for a different edition")
 
     user_team = await cruds_raid.get_team_by_participant_id(user.id, edition.id, db)
-    if user_team:
-        if user_team.second_id:
-            raise HTTPException(status_code=403, detail="You are already in a team.")
-        await cruds_raid.delete_team(user_team.id, db)
+    if user_team and user_team.second_id:
+        raise HTTPException(status_code=403, detail="You are already in a team.")
 
     team = await cruds_raid.get_team_by_id(invite_token.team_id, db)
     if not team:
@@ -1049,8 +1048,25 @@ async def join_team(
             detail="You are already the captain of this team.",
         )
 
-    await cruds_raid.delete_invite_token(invite_token.id, db)
-    await cruds_raid.update_team_second_id(team.id, user.id, db)
+    # A participant may already have an incomplete team and an active invite.
+    # Remove that invite before deleting the old team, otherwise the foreign
+    # key from raid_invite.team_id causes an IntegrityError (HTTP 500).
+    if user_team:
+        await cruds_raid.delete_team_invite_tokens(user_team.id, db)
+        await cruds_raid.delete_team(user_team.id, db)
+
+    try:
+        await cruds_raid.delete_invite_token(invite_token.id, db)
+        await cruds_raid.update_team_second_id(team.id, user.id, db)
+    except IntegrityError as error:
+        # Two invitees can pass the capacity check concurrently. Convert the
+        # database unique-constraint failure into a recoverable API response.
+        await db.rollback()
+        hyperion_error_logger.info("Raid team join conflict", exc_info=error)
+        raise HTTPException(
+            status_code=409,
+            detail="This team was just joined by another participant.",
+        ) from error
 
 
 @module.router.post(

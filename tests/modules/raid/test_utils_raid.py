@@ -21,7 +21,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.raid import coredata_raid
 from app.modules.raid.models_raid import RaidParticipant, RaidTeam
-from app.modules.raid.raid_type import Difficulty, Situation, Size
+from app.modules.raid.raid_type import (
+    Difficulty,
+    DocumentValidation,
+    Situation,
+    Size,
+)
 from app.modules.raid.utils.utils_raid import (
     calculate_raid_payment,
     get_all_security_files_zip,
@@ -83,21 +88,106 @@ def prices() -> coredata_raid.RaidPrice:
         student_price=50,
         t_shirt_price=15,
         external_price=90,
+        volunteer_price=0,
+        scholarship_price=25,
     )
 
 
 def _participant(**kwargs):
+    school_authorization = kwargs.pop("school_authorization", None)
     defaults: dict[str, Any] = {
         "user_id": str(uuid4()),
         "edition_id": uuid4(),
         "payment": False,
         "t_shirt_payment": False,
         "t_shirt_size": None,
+        "has_scholarship": False,
         "situation": None,
         "student_card_id": None,
     }
     defaults.update(kwargs)
-    return RaidParticipant(**defaults)
+    participant = RaidParticipant(**defaults)
+    participant.school_authorization = school_authorization
+    return participant
+
+
+def _accepted_doc() -> Any:
+    """A school authorization document already accepted by an admin."""
+    doc = Mock()
+    doc.validation = DocumentValidation.accepted
+    return doc
+
+
+def test_payment_scholarship(prices) -> None:
+    p = _participant(
+        situation=Situation.centrale,
+        student_card_id=str(uuid.uuid4()),
+        has_scholarship=True,
+        school_authorization=_accepted_doc(),
+    )
+    price, label = calculate_raid_payment(p, prices)
+    assert price == 25
+    assert "boursier" in label
+
+
+def test_payment_scholarship_takes_precedence_over_external(prices) -> None:
+    """Scholarship wins even without any student card / central situation."""
+    p = _participant(
+        situation=Situation.other,
+        has_scholarship=True,
+        school_authorization=_accepted_doc(),
+    )
+    price, label = calculate_raid_payment(p, prices)
+    assert price == 25
+    assert "boursier" in label
+
+
+def test_payment_scholarship_with_tshirt(prices) -> None:
+    p = _participant(
+        situation=Situation.other,
+        has_scholarship=True,
+        school_authorization=_accepted_doc(),
+        t_shirt_size=Size.M,
+    )
+    price, label = calculate_raid_payment(p, prices)
+    assert price == 40  # 25 scholarship + 15 t-shirt
+    assert "boursier" in label
+
+
+def test_payment_scholarship_without_document_is_external(prices) -> None:
+    """The flag alone must not unlock the discounted price."""
+    p = _participant(situation=Situation.other, has_scholarship=True)
+    price, label = calculate_raid_payment(p, prices)
+    assert price == 90
+    assert "externe" in label
+
+
+def test_payment_scholarship_with_pending_document_is_external(prices) -> None:
+    """A pending (not yet accepted) document does not grant the discount."""
+    doc = Mock()
+    doc.validation = DocumentValidation.pending
+    p = _participant(
+        situation=Situation.other,
+        has_scholarship=True,
+        school_authorization=doc,
+    )
+    price, label = calculate_raid_payment(p, prices)
+    assert price == 90
+    assert "externe" in label
+
+
+def test_payment_raises_if_scholarship_price_missing() -> None:
+    """Prices must explicitly include scholarship_price."""
+    bad_prices = coredata_raid.RaidPrice(
+        student_price=50,
+        t_shirt_price=15,
+        external_price=90,
+        scholarship_price=None,
+    )
+    p = _participant(situation=Situation.other)
+    with pytest.raises(HTTPException) as exc_info:
+        calculate_raid_payment(p, bad_prices)
+    assert exc_info.value.status_code == 404
 
 
 def test_payment_centrale_with_student_card(prices) -> None:

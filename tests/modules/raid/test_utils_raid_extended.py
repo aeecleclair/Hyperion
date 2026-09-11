@@ -16,6 +16,7 @@ from app.core.payment import schemas_payment
 from app.modules.raid import coredata_raid, schemas_raid
 from app.modules.raid.raid_type import (
     Difficulty,
+    DocumentValidation,
     Situation,
     Size,
 )
@@ -303,11 +304,14 @@ def test_calculate_raid_payment_student_with_card():
     participant.payment = False
     participant.t_shirt_size = None
     participant.t_shirt_payment = False
+    participant.has_scholarship = False
 
     prices = coredata_raid.RaidPrice(
         student_price=50.0,
         t_shirt_price=15.0,
         external_price=90.0,
+        scholarship_price=25.0,
+        volunteer_price=0.0,
     )
 
     price, checkout_name = calculate_raid_payment(participant, prices)
@@ -324,11 +328,14 @@ def test_calculate_raid_payment_student_without_card():
     participant.payment = False
     participant.t_shirt_size = None
     participant.t_shirt_payment = False
+    participant.has_scholarship = False
 
     prices = coredata_raid.RaidPrice(
         student_price=50.0,
         t_shirt_price=15.0,
         external_price=90.0,
+        scholarship_price=25.0,
+        volunteer_price=0.0,
     )
 
     price, checkout_name = calculate_raid_payment(participant, prices)
@@ -345,11 +352,14 @@ def test_calculate_raid_payment_other_school():
     participant.payment = False
     participant.t_shirt_size = None
     participant.t_shirt_payment = False
+    participant.has_scholarship = False
 
     prices = coredata_raid.RaidPrice(
         student_price=50.0,
         t_shirt_price=15.0,
         external_price=90.0,
+        scholarship_price=25.0,
+        volunteer_price=0.0,
     )
 
     price, checkout_name = calculate_raid_payment(participant, prices)
@@ -366,16 +376,67 @@ def test_calculate_raid_payment_corporate_partner():
     participant.payment = False
     participant.t_shirt_size = None
     participant.t_shirt_payment = False
+    participant.has_scholarship = False
 
     prices = coredata_raid.RaidPrice(
         student_price=50.0,
         t_shirt_price=15.0,
         external_price=90.0,
+        scholarship_price=25.0,
+        volunteer_price=0.0,
     )
 
     price, _ = calculate_raid_payment(participant, prices)
 
     assert price == 90.0  # Corporate partner is always external
+
+
+def test_calculate_raid_payment_scholarship():
+    """Test calculate_raid_payment for participant with scholarship."""
+    participant = Mock(spec=schemas_raid.RaidParticipant)
+    participant.situation = Situation.centrale
+    participant.student_card_id = "card_123"
+    participant.payment = False
+    participant.t_shirt_size = None
+    participant.t_shirt_payment = False
+    participant.has_scholarship = True
+    participant.school_authorization = Mock(validation=DocumentValidation.accepted)
+
+    prices = coredata_raid.RaidPrice(
+        student_price=50.0,
+        t_shirt_price=15.0,
+        external_price=90.0,
+        scholarship_price=25.0,
+        volunteer_price=0.0,
+    )
+
+    price, _ = calculate_raid_payment(participant, prices)
+
+    assert price == 25.0  # Scholarship price applies
+
+
+def test_calculate_raid_payment_scholarship_without_accepted_document():
+    """Flag without an accepted school authorization stays on external price."""
+    participant = Mock(spec=schemas_raid.RaidParticipant)
+    participant.situation = Situation.other
+    participant.student_card_id = None
+    participant.payment = False
+    participant.t_shirt_size = None
+    participant.t_shirt_payment = False
+    participant.has_scholarship = True
+    participant.school_authorization = None
+
+    prices = coredata_raid.RaidPrice(
+        student_price=50.0,
+        t_shirt_price=15.0,
+        external_price=90.0,
+        scholarship_price=25.0,
+        volunteer_price=0.0,
+    )
+
+    price, _ = calculate_raid_payment(participant, prices)
+
+    assert price == 90.0  # No accepted document -> external price
 
 
 def test_calculate_raid_payment_with_tshirt():
@@ -386,11 +447,14 @@ def test_calculate_raid_payment_with_tshirt():
     participant.payment = False
     participant.t_shirt_size = Size.L
     participant.t_shirt_payment = False
+    participant.has_scholarship = False
 
     prices = coredata_raid.RaidPrice(
         student_price=50.0,
         t_shirt_price=15.0,
         external_price=90.0,
+        scholarship_price=25.0,
+        volunteer_price=0.0,
     )
 
     price, _ = calculate_raid_payment(participant, prices)
@@ -406,11 +470,14 @@ def test_calculate_raid_payment_already_paid():
     participant.payment = True
     participant.t_shirt_size = None
     participant.t_shirt_payment = False
+    participant.has_scholarship = False
 
     prices = coredata_raid.RaidPrice(
         student_price=50.0,
         t_shirt_price=15.0,
         external_price=90.0,
+        scholarship_price=25.0,
+        volunteer_price=0.0,
     )
 
     price, _ = calculate_raid_payment(participant, prices)
@@ -426,11 +493,14 @@ def test_calculate_raid_payment_tshirt_alone():
     participant.payment = True
     participant.t_shirt_size = Size.L
     participant.t_shirt_payment = False
+    participant.has_scholarship = False
 
     prices = coredata_raid.RaidPrice(
         student_price=50.0,
         t_shirt_price=15.0,
         external_price=90.0,
+        scholarship_price=25.0,
+        volunteer_price=0.0,
     )
 
     price, _ = calculate_raid_payment(participant, prices)
@@ -446,11 +516,14 @@ def test_calculate_raid_payment_fully_paid():
     participant.payment = True
     participant.t_shirt_size = Size.L
     participant.t_shirt_payment = True
+    participant.has_scholarship = False
 
     prices = coredata_raid.RaidPrice(
         student_price=50.0,
         t_shirt_price=15.0,
         external_price=90.0,
+        scholarship_price=25.0,
+        volunteer_price=0.0,
     )
 
     price, _ = calculate_raid_payment(participant, prices)
@@ -466,6 +539,7 @@ def test_calculate_raid_payment_invalid_price():
     participant.payment = False
     participant.t_shirt_size = None
     participant.t_shirt_payment = False
+    participant.has_scholarship = False
 
     prices = coredata_raid.RaidPrice(
         student_price=None,
@@ -491,11 +565,14 @@ def test_calculate_raid_payment_situation_none():
     participant.payment = False
     participant.t_shirt_size = None
     participant.t_shirt_payment = False
+    participant.has_scholarship = False
 
     prices = coredata_raid.RaidPrice(
         student_price=50.0,
         t_shirt_price=15.0,
         external_price=90.0,
+        scholarship_price=25.0,
+        volunteer_price=0.0,
     )
 
     price, _ = calculate_raid_payment(participant, prices)
@@ -525,6 +602,8 @@ async def test_validate_payment_all_combinations():
     prices.student_price = 50.0
     prices.external_price = 90.0
     prices.t_shirt_price = 15.0
+    prices.scholarship_price = 25.0
+    prices.volunteer_price = 0.0
 
     with patch("app.modules.raid.utils.utils_raid.cruds_raid") as mock_cruds:
         mock_cruds.get_participant_checkout_by_checkout_id = AsyncMock(
@@ -550,3 +629,91 @@ async def test_validate_payment_all_combinations():
                 participant_checkout.edition_id,
                 db,
             )
+
+
+@pytest.mark.asyncio
+async def test_validate_payment_scholarship_amount_confirms_payment():
+    """The payment callback recognizes the scholarship price on its own."""
+    db = AsyncMock()
+    checkout_payment = schemas_payment.CheckoutPayment(
+        id=uuid4(),
+        checkout_id=uuid4(),
+        paid_amount=25.0,  # scholarship price
+    )
+
+    participant_checkout = Mock()
+    participant_checkout.participant_user_id = "user_scholar"
+    participant_checkout.edition_id = uuid4()
+
+    prices = Mock()
+    prices.student_price = 50.0
+    prices.external_price = 90.0
+    prices.t_shirt_price = 15.0
+    prices.scholarship_price = 25.0
+    prices.volunteer_price = 0.0
+
+    with patch("app.modules.raid.utils.utils_raid.cruds_raid") as mock_cruds:
+        mock_cruds.get_participant_checkout_by_checkout_id = AsyncMock(
+            return_value=participant_checkout,
+        )
+        mock_cruds.confirm_payment = AsyncMock()
+        mock_cruds.confirm_t_shirt_payment = AsyncMock()
+
+        with patch(
+            "app.modules.raid.utils.utils_raid.get_core_data",
+            new=AsyncMock(return_value=prices),
+        ):
+            await validate_payment(checkout_payment, db)
+
+        mock_cruds.confirm_payment.assert_called_once_with(
+            "user_scholar",
+            participant_checkout.edition_id,
+            db,
+        )
+        mock_cruds.confirm_t_shirt_payment.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_validate_payment_scholarship_with_tshirt_confirms_both():
+    """The payment callback recognizes scholarship + t-shirt combination."""
+    db = AsyncMock()
+    checkout_payment = schemas_payment.CheckoutPayment(
+        id=uuid4(),
+        checkout_id=uuid4(),
+        paid_amount=40.0,  # scholarship + t-shirt
+    )
+
+    participant_checkout = Mock()
+    participant_checkout.participant_user_id = "user_scholar"
+    participant_checkout.edition_id = uuid4()
+
+    prices = Mock()
+    prices.student_price = 50.0
+    prices.external_price = 90.0
+    prices.t_shirt_price = 15.0
+    prices.scholarship_price = 25.0
+    prices.volunteer_price = 0.0
+
+    with patch("app.modules.raid.utils.utils_raid.cruds_raid") as mock_cruds:
+        mock_cruds.get_participant_checkout_by_checkout_id = AsyncMock(
+            return_value=participant_checkout,
+        )
+        mock_cruds.confirm_payment = AsyncMock()
+        mock_cruds.confirm_t_shirt_payment = AsyncMock()
+
+        with patch(
+            "app.modules.raid.utils.utils_raid.get_core_data",
+            new=AsyncMock(return_value=prices),
+        ):
+            await validate_payment(checkout_payment, db)
+
+        mock_cruds.confirm_payment.assert_called_once_with(
+            "user_scholar",
+            participant_checkout.edition_id,
+            db,
+        )
+        mock_cruds.confirm_t_shirt_payment.assert_called_once_with(
+            "user_scholar",
+            participant_checkout.edition_id,
+            db,
+        )
