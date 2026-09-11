@@ -28,8 +28,30 @@ async def get_participant_or_404(
     user_id: str,
     edition_id: UUID,
     db: AsyncSession = Depends(get_db),
+) -> schemas_raid.RaidParticipantRestricted:
+    participant = await cruds_raid.get_participant_by_user_id(
+        user_id,
+        edition_id,
+        db,
+    )
+    if participant is None:
+        raise HTTPException(status_code=404, detail="Participant not found")
+    return participant
+
+
+async def get_participant_complete_or_404(
+    user_id: str,
+    edition_id: UUID,
+    db: AsyncSession = Depends(get_db),
 ) -> schemas_raid.RaidParticipant:
-    participant = await cruds_raid.get_participant_by_user_id(user_id, edition_id, db)
+    """
+    Include the participant's security file
+    """
+    participant = await cruds_raid.get_participant_complete_by_user_id(
+        user_id,
+        edition_id,
+        db,
+    )
     if participant is None:
         raise HTTPException(status_code=404, detail="Participant not found")
     return participant
@@ -53,7 +75,11 @@ async def ensure_user_is_not_participant_in_edition(
 ) -> None:
     # A cancelled participant has given up their slot — they can re-register
     # on the other track (e.g. switch from participant to volunteer).
-    participant = await cruds_raid.get_participant_by_user_id(user_id, edition_id, db)
+    participant = await cruds_raid.get_participant_by_user_id(
+        user_id,
+        edition_id,
+        db,
+    )
     if (
         participant is not None
         and participant.status != RaidRegistrationStatus.cancelled

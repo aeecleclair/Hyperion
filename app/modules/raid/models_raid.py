@@ -72,6 +72,8 @@ class SecurityFile(Base):
     emergency_person_name: Mapped[str | None]
     emergency_person_phone: Mapped[str | None]
     file_id: Mapped[str | None]
+    consent_given: Mapped[bool] = mapped_column(default=False)
+    consent_given_at: Mapped[datetime | None] = mapped_column(default=None)
 
     @property
     def validation(self) -> DocumentValidation:
@@ -163,10 +165,20 @@ class RaidParticipant(Base):
         foreign_keys=[parent_authorization_id],
         init=False,
     )
+    school_authorization_id: Mapped[str | None] = mapped_column(
+        ForeignKey("raid_document.id"),
+        default=None,
+    )
+    school_authorization: Mapped[Document | None] = relationship(
+        "app.modules.raid.models_raid.Document",
+        foreign_keys=[school_authorization_id],
+        init=False,
+    )
     attestation_on_honour: Mapped[bool] = mapped_column(default=False)
     payment: Mapped[bool] = mapped_column(default=False)
     t_shirt_payment: Mapped[bool] = mapped_column(default=False)
     is_minor: Mapped[bool] = mapped_column(default=False)
+    has_scholarship: Mapped[bool] = mapped_column(default=False)
 
     user: Mapped[CoreUser] = relationship(
         "CoreUser",
@@ -251,6 +263,25 @@ class RaidParticipantCheckout(Base):
     )
 
 
+class RaidVolunteerCheckout(Base):
+    __tablename__ = "raid_volunteer_checkout"
+    id: Mapped[str] = mapped_column(
+        primary_key=True,
+        index=True,
+    )
+    volunteer_user_id: Mapped[str]
+    edition_id: Mapped[UUID]
+    checkout_id: Mapped[str] = mapped_column(ForeignKey("checkout_checkout.id"))
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["volunteer_user_id", "edition_id"],
+            ["raid_volunteer.user_id", "raid_volunteer.edition_id"],
+            name="fk_raid_volunteer_checkout_volunteer",
+        ),
+    )
+
+
 class RaidVolunteer(Base):
     __tablename__ = "raid_volunteer"
     user_id: Mapped[str] = mapped_column(
@@ -274,6 +305,8 @@ class RaidVolunteer(Base):
     is_special_driver: Mapped[bool] = mapped_column(default=False)
     is_utility_vehicle_driver: Mapped[bool] = mapped_column(default=False)
     is_parcours_helper: Mapped[bool] = mapped_column(default=False)
+    payment: Mapped[bool] = mapped_column(default=False)
+    t_shirt_payment: Mapped[bool] = mapped_column(default=False)
 
     user: Mapped[CoreUser] = relationship(
         "CoreUser",

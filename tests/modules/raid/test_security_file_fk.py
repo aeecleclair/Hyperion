@@ -91,6 +91,7 @@ def _create_mock_security_file_base() -> schemas_raid.SecurityFileBase:
         emergency_person_name="Doe",
         emergency_person_phone="0600000000",
         file_id=None,
+        consent_given=True,
     )
 
 
