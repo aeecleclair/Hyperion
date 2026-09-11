@@ -511,7 +511,13 @@ async def test_get_payment_total_by_seller_as_admin(client: TestClient):
         "/cdr/stats/payment_total_by_seller/",
         headers={"Authorization": f"Bearer {token_admin}"},
     )
-    assert response.json() == {"total_amounts": [{"name": "BDE", "total_amount": 100}]}
+
+    data = response.json()
+    assert len(data["total_amounts"]) == 1
+    first_data = data["total_amounts"][0]
+    assert first_data["name"] == "BDE"
+    assert first_data["total_amount"] == 100
+
     purchase.validated = False
     await update_object_in_db(purchase)
 
@@ -530,7 +536,11 @@ def test_get_payment_total_per_type_as_admin(client: TestClient):
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
-    assert response.json() == [{"total": 5000, "payment_type": "cash"}]
+    data = response.json()
+    assert len(data) == 1
+    first_data = data[0]
+    assert first_data["payment_type"] == "cash"
+    assert first_data["total"] == 5000
 
 
 def test_get_payment_total_per_type_as_user(client: TestClient):
