@@ -19,6 +19,7 @@ PARTICIPANT_DATA_TO_SELECT = [
     models_raid.RaidParticipant.student_card,
     models_raid.RaidParticipant.raid_rules,
     models_raid.RaidParticipant.parent_authorization,
+    models_raid.RaidParticipant.school_authorization,
     models_raid.RaidParticipant.user,
 ]
 
@@ -37,26 +38,7 @@ async def create_participant(
 ) -> None:
     db.add(
         models_raid.RaidParticipant(
-            user_id=participant.user_id,
-            edition_id=participant.edition_id,
-            status=participant.status,
-            address=participant.address,
-            bike_size=participant.bike_size,
-            t_shirt_size=participant.t_shirt_size,
-            situation=participant.situation,
-            other_school=participant.other_school,
-            company=participant.company,
-            diet=participant.diet,
-            id_card_id=participant.id_card_id,
-            medical_certificate_id=participant.medical_certificate_id,
-            security_file_id=participant.security_file_id,
-            student_card_id=participant.student_card_id,
-            raid_rules_id=participant.raid_rules_id,
-            parent_authorization_id=participant.parent_authorization_id,
-            attestation_on_honour=participant.attestation_on_honour,
-            payment=participant.payment,
-            t_shirt_payment=participant.t_shirt_payment,
-            is_minor=participant.is_minor,
+            **participant.model_dump(),
         ),
     )
     await db.flush()
@@ -618,6 +600,7 @@ async def get_user_by_document_id(
                 models_raid.RaidParticipant.student_card_id == document_id,
                 models_raid.RaidParticipant.raid_rules_id == document_id,
                 models_raid.RaidParticipant.parent_authorization_id == document_id,
+                models_raid.RaidParticipant.school_authorization_id == document_id,
             ),
         )
         .options(
