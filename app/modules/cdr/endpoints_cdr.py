@@ -239,7 +239,7 @@ async def get_payment_total_per_type(
 
 @module.router.get(
     "/cdr/stats/payment_total/",
-    response_model=int,
+    response_model=schemas_cdr.TotalPayment,
     status_code=200,
 )
 async def get_payment_total(

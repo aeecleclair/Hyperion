@@ -350,3 +350,7 @@ class TotalPaymentOfSeller(BaseModel):
 
 class TotalPaymentBySeller(BaseModel):
     total_amounts: list[TotalPaymentOfSeller]
+
+
+class TotalPayment(BaseModel):
+    total_amount: int

@@ -977,7 +977,7 @@ async def get_payment_total(
     )
     total = result.scalar()
 
-    return total if total is not None else 0
+    return schemas_cdr.TotalPayment(total_amount=total if total is not None else 0)
 
 
 def create_action(
