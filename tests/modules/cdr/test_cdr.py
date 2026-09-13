@@ -486,7 +486,7 @@ def test_get_payment_total_as_admin(client: TestClient):
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert response.status_code == 200
-    assert response.json().total_amount == 5000
+    assert response.json()["total_amount"] == 5000
 
 
 def test_get_payment_total_as_user(client: TestClient):
