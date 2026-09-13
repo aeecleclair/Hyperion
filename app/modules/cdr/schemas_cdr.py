@@ -341,3 +341,16 @@ class BatchValidation(BaseModel):
     user_emails: list[str]
     product_variant_id: UUID
     validated: bool
+
+
+class TotalPaymentOfSeller(BaseModel):
+    name: str
+    total_amount: int
+
+
+class TotalPaymentBySeller(BaseModel):
+    total_amounts: list[TotalPaymentOfSeller]
+
+
+class TotalPayment(BaseModel):
+    total_amount: int
