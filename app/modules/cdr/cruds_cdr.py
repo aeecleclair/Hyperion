@@ -968,7 +968,7 @@ async def get_payment_total_by_type(
 async def get_payment_total(
     db: AsyncSession,
     cdr_year: int,
-) -> int:
+) -> schemas_cdr.TotalPayment:
 
     result = await db.execute(
         select(
