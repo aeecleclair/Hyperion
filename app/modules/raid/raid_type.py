@@ -9,6 +9,9 @@ class DocumentType(StrEnum):
     studentCard = "studentCard"  # the student card of the participant
     raidRules = "raidRules"  # the rules of the raid
     parentAuthorization = "parentAuthorization"  # the parent authorization
+    schoolAuthorization = (
+        "schoolAuthorization"  # the school authorization for scholarship participants
+    )
 
 
 class Size(StrEnum):  # for the T-shirt and the bike

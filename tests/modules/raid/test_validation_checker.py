@@ -53,12 +53,14 @@ def _make_validated_participant(
     is_minor: bool = False,
     with_student_card: bool | None = None,
     with_parent_auth: bool | None = None,
+    with_school_authorization: bool = True,
     payment: bool = True,
     t_shirt_size: Size | None = None,
     t_shirt_payment: bool = True,
     attestation: bool = True,
     with_security_file: bool = True,
     security_contacts: bool = True,
+    has_scholarship: bool = False,
 ) -> Mock:
     """Assemble a participant that would pass every check by default."""
     edition_id = edition_id or uuid4()
@@ -72,6 +74,7 @@ def _make_validated_participant(
     participant.edition_id = edition_id
     participant.situation = situation
     participant.is_minor = is_minor
+    participant.has_scholarship = has_scholarship
     participant.attestation_on_honour = attestation
     participant.payment = payment
     participant.t_shirt_size = t_shirt_size
@@ -84,6 +87,9 @@ def _make_validated_participant(
     )
     participant.parent_authorization = (
         _make_doc(DocumentValidation.accepted) if with_parent_auth else None
+    )
+    participant.school_authorization = (
+        _make_doc(DocumentValidation.accepted) if with_school_authorization else None
     )
     participant.security_file = (
         _make_security_file(security_contacts) if with_security_file else None
@@ -212,6 +218,39 @@ def test_check_all_documents_accepted_requires_student_card_for_otherschool() ->
     with pytest.raises(HTTPException) as exc_info:
         validation_checker._check_all_documents_accepted(p)
     assert exc_info.value.detail == "Missing student card"
+
+
+def test_check_all_documents_accepted_requires_school_authorization_for_scholarship() -> (
+    None
+):
+    p = _make_validated_participant(
+        situation=Situation.centrale,
+        is_minor=False,
+        with_school_authorization=False,
+        has_scholarship=True,
+    )
+    with pytest.raises(HTTPException) as exc_info:
+        validation_checker._check_all_documents_accepted(p)
+    assert exc_info.value.detail == "Missing school authorization"
+
+
+def test_check_all_documents_accepted_rejects_school_authorization_not_accepted() -> (
+    None
+):
+    p = _make_validated_participant(has_scholarship=True)
+    p.school_authorization = _make_doc(DocumentValidation.pending)
+    with pytest.raises(HTTPException) as exc_info:
+        validation_checker._check_all_documents_accepted(p)
+    assert exc_info.value.detail == "Document school authorization is not accepted"
+
+
+def test_check_all_documents_accepted_ignores_school_auth_without_scholarship() -> None:
+    """A missing school authorization is fine when has_scholarship is False."""
+    p = _make_validated_participant(
+        has_scholarship=False,
+        with_school_authorization=False,
+    )
+    validation_checker._check_all_documents_accepted(p)  # no raise
 
 
 def test_check_all_documents_accepted_requires_parent_auth_when_minor() -> None:
@@ -443,12 +482,18 @@ def test_count_total_required_documents_centrale() -> None:
         spec=models_raid.RaidParticipant,
         situation=Situation.centrale,
         is_minor=False,
+        has_scholarship=False,
     )
     assert validation_checker.count_total_required_documents(p) == 4
 
 
 def test_count_total_required_documents_other_minor() -> None:
-    p = Mock(spec=models_raid.RaidParticipant, situation=Situation.other, is_minor=True)
+    p = Mock(
+        spec=models_raid.RaidParticipant,
+        situation=Situation.other,
+        is_minor=True,
+        has_scholarship=False,
+    )
     assert validation_checker.count_total_required_documents(p) == 4
 
 
@@ -457,7 +502,32 @@ def test_count_total_required_documents_centrale_minor() -> None:
         spec=models_raid.RaidParticipant,
         situation=Situation.centrale,
         is_minor=True,
+        has_scholarship=False,
     )
+    assert validation_checker.count_total_required_documents(p) == 5
+
+
+def test_count_total_required_documents_other_minor_scholarship() -> None:
+    p = Mock(
+        spec=models_raid.RaidParticipant,
+        situation=Situation.other,
+        is_minor=True,
+        has_scholarship=True,
+    )
+    # id_card + medical_certificate + raid_rules + parent_authorization
+    # + school_authorization (no student card for `other`)
+    assert validation_checker.count_total_required_documents(p) == 5
+
+
+def test_count_total_required_documents_centrale_scholarship() -> None:
+    p = Mock(
+        spec=models_raid.RaidParticipant,
+        situation=Situation.centrale,
+        is_minor=False,
+        has_scholarship=True,
+    )
+    # id_card + medical_certificate + raid_rules + student_card
+    # + school_authorization
     assert validation_checker.count_total_required_documents(p) == 5
 
 
@@ -467,8 +537,47 @@ def test_count_accepted_documents_all_present() -> None:
     assert validation_checker.count_accepted_documents(p) == 5
 
 
+def test_count_accepted_documents_scholarship_all_present() -> None:
+    p = _make_validated_participant(situation=Situation.centrale, has_scholarship=True)
+    # id_card + medical_certificate + raid_rules + student_card + school_authorization
+    assert validation_checker.count_accepted_documents(p) == 5
+
+
+def test_count_accepted_documents_scholarship_without_doc_not_counted() -> None:
+    p = _make_validated_participant(
+        situation=Situation.centrale,
+        has_scholarship=True,
+        with_school_authorization=False,
+    )
+    # id_card + medical_certificate + raid_rules + student_card
+    assert validation_checker.count_accepted_documents(p) == 4
+
+
 def test_count_accepted_documents_pending_not_counted() -> None:
     p = _make_validated_participant()
     p.id_card = _make_doc(DocumentValidation.pending)
     # lost id_card -> 2 (medical + raid_rules) + student_card
     assert validation_checker.count_accepted_documents(p) == 3
+
+
+def test_compute_participant_progress_temporary_school_authorization_counts_half() -> (
+    None
+):
+    """A `temporary` school authorization scores half a slot for scholars."""
+    complete = _make_validated_participant(has_scholarship=True)
+    partial = _make_validated_participant(has_scholarship=True)
+    partial.school_authorization = _make_doc(DocumentValidation.temporary)
+
+    complete_progress = validation_checker.compute_participant_progress(complete)
+    partial_progress = validation_checker.compute_participant_progress(partial)
+
+    # centrale + scholarship: 11 slots total, the school authorization slot
+    # is worth 0.5 instead of 1.0.
+    assert complete_progress - partial_progress == pytest.approx(100 * 0.5 / 11)
+    assert complete_progress > partial_progress > 0
+
+
+def test_compute_participant_progress_full_with_scholarship() -> None:
+    p = _make_validated_participant(has_scholarship=True)
+    progress = validation_checker.compute_participant_progress(p)
+    assert progress >= 70
