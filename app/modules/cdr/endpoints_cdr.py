@@ -141,6 +141,7 @@ async def get_cdr_users_pending_validation(
     user: models_users.CoreUser = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
     """
     Get all users that have non-validated purchases.
@@ -158,7 +159,7 @@ async def get_cdr_users_pending_validation(
             status_code=403,
             detail="You must be a seller to use this endpoint.",
         )
-    core_users = await cruds_cdr.get_pending_validation_users(db=db)
+    core_users = await cruds_cdr.get_pending_validation_users(db=db, year=cdr_year.year)
 
     # We construct a dict of {curriculum_id: curriculum}
     curriculum_mapping = {c.id: c for c in await cruds_cdr.get_curriculums(db=db)}
@@ -188,6 +189,75 @@ async def get_cdr_users_pending_validation(
         )
         for user in core_users
     ]
+
+
+@module.router.get(
+    "/cdr/stats/payment_total_by_seller/",
+    response_model=schemas_cdr.TotalPaymentBySeller,
+    status_code=200,
+)
+async def get_payment_total_by_seller(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
+    ),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
+):
+    """
+    Get the total of all payments made in the CDR for each seller.
+
+    **User must be a CDR Admin to use this endpoint**
+    """
+    return await cruds_cdr.get_payment_total_by_seller(
+        db=db,
+        cdr_year=cdr_year.year,
+    )
+
+
+@module.router.get(
+    "/cdr/stats/payment_total_per_type/",
+    response_model=list[schemas_cdr.PaymentBase],
+    status_code=200,
+)
+async def get_payment_total_per_type(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
+    ),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
+):
+    """
+    Get the total of all payments made in the CDR for each payment type.
+
+    **User must a CDR Admin to use this endpoint**
+    """
+    return await cruds_cdr.get_payment_total_by_type(
+        db=db,
+        cdr_year=cdr_year.year,
+    )
+
+
+@module.router.get(
+    "/cdr/stats/payment_total/",
+    response_model=schemas_cdr.TotalPayment,
+    status_code=200,
+)
+async def get_payment_total(
+    db: AsyncSession = Depends(get_db),
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([CdrPermissions.manage_cdr]),
+    ),
+    cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
+):
+    """
+    Get the total of all payments made in the CDR.
+
+    **User must a CDR Admin to use this endpoint**
+    """
+    return await cruds_cdr.get_payment_total(
+        db=db,
+        cdr_year=cdr_year.year,
+    )
 
 
 @module.router.get(

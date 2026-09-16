@@ -902,6 +902,84 @@ async def delete_payment(
     )
 
 
+async def get_payment_total_by_seller(
+    db: AsyncSession,
+    cdr_year: int,
+) -> schemas_cdr.TotalPaymentBySeller:
+    result = await db.execute(
+        select(
+            models_cdr.Seller.name,
+            func.sum(
+                models_cdr.ProductVariant.price * models_cdr.Purchase.quantity,
+            ).label("total_amount"),
+        )
+        .join(
+            models_cdr.CdrProduct,
+            models_cdr.Seller.id == models_cdr.CdrProduct.seller_id,
+        )
+        .join(
+            models_cdr.ProductVariant,
+            models_cdr.ProductVariant.product_id == models_cdr.CdrProduct.id,
+        )
+        .join(
+            models_cdr.Purchase,
+            models_cdr.Purchase.product_variant_id == models_cdr.ProductVariant.id,
+        )
+        .where(
+            models_cdr.Purchase.validated,
+            models_cdr.ProductVariant.year == cdr_year,
+        )
+        .group_by(models_cdr.Seller.id),
+    )
+
+    return schemas_cdr.TotalPaymentBySeller(
+        total_amounts=[
+            schemas_cdr.TotalPaymentOfSeller(
+                total_amount=row.total_amount,
+                name=row.name,
+            )
+            for row in result.all()
+        ],
+    )
+
+
+async def get_payment_total_by_type(
+    db: AsyncSession,
+    cdr_year: int,
+) -> list[schemas_cdr.PaymentBase]:
+    result = await db.execute(
+        select(
+            models_cdr.Payment.payment_type,
+            func.sum(models_cdr.Payment.total).label("total"),
+        )
+        .where(models_cdr.Payment.year == cdr_year)
+        .group_by(models_cdr.Payment.payment_type),
+    )
+
+    return [
+        schemas_cdr.PaymentBase(
+            total=row.total,
+            payment_type=row.payment_type,
+        )
+        for row in result.all()
+    ]
+
+
+async def get_payment_total(
+    db: AsyncSession,
+    cdr_year: int,
+) -> schemas_cdr.TotalPayment:
+
+    result = await db.execute(
+        select(
+            func.sum(models_cdr.Payment.total).label("total"),
+        ).where(models_cdr.Payment.year == cdr_year),
+    )
+    total = result.scalar()
+
+    return schemas_cdr.TotalPayment(total_amount=total if total is not None else 0)
+
+
 def create_action(
     db: AsyncSession,
     action: models_cdr.CdrAction,
@@ -1097,7 +1175,10 @@ async def delete_customdata(db: AsyncSession, field_id: UUID, user_id: str):
     )
 
 
-async def get_pending_validation_users(db: AsyncSession) -> Sequence[CoreUser]:
+async def get_pending_validation_users(
+    db: AsyncSession,
+    year: int,
+) -> Sequence[CoreUser]:
     result = await db.execute(
         select(models_cdr.Purchase)
         .join(
@@ -1111,6 +1192,7 @@ async def get_pending_validation_users(db: AsyncSession) -> Sequence[CoreUser]:
         .where(
             models_cdr.Purchase.validated.is_(False),
             models_cdr.CdrProduct.needs_validation.is_(True),
+            models_cdr.CdrProduct.year == year,
         ),
     )
     user_ids = set(purchase.user_id for purchase in result.scalars().all())
