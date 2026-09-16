@@ -75,6 +75,55 @@ def test_participant_update_allows_empty_body() -> None:
     schemas_raid.RaidParticipantUpdate()
 
 
+# -- RaidParticipant scholarship fields -----------------------------------
+
+
+def test_participant_create_scholarship_defaults_false() -> None:
+    u = schemas_raid.RaidParticipantCreate(
+        user_id="u1",
+        edition_id=uuid4(),
+        status=RaidRegistrationStatus.draft,
+    )
+    assert u.has_scholarship is False
+    assert u.school_authorization_id is None
+
+
+def test_participant_create_accepts_scholarship_fields() -> None:
+    doc_id = str(uuid4())
+    u = schemas_raid.RaidParticipantCreate(
+        user_id="u1",
+        edition_id=uuid4(),
+        status=RaidRegistrationStatus.draft,
+        has_scholarship=True,
+        school_authorization_id=doc_id,
+    )
+    assert u.has_scholarship is True
+    assert u.school_authorization_id == doc_id
+
+
+def test_participant_update_accepts_school_authorization_id() -> None:
+    doc_id = str(uuid4())
+    u = schemas_raid.RaidParticipantUpdate(school_authorization_id=doc_id)
+    assert u.school_authorization_id == doc_id
+
+
+def test_participant_update_accepts_has_scholarship() -> None:
+    """The update schema carries the scholarship flag (admin-only upstream)."""
+    u = schemas_raid.RaidParticipantUpdate(has_scholarship=True)
+    assert u.has_scholarship is True
+
+    unset = schemas_raid.RaidParticipantUpdate()
+    assert unset.has_scholarship is None  # absent = don't touch
+
+
+def test_participant_restricted_requires_scholarship_flag() -> None:
+    """The read schema exposes has_scholarship as a required field."""
+    fields = schemas_raid.RaidParticipantRestricted.model_fields
+    assert "has_scholarship" in fields
+    assert "school_authorization_id" in fields
+    assert fields["has_scholarship"].is_required()
+
+
 def test_participant_update_preserves_other_school_when_other() -> None:
     u = schemas_raid.RaidParticipantUpdate(
         situation=Situation.other,

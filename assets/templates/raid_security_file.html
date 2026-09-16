@@ -315,6 +315,16 @@
               </td>
             </tr>
             <tr>
+              <td class="px-3 p-2 border border-slate-500 w-48">
+                Responsable Parcours
+              </td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{course_responsible.firstname + " " + course_responsible.name +
+                " - +" + course_responsible.phone if course_responsible else
+                "Aucun"}}
+              </td>
+            </tr>
+            <tr>
               <td class="px-3 p-2 border border-slate-500 w-48">Président·e</td>
               <td class="px-3 p-2 border border-slate-500">
                 {{president.firstname + " " + president.name + " - +" +
