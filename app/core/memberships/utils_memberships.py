@@ -1,14 +1,14 @@
 import logging
 from datetime import UTC, datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.documents import cruds_documents, schemas_documents
+from app.core.documents.documenso_api_wrapper import DocumensoAPIWrapper
 from app.core.documents.exceptions_documents import (
     DocumentCreationError,
-    ElementTemplateNotFoundError,
 )
 from app.core.documents.types_documenso import DocumentStatus
 from app.core.documents.utils_documents import (
@@ -26,6 +26,7 @@ from app.core.memberships import (
 from app.core.users.schemas_users import CoreUser
 from app.core.users.utils_users import user_model_to_schema
 from app.core.utils.config import Settings
+from app.types.exceptions import ObjectExpectedInDbNotFoundError
 from app.utils.mail.mailworker import send_email
 
 MODULE_ROOT = "memberships"
@@ -96,9 +97,11 @@ def user_membership_with_association_model_to_schema(
 
 
 async def validate_user_new_membership(
-    user_membership: schemas_memberships.UserMembershipSimple,
+    user_id: str,
+    user_membership: schemas_memberships.UserMembershipBase,
     db: AsyncSession,
-) -> schemas_memberships.UserMembershipSimple:
+    ignored_membership_id: UUID | None = None,
+) -> None:
     """
     Validate the given membership data.
 
@@ -113,12 +116,12 @@ async def validate_user_new_membership(
     memberships = list(
         await cruds_memberships.get_user_memberships_by_user_id_and_association_membership_id(
             db,
-            user_membership.user_id,
+            user_id,
             user_membership.association_membership_id,
         ),
     )
     for membership in memberships:
-        if user_membership.id != membership.id:
+        if ignored_membership_id != membership.id:
             if (
                 user_membership.start_date
                 < membership.end_date
@@ -137,8 +140,6 @@ async def validate_user_new_membership(
                     status_code=400,
                     detail="The new membership period overlaps with an existing one.",
                 )
-
-    return user_membership
 
 
 async def get_user_active_membership_to_association_membership(
@@ -195,8 +196,8 @@ async def membership_document_callback(
 
 async def add_membership_to_user(
     user: CoreUser,
-    association_membership: schemas_memberships.MembershipSimple,
-    user_membership: schemas_memberships.UserMembershipSimple,
+    association_membership: schemas_memberships.MembershipComplete,
+    user_membership: schemas_memberships.UserMembershipBase,
     db: AsyncSession,
     settings: Settings,
 ) -> schemas_memberships.UserMembershipComplete:
@@ -207,62 +208,69 @@ async def add_membership_to_user(
     :param user_membership: The user membership to add.
     :param db: The database session.
     """
-    await validate_user_new_membership(user_membership, db)
+    await validate_user_new_membership(user.id, user_membership, db)
 
-    if association_membership.template_id is not None:
-        template = await cruds_documents.get_template_by_id(
-            db,
-            association_membership.template_id,
-        )
-        if template is None:
-            raise ElementTemplateNotFoundError(association_membership.template_id)
+    new_user_membership_id = uuid4()
 
-        documenso = configure_documenso_api_wrapper(
-            api_key=template.team.api_key,
-            settings=settings,
-        )
-
-        document = await use_template_for_user(
-            user=user,
-            template=template,
-            module=MODULE_ROOT,
-            db=db,
-            documenso=documenso,
-        )
-        await db.flush()
-        user_membership.document_id = document.id
-        user_membership.document_status = document.status
-        user_membership.valid = (
-            user_membership.document_status == DocumentStatus.COMPLETED
-        )
-
-    hyperion_error_logger.debug(
-        f"Adding membership {association_membership.id} to user {user.id} with membership data: {user_membership}",
-    )
     await cruds_memberships.create_user_membership(
         db=db,
-        user_membership=user_membership,
+        user_membership=schemas_memberships.UserMembershipSimple(
+            id=new_user_membership_id,
+            user_id=user.id,
+            association_membership_id=association_membership.id,
+            start_date=user_membership.start_date,
+            end_date=user_membership.end_date,
+            valid=True,
+        ),
     )
 
-    return schemas_memberships.UserMembershipComplete(
-        id=user_membership.id,
-        user_id=user_membership.user_id,
-        association_membership_id=user_membership.association_membership_id,
-        start_date=user_membership.start_date,
-        end_date=user_membership.end_date,
-        document_id=user_membership.document_id,
-        document_status=user_membership.document_status,
-        valid=user_membership.valid,
-        user=user,
+    if association_membership.template is not None:
+        team = await cruds_documents.get_team_by_id(
+            db,
+            association_membership.template.team_id,
+        )
+        if team is None:
+            raise ObjectExpectedInDbNotFoundError(
+                "DocumentTeam",
+                association_membership.template.team_id,
+            )
+        documenso = configure_documenso_api_wrapper(
+            api_key=team.api_key,
+            settings=settings,
+        )
+        await renew_membership_documents(
+            association_membership=association_membership,
+            user_membership=schemas_memberships.UserMembershipComplete(
+                id=new_user_membership_id,
+                user_id=user.id,
+                association_membership_id=association_membership.id,
+                start_date=user_membership.start_date,
+                end_date=user_membership.end_date,
+                valid=True,
+                user=user,
+            ),
+            documenso=documenso,
+            db=db,
+        )
+        await db.flush()
+
+    db_membership = await cruds_memberships.get_user_membership_by_id(
+        db,
+        new_user_membership_id,
     )
+    if db_membership is None:
+        raise ObjectExpectedInDbNotFoundError(
+            "CoreAssociationUserMembership",
+            new_user_membership_id,
+        )
+    return db_membership
 
 
 async def renew_membership_documents(
     association_membership: schemas_memberships.MembershipComplete,
-    team: schemas_documents.Team,
     user_membership: schemas_memberships.UserMembershipComplete,
+    documenso: DocumensoAPIWrapper,
     db: AsyncSession,
-    settings: Settings,
 ) -> None:
     """
     Renew the documents for a user's membership to an association membership.
@@ -274,11 +282,6 @@ async def renew_membership_documents(
 
     if association_membership.template is None:
         return
-
-    documenso = configure_documenso_api_wrapper(
-        api_key=team.api_key,
-        settings=settings,
-    )
 
     document = await use_template_for_user(
         user=user_membership.user,
@@ -304,23 +307,38 @@ async def renew_memberships_documents_list(
     settings: Settings,
     report_user: CoreUser,
 ) -> None:
+    documenso = configure_documenso_api_wrapper(
+        api_key=team.api_key,
+        settings=settings,
+    )
 
     errors: dict[str, str] = {}
     for target in targets:
         try:
             await renew_membership_documents(
                 association_membership=association_membership,
-                team=team,
                 user_membership=target,
+                documenso=documenso,
                 db=db,
-                settings=settings,
             )
         except Exception as e:
             if isinstance(e, DocumentCreationError):
                 errors[e.user_email] = e.message
             else:
-                errors[target.user.email] = e
-    await send_email()
+                errors[target.user.email] = str(e)
+
+    if settings.SMTP_ACTIVE:
+        content = f"Membership documents renewal report for {association_membership.name}:\n\n"
+        content += f"Summary:\nTotal users processed: {len(targets)}\nTotal errors: {len(errors)}\nSuccessful renewals: {len(targets) - len(errors)}\n\nErrors:\n"
+        content += "\n".join(
+            [f"  - {email}: {error}" for email, error in errors.items()],
+        )
+        await send_email(
+            recipient=report_user.email,
+            subject=f"Membership documents renewal report for {association_membership.name}",
+            content=content,
+            settings=settings,
+        )
 
 
 async def remove_membership_from_user(

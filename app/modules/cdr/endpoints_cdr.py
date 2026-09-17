@@ -1935,13 +1935,10 @@ async def add_membership(
             user=user_model_to_schema(user),
             association_membership=association_membership,
             db=db,
-            user_membership=schemas_memberships.UserMembershipSimple(
-                id=uuid4(),
-                user_id=user_id,
+            user_membership=schemas_memberships.UserMembershipBase(
                 association_membership_id=product_related_membership_id,
                 start_date=start_date,
                 end_date=end_date,
-                valid=True,
             ),
             settings=settings,
         )
