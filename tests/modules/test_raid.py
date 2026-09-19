@@ -1328,6 +1328,81 @@ async def test_school_authorization_document_is_readable_by_owner(
         await db.commit()
 
 
+async def test_raid_rules_document_is_readable_by_every_participant(
+    client: TestClient,
+) -> None:
+    """The edition-wide rules are readable even when a participant also owns them.
+
+    Regression: uploading the rules from the admin information page also assigns
+    them to the uploader's participant record. The read endpoint used to resolve
+    that owner first and only then enforce team membership, so every other
+    participant got a 403 when downloading the rules from the information page.
+    """
+    doc_id = str(uuid.uuid4())
+    file_bytes = b"%PDF-1.4 raid rules"
+    await save_bytes_as_data(
+        file_bytes=file_bytes,
+        directory="raid",
+        filename=doc_id,
+        extension="pdf",
+    )
+    doc = models_raid.Document(
+        id=doc_id,
+        edition_id=active_edition.id,
+        name="reglement.pdf",
+        uploaded_at=datetime.datetime.now(tz=datetime.UTC).date(),
+        type=DocumentType.raidRules,
+        validation=DocumentValidation.pending,
+    )
+    await add_object_to_db(doc)
+
+    # The uploader references the document on their own participant record.
+    async with get_TestingSessionLocal()() as db:
+        await db.execute(
+            update(models_raid.RaidParticipant)
+            .where(
+                models_raid.RaidParticipant.user_id == user_captain.id,
+                models_raid.RaidParticipant.edition_id == active_edition.id,
+            )
+            .values(raid_rules_id=doc_id),
+        )
+        await db.commit()
+
+    # Publish it as the rules of the edition.
+    r = client.patch(
+        "/raid/information",
+        json={"raid_rules_id": doc_id},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 204
+
+    # A participant from another team must still be able to download it.
+    r = client.get(
+        f"/raid/document/{doc_id}",
+        headers={"Authorization": f"Bearer {token_solo}"},
+    )
+    assert r.status_code == 200
+    assert r.content == file_bytes
+
+    # Cleanup so the shared edition state does not leak into other tests.
+    async with get_TestingSessionLocal()() as db:
+        await db.execute(
+            update(models_raid.RaidParticipant)
+            .where(
+                models_raid.RaidParticipant.user_id == user_captain.id,
+                models_raid.RaidParticipant.edition_id == active_edition.id,
+            )
+            .values(raid_rules_id=None),
+        )
+        await db.commit()
+    r = client.patch(
+        "/raid/information",
+        json={"raid_rules_id": None},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 204
+
+
 # ---------------------------------------------------------------------------
 # Raw CRUD integration tests (edition-aware)
 # ---------------------------------------------------------------------------

@@ -749,15 +749,16 @@ async def read_document(
     if not document:
         raise HTTPException(status_code=404, detail="Document not found.")
 
+    information = await get_core_data(coredata_raid.RaidInformation, db)
+    if document_id in {information.raid_rules_id, information.raid_information_id}:
+        return await get_file_from_data(
+            default_asset="assets/pdf/default_PDF.pdf",
+            directory="raid",
+            filename=str(document_id),
+        )
+
     participant = await cruds_raid.get_user_by_document_id(document_id, db)
     if not participant:
-        information = await get_core_data(coredata_raid.RaidInformation, db)
-        if document_id in {information.raid_rules_id, information.raid_information_id}:
-            return await get_file_from_data(
-                default_asset="assets/pdf/default_PDF.pdf",
-                directory="raid",
-                filename=str(document_id),
-            )
         raise HTTPException(
             status_code=404,
             detail="Participant owning the document not found.",
