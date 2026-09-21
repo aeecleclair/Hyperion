@@ -73,35 +73,61 @@ async def validate_payment(
     if participant_checkout:
         participant_user_id = participant_checkout.participant_user_id
         edition_id = participant_checkout.edition_id
+        # Rebuild the exact expected total from the participant's CURRENT state
+        # (the same function that priced the checkout when it was created).
+        # Matching prices from the global grid is ambiguous (two situations can
+        # share a price) and breaks as soon as the payer adds a HelloAsso
+        # donation: HelloAsso reports amount + tip in the webhook.
+        participant = await cruds_raid.get_participant_by_user_id(
+            participant_user_id,
+            edition_id,
+            db,
+        )
+        if participant is None:
+            hyperion_error_logger.error(
+                f"RAID: participant {participant_user_id} not found "
+                f"for checkout {checkout_id}.",
+            )
+            raise RaidPayementError(checkout_id)
         prices = await get_core_data(coredata_raid.RaidPrice, db)
-        inscription_prices = [
-            price
-            for price in (
-                prices.student_price,
-                prices.external_price,
-                prices.scholarship_price,
+        try:
+            expected_amount = calculate_raid_payment(participant, prices)[0]
+        except HTTPException:
+            # Prices were unset after the checkout was created: we cannot
+            # reconcile the payment. Leave it unconfirmed (an admin can
+            # validate it manually).
+            hyperion_error_logger.exception(
+                f"RAID: cannot reconcile checkout {checkout_id}: prices are "
+                f"not set anymore.",
             )
-            if price
-        ]
-        if any(paid_amount == price for price in inscription_prices):
+            return
+        if expected_amount <= 0:
+            hyperion_error_logger.error(
+                f"RAID: checkout {checkout_id} paid ({paid_amount}) but "
+                f"participant {participant_user_id} owes nothing.",
+            )
+            return
+        if paid_amount < expected_amount:
+            hyperion_error_logger.error(
+                f"RAID: invalid payment amount for checkout {checkout_id}: "
+                f"expected at least {expected_amount}, got {paid_amount}.",
+            )
+            return
+        # paid_amount >= expected_amount: the excess (if any) is a HelloAsso
+        # donation. Confirm every component that was part of the checkout and
+        # is still unpaid.
+        if not participant.payment:
             await cruds_raid.confirm_payment(participant_user_id, edition_id, db)
-        elif prices.t_shirt_price and paid_amount == prices.t_shirt_price:
-            await cruds_raid.confirm_t_shirt_payment(
-                participant_user_id,
-                edition_id,
-                db,
-            )
-        elif prices.t_shirt_price and any(
-            paid_amount == price + prices.t_shirt_price for price in inscription_prices
+        if (
+            participant.t_shirt_size
+            and participant.t_shirt_size != Size.None_
+            and not participant.t_shirt_payment
         ):
-            await cruds_raid.confirm_payment(participant_user_id, edition_id, db)
             await cruds_raid.confirm_t_shirt_payment(
                 participant_user_id,
                 edition_id,
                 db,
             )
-        else:
-            hyperion_error_logger.error("Invalid payment amount")
         return
 
     # Try volunteer checkout
@@ -112,36 +138,54 @@ async def validate_payment(
     if volunteer_checkout:
         volunteer_user_id = volunteer_checkout.volunteer_user_id
         edition_id = volunteer_checkout.edition_id
+        volunteer = await cruds_raid.get_volunteer_by_user_id(
+            volunteer_user_id,
+            edition_id,
+            db,
+        )
+        if volunteer is None:
+            hyperion_error_logger.error(
+                f"RAID: volunteer {volunteer_user_id} not found "
+                f"for checkout {checkout_id}.",
+            )
+            raise RaidPayementError(checkout_id)
         prices = await get_core_data(coredata_raid.RaidPrice, db)
-        if prices.volunteer_price and paid_amount == prices.volunteer_price:
+        try:
+            expected_amount = calculate_volunteer_payment(volunteer, prices)[0]
+        except HTTPException:
+            hyperion_error_logger.exception(
+                f"RAID: cannot reconcile checkout {checkout_id}: prices are "
+                f"not set anymore.",
+            )
+            return
+        if expected_amount <= 0:
+            hyperion_error_logger.error(
+                f"RAID: checkout {checkout_id} paid ({paid_amount}) but "
+                f"volunteer {volunteer_user_id} owes nothing.",
+            )
+            return
+        if paid_amount < expected_amount:
+            hyperion_error_logger.error(
+                f"RAID: invalid payment amount for checkout {checkout_id}: "
+                f"expected at least {expected_amount}, got {paid_amount}.",
+            )
+            return
+        if not volunteer.payment:
             await cruds_raid.confirm_volunteer_payment(
                 volunteer_user_id,
                 edition_id,
                 db,
             )
-        elif prices.t_shirt_price and paid_amount == prices.t_shirt_price:
-            await cruds_raid.confirm_volunteer_t_shirt_payment(
-                volunteer_user_id,
-                edition_id,
-                db,
-            )
-        elif (
-            prices.t_shirt_price
-            and prices.volunteer_price
-            and (paid_amount == prices.volunteer_price + prices.t_shirt_price)
+        if (
+            volunteer.t_shirt_size
+            and volunteer.t_shirt_size != Size.None_
+            and not volunteer.t_shirt_payment
         ):
-            await cruds_raid.confirm_volunteer_payment(
-                volunteer_user_id,
-                edition_id,
-                db,
-            )
             await cruds_raid.confirm_volunteer_t_shirt_payment(
                 volunteer_user_id,
                 edition_id,
                 db,
             )
-        else:
-            hyperion_error_logger.error("Invalid payment amount")
         return
 
     hyperion_error_logger.error(f"No checkout found for id {checkout_id}")
