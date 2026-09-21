@@ -341,7 +341,7 @@ class PaymentUrl(BaseModel):
 class RaidParticipantCheckout(BaseModel):
     participant_user_id: str
     edition_id: UUID
-    checkout_id: str
+    checkout_id: UUID
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -349,7 +349,7 @@ class RaidParticipantCheckout(BaseModel):
 class RaidVolunteerCheckout(BaseModel):
     volunteer_user_id: str
     edition_id: UUID
-    checkout_id: str
+    checkout_id: UUID
 
     model_config = ConfigDict(from_attributes=True)
 

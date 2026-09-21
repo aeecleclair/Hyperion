@@ -32,6 +32,7 @@ from app.modules.raid.raid_type import (
     DocumentType,
     DocumentValidation,
     RaidRegistrationStatus,
+    Situation,
     Size,
 )
 from app.modules.raid.utils.utils_raid import (
@@ -243,7 +244,8 @@ async def create_participant(
 ):
     """Create a participant. Identity (name/firstname/email/birthday/phone)
     is read from the CoreUser and must already be set there."""
-    if await cruds_raid.is_user_a_participant(user.id, edition.id, db):
+    existing = await cruds_raid.get_participant_by_user_id(user.id, edition.id, db)
+    if existing is not None and existing.status != RaidRegistrationStatus.cancelled:
         raise HTTPException(status_code=403, detail="You are already a participant.")
     await ensure_user_is_not_volunteer_in_edition(user.id, edition.id, db)
 
@@ -252,6 +254,18 @@ async def create_participant(
             status_code=400,
             detail="Your user profile is missing birthday or phone; please update it first.",
         )
+
+    if existing is not None:
+        # A cancelled participant row keeps the primary key (user_id,
+        # edition_id): re-activate it as a fresh draft instead of 403-ing
+        # forever. Linked documents/security file are kept.
+        await cruds_raid.update_participant_status(
+            user.id,
+            edition.id,
+            RaidRegistrationStatus.draft,
+            db,
+        )
+        return await get_participant_complete_or_404(user.id, edition.id, db)
 
     raid_information = await get_core_data(coredata_raid.RaidInformation, db)
     is_minor = will_birthday_be_minor_on(
@@ -320,6 +334,27 @@ async def update_participant(
             db,
         ):
             raise HTTPException(status_code=404, detail="Security_file not found.")
+
+    # Scholarship is restricted to students: validate against the merged
+    # (payload + DB) state, since the payload may omit either field.
+    merged_situation = (
+        participant_update.situation
+        if participant_update.situation is not None
+        else saved_participant.situation
+    )
+    merged_scholarship = (
+        participant_update.has_scholarship
+        if participant_update.has_scholarship is not None
+        else saved_participant.has_scholarship
+    )
+    if merged_scholarship and merged_situation not in (
+        Situation.centrale,
+        Situation.otherSchool,
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Scholarship is only available for students.",
+        )
 
     await cruds_raid.update_participant(user_id, edition.id, participant_update, db)
 
@@ -717,14 +752,15 @@ async def upload_document(
             DocumentType.raidRules: "raid_rules_id",
             DocumentType.parentAuthorization: "parent_authorization_id",
             DocumentType.schoolAuthorization: "school_authorization_id",
-        }[document_type]
-        await cruds_raid.assign_document(
-            user.id,
-            edition.id,
-            document_id,
-            document_key,
-            db,
-        )
+        }.get(document_type)
+        if document_key is not None:
+            await cruds_raid.assign_document(
+                user.id,
+                edition.id,
+                document_id,
+                document_key,
+                db,
+            )
     except Exception:
         # Rollback: delete the uploaded file if DB operations fail
         await delete_file_from_data(directory="raid", filename=document_id)
@@ -1268,7 +1304,7 @@ async def get_payment_url(
         schemas_raid.RaidParticipantCheckout(
             participant_user_id=user.id,
             edition_id=edition.id,
-            checkout_id=str(checkout.id),
+            checkout_id=checkout.id,
         ),
         db=db,
     )
@@ -1311,7 +1347,7 @@ async def get_volunteer_payment_url(
         schemas_raid.RaidVolunteerCheckout(
             volunteer_user_id=user.id,
             edition_id=edition.id,
-            checkout_id=str(checkout.id),
+            checkout_id=checkout.id,
         ),
         db=db,
     )
