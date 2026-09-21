@@ -217,6 +217,14 @@ class RaidParticipantUpdate(BaseModel):
             raise ValueError(msg)
         if self.situation == Situation.centrale and self.other_school:
             self.other_school = None
+        # Only students may claim the scholarship rate.
+        if self.has_scholarship and self.situation not in (
+            None,
+            Situation.centrale,
+            Situation.otherSchool,
+        ):
+            msg = "Scholarship is only available for students."
+            raise ValueError(msg)
         return self
 
 
