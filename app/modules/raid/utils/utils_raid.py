@@ -442,3 +442,11 @@ def calculate_volunteer_payment(
             checkout_name += " + "
         checkout_name += "T Shirt taille" + volunteer.t_shirt_size.value
     return price, checkout_name
+
+
+# Clear out the security file on every card except the requesting user's own
+def prepare_data(user_id: str, participant: schemas_raid.RaidParticipant) -> dict:
+    data = participant.model_dump()
+    if participant.user_id != user_id:
+        data["security_file"] = None
+    return data

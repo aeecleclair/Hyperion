@@ -40,6 +40,7 @@ from app.modules.raid.utils.utils_raid import (
     calculate_volunteer_payment,
     get_all_security_files_zip,
     get_all_team_files_zip,
+    prepare_data,
     validate_payment,
     will_birthday_be_minor_on,
 )
@@ -524,7 +525,7 @@ async def create_team(
 
 @module.router.get(
     "/raid/participants/me/team",
-    response_model=schemas_raid.RaidTeamComplete,
+    response_model=schemas_raid.RaidTeamIncludingSecurityFile,
     status_code=200,
 )
 async def get_my_team(
@@ -544,26 +545,14 @@ async def get_my_team(
     if not participant_team:
         raise HTTPException(status_code=404, detail="You do not have a team.")
 
-    return schemas_raid.RaidTeamComplete(
-        name=participant_team.name,
-        id=participant_team.id,
-        edition_id=participant_team.edition_id,
-        number=participant_team.number,
-        captain_id=participant_team.captain_id,
-        second_id=participant_team.second_id,
-        difficulty=participant_team.difficulty,
-        meeting_place=participant_team.meeting_place,
-        file_id=participant_team.file_id,
-        captain=schemas_raid.RaidParticipantRestrictedComplete(
-            **participant_team.captain.model_dump(),
-        ),
-        second=schemas_raid.RaidParticipantRestrictedComplete(
-            **participant_team.second.model_dump(),
-        )
+    response = participant_team.model_dump()
+    response["captain"] = prepare_data(user.id, participant_team.captain)
+    response["second"] = (
+        prepare_data(user.id, participant_team.second)
         if participant_team.second
-        else None,
-        validation_progress=participant_team.validation_progress,
+        else None
     )
+    return response
 
 
 @module.router.get(
@@ -900,8 +889,7 @@ async def set_security_file(
                 emergency_person_firstname=security_file.emergency_person_firstname
                 or "",
                 emergency_person_name=security_file.emergency_person_name or "",
-                emergency_person_phone=security_file.emergency_person_phone
-                or "",
+                emergency_person_phone=security_file.emergency_person_phone or "",
                 db=db,
             )
         return await cruds_raid.get_security_file_by_security_id(
