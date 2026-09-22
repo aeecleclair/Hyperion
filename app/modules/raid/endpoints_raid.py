@@ -867,43 +867,79 @@ async def set_security_file(
 
     participant = await get_participant_or_404(participant_id, edition.id, db)
 
-    if not security_file.consent_given:
+    # Consent gates MEDICAL DATA ONLY
+    medical_fields_provided = any(
+        value is not None
+        for value in (
+            security_file.allergy,
+            security_file.ongoing_treatment,
+            security_file.sicknesses,
+            security_file.hospitalization,
+            security_file.surgical_operation,
+            security_file.trauma,
+            security_file.family,
+            security_file.file_id,
+        )
+    )
+    if not security_file.consent_given and medical_fields_provided:
         raise HTTPException(
             status_code=400,
             detail="Consent must be given to register medical data",
         )
 
     if participant.security_file_id:
-        await cruds_raid.update_security_file(
-            security_file_id=participant.security_file_id,
-            security_file=security_file,
-            db=db,
-        )
+        if security_file.consent_given:
+            await cruds_raid.update_security_file(
+                security_file_id=participant.security_file_id,
+                security_file=security_file,
+                db=db,
+            )
+        else:
+            await cruds_raid.update_security_file_emergency(
+                security_file_id=participant.security_file_id,
+                emergency_person_firstname=security_file.emergency_person_firstname
+                or "",
+                emergency_person_name=security_file.emergency_person_name or "",
+                emergency_person_phone=security_file.emergency_person_phone
+                or "",
+                db=db,
+            )
         return await cruds_raid.get_security_file_by_security_id(
             participant.security_file_id,
             db,
         )
 
     new_security_file_id = str(uuid.uuid4())
+    # Creation without consent stores the emergency contact only
     security_file_schema = schemas_raid.SecurityFile(
         id=new_security_file_id,
         validation=DocumentValidation.pending,
-        allergy=security_file.allergy,
-        asthma=security_file.asthma,
-        intensive_care_unit=security_file.intensive_care_unit,
-        intensive_care_unit_when=security_file.intensive_care_unit_when,
-        ongoing_treatment=security_file.ongoing_treatment,
-        sicknesses=security_file.sicknesses,
-        hospitalization=security_file.hospitalization,
-        surgical_operation=security_file.surgical_operation,
-        trauma=security_file.trauma,
-        family=security_file.family,
+        allergy=security_file.allergy if security_file.consent_given else None,
+        asthma=security_file.asthma if security_file.consent_given else False,
+        intensive_care_unit=security_file.intensive_care_unit
+        if security_file.consent_given
+        else None,
+        intensive_care_unit_when=security_file.intensive_care_unit_when
+        if security_file.consent_given
+        else None,
+        ongoing_treatment=security_file.ongoing_treatment
+        if security_file.consent_given
+        else None,
+        sicknesses=security_file.sicknesses if security_file.consent_given else None,
+        hospitalization=security_file.hospitalization
+        if security_file.consent_given
+        else None,
+        surgical_operation=security_file.surgical_operation
+        if security_file.consent_given
+        else None,
+        trauma=security_file.trauma if security_file.consent_given else None,
+        family=security_file.family if security_file.consent_given else None,
         emergency_person_firstname=security_file.emergency_person_firstname,
         emergency_person_name=security_file.emergency_person_name,
         emergency_person_phone=security_file.emergency_person_phone,
         file_id=security_file.file_id,
         consent_given=security_file.consent_given,
-        consent_given_at=datetime.now(UTC),
+        consent_given_at=datetime.now(UTC) if security_file.consent_given else None,
     )
     await cruds_raid.add_security_file(security_file_schema, edition.id, db)
     await cruds_raid.assign_security_file(
