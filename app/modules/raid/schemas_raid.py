@@ -237,9 +237,9 @@ class RaidTeamPreview(RaidTeamBase):
     edition_id: UUID
     number: int | None = None
     captain_id: str
-    captain: RaidParticipantPreview
+    captain: RaidParticipantRestricted
     second_id: str | None = None
-    second: RaidParticipantPreview | None = None
+    second: RaidParticipantRestricted | None = None
     difficulty: Difficulty | None = None
     meeting_place: MeetingPlace | None = None
 
