@@ -22,7 +22,9 @@ from app.modules.raid.raid_type import (
 )
 from app.modules.raid.utils.utils_raid import (
     RaidPayementError,
+    _or_dash,
     _participant_pdf_context,
+    _recap_participant_context,
     calculate_raid_payment,
     get_participant,
     set_team_number,
@@ -1100,3 +1102,44 @@ async def test_validate_payment_scholarship_with_tshirt_confirms_both():
             participant_checkout.edition_id,
             db,
         )
+
+
+class TestPdfEmptyFieldDash:
+    """PDF exports must render empty fields as '-', never Python's 'None'."""
+
+    def test_or_dash(self):
+        assert _or_dash(None) == "-"
+        assert _or_dash("") == "-"
+        assert _or_dash("Rue des Lilas") == "Rue des Lilas"
+        assert _or_dash(0) == "0"
+
+    def test_recap_context_uses_dash_for_missing_fields(self):
+        participant = Mock(spec=schemas_raid.RaidParticipantRestricted)
+        participant.address = None
+        participant.diet = None
+        participant.bike_size = None
+        participant.t_shirt_size = None
+        participant.t_shirt_payment = False
+        participant.situation = None
+        participant.attestation_on_honour = False
+        participant.payment = False
+        participant.number_of_document = 5
+        participant.number_of_validated_document = 2
+        participant.user = Mock()
+        participant.user.name = "Doe"
+        participant.user.firstname = "John"
+        participant.user.email = "j@x.fr"
+        participant.user.phone = "+33123456789"
+        participant.user.birthday = None
+
+        ctx = _recap_participant_context(participant)
+
+        assert ctx["adresse"] == "-"
+        assert ctx["regime"] == "-"
+        assert ctx["date_naissance"] == "-"
+        assert ctx["taille_velo"] == "-"
+        assert ctx["tshirt"] == "-"
+        assert ctx["documents_valides"] == "2"
+        assert ctx["documents_total"] == "5"
+        joined = " ".join(str(v) for v in ctx.values())
+        assert "None" not in joined

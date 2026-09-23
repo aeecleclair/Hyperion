@@ -51,7 +51,9 @@
               <td class="px-3 p-2 border border-slate-500 w-48">
                 Numéro de dossard
               </td>
-              <td class="px-3 p-2 border border-slate-500">{{team_number}}</td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{team_number if team_number is not none}}
+              </td>
             </tr>
             <tr>
               <td class="px-3 p-2 border border-slate-500 w-48">
@@ -63,7 +65,9 @@
             </tr>
             <tr>
               <td class="px-3 p-2 border border-slate-500 w-48">Adresse</td>
-              <td class="px-3 p-2 border border-slate-500">{{address}}</td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{address if address is not none}}
+              </td>
             </tr>
             <tr>
               <td class="px-3 p-2 border border-slate-500 w-48">Téléphone</td>
@@ -82,7 +86,8 @@
             <tr>
               <td class="px-3 p-2 border border-slate-500 w-48">Allergie</td>
               <td class="px-3 p-2 border border-slate-500">
-                {{security_file.allergy if security_file.allergy else "Aucune"}}
+                {{(security_file.allergy if security_file.allergy else "Aucune")
+                if security_file else "-"}}
               </td>
             </tr>
             <tr>
@@ -133,13 +138,15 @@
                 Traumatismes
               </td>
               <td class="px-3 p-2 border border-slate-500">
-                {{security_file.trauma if security_file.trauma else "Aucun"}}
+                {{(security_file.trauma if security_file.trauma else "Aucun") if
+                security_file else "-"}}
               </td>
             </tr>
             <tr>
               <td class="px-3 p-2 border border-slate-500 w-48">Familiaux</td>
               <td class="px-3 p-2 border border-slate-500">
-                {{security_file.family if security_file.family else "Aucun"}}
+                {{(security_file.family if security_file.family else "Aucun") if
+                security_file else "-"}}
               </td>
             </tr>
           </tbody>
@@ -155,19 +162,22 @@
             <tr>
               <td class="px-3 p-2 border border-slate-500 w-48">Nom</td>
               <td class="px-3 p-2 border border-slate-500">
-                {{security_file.emergency_person_name}}
+                {{security_file.emergency_person_name if security_file else
+                "-"}}
               </td>
             </tr>
             <tr>
               <td class="px-3 p-2 border border-slate-500 w-48">Prénom</td>
               <td class="px-3 p-2 border border-slate-500">
-                {{security_file.emergency_person_firstname}}
+                {{security_file.emergency_person_firstname if security_file else
+                "-"}}
               </td>
             </tr>
             <tr>
               <td class="px-3 p-2 border border-slate-500 w-48">Téléphone</td>
               <td class="px-3 p-2 border border-slate-500">
-                {{security_file.emergency_person_phone}}
+                {{security_file.emergency_person_phone if security_file else
+                "-"}}
               </td>
             </tr>
           </tbody>
@@ -217,7 +227,9 @@
             </tr>
             <tr>
               <td class="px-3 p-2 border border-slate-500 w-48">Adresse</td>
-              <td class="px-3 p-2 border border-slate-500">{{address}}</td>
+              <td class="px-3 p-2 border border-slate-500">
+                {{address if address is not none}}
+              </td>
             </tr>
             <tr>
               <td class="px-3 p-2 border border-slate-500 w-48">Téléphone</td>
@@ -235,7 +247,8 @@
             <tr>
               <td class="px-3 p-2 border border-slate-500 w-48">Allergie</td>
               <td class="px-3 p-2 border border-slate-500">
-                {{security_file.allergy if security_file.allergy else "Aucune"}}
+                {{(security_file.allergy if security_file.allergy else "Aucune")
+                if security_file else "-"}}
               </td>
             </tr>
             <tr>
@@ -286,13 +299,15 @@
                 Traumatismes
               </td>
               <td class="px-3 p-2 border border-slate-500">
-                {{security_file.trauma if security_file.trauma else "Aucun"}}
+                {{(security_file.trauma if security_file.trauma else "Aucun") if
+                security_file else "-"}}
               </td>
             </tr>
             <tr>
               <td class="px-3 p-2 border border-slate-500 w-48">Familiaux</td>
               <td class="px-3 p-2 border border-slate-500">
-                {{security_file.family if security_file.family else "Aucun"}}
+                {{(security_file.family if security_file.family else "Aucun") if
+                security_file else "-"}}
               </td>
             </tr>
           </tbody>

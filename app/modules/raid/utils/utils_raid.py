@@ -16,8 +16,11 @@ from app.modules.raid.raid_type import (
     Size,
 )
 from app.modules.raid.utils.pdf.conversion_utils import (
+    date_to_string,
     get_difficulty_label,
     get_meeting_place_label,
+    get_situation_label,
+    get_size_label,
     nullable_number_to_string,
 )
 from app.modules.raid.utils.validation_checker import compute_team_progress
@@ -230,6 +233,50 @@ def _participant_pdf_context(
     return ctx
 
 
+# Displayed in the PDFs for any empty (None) field so the admin sees the field
+# is deliberately empty, not a rendering bug.
+PDF_EMPTY_PLACEHOLDER = "-"
+
+
+def _or_dash(value) -> str:
+    """Render None/empty values as a dash instead of leaking 'None' into PDFs."""
+    if value is None or value == "":
+        return PDF_EMPTY_PLACEHOLDER
+    return str(value)
+
+
+def _recap_participant_context(
+    participant: schemas_raid.RaidParticipantRestricted,
+) -> dict:
+    """French-keyed context for the recap template, with '-' for empty fields."""
+    user = participant.user
+    return {
+        "nom": _or_dash(user.name if user else None),
+        "prenom": _or_dash(user.firstname if user else None),
+        "date_naissance": (
+            date_to_string(user.birthday)
+            if user and user.birthday
+            else PDF_EMPTY_PLACEHOLDER
+        ),
+        "adresse": _or_dash(participant.address),
+        "telephone": _or_dash(user.phone if user else None),
+        "email": _or_dash(user.email if user else None),
+        "taille_velo": get_size_label(participant.bike_size),
+        "tshirt": (
+            f"{participant.t_shirt_size.value} ({'payé' if participant.t_shirt_payment else 'non payé'})"
+            if participant.t_shirt_size
+            else PDF_EMPTY_PLACEHOLDER
+        ),
+        "situation": get_situation_label(participant.situation),
+        "regime": _or_dash(participant.diet),
+        "attestation": "Oui" if participant.attestation_on_honour else "Non",
+        # Same computed counters as the admin UI so both always agree.
+        "documents_valides": str(participant.number_of_validated_document),
+        "documents_total": str(participant.number_of_document),
+        "paiement": "Payé" if participant.payment else "Non payé",
+    }
+
+
 async def generate_security_file_pdf(
     participant: schemas_raid.RaidParticipant,
     information: coredata_raid.RaidInformation,
@@ -271,8 +318,10 @@ async def generate_recap_file_pdf(
         "lieu_rdv": get_meeting_place_label(team.meeting_place),
         "numero": nullable_number_to_string(team.number),
         "inscription": str(int(compute_team_progress(team))) + " %",
-        "capitaine": _participant_pdf_context(team.captain),
-        "participant": _participant_pdf_context(team.second) if team.second else None,
+        "capitaine": _recap_participant_context(team.captain),
+        "participant": (
+            _recap_participant_context(team.second) if team.second else None
+        ),
     }
 
     file_id = team.id
