@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 from uuid import UUID, uuid4
 
 import pytest
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.raid import schemas_raid
@@ -379,3 +380,220 @@ class TestSecurityFileFKEdgeCases:
                     user=user,
                     edition=edition,
                 )
+
+
+# --- Consent gates medical data only; emergency contact always allowed ------
+
+
+class TestSecurityFileConsentRules:
+    """Tests for the no-consent contract."""
+
+    @staticmethod
+    def _base_kwargs() -> dict:
+        return {
+            "allergy": None,
+            "asthma": False,
+            "intensive_care_unit": None,
+            "intensive_care_unit_when": None,
+            "ongoing_treatment": None,
+            "sicknesses": None,
+            "hospitalization": None,
+            "surgical_operation": None,
+            "trauma": None,
+            "family": None,
+            "emergency_person_firstname": "Jane",
+            "emergency_person_name": "Doe",
+            "emergency_person_phone": "+33612345678",
+            "file_id": None,
+            "consent_given": False,
+        }
+
+    @pytest.mark.asyncio
+    async def test_medical_data_without_consent_rejected(self) -> None:
+        """Any medical field with consent_given=False is a 400."""
+        security_file = schemas_raid.SecurityFileBase(
+            **self._base_kwargs() | {"allergy": "Pollens"},
+        )
+        with (
+            patch(
+                "app.modules.raid.endpoints_raid.get_participant_or_404",
+                new=AsyncMock(
+                    return_value=_create_mock_participant(
+                        security_file_id=None,
+                    ),
+                ),
+            ),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            await set_security_file(
+                security_file=security_file,
+                participant_id="user_123",
+                db=_create_mock_db(),
+                user=_create_mock_user(),
+                edition=_create_mock_edition(),
+            )
+        assert getattr(exc_info.value, "status_code", None) == 400
+        assert "Consent" in str(exc_info.value.detail)
+
+    @pytest.mark.asyncio
+    async def test_emergency_only_without_consent_updates_emergency_fields(
+        self,
+    ) -> None:
+        """Existing file + no consent + no medical data: only the emergency
+        contact is rewritten (update_security_file must NOT be called)."""
+        db = _create_mock_db()
+        user = _create_mock_user()
+        edition = _create_mock_edition()
+        participant = _create_mock_participant(security_file_id="existing_id")
+        security_file = schemas_raid.SecurityFileBase(**self._base_kwargs())
+
+        with (
+            patch(
+                "app.modules.raid.endpoints_raid.has_user_permission",
+                new=AsyncMock(return_value=False),
+            ),
+            patch(
+                "app.modules.raid.endpoints_raid.get_participant_or_404",
+                new=AsyncMock(return_value=participant),
+            ),
+            patch(
+                "app.modules.raid.endpoints_raid.cruds_raid.update_security_file",
+                new=AsyncMock(),
+            ) as mock_full_update,
+            patch(
+                "app.modules.raid.endpoints_raid.cruds_raid.update_security_file_emergency",
+                new=AsyncMock(),
+            ) as mock_emergency_update,
+            patch(
+                "app.modules.raid.endpoints_raid.cruds_raid.get_security_file_by_security_id",
+                new=AsyncMock(
+                    return_value=Mock(
+                        spec=schemas_raid.SecurityFile,
+                        id="existing_id",
+                    ),
+                ),
+            ),
+        ):
+            result = await set_security_file(
+                security_file=security_file,
+                participant_id="user_123",
+                db=db,
+                user=user,
+                edition=edition,
+            )
+
+            mock_full_update.assert_not_called()
+            mock_emergency_update.assert_called_once_with(
+                security_file_id="existing_id",
+                emergency_person_firstname="Jane",
+                emergency_person_name="Doe",
+                emergency_person_phone="+33612345678",
+                db=db,
+            )
+            assert result is not None
+
+    @pytest.mark.asyncio
+    async def test_emergency_only_creation_nulls_medical_fields(self) -> None:
+        """Creation without consent stores the emergency contact only."""
+        db = _create_mock_db()
+        user = _create_mock_user()
+        edition = _create_mock_edition()
+        participant = _create_mock_participant(security_file_id=None)
+        security_file = schemas_raid.SecurityFileBase(**self._base_kwargs())
+
+        with (
+            patch(
+                "app.modules.raid.endpoints_raid.has_user_permission",
+                new=AsyncMock(return_value=False),
+            ),
+            patch(
+                "app.modules.raid.endpoints_raid.get_participant_or_404",
+                new=AsyncMock(return_value=participant),
+            ),
+            patch(
+                "app.modules.raid.endpoints_raid.cruds_raid.add_security_file",
+                new=AsyncMock(),
+            ) as mock_add,
+            patch(
+                "app.modules.raid.endpoints_raid.cruds_raid.assign_security_file",
+                new=AsyncMock(),
+            ),
+            patch(
+                "app.modules.raid.endpoints_raid.cruds_raid.get_security_file_by_security_id",
+                new=AsyncMock(
+                    return_value=Mock(spec=schemas_raid.SecurityFile, id="new_id"),
+                ),
+            ),
+        ):
+            await set_security_file(
+                security_file=security_file,
+                participant_id="user_123",
+                db=db,
+                user=user,
+                edition=edition,
+            )
+
+            stored = mock_add.call_args.args[0]
+            assert stored.allergy is None
+            assert stored.asthma is False
+            assert stored.ongoing_treatment is None
+            assert stored.file_id is None
+            assert stored.consent_given is False
+            assert stored.consent_given_at is None
+            # Emergency contact preserved
+            assert stored.emergency_person_firstname == "Jane"
+            assert stored.emergency_person_name == "Doe"
+            assert stored.emergency_person_phone == "+33612345678"
+
+    @pytest.mark.asyncio
+    async def test_consent_given_updates_everything(self) -> None:
+        """With consent, the full file (medical + emergency) is updated."""
+        db = _create_mock_db()
+        user = _create_mock_user()
+        edition = _create_mock_edition()
+        participant = _create_mock_participant(security_file_id="existing_id")
+        security_file = schemas_raid.SecurityFileBase(
+            **self._base_kwargs()
+            | {
+                "allergy": "Pollens",
+                "consent_given": True,
+            },
+        )
+
+        with (
+            patch(
+                "app.modules.raid.endpoints_raid.has_user_permission",
+                new=AsyncMock(return_value=False),
+            ),
+            patch(
+                "app.modules.raid.endpoints_raid.get_participant_or_404",
+                new=AsyncMock(return_value=participant),
+            ),
+            patch(
+                "app.modules.raid.endpoints_raid.cruds_raid.update_security_file",
+                new=AsyncMock(),
+            ) as mock_full_update,
+            patch(
+                "app.modules.raid.endpoints_raid.cruds_raid.update_security_file_emergency",
+                new=AsyncMock(),
+            ) as mock_emergency_update,
+            patch(
+                "app.modules.raid.endpoints_raid.cruds_raid.get_security_file_by_security_id",
+                new=AsyncMock(
+                    return_value=Mock(
+                        spec=schemas_raid.SecurityFile,
+                        id="existing_id",
+                    ),
+                ),
+            ),
+        ):
+            await set_security_file(
+                security_file=security_file,
+                participant_id="user_123",
+                db=db,
+                user=user,
+                edition=edition,
+            )
+
+            mock_full_update.assert_called_once()
+            mock_emergency_update.assert_not_called()

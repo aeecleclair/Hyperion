@@ -695,6 +695,45 @@ def test_validate_document_as_admin(client: TestClient) -> None:
     assert r.status_code == 204
 
 
+@pytest.mark.parametrize(
+    "target_validation",
+    [DocumentValidation.refused, DocumentValidation.temporary],
+)
+async def test_validate_document_full_state_matrix(
+    client: TestClient,
+    target_validation: DocumentValidation,
+) -> None:
+    """An admin can drive a document through any validation state."""
+    # doc_accepted is pending again at this point (module fixture order);
+    # drive it: pending -> refused first.
+    r = client.post(
+        f"/raid/document/{doc_accepted.id}/validate?validation=refused",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 204
+
+    # Any transition out of refused (the case that used to be doubted).
+    r = client.post(
+        f"/raid/document/{doc_accepted.id}/validate?validation={target_validation.value}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 204
+
+    # The state is persisted (the document has no owning participant, so the
+    # read endpoint is not usable here — check the database directly).
+    async with get_TestingSessionLocal()() as db:
+        stored = await db.get(models_raid.Document, doc_accepted.id)
+        assert stored is not None
+        assert stored.validation == target_validation
+
+    # Leave the document accepted for downstream tests.
+    r = client.post(
+        f"/raid/document/{doc_accepted.id}/validate?validation=accepted",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 204
+
+
 # ---------------------------------------------------------------------------
 # Payment
 # ---------------------------------------------------------------------------
@@ -1384,13 +1423,7 @@ async def test_school_authorization_document_is_readable_by_owner(
 async def test_raid_rules_document_is_readable_by_every_participant(
     client: TestClient,
 ) -> None:
-    """The edition-wide rules are readable even when a participant also owns them.
-
-    Regression: uploading the rules from the admin information page also assigns
-    them to the uploader's participant record. The read endpoint used to resolve
-    that owner first and only then enforce team membership, so every other
-    participant got a 403 when downloading the rules from the information page.
-    """
+    """The edition-wide rules are readable even when a participant also owns them."""
     doc_id = str(uuid.uuid4())
     file_bytes = b"%PDF-1.4 raid rules"
     await save_bytes_as_data(
@@ -1451,6 +1484,53 @@ async def test_raid_rules_document_is_readable_by_every_participant(
     r = client.patch(
         "/raid/information",
         json={"raid_rules_id": None},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 204
+
+
+async def test_raid_information_document_is_readable_by_every_participant(
+    client: TestClient,
+) -> None:
+    """The raid guide (raidInformation) is downloadable like the rules."""
+    doc_id = str(uuid.uuid4())
+    file_bytes = b"%PDF-1.4 raid guide"
+    await save_bytes_as_data(
+        file_bytes=file_bytes,
+        directory="raid",
+        filename=doc_id,
+        extension="pdf",
+    )
+    doc = models_raid.Document(
+        id=doc_id,
+        edition_id=active_edition.id,
+        name="guide-du-raid.pdf",
+        uploaded_at=datetime.datetime.now(tz=datetime.UTC).date(),
+        type=DocumentType.raidInformation,
+        validation=DocumentValidation.pending,
+    )
+    await add_object_to_db(doc)
+
+    # Publish it as the edition guide.
+    r = client.patch(
+        "/raid/information",
+        json={"raid_information_id": doc_id},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 204
+
+    # A participant from another team must be able to download it.
+    r = client.get(
+        f"/raid/document/{doc_id}",
+        headers={"Authorization": f"Bearer {token_solo}"},
+    )
+    assert r.status_code == 200
+    assert r.content == file_bytes
+
+    # Cleanup so the shared edition state does not leak into other tests.
+    r = client.patch(
+        "/raid/information",
+        json={"raid_information_id": None},
         headers={"Authorization": f"Bearer {token_admin}"},
     )
     assert r.status_code == 204
@@ -1597,3 +1677,28 @@ async def test_edition_crud_create_read_delete() -> None:
         assert any(e.id == new_edition.id for e in all_editions)
         await cruds_raid.delete_edition(new_edition.id, db)
         await db.commit()
+
+
+async def test_upload_raid_information_document_not_attached_to_participant(
+    client: TestClient,
+) -> None:
+    """The raid guide uploads fine and stays edition-wide (no participant slot)."""
+    r = client.post(
+        "/raid/document/raidInformation",
+        files={"file": ("guide.pdf", b"%PDF-1.4 guide", "application/pdf")},
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 201
+    doc_id = r.json()["id"]
+
+    # It must NOT be attached to the uploader's participant record.
+    r = client.get(
+        "/raid/participants/me",
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 200
+    me = r.json()
+    participant_slots = [
+        value for key, value in me.items() if key.endswith("_id") and value == doc_id
+    ]
+    assert participant_slots == []
