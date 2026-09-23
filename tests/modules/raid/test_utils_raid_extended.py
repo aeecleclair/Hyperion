@@ -192,6 +192,320 @@ async def test_validate_payment_raised_when_checkout_not_found():
         assert "not found" in str(exc_info.value)
 
 
+# --- validate_payment: volunteer branch + error paths ---------------------
+
+
+def _make_volunteer(**overrides):
+    """Volunteer mock matching what the volunteer checkout branch reads."""
+    volunteer = Mock()
+    volunteer.payment = False
+    volunteer.t_shirt_payment = False
+    volunteer.t_shirt_size = None
+    for key, value in overrides.items():
+        setattr(volunteer, key, value)
+    return volunteer
+
+
+@pytest.mark.asyncio
+async def test_validate_payment_volunteer_checkout_success():
+    """A volunteer checkout (participant lookup missed) confirms the volunteer."""
+    db = AsyncMock()
+    checkout_payment = schemas_payment.CheckoutPayment(
+        id=uuid4(),
+        checkout_id=uuid4(),
+        paid_amount=5.0,  # volunteer price
+    )
+    volunteer_checkout = Mock()
+    volunteer_checkout.volunteer_user_id = "vol_1"
+    volunteer_checkout.edition_id = uuid4()
+    volunteer = _make_volunteer()
+
+    prices = Mock()
+    prices.student_price = 50.0
+    prices.external_price = 90.0
+    prices.t_shirt_price = 15.0
+    prices.scholarship_price = 25.0
+    prices.volunteer_price = 5.0
+
+    with patch("app.modules.raid.utils.utils_raid.cruds_raid") as mock_cruds:
+        mock_cruds.get_participant_checkout_by_checkout_id = AsyncMock(
+            return_value=None,
+        )
+        mock_cruds.get_volunteer_checkout_by_checkout_id = AsyncMock(
+            return_value=volunteer_checkout,
+        )
+        mock_cruds.get_volunteer_by_user_id = AsyncMock(return_value=volunteer)
+        mock_cruds.confirm_volunteer_payment = AsyncMock()
+        mock_cruds.confirm_volunteer_t_shirt_payment = AsyncMock()
+
+        with patch(
+            "app.modules.raid.utils.utils_raid.get_core_data",
+            new=AsyncMock(return_value=prices),
+        ):
+            await validate_payment(checkout_payment, db)
+
+        mock_cruds.confirm_volunteer_payment.assert_called_once_with(
+            "vol_1",
+            volunteer_checkout.edition_id,
+            db,
+        )
+        mock_cruds.confirm_volunteer_t_shirt_payment.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_validate_payment_volunteer_with_tshirt_confirms_both():
+    """Volunteer + t-shirt: both confirmations fire (5 + 15 = 20 paid)."""
+    db = AsyncMock()
+    checkout_payment = schemas_payment.CheckoutPayment(
+        id=uuid4(),
+        checkout_id=uuid4(),
+        paid_amount=20.0,
+    )
+    volunteer_checkout = Mock()
+    volunteer_checkout.volunteer_user_id = "vol_2"
+    volunteer_checkout.edition_id = uuid4()
+    volunteer = _make_volunteer(t_shirt_size=Size.M)
+
+    prices = Mock()
+    prices.student_price = 50.0
+    prices.external_price = 90.0
+    prices.t_shirt_price = 15.0
+    prices.scholarship_price = 25.0
+    prices.volunteer_price = 5.0
+
+    with patch("app.modules.raid.utils.utils_raid.cruds_raid") as mock_cruds:
+        mock_cruds.get_participant_checkout_by_checkout_id = AsyncMock(
+            return_value=None,
+        )
+        mock_cruds.get_volunteer_checkout_by_checkout_id = AsyncMock(
+            return_value=volunteer_checkout,
+        )
+        mock_cruds.get_volunteer_by_user_id = AsyncMock(return_value=volunteer)
+        mock_cruds.confirm_volunteer_payment = AsyncMock()
+        mock_cruds.confirm_volunteer_t_shirt_payment = AsyncMock()
+
+        with patch(
+            "app.modules.raid.utils.utils_raid.get_core_data",
+            new=AsyncMock(return_value=prices),
+        ):
+            await validate_payment(checkout_payment, db)
+
+        mock_cruds.confirm_volunteer_payment.assert_called_once_with(
+            "vol_2",
+            volunteer_checkout.edition_id,
+            db,
+        )
+        mock_cruds.confirm_volunteer_t_shirt_payment.assert_called_once_with(
+            "vol_2",
+            volunteer_checkout.edition_id,
+            db,
+        )
+
+
+@pytest.mark.asyncio
+async def test_validate_payment_error_paths_are_logged_and_swallowed():
+    """Participant/volunteer vanished or prices unset: no crash, no confirm."""
+    db = AsyncMock()
+    prices = Mock()
+    prices.student_price = None  # -> calculate raises HTTPException 404
+    prices.external_price = 90.0
+    prices.t_shirt_price = 15.0
+    prices.scholarship_price = 25.0
+    prices.volunteer_price = 5.0
+
+    checkout_payment = schemas_payment.CheckoutPayment(
+        id=uuid4(),
+        checkout_id=uuid4(),
+        paid_amount=50.0,
+    )
+
+    # 1) participant checkout but participant row gone -> RaidPayementError
+    with patch("app.modules.raid.utils.utils_raid.cruds_raid") as mock_cruds:
+        mock_cruds.get_participant_checkout_by_checkout_id = AsyncMock(
+            return_value=Mock(
+                participant_user_id="ghost",
+                edition_id=uuid4(),
+            ),
+        )
+        mock_cruds.get_participant_by_user_id = AsyncMock(return_value=None)
+
+        with pytest.raises(RaidPayementError):
+            await validate_payment(checkout_payment, db)
+
+    # 2) participant present but prices were unset: logged, nothing confirmed
+    participant = _make_participant(situation=Situation.centrale)
+    with patch("app.modules.raid.utils.utils_raid.cruds_raid") as mock_cruds:
+        mock_cruds.get_participant_checkout_by_checkout_id = AsyncMock(
+            return_value=Mock(
+                participant_user_id="u1",
+                edition_id=uuid4(),
+            ),
+        )
+        mock_cruds.get_participant_by_user_id = AsyncMock(
+            return_value=participant,
+        )
+        mock_cruds.confirm_payment = AsyncMock()
+
+        with patch(
+            "app.modules.raid.utils.utils_raid.get_core_data",
+            new=AsyncMock(return_value=prices),
+        ):
+            await validate_payment(checkout_payment, db)
+
+        mock_cruds.confirm_payment.assert_not_called()
+
+    # 3) volunteer checkout but volunteer row gone -> RaidPayementError
+    with patch("app.modules.raid.utils.utils_raid.cruds_raid") as mock_cruds:
+        mock_cruds.get_participant_checkout_by_checkout_id = AsyncMock(
+            return_value=None,
+        )
+        mock_cruds.get_volunteer_checkout_by_checkout_id = AsyncMock(
+            return_value=Mock(
+                volunteer_user_id="ghost_vol",
+                edition_id=uuid4(),
+            ),
+        )
+        mock_cruds.get_volunteer_by_user_id = AsyncMock(return_value=None)
+
+        with pytest.raises(RaidPayementError):
+            await validate_payment(checkout_payment, db)
+
+    # 4) volunteer present, volunteer prices unset -> logged, nothing confirmed
+    volunteer_prices_unset = Mock(
+        volunteer_price=0.0,  # falsy -> calculate raises HTTPException 404
+        t_shirt_price=15.0,
+    )
+    with patch("app.modules.raid.utils.utils_raid.cruds_raid") as mock_cruds:
+        mock_cruds.get_participant_checkout_by_checkout_id = AsyncMock(
+            return_value=None,
+        )
+        mock_cruds.get_volunteer_checkout_by_checkout_id = AsyncMock(
+            return_value=Mock(
+                volunteer_user_id="v1",
+                edition_id=uuid4(),
+            ),
+        )
+        mock_cruds.get_volunteer_by_user_id = AsyncMock(
+            return_value=_make_volunteer(),
+        )
+        mock_cruds.confirm_volunteer_payment = AsyncMock()
+
+        with patch(
+            "app.modules.raid.utils.utils_raid.get_core_data",
+            new=AsyncMock(return_value=volunteer_prices_unset),
+        ):
+            await validate_payment(checkout_payment, db)
+
+        mock_cruds.confirm_volunteer_payment.assert_not_called()
+
+    # 5) volunteer already paid -> expected total 0, nothing confirmed
+    with patch("app.modules.raid.utils.utils_raid.cruds_raid") as mock_cruds:
+        mock_cruds.get_participant_checkout_by_checkout_id = AsyncMock(
+            return_value=None,
+        )
+        mock_cruds.get_volunteer_checkout_by_checkout_id = AsyncMock(
+            return_value=Mock(
+                volunteer_user_id="v1",
+                edition_id=uuid4(),
+            ),
+        )
+        mock_cruds.get_volunteer_by_user_id = AsyncMock(
+            return_value=_make_volunteer(payment=True),
+        )
+        mock_cruds.confirm_volunteer_payment = AsyncMock()
+        mock_cruds.confirm_volunteer_t_shirt_payment = AsyncMock()
+
+        with patch(
+            "app.modules.raid.utils.utils_raid.get_core_data",
+            new=AsyncMock(
+                return_value=Mock(
+                    volunteer_price=5.0,
+                    t_shirt_price=15.0,
+                ),
+            ),
+        ):
+            await validate_payment(checkout_payment, db)
+
+        mock_cruds.confirm_volunteer_payment.assert_not_called()
+        mock_cruds.confirm_volunteer_t_shirt_payment.assert_not_called()
+
+    # 6) volunteer underpaid -> logged, nothing confirmed
+    underpaid = schemas_payment.CheckoutPayment(
+        id=uuid4(),
+        checkout_id=uuid4(),
+        paid_amount=5.0,  # owes 5 + 15 = 20 -> short
+    )
+    with patch("app.modules.raid.utils.utils_raid.cruds_raid") as mock_cruds:
+        mock_cruds.get_participant_checkout_by_checkout_id = AsyncMock(
+            return_value=None,
+        )
+        mock_cruds.get_volunteer_checkout_by_checkout_id = AsyncMock(
+            return_value=Mock(
+                volunteer_user_id="v1",
+                edition_id=uuid4(),
+            ),
+        )
+        mock_cruds.get_volunteer_by_user_id = AsyncMock(
+            return_value=_make_volunteer(t_shirt_size=Size.M),  # owes 5 + 15
+        )
+        mock_cruds.confirm_volunteer_payment = AsyncMock()
+        mock_cruds.confirm_volunteer_t_shirt_payment = AsyncMock()
+
+        with patch(
+            "app.modules.raid.utils.utils_raid.get_core_data",
+            new=AsyncMock(
+                return_value=Mock(
+                    volunteer_price=5.0,
+                    t_shirt_price=15.0,
+                ),
+            ),
+        ):
+            await validate_payment(underpaid, db)
+
+        mock_cruds.confirm_volunteer_payment.assert_not_called()
+        mock_cruds.confirm_volunteer_t_shirt_payment.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_validate_payment_owing_nothing_never_confirms():
+    """A webhook for an already-paid participant confirms nothing new."""
+    db = AsyncMock()
+    checkout_payment = schemas_payment.CheckoutPayment(
+        id=uuid4(),
+        checkout_id=uuid4(),
+        paid_amount=50.0,
+    )
+    participant = _make_participant(payment=True)  # expected total = 0
+
+    prices = Mock()
+    prices.student_price = 50.0
+    prices.external_price = 90.0
+    prices.t_shirt_price = 15.0
+    prices.scholarship_price = 25.0
+
+    with patch("app.modules.raid.utils.utils_raid.cruds_raid") as mock_cruds:
+        mock_cruds.get_participant_checkout_by_checkout_id = AsyncMock(
+            return_value=Mock(
+                participant_user_id="u1",
+                edition_id=uuid4(),
+            ),
+        )
+        mock_cruds.get_participant_by_user_id = AsyncMock(
+            return_value=participant,
+        )
+        mock_cruds.confirm_payment = AsyncMock()
+        mock_cruds.confirm_t_shirt_payment = AsyncMock()
+
+        with patch(
+            "app.modules.raid.utils.utils_raid.get_core_data",
+            new=AsyncMock(return_value=prices),
+        ):
+            await validate_payment(checkout_payment, db)
+
+        mock_cruds.confirm_payment.assert_not_called()
+        mock_cruds.confirm_t_shirt_payment.assert_not_called()
+
+
 # --- set_team_number tests -----------------------------------------------
 
 

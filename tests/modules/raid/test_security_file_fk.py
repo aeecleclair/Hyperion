@@ -6,7 +6,7 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.raid import schemas_raid
+from app.modules.raid import cruds_raid, schemas_raid
 from app.modules.raid.endpoints_raid import set_security_file
 
 # --- Helper functions -----------------------------------------------------
@@ -597,3 +597,31 @@ class TestSecurityFileConsentRules:
 
             mock_full_update.assert_called_once()
             mock_emergency_update.assert_not_called()
+
+
+async def test_update_security_file_emergency_updates_only_contact_columns() -> None:
+    """The no-consent CRUD writes exactly the three emergency columns."""
+    db = _create_mock_db()
+    await cruds_raid.update_security_file_emergency(
+        security_file_id="sf_1",
+        emergency_person_firstname="Jane",
+        emergency_person_name="Doe",
+        emergency_person_phone="+33612345678",
+        db=db,
+    )
+
+    # One UPDATE on the security_file row + flush; no commit.
+    db.execute.assert_awaited_once()
+    statement = db.execute.await_args.args[0]
+    assert statement.is_update
+    assert statement.table.name == "raid_security_file"
+    assert {
+        col.key
+        for col in statement._values  # noqa: SLF001 (introspecting the mock)
+    } == {
+        "emergency_person_firstname",
+        "emergency_person_name",
+        "emergency_person_phone",
+    }
+    db.flush.assert_awaited_once()
+    db.commit.assert_not_awaited()

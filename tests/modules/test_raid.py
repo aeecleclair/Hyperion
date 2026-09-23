@@ -9,14 +9,16 @@ the participant/volunteer payloads stay small and mirror the real API shape.
 
 import datetime
 import uuid
+from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from sqlalchemy import delete, update
+from sqlalchemy import delete, select, update
 
 from app.core.groups import models_groups
 from app.core.payment import cruds_payment, models_payment
+from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.users import cruds_users, models_users, schemas_users
 from app.modules.raid import coredata_raid, cruds_raid, models_raid, schemas_raid
 from app.modules.raid.endpoints_raid import RaidPermissions
@@ -31,6 +33,7 @@ from app.modules.raid.raid_type import (
 )
 from app.utils.tools import save_bytes_as_data
 from tests.commons import (
+    MockedPaymentTool,
     add_coredata_to_db,
     add_object_to_db,
     create_api_access_token,
@@ -106,6 +109,7 @@ async def init_objects() -> None:
             partner_price=70,
             external_price=90,
             scholarship_price=25,
+            volunteer_price=5,
         ),
     )
     await add_coredata_to_db(coredata_raid.RaidInformation())
@@ -591,6 +595,37 @@ def test_cancel_by_self(client: TestClient) -> None:
     assert r2.json()["status"] == "cancelled"
 
 
+async def test_cancelled_participant_can_re_register(
+    client: TestClient,
+) -> None:
+    """Re-enrolling after cancellation revives the same row as a fresh draft."""
+    # user_solo was cancelled by the preceding test.
+    r = client.post(
+        "/raid/participants",
+        headers={"Authorization": f"Bearer {token_solo}"},
+    )
+    assert r.status_code == 201
+    body = r.json()
+    assert body["user_id"] == user_solo.id
+    assert body["status"] == "draft"
+
+    # Exactly one row (no duplicate was created).
+    async with get_TestingSessionLocal()() as db:
+        rows = (
+            (
+                await db.execute(
+                    select(models_raid.RaidParticipant).where(
+                        models_raid.RaidParticipant.user_id == user_solo.id,
+                        models_raid.RaidParticipant.edition_id == active_edition.id,
+                    ),
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert len(rows) == 1
+
+
 # ---------------------------------------------------------------------------
 # Teams
 # ---------------------------------------------------------------------------
@@ -815,6 +850,50 @@ def test_create_volunteer_twice_rejected(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token_volunteer}"},
     )
     assert r.status_code == 403
+
+
+async def test_volunteer_payment_url_persists_checkout(client: TestClient) -> None:
+    """The volunteer payment URL creates a HelloAsso checkout and persists it.
+
+    Regression: the raid_volunteer_checkout row (the payment callback's only
+    way to reconcile a volunteer checkout) was never covered.
+    """
+    with patch.dict(
+        "app.dependencies.GLOBAL_STATE",
+        {"payment_tools": {HelloAssoConfigName.RAID: MockedPaymentTool()}},
+    ):
+        r = client.get(
+            "/raid/volunteers/pay",
+            headers={"Authorization": f"Bearer {token_volunteer}"},
+        )
+
+    assert r.status_code == 201
+    assert r.json()["url"] == "https://some.url.fr/checkout"
+
+    # The volunteer checkout row links the user and edition to the checkout.
+    async with get_TestingSessionLocal()() as db:
+        result = await db.execute(
+            select(models_raid.RaidVolunteerCheckout).where(
+                models_raid.RaidVolunteerCheckout.checkout_id == mocked_checkout_id,
+            ),
+        )
+        row = result.scalars().first()
+        assert row is not None
+        assert row.volunteer_user_id == user_volunteer.id
+        assert row.edition_id == active_edition.id
+
+        # Leave the shared DB as we found it.
+        await db.execute(
+            delete(models_raid.RaidVolunteerCheckout).where(
+                models_raid.RaidVolunteerCheckout.checkout_id == mocked_checkout_id,
+            ),
+        )
+        await db.execute(
+            delete(models_payment.Checkout).where(
+                models_payment.Checkout.id == mocked_checkout_id,
+            ),
+        )
+        await db.commit()
 
 
 def test_volunteer_cannot_become_participant(client: TestClient) -> None:
