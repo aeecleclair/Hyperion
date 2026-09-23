@@ -1598,6 +1598,31 @@ async def cancel_volunteer(
     await cruds_raid.update_volunteer_cancellation(user_id, edition.id, True, db)
 
 
+@module.router.patch(
+    "/raid/volunteers/{user_id}/reopen",
+    status_code=204,
+)
+async def reopen_volunteer(
+    user_id: str,
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.access_raid]),
+    ),
+    db: AsyncSession = Depends(get_db),
+    edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
+):
+    """Un-cancel a cancelled volunteer (self or admin)."""
+    is_raid_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
+    if user.id != user_id and not is_raid_admin:
+        raise HTTPException(status_code=403, detail="You are not the volunteer.")
+    volunteer = await get_volunteer_or_404(user_id, edition.id, db)
+    if not volunteer.cancelled:
+        raise HTTPException(
+            status_code=400,
+            detail="Volunteer is not cancelled; nothing to reopen.",
+        )
+    await cruds_raid.update_volunteer_cancellation(user_id, edition.id, False, db)
+
+
 @module.router.delete(
     "/raid/volunteers/{user_id}",
     status_code=204,

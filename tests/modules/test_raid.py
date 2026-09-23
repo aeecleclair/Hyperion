@@ -982,6 +982,41 @@ async def test_validate_volunteer_success(client: TestClient) -> None:
     assert r.status_code == 204
 
 
+def test_volunteer_cancel_then_reopen(client: TestClient) -> None:
+    """Cancelling a volunteer must not be a dead-end: they can reopen."""
+    r = client.patch(
+        f"/raid/volunteers/{user_volunteer.id}/cancel",
+        headers={"Authorization": f"Bearer {token_volunteer}"},
+    )
+    assert r.status_code == 204
+    r2 = client.get(
+        "/raid/volunteers/me",
+        headers={"Authorization": f"Bearer {token_volunteer}"},
+    )
+    assert r2.status_code == 200
+    assert r2.json()["cancelled"] is True
+
+    r3 = client.patch(
+        f"/raid/volunteers/{user_volunteer.id}/reopen",
+        headers={"Authorization": f"Bearer {token_volunteer}"},
+    )
+    assert r3.status_code == 204
+    r4 = client.get(
+        "/raid/volunteers/me",
+        headers={"Authorization": f"Bearer {token_volunteer}"},
+    )
+    assert r4.status_code == 200
+    assert r4.json()["cancelled"] is False
+
+
+def test_reopen_not_cancelled_volunteer_400(client: TestClient) -> None:
+    r = client.patch(
+        f"/raid/volunteers/{user_volunteer.id}/reopen",
+        headers={"Authorization": f"Bearer {token_volunteer}"},
+    )
+    assert r.status_code == 400
+
+
 def test_delete_validated_volunteer_self_forbidden(client: TestClient) -> None:
     r = client.delete(
         f"/raid/volunteers/{user_volunteer.id}",
