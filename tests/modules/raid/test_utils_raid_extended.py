@@ -52,6 +52,21 @@ def _create_mock_user():
 # --- validate_payment tests -----------------------------------------------
 
 
+def _make_participant(**overrides):
+    """Build a participant mock matching what calculate_raid_payment reads."""
+    participant = Mock()
+    participant.payment = False
+    participant.t_shirt_payment = False
+    participant.t_shirt_size = None
+    participant.has_scholarship = False
+    participant.school_authorization = None
+    participant.situation = Situation.other
+    participant.student_card_id = None
+    for key, value in overrides.items():
+        setattr(participant, key, value)
+    return participant
+
+
 @pytest.mark.asyncio
 async def test_validate_payment_success_student():
     """Test validate_payment with student price."""
@@ -68,18 +83,29 @@ async def test_validate_payment_success_student():
     participant_checkout.participant_user_id = "user_123"
     participant_checkout.edition_id = uuid4()
 
+    # The participant state prices the checkout at exactly 50 (student rate)
+    participant = _make_participant(
+        situation=Situation.centrale,
+        student_card_id=uuid4(),
+    )
+
     # Mock prices
     prices = Mock()
     prices.student_price = 50.0
     prices.external_price = 90.0
     prices.t_shirt_price = 15.0
+    prices.scholarship_price = 25.0
 
     # Mock dependencies
     with patch("app.modules.raid.utils.utils_raid.cruds_raid") as mock_cruds:
         mock_cruds.get_participant_checkout_by_checkout_id = AsyncMock(
             return_value=participant_checkout,
         )
+        mock_cruds.get_participant_by_user_id = AsyncMock(
+            return_value=participant,
+        )
         mock_cruds.confirm_payment = AsyncMock()
+        mock_cruds.confirm_t_shirt_payment = AsyncMock()
 
         with patch(
             "app.modules.raid.utils.utils_raid.get_core_data",
@@ -93,6 +119,7 @@ async def test_validate_payment_success_student():
                 participant_checkout.edition_id,
                 db,
             )
+            mock_cruds.confirm_t_shirt_payment.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -109,15 +136,23 @@ async def test_validate_payment_success_tshirt():
     participant_checkout.participant_user_id = "user_456"
     participant_checkout.edition_id = uuid4()
 
+    # Already-paid participant owing only the t-shirt
+    participant = _make_participant(payment=True, t_shirt_size=Size.M)
+
     prices = Mock()
     prices.student_price = 50.0
     prices.external_price = 90.0
     prices.t_shirt_price = 15.0
+    prices.scholarship_price = 25.0
 
     with patch("app.modules.raid.utils.utils_raid.cruds_raid") as mock_cruds:
         mock_cruds.get_participant_checkout_by_checkout_id = AsyncMock(
             return_value=participant_checkout,
         )
+        mock_cruds.get_participant_by_user_id = AsyncMock(
+            return_value=participant,
+        )
+        mock_cruds.confirm_payment = AsyncMock()
         mock_cruds.confirm_t_shirt_payment = AsyncMock()
 
         with patch(
@@ -131,6 +166,7 @@ async def test_validate_payment_success_tshirt():
                 participant_checkout.edition_id,
                 db,
             )
+            mock_cruds.confirm_payment.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -598,6 +634,13 @@ async def test_validate_payment_all_combinations():
     participant_checkout.participant_user_id = "user_789"
     participant_checkout.edition_id = uuid4()
 
+    # Unpaid student with t-shirt: expected total = 50 + 15 = 65
+    participant = _make_participant(
+        situation=Situation.centrale,
+        student_card_id=uuid4(),
+        t_shirt_size=Size.M,
+    )
+
     prices = Mock()
     prices.student_price = 50.0
     prices.external_price = 90.0
@@ -608,6 +651,9 @@ async def test_validate_payment_all_combinations():
     with patch("app.modules.raid.utils.utils_raid.cruds_raid") as mock_cruds:
         mock_cruds.get_participant_checkout_by_checkout_id = AsyncMock(
             return_value=participant_checkout,
+        )
+        mock_cruds.get_participant_by_user_id = AsyncMock(
+            return_value=participant,
         )
         mock_cruds.confirm_payment = AsyncMock()
         mock_cruds.confirm_t_shirt_payment = AsyncMock()
@@ -645,6 +691,14 @@ async def test_validate_payment_scholarship_amount_confirms_payment():
     participant_checkout.participant_user_id = "user_scholar"
     participant_checkout.edition_id = uuid4()
 
+    # Accepted school authorization: expected total = 25 (scholarship rate)
+    participant = _make_participant(
+        has_scholarship=True,
+        school_authorization=Mock(
+            validation=DocumentValidation.accepted,
+        ),
+    )
+
     prices = Mock()
     prices.student_price = 50.0
     prices.external_price = 90.0
@@ -655,6 +709,9 @@ async def test_validate_payment_scholarship_amount_confirms_payment():
     with patch("app.modules.raid.utils.utils_raid.cruds_raid") as mock_cruds:
         mock_cruds.get_participant_checkout_by_checkout_id = AsyncMock(
             return_value=participant_checkout,
+        )
+        mock_cruds.get_participant_by_user_id = AsyncMock(
+            return_value=participant,
         )
         mock_cruds.confirm_payment = AsyncMock()
         mock_cruds.confirm_t_shirt_payment = AsyncMock()
@@ -687,6 +744,15 @@ async def test_validate_payment_scholarship_with_tshirt_confirms_both():
     participant_checkout.participant_user_id = "user_scholar"
     participant_checkout.edition_id = uuid4()
 
+    # Scholarship + t-shirt: expected total = 25 + 15 = 40
+    participant = _make_participant(
+        has_scholarship=True,
+        school_authorization=Mock(
+            validation=DocumentValidation.accepted,
+        ),
+        t_shirt_size=Size.M,
+    )
+
     prices = Mock()
     prices.student_price = 50.0
     prices.external_price = 90.0
@@ -697,6 +763,9 @@ async def test_validate_payment_scholarship_with_tshirt_confirms_both():
     with patch("app.modules.raid.utils.utils_raid.cruds_raid") as mock_cruds:
         mock_cruds.get_participant_checkout_by_checkout_id = AsyncMock(
             return_value=participant_checkout,
+        )
+        mock_cruds.get_participant_by_user_id = AsyncMock(
+            return_value=participant,
         )
         mock_cruds.confirm_payment = AsyncMock()
         mock_cruds.confirm_t_shirt_payment = AsyncMock()

@@ -208,12 +208,15 @@ def test_team_preview_progress_with_no_participants() -> None:
         name="T",
         number=None,
         captain_id="u1",
-        captain=schemas_raid.RaidParticipantPreview(
+        captain=schemas_raid.RaidParticipantRestricted(
             user_id="u1",
             edition_id=uuid4(),
             status=RaidRegistrationStatus.draft,
             payment=False,
             t_shirt_payment=False,
+            attestation_on_honour=False,
+            is_minor=False,
+            has_scholarship=False,
             user=_dummy_core_user("u1"),
         ),
         second=None,
@@ -232,12 +235,15 @@ def test_team_preview_progress_with_filled_meta_only() -> None:
         name="T",
         number=42,
         captain_id="u1",
-        captain=schemas_raid.RaidParticipantPreview(
+        captain=schemas_raid.RaidParticipantRestricted(
             user_id="u1",
             edition_id=uuid4(),
             status=RaidRegistrationStatus.draft,
             payment=False,
             t_shirt_payment=False,
+            attestation_on_honour=False,
+            is_minor=False,
+            has_scholarship=False,
             user=_dummy_core_user("u1"),
         ),
         second=None,

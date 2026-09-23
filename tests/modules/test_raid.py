@@ -976,11 +976,13 @@ async def _setup_scholarship_participant(
             )
             .values(
                 status=RaidRegistrationStatus.submitted,
-                situation=Situation.other,  # scholarship applies without student card
+                situation=Situation.otherSchool,
+                other_school="École des Bourses",
                 has_scholarship=True,
                 id_card_id=docs[DocumentType.idCard].id,
                 medical_certificate_id=docs[DocumentType.medicalCertificate].id,
                 raid_rules_id=docs[DocumentType.raidRules].id,
+                student_card_id=docs[DocumentType.studentCard].id,
                 school_authorization_id=docs[DocumentType.schoolAuthorization].id,
                 security_file_id=security.id,
                 attestation_on_honour=True,
@@ -1168,6 +1170,49 @@ async def test_participant_can_set_scholarship_flag(client: TestClient) -> None:
     assert r.status_code == 204
 
 
+async def test_non_student_cannot_claim_scholarship(client: TestClient) -> None:
+    """Scholarship is student-only: an explicit non-student situation is rejected"""
+    user = await create_user_with_groups([])
+    await _set_user_identity(user.id, "+33671000007", datetime.date(2000, 7, 7))
+    token = create_api_access_token(user)
+
+    r = client.post(
+        "/raid/participants",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 201
+
+    # Explicit payload pairing: corporate partner + scholarship → 422.
+    r = client.patch(
+        f"/raid/participants/{user.id}",
+        json={"has_scholarship": True, "situation": "corporatePartner"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 422
+
+    # Seed a non-student participant, then try to add the flag alone: the
+    # endpoint merges payload + DB state, sees a non-student boursier, and
+    # rejects with 400.
+    async with get_TestingSessionLocal()() as db:
+        await db.execute(
+            update(models_raid.RaidParticipant)
+            .where(
+                models_raid.RaidParticipant.user_id == user.id,
+                models_raid.RaidParticipant.edition_id == active_edition.id,
+            )
+            .values(situation=Situation.other),
+        )
+        await db.commit()
+
+    r = client.patch(
+        f"/raid/participants/{user.id}",
+        json={"has_scholarship": True},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 400, r.json()
+    assert r.json()["detail"] == "Scholarship is only available for students."
+
+
 async def test_scholarship_price_requires_accepted_school_authorization(
     client: TestClient,
 ) -> None:
@@ -1186,7 +1231,11 @@ async def test_scholarship_price_requires_accepted_school_authorization(
     # Declare scholarship but upload no school authorization document.
     r = client.patch(
         f"/raid/participants/{user.id}",
-        json={"has_scholarship": True},
+        json={
+            "has_scholarship": True,
+            "situation": "otherSchool",
+            "other_school": "École des Bourses",
+        },
         headers={"Authorization": f"Bearer {token}"},
     )
     assert r.status_code == 204
@@ -1230,7 +1279,11 @@ async def test_scholarship_price_applies_with_accepted_school_authorization(
 
     r = client.patch(
         f"/raid/participants/{user.id}",
-        json={"has_scholarship": True},
+        json={
+            "has_scholarship": True,
+            "situation": "otherSchool",
+            "other_school": "École des Bourses",
+        },
         headers={"Authorization": f"Bearer {token}"},
     )
     assert r.status_code == 204

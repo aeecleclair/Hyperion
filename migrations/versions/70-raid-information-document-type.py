@@ -63,12 +63,20 @@ def test_upgrade(
     alembic_runner: "MigrationContext",
     alembic_connection: sa.Connection,
 ) -> None:
-    """Verify the raidInformation label exists after the upgrade."""
+    """Verify the raidInformation label exists after the upgrade.
+
+    Reads the pg_enum catalog instead of enum_range(): Postgres forbids
+    *using* a new enum value in the same transaction that added it.
+    """
 
     labels = {
         row[0]
         for row in alembic_connection.execute(
-            sa.text("SELECT unnest(enum_range(NULL::documenttype))"),
+            sa.text(
+                "SELECT enumlabel FROM pg_enum "
+                "JOIN pg_type ON pg_type.oid = pg_enum.enumtypid "
+                "WHERE pg_type.typname = 'documenttype'",
+            ),
         ).fetchall()
     }
     assert NEW_LABEL in labels
