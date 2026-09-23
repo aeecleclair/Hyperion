@@ -1816,3 +1816,372 @@ async def test_upload_raid_information_document_not_attached_to_participant(
         value for key, value in me.items() if key.endswith("_id") and value == doc_id
     ]
     assert participant_slots == []
+
+
+# ---------------------------------------------------------------------------
+# Teams: invite / join / kick / merge lifecycle (previously untested)
+# ---------------------------------------------------------------------------
+
+
+async def _new_participant_user(phone: str):
+    """Create a user with identity + a draft participant row, return (user, token)."""
+    user = await create_user_with_groups([])
+    await _set_user_identity(user.id, phone, datetime.date(2000, 1, 1))
+    await add_object_to_db(
+        models_raid.RaidParticipant(
+            user_id=user.id,
+            edition_id=active_edition.id,
+            status=RaidRegistrationStatus.draft,
+            situation=Situation.centrale,
+            is_minor=False,
+        ),
+    )
+    return user, create_api_access_token(user)
+
+
+async def test_team_invite_join_kick_lifecycle(client: TestClient) -> None:
+    """Solo captain invites, a joiner fills the team, admin kicks the joiner."""
+    joiner, token_joiner = await _new_participant_user("+33671000001")
+
+    # The joiner starts without a team.
+    r = client.get(
+        "/raid/participants/me/team",
+        headers={"Authorization": f"Bearer {token_joiner}"},
+    )
+    assert r.status_code == 404
+
+    # Invite with a team id that isn't yours -> 403 (the endpoint resolves
+    # YOUR team first, then compares ids).
+    r = client.post(
+        f"/raid/teams/{uuid.uuid4()}/invite",
+        headers={"Authorization": f"Bearer {token_solo}"},
+    )
+    assert r.status_code == 403
+    assert "not in the team" in r.json()["detail"]
+
+    # SoloTeam has no invite yet: creating one returns a token, twice returns
+    # the same one (idempotent). The team read is self-only, so the solo
+    # captain queries it with their own token.
+    r = client.get(
+        f"/raid/participants/{user_solo.id}/team",
+        headers={"Authorization": f"Bearer {token_solo}"},
+    )
+    assert r.status_code == 200
+    solo_team_id = r.json()["id"]
+
+    r1 = client.post(
+        f"/raid/teams/{solo_team_id}/invite",
+        headers={"Authorization": f"Bearer {token_solo}"},
+    )
+    assert r1.status_code == 201
+    token_value = r1.json()["token"]
+    r2 = client.post(
+        f"/raid/teams/{solo_team_id}/invite",
+        headers={"Authorization": f"Bearer {token_solo}"},
+    )
+    assert r2.status_code == 201
+    assert r2.json()["token"] == token_value
+
+    # Another team's captain cannot mint a token for SoloTeam.
+    r = client.post(
+        f"/raid/teams/{solo_team_id}/invite",
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 403
+
+    # Unknown token -> 404.
+    r = client.post(
+        "/raid/teams/join/notarealtoken",
+        headers={"Authorization": f"Bearer {token_joiner}"},
+    )
+    assert r.status_code == 404
+
+    # A full team's captain cannot join another team.
+    r = client.post(
+        "/raid/teams/join/" + "x" * 10,
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code in (403, 404)
+
+    # The joiner joins SoloTeam -> 204, and the team now has a second.
+    r = client.post(
+        f"/raid/teams/join/{token_value}",
+        headers={"Authorization": f"Bearer {token_joiner}"},
+    )
+    assert r.status_code == 204
+    r = client.get(
+        f"/raid/participants/{user_solo.id}/team",
+        headers={"Authorization": f"Bearer {token_solo}"},
+    )
+    assert r.json()["second_id"] == joiner.id
+
+    # Joining again is rejected (already in a team).
+    r = client.post(
+        f"/raid/teams/join/{token_value}",
+        headers={"Authorization": f"Bearer {token_joiner}"},
+    )
+    assert r.status_code == 404  # token was consumed on first join
+
+    # With the team full, the joiner's own captain re-joining hits the
+    # "own team is full" gate FIRST (gate order), not the captain gate.
+    r3 = client.post(
+        f"/raid/teams/{solo_team_id}/invite",
+        headers={"Authorization": f"Bearer {token_solo}"},
+    )
+    assert r3.status_code == 201
+    r = client.post(
+        f"/raid/teams/join/{r3.json()['token']}",
+        headers={"Authorization": f"Bearer {token_solo}"},
+    )
+    assert r.status_code == 403
+    assert "already in a team" in r.json()["detail"]
+
+    # Admin kicks the joiner -> team is solo again.
+    r = client.post(
+        f"/raid/teams/{solo_team_id}/kick/{joiner.id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 201
+    assert r.json()["second_id"] is None
+
+    # Kicking a non-member -> 404.
+    r = client.post(
+        f"/raid/teams/{solo_team_id}/kick/{user_second.id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 404
+
+    # Kicking the only member -> 403.
+    r = client.post(
+        f"/raid/teams/{solo_team_id}/kick/{user_solo.id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 403
+    assert "only member" in r.json()["detail"]
+
+    # Now that the team is solo again, the captain joining their OWN team
+    # with a fresh token reaches the dedicated captain gate.
+    r = client.post(
+        f"/raid/teams/{solo_team_id}/invite",
+        headers={"Authorization": f"Bearer {token_solo}"},
+    )
+    assert r.status_code == 201
+    r = client.post(
+        f"/raid/teams/join/{r.json()['token']}",
+        headers={"Authorization": f"Bearer {token_solo}"},
+    )
+    assert r.status_code == 403
+    assert "captain" in r.json()["detail"]
+
+
+async def test_team_create_requires_participant_and_no_team(client: TestClient) -> None:
+    """create_team: 403 for non-participants and for participants with a team."""
+    ghost, token_ghost = await _new_participant_user("+33671000002")
+    # Remove the participant row so the user has no participation at all.
+    async with get_TestingSessionLocal()() as db:
+        await db.execute(
+            delete(models_raid.RaidParticipant).where(
+                models_raid.RaidParticipant.user_id == ghost.id,
+            ),
+        )
+        await db.commit()
+
+    r = client.post(
+        "/raid/teams",
+        json={"name": "GhostTeam"},
+        headers={"Authorization": f"Bearer {token_ghost}"},
+    )
+    assert r.status_code == 403
+
+    # A participant who already owns a team cannot create another one.
+    r = client.post(
+        "/raid/teams",
+        json={"name": "SecondTeam"},
+        headers={"Authorization": f"Bearer {token_solo}"},
+    )
+    assert r.status_code == 403
+    assert "already have a team" in r.json()["detail"]
+
+    # Non-admin cannot delete teams.
+    r = client.delete(
+        "/raid/teams",
+        headers={"Authorization": f"Bearer {token_solo}"},
+    )
+    assert r.status_code == 403
+
+
+async def test_merge_two_solo_teams(client: TestClient) -> None:
+    """Merging two captain-only teams fills team1 with team2's captain."""
+    _, t1 = await _new_participant_user("+33671000003")
+    u2, t2 = await _new_participant_user("+33671000004")
+
+    r = client.post(
+        "/raid/teams",
+        json={"name": "MergeA"},
+        headers={"Authorization": f"Bearer {t1}"},
+    )
+    assert r.status_code == 201
+    team1_id = r.json()["id"]
+
+    r = client.post(
+        "/raid/teams",
+        json={"name": "MergeB"},
+        headers={"Authorization": f"Bearer {t2}"},
+    )
+    assert r.status_code == 201
+    team2_id = r.json()["id"]
+
+    # Merge requires admin.
+    r = client.post(
+        f"/raid/teams/merge?team1_id={team1_id}&team2_id={team2_id}",
+        headers={"Authorization": f"Bearer {t1}"},
+    )
+    assert r.status_code == 403
+
+    # Merging a team with itself -> 403 "Teams are the same."
+    r = client.post(
+        f"/raid/teams/merge?team1_id={team1_id}&team2_id={team1_id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 403
+    assert "same" in r.json()["detail"]
+
+    # Merging a full team -> 403 (MainTeam has a second).
+    r = client.get(
+        f"/raid/participants/{user_captain.id}/team",
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    main_team_id = r.json()["id"]
+    r = client.post(
+        f"/raid/teams/merge?team1_id={team1_id}&team2_id={main_team_id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 403
+    assert "full" in r.json()["detail"]
+
+    # Real merge: team1 absorbs team2's captain.
+    r = client.post(
+        f"/raid/teams/merge?team1_id={team1_id}&team2_id={team2_id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 201
+    body = r.json()
+    assert body["id"] == team1_id
+    assert body["name"] == "MergeA & MergeB"
+    assert body["second_id"] == u2.id
+
+    # team2 no longer exists.
+    r = client.get(
+        f"/raid/teams/{team2_id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 404
+
+
+def test_update_team_settings_persist(client: TestClient) -> None:
+    """PATCH team difficulty/meeting_place/number persists (admin on any team)."""
+    # The team read endpoint is self-only: the solo captain queries their team.
+    r = client.get(
+        f"/raid/participants/{user_solo.id}/team",
+        headers={"Authorization": f"Bearer {token_solo}"},
+    )
+    team_id = r.json()["id"]
+
+    r = client.patch(
+        f"/raid/teams/{team_id}",
+        json={"difficulty": "expert", "meeting_place": "bellecour", "number": 42},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 204
+
+    r = client.get(
+        f"/raid/teams/{team_id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.json()["difficulty"] == "expert"
+    assert r.json()["meeting_place"] == "bellecour"
+    assert r.json()["number"] == 42
+
+    # A non-member cannot edit someone else's team.
+    r = client.patch(
+        f"/raid/teams/{team_id}",
+        json={"name": "Hijacked"},
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 403
+    assert "only edit your own team" in r.json()["detail"]
+
+    # Cleanup: restore SoloTeam to its fixture state.
+    client.patch(
+        f"/raid/teams/{team_id}",
+        json={"difficulty": None, "meeting_place": None, "number": None},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+
+
+# ---------------------------------------------------------------------------
+# Price configuration endpoints (previously untested)
+# ---------------------------------------------------------------------------
+
+
+def test_get_raid_price_readable_by_any_raid_user(client: TestClient) -> None:
+    """Prices are readable by anyone with raid access (all account types);
+    only manage_raid may change them (covered by the PATCH 403 test)."""
+    r = client.get(
+        "/raid/price",
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 200
+    assert "student_price" in r.json()
+
+
+def test_patch_raid_price_requires_admin(client: TestClient) -> None:
+    r = client.patch(
+        "/raid/price",
+        json={"student_price": 1},
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 403
+
+
+def test_raid_price_full_replace_semantics(client: TestClient) -> None:
+    """PATCH /raid/price replaces the whole grid: omitted fields reset to None."""
+    r = client.get(
+        "/raid/price",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 200
+    original = r.json()
+
+    try:
+        # Send a payload with only two prices: everything else must reset.
+        r = client.patch(
+            "/raid/price",
+            json={"student_price": 111, "t_shirt_price": 12},
+            headers={"Authorization": f"Bearer {token_admin}"},
+        )
+        assert r.status_code == 204
+
+        r = client.get(
+            "/raid/price",
+            headers={"Authorization": f"Bearer {token_admin}"},
+        )
+        body = r.json()
+        assert body["student_price"] == 111
+        assert body["t_shirt_price"] == 12
+        assert body["external_price"] is None
+        assert body["volunteer_price"] is None
+    finally:
+        # Restore the seed grid exactly.
+        r = client.patch(
+            "/raid/price",
+            json=original,
+            headers={"Authorization": f"Bearer {token_admin}"},
+        )
+        assert r.status_code == 204
+
+    r = client.get(
+        "/raid/price",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.json() == original
