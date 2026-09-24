@@ -619,6 +619,17 @@ async def test_admin_validate_full_happy_path(
     assert r.status_code == 200
     assert r.json()["status"] == "validated"
 
+    async with get_TestingSessionLocal()() as db:
+        await db.execute(
+            update(models_raid.RaidParticipant)
+            .where(
+                models_raid.RaidParticipant.user_id == user_second.id,
+                models_raid.RaidParticipant.edition_id == active_edition.id,
+            )
+            .values(status=RaidRegistrationStatus.draft),
+        )
+        await db.commit()
+
 
 def test_non_admin_update_blocked_after_validation(client: TestClient) -> None:
     r = client.patch(
@@ -1817,15 +1828,7 @@ async def test_scholarship_price_applies_with_accepted_school_authorization(
     assert r.status_code == 204
 
     # Lifecycle: submit the dossier before paying.
-    client.post(
-        f"/raid/participant/{user.id}/honour",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    r = client.post(
-        f"/raid/participants/{user.id}/submit",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert r.status_code == 204, r.json()
+    await _submit_minimum_dossier(client, user, token)
 
     r = client.get(
         "/raid/pay",
