@@ -401,6 +401,66 @@ def test_update_participant_other_forbidden(client: TestClient) -> None:
     assert r.status_code == 403
 
 
+async def test_update_participant_teammate_allowed(client: TestClient) -> None:
+    """A teammate may edit the other member's card (documents, sizes, ...)."""
+    r = client.patch(
+        f"/raid/participants/{user_captain.id}",
+        json={"address": "edited by teammate"},
+        headers={"Authorization": f"Bearer {token_second}"},
+    )
+    assert r.status_code == 204
+    async with get_TestingSessionLocal()() as db:
+        participant = await cruds_raid.get_participant_by_user_id(
+            user_captain.id,
+            active_edition.id,
+            db,
+        )
+        assert participant is not None
+        assert participant.address == "edited by teammate"
+
+
+async def test_teammate_cannot_attach_security_file(client: TestClient) -> None:
+    """Health data stays self-service: a teammate cannot set a security file."""
+    async with get_TestingSessionLocal()() as db:
+        security = models_raid.SecurityFile(
+            id=str(uuid.uuid4()),
+            edition_id=active_edition.id,
+            allergy=None,
+            asthma=False,
+            consent_given=True,
+            intensive_care_unit=None,
+            intensive_care_unit_when=None,
+            ongoing_treatment=None,
+            sicknesses=None,
+            hospitalization=None,
+            surgical_operation=None,
+            trauma=None,
+            family=None,
+            emergency_person_firstname="Jane",
+            emergency_person_name="Doe",
+            emergency_person_phone="0600000000",
+            file_id=None,
+        )
+        db.add(security)
+        await db.commit()
+        security_id = security.id
+
+    r = client.patch(
+        f"/raid/participants/{user_captain.id}",
+        json={"security_file_id": security_id},
+        headers={"Authorization": f"Bearer {token_second}"},
+    )
+    assert r.status_code == 403
+    async with get_TestingSessionLocal()() as db:
+        participant = await cruds_raid.get_participant_by_user_id(
+            user_captain.id,
+            active_edition.id,
+            db,
+        )
+        assert participant is not None
+        assert participant.security_file_id != security_id
+
+
 def test_update_participant_legacy_situation_string(client: TestClient) -> None:
     # Grace-period coercion of `otherschool` -> Situation.otherSchool.
     r = client.patch(
@@ -697,7 +757,7 @@ def test_upload_document(client: TestClient) -> None:
 
 
 def test_upload_school_authorization_document(client: TestClient) -> None:
-    """Uploading a school authorization assigns it to the participant."""
+    """Upload is unattached; attaching happens explicitly via the participant PATCH."""
     r = client.post(
         "/raid/document/schoolAuthorization",
         files={"file": ("school_auth.pdf", b"blob", "application/pdf")},
@@ -706,6 +766,21 @@ def test_upload_school_authorization_document(client: TestClient) -> None:
     assert r.status_code == 201
     doc_id = r.json()["id"]
 
+    # Upload alone must NOT touch the uploader's participant record.
+    r = client.get(
+        "/raid/participants/me",
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 200
+    assert r.json()["school_authorization_id"] != doc_id
+
+    # The explicit PATCH is what attaches the document.
+    r = client.patch(
+        f"/raid/participants/{user_captain.id}",
+        json={"school_authorization_id": doc_id},
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 204
     r = client.get(
         "/raid/participants/me",
         headers={"Authorization": f"Bearer {token_captain}"},
@@ -1422,17 +1497,19 @@ async def test_scholarship_price_applies_with_accepted_school_authorization(
     )
     assert r.status_code == 201
 
-    # Upload + assign a pending school authorization, declare the scholarship.
+    # Upload then explicitly attach a pending school authorization.
     upload = client.post(
         "/raid/document/schoolAuthorization",
         files={"file": ("school_auth.pdf", b"blob", "application/pdf")},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert upload.status_code == 201
+    school_auth_id = upload.json()["id"]
 
     r = client.patch(
         f"/raid/participants/{user.id}",
         json={
+            "school_authorization_id": school_auth_id,
             "has_scholarship": True,
             "situation": "otherSchool",
             "other_school": "École des Bourses",

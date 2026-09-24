@@ -301,7 +301,19 @@ async def update_participant(
 
     is_raid_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
     if user.id != user_id and not is_raid_admin:
-        raise HTTPException(status_code=403, detail="You are not the participant.")
+        own_team = await cruds_raid.get_team_by_participant_id(
+            user.id,
+            edition.id,
+            db,
+        )
+        if own_team is None or user_id not in (
+            own_team.captain_id,
+            own_team.second_id,
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="You are not the participant.",
+            )
     if not is_raid_admin and saved_participant.status != RaidRegistrationStatus.draft:
         raise HTTPException(
             status_code=400,
@@ -330,6 +342,11 @@ async def update_participant(
             )
 
     if participant_update.security_file_id:
+        if user.id != user_id and not is_raid_admin:
+            raise HTTPException(
+                status_code=403,
+                detail="Security file can only be set by the participant.",
+            )
         if not await cruds_raid.get_security_file_by_security_id(
             participant_update.security_file_id,
             db,
@@ -733,23 +750,6 @@ async def upload_document(
     )
     try:
         await cruds_raid.create_document(document_schema, edition.id, db)
-
-        document_key = {
-            DocumentType.idCard: "id_card_id",
-            DocumentType.medicalCertificate: "medical_certificate_id",
-            DocumentType.studentCard: "student_card_id",
-            DocumentType.raidRules: "raid_rules_id",
-            DocumentType.parentAuthorization: "parent_authorization_id",
-            DocumentType.schoolAuthorization: "school_authorization_id",
-        }.get(document_type)
-        if document_key is not None:
-            await cruds_raid.assign_document(
-                user.id,
-                edition.id,
-                document_id,
-                document_key,
-                db,
-            )
     except Exception:
         # Rollback: delete the uploaded file if DB operations fail
         await delete_file_from_data(directory="raid", filename=document_id)
