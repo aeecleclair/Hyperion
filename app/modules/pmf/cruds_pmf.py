@@ -1,0 +1,402 @@
+from datetime import UTC, datetime
+from uuid import UUID
+
+from sqlalchemy import and_, delete, select, true, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.users import schemas_users
+from app.modules.pmf import models_pmf, schemas_pmf, types_pmf
+
+
+async def create_offer(offer: schemas_pmf.OfferSimple, db: AsyncSession) -> None:
+    """Create a new PMF offer with associated tags."""
+    db.add(
+        models_pmf.PmfOffer(
+            id=offer.id,
+            author_id=offer.author_id,
+            company_name=offer.company_name,
+            title=offer.title,
+            description=offer.description,
+            offer_type=offer.offer_type,
+            location=offer.location,
+            location_type=offer.location_type,
+            start_date=offer.start_date,
+            duration=offer.duration,
+            created_on=datetime.now(UTC).date(),
+            hidden=offer.hidden,
+            tags=[],
+        ),
+    )
+
+
+async def update_offer(
+    offer_id: UUID,
+    structure_update: schemas_pmf.OfferUpdate,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_pmf.PmfOffer)
+        .where(models_pmf.PmfOffer.id == offer_id)
+        .values(**structure_update.model_dump(exclude_unset=True)),
+    )
+
+
+async def delete_offer(offer_id: UUID, db: AsyncSession) -> None:
+    # First, delete associations in pmf_offer_tags
+    await db.execute(
+        delete(models_pmf.OfferTags).where(models_pmf.OfferTags.offer_id == offer_id),
+    )
+    await db.execute(
+        delete(models_pmf.PmfOffer).where(models_pmf.PmfOffer.id == offer_id),
+    )
+
+
+async def get_offer_by_id(
+    offer_id: UUID,
+    db: AsyncSession,
+) -> models_pmf.PmfOffer | None:
+    result = await db.execute(
+        select(models_pmf.PmfOffer).where(models_pmf.PmfOffer.id == offer_id),
+    )
+    return result.scalars().first()
+
+
+async def get_offers(
+    db: AsyncSession,
+    included_offer_types: list[types_pmf.OfferType] | None = None,
+    included_tags: list[str] | None = None,
+    included_location_types: list[types_pmf.LocationType] | None = None,
+    limit: int | None = None,
+    offset: int | None = None,
+    show_hidden: bool | None = False,
+) -> list[schemas_pmf.OfferComplete]:
+    where_clause = (
+        (
+            models_pmf.PmfOffer.offer_type.in_(included_offer_types)
+            if included_offer_types
+            else true()
+        )
+        & (
+            models_pmf.PmfOffer.tags.any(models_pmf.Tag.tag.in_(included_tags))
+            if included_tags
+            else true()
+        )
+        & (
+            models_pmf.PmfOffer.location_type.in_(included_location_types)
+            if included_location_types
+            else true()
+        )
+        & (not models_pmf.PmfOffer.hidden if not show_hidden else true())
+    )
+
+    offers = await db.execute(
+        select(models_pmf.PmfOffer).where(where_clause).limit(limit).offset(offset),
+    )
+    return [
+        schemas_pmf.OfferComplete(
+            id=offer.id,
+            author_id=offer.author_id,
+            company_name=offer.company_name,
+            title=offer.title,
+            description=offer.description,
+            offer_type=offer.offer_type,
+            location=offer.location,
+            location_type=offer.location_type,
+            start_date=offer.start_date,
+            created_on=offer.created_on,
+            duration=offer.duration,
+            hidden=offer.hidden,
+            author=schemas_users.CoreUserSimple.model_validate(offer.author),
+            tags=[
+                schemas_pmf.TagComplete(
+                    id=tag.id,
+                    tag=tag.tag,
+                    created_on=tag.created_on,
+                )
+                for tag in offer.tags
+            ],
+        )
+        for offer in offers.scalars().all()
+    ]
+
+
+async def get_offers_by_author_id(
+    author_id: str,
+    db: AsyncSession,
+    included_offer_types: list[types_pmf.OfferType] | None = None,
+    included_tags: list[str] | None = None,
+    included_location_types: list[types_pmf.LocationType] | None = None,
+    limit: int | None = None,
+    offset: int | None = None,
+    show_hidden: bool | None = False,
+) -> list[schemas_pmf.OfferComplete]:
+    where_clause = (
+        (
+            models_pmf.PmfOffer.offer_type.in_(included_offer_types)
+            if included_offer_types
+            else true()
+        )
+        & (
+            models_pmf.PmfOffer.tags.any(models_pmf.Tag.tag.in_(included_tags))
+            if included_tags
+            else true()
+        )
+        & (
+            models_pmf.PmfOffer.location_type.in_(included_location_types)
+            if included_location_types
+            else true()
+        )
+        & (models_pmf.PmfOffer.author_id == author_id)
+        & (not models_pmf.PmfOffer.hidden if not show_hidden else true())
+    )
+
+    offers = await db.execute(
+        select(models_pmf.PmfOffer).where(where_clause).limit(limit).offset(offset),
+    )
+    return [
+        schemas_pmf.OfferComplete(
+            id=offer.id,
+            author_id=offer.author_id,
+            company_name=offer.company_name,
+            title=offer.title,
+            description=offer.description,
+            offer_type=offer.offer_type,
+            location=offer.location,
+            location_type=offer.location_type,
+            start_date=offer.start_date,
+            created_on=offer.created_on,
+            duration=offer.duration,
+            hidden=offer.hidden,
+            author=schemas_users.CoreUserSimple.model_validate(offer.author),
+            tags=[
+                schemas_pmf.TagComplete(
+                    id=tag.id,
+                    tag=tag.tag,
+                    created_on=tag.created_on,
+                )
+                for tag in offer.tags
+            ],
+        )
+        for offer in offers.scalars().all()
+    ]
+
+
+async def get_me_offers(
+    author_id: str,
+    db: AsyncSession,
+    included_offer_types: list[types_pmf.OfferType] | None = None,
+    included_tags: list[str] | None = None,
+    included_location_types: list[types_pmf.LocationType] | None = None,
+    limit: int | None = None,
+    offset: int | None = None,
+) -> list[schemas_pmf.OfferComplete]:
+    where_clause = (
+        (
+            models_pmf.PmfOffer.offer_type.in_(included_offer_types)
+            if included_offer_types
+            else true()
+        )
+        & (
+            models_pmf.PmfOffer.tags.any(models_pmf.Tag.tag.in_(included_tags))
+            if included_tags
+            else true()
+        )
+        & (
+            models_pmf.PmfOffer.location_type.in_(included_location_types)
+            if included_location_types
+            else true()
+        )
+        & (models_pmf.PmfOffer.author_id == author_id)
+    )
+
+    offers = await db.execute(
+        select(models_pmf.PmfOffer).where(where_clause).limit(limit).offset(offset),
+    )
+    return [
+        schemas_pmf.OfferComplete(
+            id=offer.id,
+            author_id=offer.author_id,
+            company_name=offer.company_name,
+            title=offer.title,
+            description=offer.description,
+            offer_type=offer.offer_type,
+            location=offer.location,
+            location_type=offer.location_type,
+            start_date=offer.start_date,
+            created_on=offer.created_on,
+            duration=offer.duration,
+            hidden=offer.hidden,
+            author=schemas_users.CoreUserSimple.model_validate(offer.author),
+            tags=[
+                schemas_pmf.TagComplete(
+                    id=tag.id,
+                    tag=tag.tag,
+                    created_on=tag.created_on,
+                )
+                for tag in offer.tags
+            ],
+        )
+        for offer in offers.scalars().all()
+    ]
+
+
+async def get_tags(db: AsyncSession) -> list[schemas_pmf.TagComplete]:
+    tags = await db.execute(
+        select(models_pmf.Tag).distinct(models_pmf.Tag.tag),
+    )
+    return [
+        schemas_pmf.TagComplete(
+            id=tag.id,
+            tag=tag.tag,
+            created_on=tag.created_on,
+        )
+        for tag in tags.scalars().all()
+    ]
+
+
+async def get_tag_by_name(
+    tag_name: str,
+    db: AsyncSession,
+) -> models_pmf.Tag | None:
+    result = await db.execute(
+        select(models_pmf.Tag).where(models_pmf.Tag.tag == tag_name),
+    )
+    return result.scalars().first()
+
+
+async def get_tag_by_id(
+    tag_id: UUID,
+    db: AsyncSession,
+) -> models_pmf.Tag | None:
+    result = await db.execute(
+        select(models_pmf.Tag).where(models_pmf.Tag.id == tag_id),
+    )
+    return result.scalars().first()
+
+
+async def create_tag(
+    tag: schemas_pmf.TagComplete,
+    db: AsyncSession,
+) -> None:
+    tag_db = models_pmf.Tag(
+        id=tag.id,
+        tag=tag.tag,
+        created_on=tag.created_on,
+    )
+    db.add(tag_db)
+
+
+async def update_tag(
+    tag_id: UUID,
+    tag_update: schemas_pmf.TagBase,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_pmf.Tag)
+        .where(models_pmf.Tag.id == tag_id)
+        .values(**tag_update.model_dump(exclude_unset=True)),
+    )
+
+
+async def delete_tag(
+    tag_id: UUID,
+    db: AsyncSession,
+) -> None:
+    # First, delete associations in pmf_offer_tags
+    await db.execute(
+        delete(models_pmf.OfferTags).where(models_pmf.OfferTags.tag_id == tag_id),
+    )
+    await db.execute(
+        delete(models_pmf.Tag).where(models_pmf.Tag.id == tag_id),
+    )
+
+async def get_profile(
+    user_id: UUID,
+    db: AsyncSession
+) -> schemas_pmf.ProfileComplete:
+    result = await db.execute(
+        select(models_pmf.Profile).where(models_pmf.Profile.user_id == user_id),
+    )
+    profile = result.scalars().first()
+    return schemas_pmf.ProfileComplete(
+        cv_list=profile.cv_list,
+        user_id=profile.user_id
+    )
+
+async def create_profile(
+        profile: schemas_pmf.ProfileBase,
+        db: AsyncSession
+) -> None:
+    db.add(models_pmf.Profile(
+        user_id=profile.user_id,
+    ))
+
+async def create_cv(
+    cv: schemas_pmf.CvSimple,
+    db: AsyncSession
+) -> None:
+    cv_db = models_pmf.Cv(
+        id=cv.id,
+        user_id=cv.user_id,
+        name=cv.name,
+        created_on=cv.created_on,
+        allowed_users=[],
+    )
+    db.add(cv_db)
+
+async def update_cv(
+    cv_id: UUID,
+    cv_update: schemas_pmf.CvUpdate,
+    db: AsyncSession
+) -> None:
+    await db.execute(
+        update(models_pmf.Cv)
+        .where(models_pmf.Cv.id == cv_id)
+        .values(**cv_update.model_dump(exclude_unset=True)),
+    )
+
+async def get_cv_by_id(
+    cv_id: UUID,
+    db: AsyncSession
+) -> schemas_pmf.CvComplete:
+    result = await db.execute(
+        select(models_pmf.Cv).where(models_pmf.Cv.id == cv_id),
+    )
+    cv = result.scalars().first()
+    return schemas_pmf.CvComplete(
+        name=cv.name,
+        user_id=cv.user_id,
+        id=cv.id,
+        created_on=cv.created_on,
+        allowed_users=cv.allowed_users
+    )
+
+async def delete_cv(
+    cv_id: UUID,
+    db: AsyncSession
+) -> None:
+    await db.execute(
+        delete(models_pmf.Cv).where(models_pmf.Cv.id == cv_id),
+    )
+
+async def create_application(
+    application: schemas_pmf.ApplicationBase,
+    db: AsyncSession
+) -> None:
+    application_db=models_pmf.Application(
+        cv_id=application.cv_id,
+        student_id=application.student_id,
+        alumni_id=application.alumni_id,
+        offer_id=application.offer_id,
+        created_on=application.created_on
+    )
+    await db.add(application_db)
+
+async def delete_application(
+    student_id: str,
+    offer_id: UUID,
+    db: AsyncSession
+) -> None:
+    await db.execute(
+        delete(models_pmf.Application).where(and_(models_pmf.Application.student_id == student_id, models_pmf.Application.offer_id == offer_id))
+    )

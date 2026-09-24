@@ -14,15 +14,13 @@
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
   "github.copilot.enable": {
-    "*": true,
+    "*": false,
     "plaintext": false,
     "markdown": false,
     "scminput": false,
-    // We don't want Copilot to be active
-    // on config.yaml and dotenv files
     "yaml": false,
     "properties": false
-  },
+},
   "files.associations": {
     ".env": "properties",
     ".env.template": "properties"
