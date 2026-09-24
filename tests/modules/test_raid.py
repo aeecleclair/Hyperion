@@ -521,6 +521,24 @@ def test_admin_validate_fails_before_prerequisites(client: TestClient) -> None:
     assert r.status_code == 400
 
 
+def test_validate_draft_rejected_submit_first(client: TestClient) -> None:
+    """Lifecycle order: draft -> submitted -> (pay) -> validated."""
+    r = client.patch(
+        f"/raid/participants/{user_captain.id}/validate",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 400
+    assert "submitted" in r.json()["detail"]
+
+
+def test_pay_in_draft_rejected_submit_first(client: TestClient) -> None:
+    """Payment happens after the dossier is submitted (pricing depends on the
+    submitted dossier), never while still editing it in draft."""
+    r = client.get("/raid/pay", headers={"Authorization": f"Bearer {token_solo}"})
+    assert r.status_code == 400
+    assert "submitted" in r.json()["detail"]
+
+
 async def test_admin_validate_full_happy_path(
     client: TestClient,
 ) -> None:
@@ -583,6 +601,7 @@ async def test_admin_validate_full_happy_path(
                     payment=True,
                     t_shirt_payment=True,
                     situation=Situation.centrale,
+                    status=RaidRegistrationStatus.submitted,
                 ),
             )
         await db.commit()
@@ -654,6 +673,9 @@ def test_cancel_by_self(client: TestClient) -> None:
     assert r2.status_code == 200
     assert r2.json()["status"] == "cancelled"
 
+    r3 = client.get("/raid/pay", headers={"Authorization": f"Bearer {token_solo}"})
+    assert r3.status_code == 400
+
 
 async def test_cancelled_participant_can_re_register(
     client: TestClient,
@@ -684,6 +706,14 @@ async def test_cancelled_participant_can_re_register(
             .all()
         )
         assert len(rows) == 1
+
+    r = client.post(
+        "/raid/teams",
+        json={"name": "SoloTeam"},
+        headers={"Authorization": f"Bearer {token_solo}"},
+    )
+    assert r.status_code == 201
+    assert r.json()["captain_id"] == user_solo.id
 
 
 # ---------------------------------------------------------------------------
@@ -1131,6 +1161,153 @@ def test_reopen_not_cancelled_volunteer_400(client: TestClient) -> None:
     assert r.status_code == 400
 
 
+async def test_volunteer_reopen_blocked_while_participant_live(
+    client: TestClient,
+) -> None:
+    """One live role per edition: a cancelled volunteer cannot reopen."""
+    r = client.patch(
+        f"/raid/volunteers/{user_volunteer.id}/cancel",
+        headers={"Authorization": f"Bearer {token_volunteer}"},
+    )
+    assert r.status_code == 204
+
+    async with get_TestingSessionLocal()() as db:
+        db.add(
+            models_raid.RaidParticipant(
+                user_id=user_volunteer.id,
+                edition_id=active_edition.id,
+                status=RaidRegistrationStatus.draft,
+                situation=Situation.centrale,
+                is_minor=False,
+            ),
+        )
+        await db.commit()
+
+    r = client.patch(
+        f"/raid/volunteers/{user_volunteer.id}/reopen",
+        headers={"Authorization": f"Bearer {token_volunteer}"},
+    )
+    assert r.status_code == 400
+    assert "Participant registration is live" in r.json()["detail"]
+    async with get_TestingSessionLocal()() as db:
+        volunteer = await cruds_raid.get_volunteer_by_user_id(
+            user_volunteer.id,
+            active_edition.id,
+            db,
+        )
+        assert volunteer is not None
+        assert volunteer.cancelled is True
+
+    # Restore: drop the conflicting participant row, reopen the volunteer.
+    async with get_TestingSessionLocal()() as db:
+        await db.execute(
+            delete(models_raid.RaidParticipant).where(
+                models_raid.RaidParticipant.user_id == user_volunteer.id,
+            ),
+        )
+        await db.commit()
+    r = client.patch(
+        f"/raid/volunteers/{user_volunteer.id}/reopen",
+        headers={"Authorization": f"Bearer {token_volunteer}"},
+    )
+    assert r.status_code == 204
+
+
+async def test_cancelled_participant_leaves_no_zombie_team(
+    client: TestClient,
+) -> None:
+    """Cancelling cleans up team membership: second detached."""
+    captain, token_captain2 = await _new_participant_user("+33671000011")
+    second, _ = await _new_participant_user("+33671000012")
+
+    r = client.post(
+        "/raid/teams",
+        json={"name": "ZombieCheck"},
+        headers={"Authorization": f"Bearer {token_captain2}"},
+    )
+    assert r.status_code == 201
+    team_id = r.json()["id"]
+
+    # Invite + join to fill the team.
+    r = client.post(
+        f"/raid/teams/{team_id}/invite",
+        headers={"Authorization": f"Bearer {token_captain2}"},
+    )
+    assert r.status_code == 201
+    invite = r.json()["token"]
+    r = client.post(
+        f"/raid/teams/join/{invite}",
+        headers={"Authorization": f"Bearer {_}"},
+    )
+    assert r.status_code == 204
+
+    # The SECOND cancels: they are detached from the team.
+    r = client.patch(
+        f"/raid/participants/{second.id}/cancel",
+        headers={"Authorization": f"Bearer {_}"},
+    )
+    assert r.status_code == 204
+    r = client.get(
+        f"/raid/teams/{team_id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 200
+    assert r.json()["second_id"] is None
+    assert r.json()["captain_id"] == captain.id
+
+    # The CAPTAIN (now solo again) cancels: the empty team is deleted and its
+    # pending invites with it.
+    r = client.post(
+        f"/raid/teams/{team_id}/invite",
+        headers={"Authorization": f"Bearer {token_captain2}"},
+    )
+    assert r.status_code == 201
+    r = client.patch(
+        f"/raid/participants/{captain.id}/cancel",
+        headers={"Authorization": f"Bearer {token_captain2}"},
+    )
+    assert r.status_code == 204
+    r = client.get(
+        f"/raid/teams/{team_id}",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r.status_code == 404
+
+
+async def test_cancelled_participant_cannot_join_team(client: TestClient) -> None:
+    """The join gate requires a live (draft) participant registration."""
+    _, token_captain2 = await _new_participant_user("+33671000013")
+    cancelled_user, token_cancelled = await _new_participant_user("+33671000014")
+
+    r = client.post(
+        "/raid/teams",
+        json={"name": "JoinGateTeam"},
+        headers={"Authorization": f"Bearer {token_captain2}"},
+    )
+    assert r.status_code == 201
+    team_id = r.json()["id"]
+
+    r = client.post(
+        f"/raid/teams/{team_id}/invite",
+        headers={"Authorization": f"Bearer {token_captain2}"},
+    )
+    assert r.status_code == 201
+    invite = r.json()["token"]
+
+    # Cancel the would-be joiner, then try to join: refused.
+    r = client.patch(
+        f"/raid/participants/{cancelled_user.id}/cancel",
+        headers={"Authorization": f"Bearer {token_cancelled}"},
+    )
+    assert r.status_code == 204
+    r = client.post(
+        f"/raid/teams/join/{invite}",
+        headers={"Authorization": f"Bearer {token_cancelled}"},
+    )
+    assert r.status_code == 403
+    assert "draft state" in r.json()["detail"]
+
+
 def test_delete_validated_volunteer_self_forbidden(client: TestClient) -> None:
     r = client.delete(
         f"/raid/volunteers/{user_volunteer.id}",
@@ -1158,6 +1335,85 @@ def test_get_volunteer_me_after_delete(client: TestClient) -> None:
 # ---------------------------------------------------------------------------
 # Scholarship flow (has_scholarship + school_authorization document)
 # ---------------------------------------------------------------------------
+
+
+async def _submit_minimum_dossier(
+    client: TestClient,
+    user: models_users.CoreUser,
+    token: str,
+) -> None:
+    """Give the participant the minimum submittable dossier (attestation,
+    security file, required documents) and submit it.
+
+    Lifecycle order under test elsewhere: draft -> submitted -> pay ->
+    validated. Pricing tests call this because /raid/pay only serves
+    submitted dossiers.
+    """
+    async with get_TestingSessionLocal()() as db:
+        docs = {}
+        for doc_type in (
+            DocumentType.idCard,
+            DocumentType.medicalCertificate,
+            DocumentType.raidRules,
+        ):
+            doc = models_raid.Document(
+                id=str(uuid.uuid4()),
+                edition_id=active_edition.id,
+                name=f"min-{doc_type.value}.pdf",
+                uploaded_at=datetime.datetime.now(tz=datetime.UTC).date(),
+                type=doc_type,
+                validation=DocumentValidation.pending,
+            )
+            db.add(doc)
+            docs[doc_type] = doc
+        await db.flush()
+
+        security = models_raid.SecurityFile(
+            id=str(uuid.uuid4()),
+            edition_id=active_edition.id,
+            allergy=None,
+            asthma=False,
+            intensive_care_unit=None,
+            intensive_care_unit_when=None,
+            ongoing_treatment=None,
+            sicknesses=None,
+            hospitalization=None,
+            surgical_operation=None,
+            trauma=None,
+            family=None,
+            emergency_person_firstname="Jane",
+            emergency_person_name="Doe",
+            emergency_person_phone="0600000000",
+            file_id=None,
+        )
+        db.add(security)
+        await db.flush()
+
+        await db.execute(
+            update(models_raid.RaidParticipant)
+            .where(
+                models_raid.RaidParticipant.user_id == user.id,
+                models_raid.RaidParticipant.edition_id == active_edition.id,
+            )
+            .values(
+                id_card_id=docs[DocumentType.idCard].id,
+                medical_certificate_id=docs[DocumentType.medicalCertificate].id,
+                raid_rules_id=docs[DocumentType.raidRules].id,
+                security_file_id=security.id,
+                attestation_on_honour=True,
+            ),
+        )
+        await db.commit()
+
+    client.post(
+        f"/raid/participant/{user.id}/honour",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    r = client.post(
+        f"/raid/participants/{user.id}/submit",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 204, r.json()
 
 
 async def _setup_scholarship_participant(
@@ -1507,6 +1763,9 @@ async def test_scholarship_price_requires_accepted_school_authorization(
     )
     assert r.status_code == 204
 
+    # Lifecycle: submit the dossier before paying.
+    await _submit_minimum_dossier(client, user, token)
+
     r = client.get(
         "/raid/pay",
         headers={"Authorization": f"Bearer {token}"},
@@ -1556,6 +1815,17 @@ async def test_scholarship_price_applies_with_accepted_school_authorization(
         headers={"Authorization": f"Bearer {token}"},
     )
     assert r.status_code == 204
+
+    # Lifecycle: submit the dossier before paying.
+    client.post(
+        f"/raid/participant/{user.id}/honour",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    r = client.post(
+        f"/raid/participants/{user.id}/submit",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 204, r.json()
 
     r = client.get(
         "/raid/pay",

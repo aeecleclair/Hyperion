@@ -21,6 +21,7 @@ from app.dependencies import (
 from app.modules.raid import coredata_raid, cruds_raid, schemas_raid
 from app.modules.raid.dependencies_raid import (
     ensure_user_is_not_participant_in_edition,
+    ensure_user_is_not_team_member,
     ensure_user_is_not_volunteer_in_edition,
     get_current_raid_edition,
     get_participant_complete_or_404,
@@ -464,6 +465,11 @@ async def validate_participant(
         edition.id,
         db,
     )
+    if participant.status != RaidRegistrationStatus.submitted:
+        raise HTTPException(
+            status_code=400,
+            detail="Participant is not in submitted state; only a submitted dossier can be validated",
+        )
 
     await check_participant_validation_consistency(participant, edition.id, db)
     await cruds_raid.update_participant_status(
@@ -501,6 +507,17 @@ async def cancel_participant(
         RaidRegistrationStatus.cancelled,
         db,
     )
+    team = await cruds_raid.get_team_by_participant_id(user_id, edition.id, db)
+    if team is not None:
+        await cruds_raid.delete_team_invite_tokens(team.id, db)
+        if team.captain_id == user_id:
+            if team.second_id:
+                await cruds_raid.update_team_captain_id(team.id, team.second_id, db)
+                await cruds_raid.update_team_second_id(team.id, None, db)
+            else:
+                await cruds_raid.delete_team(team.id, db)
+        else:
+            await cruds_raid.update_team_second_id(team.id, None, db)
 
 
 # ---------------------------------------------------------------------------
@@ -521,7 +538,12 @@ async def create_team(
     db: AsyncSession = Depends(get_db),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    if not await cruds_raid.is_user_a_participant(user.id, edition.id, db):
+    me_participant = await cruds_raid.get_participant_by_user_id(
+        user.id,
+        edition.id,
+        db,
+    )
+    if me_participant is None or me_participant.status != RaidRegistrationStatus.draft:
         raise HTTPException(status_code=403, detail="You are not a participant.")
     if await cruds_raid.get_team_by_participant_id(user.id, edition.id, db):
         raise HTTPException(status_code=403, detail="You already have a team.")
@@ -1061,6 +1083,16 @@ async def create_invite_token(
         raise HTTPException(status_code=404, detail="Team not found.")
     if team.id != team_id:
         raise HTTPException(status_code=403, detail="You are not in the team.")
+    me_participant = await cruds_raid.get_participant_by_user_id(
+        user.id,
+        edition.id,
+        db,
+    )
+    if me_participant is None or me_participant.status != RaidRegistrationStatus.draft:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not a participant in draft state.",
+        )
 
     existing = await cruds_raid.get_invite_token_by_team_id(team_id, db)
     if existing:
@@ -1098,6 +1130,17 @@ async def join_team(
     if user_team and user_team.second_id:
         raise HTTPException(status_code=403, detail="You are already in a team.")
 
+    me_participant = await cruds_raid.get_participant_by_user_id(
+        user.id,
+        edition.id,
+        db,
+    )
+    if me_participant is None or me_participant.status != RaidRegistrationStatus.draft:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not a participant in draft state.",
+        )
+
     team = await cruds_raid.get_team_by_id(invite_token.team_id, db)
     if not team:
         raise HTTPException(status_code=404, detail="Team not found.")
@@ -1109,9 +1152,6 @@ async def join_team(
             detail="You are already the captain of this team.",
         )
 
-    # A participant may already have an incomplete team and an active invite.
-    # Remove that invite before deleting the old team, otherwise the foreign
-    # key from raid_invite.team_id causes an IntegrityError (HTTP 500).
     if user_team:
         await cruds_raid.delete_team_invite_tokens(user_team.id, db)
         await cruds_raid.delete_team(user_team.id, db)
@@ -1312,6 +1352,11 @@ async def get_payment_url(
     participant = await cruds_raid.get_participant_by_user_id(user.id, edition.id, db)
     if not participant:
         raise HTTPException(status_code=403, detail="You are not a participant.")
+    if participant.status != RaidRegistrationStatus.submitted:
+        raise HTTPException(
+            status_code=400,
+            detail="Participant is not in submitted state; the dossier must be submitted before paying",
+        )
     price, checkout_name = calculate_raid_payment(participant, raid_prices)
 
     user_dict = {k: v for k, v in user.__dict__.items() if not k.startswith("_")}
@@ -1355,6 +1400,8 @@ async def get_volunteer_payment_url(
     volunteer = await cruds_raid.get_volunteer_by_user_id(user.id, edition.id, db)
     if not volunteer:
         raise HTTPException(status_code=403, detail="You are not a volunteer.")
+    if volunteer.cancelled:
+        raise HTTPException(status_code=400, detail="Volunteer is cancelled")
     price, checkout_name = calculate_volunteer_payment(volunteer, raid_prices)
 
     user_dict = {k: v for k, v in user.__dict__.items() if not k.startswith("_")}
@@ -1473,6 +1520,7 @@ async def create_volunteer(
     if existing_volunteer is not None and not existing_volunteer.cancelled:
         raise HTTPException(status_code=403, detail="You are already a volunteer.")
     await ensure_user_is_not_participant_in_edition(user.id, edition.id, db)
+    await ensure_user_is_not_team_member(user.id, edition.id, db)
 
     volunteer_create = schemas_raid.RaidVolunteerCreate(
         user_id=user.id,
@@ -1644,6 +1692,16 @@ async def reopen_volunteer(
         raise HTTPException(
             status_code=400,
             detail="Volunteer is not cancelled; nothing to reopen.",
+        )
+
+    participant = await cruds_raid.get_participant_by_user_id(user_id, edition.id, db)
+    if (
+        participant is not None
+        and participant.status != RaidRegistrationStatus.cancelled
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Participant registration is live; cancel it before reopening the volunteer track.",
         )
     await cruds_raid.update_volunteer_cancellation(user_id, edition.id, False, db)
 
