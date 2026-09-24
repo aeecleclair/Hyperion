@@ -1084,6 +1084,45 @@ def test_volunteer_cancel_then_reopen(client: TestClient) -> None:
     assert r4.json()["cancelled"] is False
 
 
+async def test_cancelled_volunteer_can_re_register_via_post(
+    client: TestClient,
+) -> None:
+    """POST /raid/volunteers re-activates a cancelled row."""
+    # Leave the volunteer cancelled, then re-register through POST.
+    r = client.patch(
+        f"/raid/volunteers/{user_volunteer.id}/cancel",
+        headers={"Authorization": f"Bearer {token_volunteer}"},
+    )
+    assert r.status_code == 204
+
+    r2 = client.post(
+        "/raid/volunteers",
+        json={
+            "diet": "carnivore",
+            "emergency_person_name": "Jane Doe",
+            "emergency_person_phone": "+33611111111",
+            "has_car": False,
+            "is_parcours_helper": True,
+        },
+        headers={"Authorization": f"Bearer {token_volunteer}"},
+    )
+    assert r2.status_code == 201
+    body = r2.json()
+    assert body["cancelled"] is False
+    # Re-registration restarts from scratch: pending, with the new payload
+    # applied (has_car=False overwrites the pre-cancellation True).
+    assert body["validated"] is False
+    assert body["has_car"] is False
+    assert body["diet"] == "carnivore"
+
+    # Back to the pre-test state (validated volunteer) for the following tests.
+    r3 = client.patch(
+        f"/raid/volunteers/{user_volunteer.id}/validate",
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert r3.status_code == 204
+
+
 def test_reopen_not_cancelled_volunteer_400(client: TestClient) -> None:
     r = client.patch(
         f"/raid/volunteers/{user_volunteer.id}/reopen",

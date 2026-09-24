@@ -1465,7 +1465,12 @@ async def create_volunteer(
     db: AsyncSession = Depends(get_db),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    if await cruds_raid.get_volunteer_by_user_id(user.id, edition.id, db):
+    existing_volunteer = await cruds_raid.get_volunteer_by_user_id(
+        user.id,
+        edition.id,
+        db,
+    )
+    if existing_volunteer is not None and not existing_volunteer.cancelled:
         raise HTTPException(status_code=403, detail="You are already a volunteer.")
     await ensure_user_is_not_participant_in_edition(user.id, edition.id, db)
 
@@ -1486,7 +1491,27 @@ async def create_volunteer(
         is_utility_vehicle_driver=volunteer.is_utility_vehicle_driver,
         is_parcours_helper=volunteer.is_parcours_helper,
     )
-    await cruds_raid.create_volunteer(volunteer_create, db)
+    if existing_volunteer is not None:
+        await cruds_raid.update_volunteer(
+            user.id,
+            edition.id,
+            schemas_raid.RaidVolunteerEdit(**volunteer.model_dump()),
+            db,
+        )
+        await cruds_raid.update_volunteer_cancellation(
+            user.id,
+            edition.id,
+            False,
+            db,
+        )
+        await cruds_raid.update_volunteer_validation(
+            user.id,
+            edition.id,
+            False,
+            db,
+        )
+    else:
+        await cruds_raid.create_volunteer(volunteer_create, db)
     return await get_volunteer_or_404(user.id, edition.id, db)
 
 
