@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.documents import cruds_documents, schemas_documents
 from app.core.documents.exceptions_documents import (
+    DocumentCreationError,
     ElementTemplateNotFoundError,
 )
 from app.core.documents.types_documenso import DocumentStatus
@@ -25,6 +26,7 @@ from app.core.memberships import (
 from app.core.users.schemas_users import CoreUser
 from app.core.users.utils_users import user_model_to_schema
 from app.core.utils.config import Settings
+from app.utils.mail.mailworker import send_email
 
 MODULE_ROOT = "memberships"
 
@@ -292,6 +294,33 @@ async def renew_membership_documents(
         document_id=document.id,
         document_status=document.status,
     )
+
+
+async def renew_memberships_documents_list(
+    targets: list[schemas_memberships.UserMembershipComplete],
+    team: schemas_documents.Team,
+    association_membership: schemas_memberships.MembershipComplete,
+    db: AsyncSession,
+    settings: Settings,
+    report_user: CoreUser,
+) -> None:
+
+    errors: dict[str, str] = {}
+    for target in targets:
+        try:
+            await renew_membership_documents(
+                association_membership=association_membership,
+                team=team,
+                user_membership=target,
+                db=db,
+                settings=settings,
+            )
+        except Exception as e:
+            if isinstance(e, DocumentCreationError):
+                errors[e.user_email] = e.message
+            else:
+                errors[target.user.email] = e
+    await send_email()
 
 
 async def remove_membership_from_user(

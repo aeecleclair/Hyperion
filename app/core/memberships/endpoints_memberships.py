@@ -2,7 +2,7 @@ import asyncio
 import uuid
 from datetime import UTC, date, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.documents import cruds_documents
@@ -23,6 +23,7 @@ from app.core.memberships.utils_memberships import (
     membership_document_callback,
     remove_membership_from_user,
     renew_membership_documents,
+    renew_memberships_documents_list,
     validate_user_new_membership,
 )
 from app.core.users import cruds_users, models_users
@@ -296,6 +297,7 @@ async def update_association_membership(
 async def renew_users_membership_document(
     renewal_criterion: schemas_memberships.MembershipRenewalCriterion,
     membership_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
     settings=Depends(get_settings),
@@ -346,24 +348,15 @@ async def renew_users_membership_document(
         )
     )
 
-    results: list[BaseException | None] = await asyncio.gather(
-        *[
-            renew_membership_documents(
-                association_membership=db_association_membership,
-                team=team,
-                user_membership=user_membership,
-                db=db,
-                settings=settings,
-            )
-            for user_membership in renewal_targets
-        ],
-        return_exceptions=True,
+    background_tasks.add_task(
+        renew_memberships_documents_list,
+        targets=renewal_targets,
+        team=team,
+        association_membership=db_association_membership,
+        db=db,
+        settings=settings,
+        report_user=user,
     )
-    errors: dict[str, str] = {}
-    for res in results:
-        if isinstance(res, DocumentCreationError):
-            errors[res.user_email] = res.message
-    return schemas_memberships.MembershipRenewalErrors(errors=errors)
 
 
 @router.delete(
