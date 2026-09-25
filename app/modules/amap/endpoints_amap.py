@@ -610,7 +610,7 @@ async def edit_order_from_delivery(
         ):
             raise HTTPException(status_code=400, detail="Invalid request")
 
-        amount = 0.0
+        amount = 0
         for product_id, product_quantity in zip(
             order.products_ids,
             order.products_quantity,
@@ -624,7 +624,6 @@ async def edit_order_from_delivery(
         db_order = schemas_amap.OrderComplete(
             order_id=order_id,
             ordering_date=previous_order.ordering_date,
-            delivery_date=delivery.delivery_date,
             delivery_id=previous_order.delivery_id,
             user_id=previous_order.user_id,
             amount=amount,
