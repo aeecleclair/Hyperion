@@ -2,7 +2,7 @@ import asyncio
 import uuid
 from io import BytesIO
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import TypeAdapter
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -370,6 +370,7 @@ async def update_template(
 async def use_template(
     template_id: uuid.UUID,
     parameters: schemas_documents.TemplateUse,
+    background_taks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: schemas_users.CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),

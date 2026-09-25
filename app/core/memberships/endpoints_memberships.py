@@ -1,4 +1,3 @@
-import asyncio
 import uuid
 from datetime import UTC, date, datetime
 
@@ -10,6 +9,7 @@ from app.core.documents.exceptions_documents import (
     DocumentCreationError,
     ElementTeamNotFoundError,
 )
+from app.core.documents.utils_documents import configure_documenso_api_wrapper
 from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import (
@@ -343,10 +343,21 @@ async def renew_users_membership_document(
         await cruds_memberships.get_user_memberships_by_association_membership_id(
             db=db,
             association_membership_id=membership_id,
-            maximal_start_date=renewal_criterion.active_date,
-            minimal_end_date=renewal_criterion.active_date,
+            maximal_start_date=renewal_criterion.membership_active_date,
+            minimal_end_date=renewal_criterion.membership_active_date,
         )
     )
+
+    if renewal_criterion.last_document_max_date is not None:
+        renewal_targets = [
+            target
+            for target in renewal_targets
+            if target.document is None
+            or (
+                target.document.created_at.date()
+                <= renewal_criterion.last_document_max_date
+            )
+        ]
 
     background_tasks.add_task(
         renew_memberships_documents_list,
@@ -355,7 +366,7 @@ async def renew_users_membership_document(
         association_membership=db_association_membership,
         db=db,
         settings=settings,
-        report_user=user,
+        report_user=user_model_to_schema(user),
     )
 
 
@@ -610,7 +621,7 @@ async def add_batch_membership(
 )
 async def update_user_membership(
     membership_id: uuid.UUID,
-    user_membership: schemas_memberships.UserMembershipEdit,
+    user_membership_edit: schemas_memberships.UserMembershipEdit,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
 ):
@@ -633,21 +644,21 @@ async def update_user_membership(
     ):
         raise HTTPException(status_code=403, detail="Unauthorized")
 
-    new_membership = schemas_memberships.UserMembershipSimple(
-        id=db_user_membership.id,
-        user_id=db_user_membership.user_id,
-        association_membership_id=db_user_membership.association_membership_id,
-        start_date=user_membership.start_date or db_user_membership.start_date,
-        end_date=user_membership.end_date or db_user_membership.end_date,
-        valid=db_user_membership.valid,
+    await validate_user_new_membership(
+        db_user_membership.user_id,
+        schemas_memberships.UserMembershipBase(
+            association_membership_id=db_user_membership.association_membership_id,
+            start_date=user_membership_edit.start_date or db_user_membership.start_date,
+            end_date=user_membership_edit.end_date or db_user_membership.end_date,
+        ),
+        db,
+        membership_id,
     )
-
-    await validate_user_new_membership(new_membership, db)
 
     await cruds_memberships.update_user_membership(
         db=db,
         user_membership_id=membership_id,
-        user_membership_edit=user_membership,
+        user_membership_edit=user_membership_edit,
     )
 
 
@@ -700,14 +711,17 @@ async def renew_user_membership_document(
         raise ElementTeamNotFoundError(
             team_id=db_association_membership.template.team_id,
         )
+    documenso = configure_documenso_api_wrapper(
+        api_key=team.api_key,
+        settings=settings,
+    )
 
     try:
         await renew_membership_documents(
             association_membership=db_association_membership,
-            team=team,
             user_membership=db_user_membership,
+            documenso=documenso,
             db=db,
-            settings=settings,
         )
         return schemas_memberships.MembershipRenewalErrors(errors={})
     except Exception as e:
