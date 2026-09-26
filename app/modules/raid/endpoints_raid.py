@@ -585,7 +585,15 @@ async def get_my_team(
         raise HTTPException(status_code=404, detail="You do not have a team.")
 
     return schemas_raid.RaidTeamIncludingSecurityFile(
-        **participant_team.model_dump(exclude={"captain", "second"}),
+        name=participant_team.name,
+        id=participant_team.id,
+        edition_id=participant_team.edition_id,
+        number=participant_team.number,
+        captain_id=participant_team.captain_id,
+        second_id=participant_team.second_id,
+        difficulty=participant_team.difficulty,
+        meeting_place=participant_team.meeting_place,
+        file_id=participant_team.file_id,
         captain=prepare_data(user.id, participant_team.captain),
         second=(
             prepare_data(user.id, participant_team.second)
