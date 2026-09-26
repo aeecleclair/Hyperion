@@ -500,4 +500,5 @@ def prepare_data(
     data = participant.model_copy(deep=True)
     if participant.user_id != user_id:
         data.security_file = None
+        data.security_file_id = None
     return data
