@@ -461,6 +461,52 @@ async def test_teammate_cannot_attach_security_file(client: TestClient) -> None:
         assert participant.security_file_id != security_id
 
 
+async def test_cannot_attach_foreign_security_file_to_own_dossier(
+    client: TestClient,
+) -> None:
+    """Regression: attaching someone else's security file id to your own
+    dossier must fail, otherwise GET /raid/participants/me serves their
+    health data back to you."""
+    async with get_TestingSessionLocal()() as db:
+        security = models_raid.SecurityFile(
+            id=str(uuid.uuid4()),
+            edition_id=active_edition.id,
+            allergy=None,
+            asthma=False,
+            consent_given=True,
+            intensive_care_unit=None,
+            intensive_care_unit_when=None,
+            ongoing_treatment=None,
+            sicknesses=None,
+            hospitalization=None,
+            surgical_operation=None,
+            trauma=None,
+            family=None,
+            emergency_person_firstname="Jane",
+            emergency_person_name="Doe",
+            emergency_person_phone="0600000000",
+            file_id=None,
+        )
+        db.add(security)
+        await db.commit()
+        security_id = security.id
+
+    r = client.patch(
+        f"/raid/participants/{user_second.id}",
+        json={"security_file_id": security_id},
+        headers={"Authorization": f"Bearer {token_second}"},
+    )
+    assert r.status_code == 403
+    async with get_TestingSessionLocal()() as db:
+        participant = await cruds_raid.get_participant_by_user_id(
+            user_second.id,
+            active_edition.id,
+            db,
+        )
+        assert participant is not None
+        assert participant.security_file_id != security_id
+
+
 def test_update_participant_legacy_situation_string(client: TestClient) -> None:
     # Grace-period coercion of `otherschool` -> Situation.otherSchool.
     r = client.patch(

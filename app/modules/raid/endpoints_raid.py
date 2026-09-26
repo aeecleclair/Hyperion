@@ -348,11 +348,17 @@ async def update_participant(
                 status_code=403,
                 detail="Security file can only be set by the participant.",
             )
-        if not await cruds_raid.get_security_file_by_security_id(
+        security_file = await cruds_raid.get_security_file_by_security_id(
             participant_update.security_file_id,
             db,
-        ):
+        )
+        if not security_file:
             raise HTTPException(status_code=404, detail="Security_file not found.")
+        if participant_update.security_file_id != saved_participant.security_file_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Security file does not belong to this participant.",
+            )
 
     # Scholarship is restricted to students: validate against the merged
     # (payload + DB) state, since the payload may omit either field.
