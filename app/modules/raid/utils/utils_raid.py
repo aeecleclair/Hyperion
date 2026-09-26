@@ -16,8 +16,11 @@ from app.modules.raid.raid_type import (
     Size,
 )
 from app.modules.raid.utils.pdf.conversion_utils import (
+    date_to_string,
     get_difficulty_label,
     get_meeting_place_label,
+    get_situation_label,
+    get_size_label,
     nullable_number_to_string,
 )
 from app.modules.raid.utils.validation_checker import compute_team_progress
@@ -73,35 +76,57 @@ async def validate_payment(
     if participant_checkout:
         participant_user_id = participant_checkout.participant_user_id
         edition_id = participant_checkout.edition_id
+        # Rebuild the exact expected total from the participant's CURRENT state
+        # (the same function that priced the checkout when it was created).
+        # Matching prices from the global grid is ambiguous because two
+        # situations can share the same price.
+        participant = await cruds_raid.get_participant_by_user_id(
+            participant_user_id,
+            edition_id,
+            db,
+        )
+        if participant is None:
+            hyperion_error_logger.error(
+                f"RAID: participant {participant_user_id} not found "
+                f"for checkout {checkout_id}.",
+            )
+            raise RaidPayementError(checkout_id)
         prices = await get_core_data(coredata_raid.RaidPrice, db)
-        inscription_prices = [
-            price
-            for price in (
-                prices.student_price,
-                prices.external_price,
-                prices.scholarship_price,
+        try:
+            expected_amount = calculate_raid_payment(participant, prices)[0]
+        except HTTPException:
+            # Prices were unset after the checkout was created: we cannot
+            # reconcile the payment. Leave it unconfirmed (an admin can
+            # validate it manually).
+            hyperion_error_logger.exception(
+                f"RAID: cannot reconcile checkout {checkout_id}: prices are "
+                f"not set anymore.",
             )
-            if price
-        ]
-        if any(paid_amount == price for price in inscription_prices):
+            return
+        if expected_amount <= 0:
+            hyperion_error_logger.error(
+                f"RAID: checkout {checkout_id} paid ({paid_amount}) but "
+                f"participant {participant_user_id} owes nothing.",
+            )
+            return
+        if paid_amount != expected_amount:
+            hyperion_error_logger.error(
+                f"RAID: invalid payment amount for checkout {checkout_id}: "
+                f"expected {expected_amount}, got {paid_amount}.",
+            )
+            return
+        if not participant.payment:
             await cruds_raid.confirm_payment(participant_user_id, edition_id, db)
-        elif prices.t_shirt_price and paid_amount == prices.t_shirt_price:
-            await cruds_raid.confirm_t_shirt_payment(
-                participant_user_id,
-                edition_id,
-                db,
-            )
-        elif prices.t_shirt_price and any(
-            paid_amount == price + prices.t_shirt_price for price in inscription_prices
+        if (
+            participant.t_shirt_size
+            and participant.t_shirt_size != Size.None_
+            and not participant.t_shirt_payment
         ):
-            await cruds_raid.confirm_payment(participant_user_id, edition_id, db)
             await cruds_raid.confirm_t_shirt_payment(
                 participant_user_id,
                 edition_id,
                 db,
             )
-        else:
-            hyperion_error_logger.error("Invalid payment amount")
         return
 
     # Try volunteer checkout
@@ -112,36 +137,54 @@ async def validate_payment(
     if volunteer_checkout:
         volunteer_user_id = volunteer_checkout.volunteer_user_id
         edition_id = volunteer_checkout.edition_id
+        volunteer = await cruds_raid.get_volunteer_by_user_id(
+            volunteer_user_id,
+            edition_id,
+            db,
+        )
+        if volunteer is None:
+            hyperion_error_logger.error(
+                f"RAID: volunteer {volunteer_user_id} not found "
+                f"for checkout {checkout_id}.",
+            )
+            raise RaidPayementError(checkout_id)
         prices = await get_core_data(coredata_raid.RaidPrice, db)
-        if prices.volunteer_price and paid_amount == prices.volunteer_price:
+        try:
+            expected_amount = calculate_volunteer_payment(volunteer, prices)[0]
+        except HTTPException:
+            hyperion_error_logger.exception(
+                f"RAID: cannot reconcile checkout {checkout_id}: prices are "
+                f"not set anymore.",
+            )
+            return
+        if expected_amount <= 0:
+            hyperion_error_logger.error(
+                f"RAID: checkout {checkout_id} paid ({paid_amount}) but "
+                f"volunteer {volunteer_user_id} owes nothing.",
+            )
+            return
+        if paid_amount != expected_amount:
+            hyperion_error_logger.error(
+                f"RAID: invalid payment amount for checkout {checkout_id}: "
+                f"expected {expected_amount}, got {paid_amount}.",
+            )
+            return
+        if not volunteer.payment:
             await cruds_raid.confirm_volunteer_payment(
                 volunteer_user_id,
                 edition_id,
                 db,
             )
-        elif prices.t_shirt_price and paid_amount == prices.t_shirt_price:
-            await cruds_raid.confirm_volunteer_t_shirt_payment(
-                volunteer_user_id,
-                edition_id,
-                db,
-            )
-        elif (
-            prices.t_shirt_price
-            and prices.volunteer_price
-            and (paid_amount == prices.volunteer_price + prices.t_shirt_price)
+        if (
+            volunteer.t_shirt_size
+            and volunteer.t_shirt_size != Size.None_
+            and not volunteer.t_shirt_payment
         ):
-            await cruds_raid.confirm_volunteer_payment(
-                volunteer_user_id,
-                edition_id,
-                db,
-            )
             await cruds_raid.confirm_volunteer_t_shirt_payment(
                 volunteer_user_id,
                 edition_id,
                 db,
             )
-        else:
-            hyperion_error_logger.error("Invalid payment amount")
         return
 
     hyperion_error_logger.error(f"No checkout found for id {checkout_id}")
@@ -186,6 +229,50 @@ def _participant_pdf_context(
     return ctx
 
 
+# Displayed in the PDFs for any empty (None) field so the admin sees the field
+# is deliberately empty, not a rendering bug.
+PDF_EMPTY_PLACEHOLDER = "-"
+
+
+def _or_dash(value) -> str:
+    """Render None/empty values as a dash instead of leaking 'None' into PDFs."""
+    if value is None or value == "":
+        return PDF_EMPTY_PLACEHOLDER
+    return str(value)
+
+
+def _recap_participant_context(
+    participant: schemas_raid.RaidParticipantRestricted,
+) -> dict:
+    """French-keyed context for the recap template, with '-' for empty fields."""
+    user = participant.user
+    return {
+        "nom": _or_dash(user.name if user else None),
+        "prenom": _or_dash(user.firstname if user else None),
+        "date_naissance": (
+            date_to_string(user.birthday)
+            if user and user.birthday
+            else PDF_EMPTY_PLACEHOLDER
+        ),
+        "adresse": _or_dash(participant.address),
+        "telephone": _or_dash(user.phone if user else None),
+        "email": _or_dash(user.email if user else None),
+        "taille_velo": get_size_label(participant.bike_size),
+        "tshirt": (
+            f"{participant.t_shirt_size.value} ({'payé' if participant.t_shirt_payment else 'non payé'})"
+            if participant.t_shirt_size
+            else PDF_EMPTY_PLACEHOLDER
+        ),
+        "situation": get_situation_label(participant.situation),
+        "regime": _or_dash(participant.diet),
+        "attestation": "Oui" if participant.attestation_on_honour else "Non",
+        # Same computed counters as the admin UI so both always agree.
+        "documents_valides": str(participant.number_of_validated_document),
+        "documents_total": str(participant.number_of_document),
+        "paiement": "Payé" if participant.payment else "Non payé",
+    }
+
+
 async def generate_security_file_pdf(
     participant: schemas_raid.RaidParticipant,
     information: coredata_raid.RaidInformation,
@@ -227,8 +314,10 @@ async def generate_recap_file_pdf(
         "lieu_rdv": get_meeting_place_label(team.meeting_place),
         "numero": nullable_number_to_string(team.number),
         "inscription": str(int(compute_team_progress(team))) + " %",
-        "capitaine": _participant_pdf_context(team.captain),
-        "participant": _participant_pdf_context(team.second) if team.second else None,
+        "capitaine": _recap_participant_context(team.captain),
+        "participant": (
+            _recap_participant_context(team.second) if team.second else None
+        ),
     }
 
     file_id = team.id
@@ -398,3 +487,17 @@ def calculate_volunteer_payment(
             checkout_name += " + "
         checkout_name += "T Shirt taille" + volunteer.t_shirt_size.value
     return price, checkout_name
+
+
+# Strip the security file on every participant card except the requesting
+# user's own.
+def prepare_data(
+    user_id: str,
+    participant: schemas_raid.RaidParticipant,
+) -> schemas_raid.RaidParticipant:
+    """Return a copy of `participant` with the security file cleared, unless
+    the participant is the requesting user."""
+    data = participant.model_copy(deep=True)
+    if participant.user_id != user_id:
+        data.security_file = None
+    return data

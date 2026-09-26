@@ -21,6 +21,7 @@ from app.dependencies import (
 from app.modules.raid import coredata_raid, cruds_raid, schemas_raid
 from app.modules.raid.dependencies_raid import (
     ensure_user_is_not_participant_in_edition,
+    ensure_user_is_not_team_member,
     ensure_user_is_not_volunteer_in_edition,
     get_current_raid_edition,
     get_participant_complete_or_404,
@@ -32,6 +33,7 @@ from app.modules.raid.raid_type import (
     DocumentType,
     DocumentValidation,
     RaidRegistrationStatus,
+    Situation,
     Size,
 )
 from app.modules.raid.utils.utils_raid import (
@@ -39,6 +41,7 @@ from app.modules.raid.utils.utils_raid import (
     calculate_volunteer_payment,
     get_all_security_files_zip,
     get_all_team_files_zip,
+    prepare_data,
     validate_payment,
     will_birthday_be_minor_on,
 )
@@ -243,7 +246,8 @@ async def create_participant(
 ):
     """Create a participant. Identity (name/firstname/email/birthday/phone)
     is read from the CoreUser and must already be set there."""
-    if await cruds_raid.is_user_a_participant(user.id, edition.id, db):
+    existing = await cruds_raid.get_participant_by_user_id(user.id, edition.id, db)
+    if existing is not None and existing.status != RaidRegistrationStatus.cancelled:
         raise HTTPException(status_code=403, detail="You are already a participant.")
     await ensure_user_is_not_volunteer_in_edition(user.id, edition.id, db)
 
@@ -252,6 +256,18 @@ async def create_participant(
             status_code=400,
             detail="Your user profile is missing birthday or phone; please update it first.",
         )
+
+    if existing is not None:
+        # A cancelled participant row keeps the primary key (user_id,
+        # edition_id): re-activate it as a fresh draft instead of 403-ing
+        # forever. Linked documents/security file are kept.
+        await cruds_raid.update_participant_status(
+            user.id,
+            edition.id,
+            RaidRegistrationStatus.draft,
+            db,
+        )
+        return await get_participant_complete_or_404(user.id, edition.id, db)
 
     raid_information = await get_core_data(coredata_raid.RaidInformation, db)
     is_minor = will_birthday_be_minor_on(
@@ -286,7 +302,19 @@ async def update_participant(
 
     is_raid_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
     if user.id != user_id and not is_raid_admin:
-        raise HTTPException(status_code=403, detail="You are not the participant.")
+        own_team = await cruds_raid.get_team_by_participant_id(
+            user.id,
+            edition.id,
+            db,
+        )
+        if own_team is None or user_id not in (
+            own_team.captain_id,
+            own_team.second_id,
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="You are not the participant.",
+            )
     if not is_raid_admin and saved_participant.status != RaidRegistrationStatus.draft:
         raise HTTPException(
             status_code=400,
@@ -315,11 +343,37 @@ async def update_participant(
             )
 
     if participant_update.security_file_id:
+        if user.id != user_id and not is_raid_admin:
+            raise HTTPException(
+                status_code=403,
+                detail="Security file can only be set by the participant.",
+            )
         if not await cruds_raid.get_security_file_by_security_id(
             participant_update.security_file_id,
             db,
         ):
             raise HTTPException(status_code=404, detail="Security_file not found.")
+
+    # Scholarship is restricted to students: validate against the merged
+    # (payload + DB) state, since the payload may omit either field.
+    merged_situation = (
+        participant_update.situation
+        if participant_update.situation is not None
+        else saved_participant.situation
+    )
+    merged_scholarship = (
+        participant_update.has_scholarship
+        if participant_update.has_scholarship is not None
+        else saved_participant.has_scholarship
+    )
+    if merged_scholarship and merged_situation not in (
+        Situation.centrale,
+        Situation.otherSchool,
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Scholarship is only available for students.",
+        )
 
     await cruds_raid.update_participant(user_id, edition.id, participant_update, db)
 
@@ -411,6 +465,11 @@ async def validate_participant(
         edition.id,
         db,
     )
+    if participant.status != RaidRegistrationStatus.submitted:
+        raise HTTPException(
+            status_code=400,
+            detail="Participant is not in submitted state; only a submitted dossier can be validated",
+        )
 
     await check_participant_validation_consistency(participant, edition.id, db)
     await cruds_raid.update_participant_status(
@@ -448,6 +507,17 @@ async def cancel_participant(
         RaidRegistrationStatus.cancelled,
         db,
     )
+    team = await cruds_raid.get_team_by_participant_id(user_id, edition.id, db)
+    if team is not None:
+        await cruds_raid.delete_team_invite_tokens(team.id, db)
+        if team.captain_id == user_id:
+            if team.second_id:
+                await cruds_raid.update_team_captain_id(team.id, team.second_id, db)
+                await cruds_raid.update_team_second_id(team.id, None, db)
+            else:
+                await cruds_raid.delete_team(team.id, db)
+        else:
+            await cruds_raid.update_team_second_id(team.id, None, db)
 
 
 # ---------------------------------------------------------------------------
@@ -468,7 +538,12 @@ async def create_team(
     db: AsyncSession = Depends(get_db),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    if not await cruds_raid.is_user_a_participant(user.id, edition.id, db):
+    me_participant = await cruds_raid.get_participant_by_user_id(
+        user.id,
+        edition.id,
+        db,
+    )
+    if me_participant is None or me_participant.status != RaidRegistrationStatus.draft:
         raise HTTPException(status_code=403, detail="You are not a participant.")
     if await cruds_raid.get_team_by_participant_id(user.id, edition.id, db):
         raise HTTPException(status_code=403, detail="You already have a team.")
@@ -489,7 +564,7 @@ async def create_team(
 
 @module.router.get(
     "/raid/participants/me/team",
-    response_model=schemas_raid.RaidTeamComplete,
+    response_model=schemas_raid.RaidTeamIncludingSecurityFile,
     status_code=200,
 )
 async def get_my_team(
@@ -509,25 +584,14 @@ async def get_my_team(
     if not participant_team:
         raise HTTPException(status_code=404, detail="You do not have a team.")
 
-    return schemas_raid.RaidTeamComplete(
-        name=participant_team.name,
-        id=participant_team.id,
-        edition_id=participant_team.edition_id,
-        number=participant_team.number,
-        captain_id=participant_team.captain_id,
-        second_id=participant_team.second_id,
-        difficulty=participant_team.difficulty,
-        meeting_place=participant_team.meeting_place,
-        file_id=participant_team.file_id,
-        captain=schemas_raid.RaidParticipantRestrictedComplete(
-            **participant_team.captain.model_dump(),
+    return schemas_raid.RaidTeamIncludingSecurityFile(
+        **participant_team.model_dump(exclude={"captain", "second"}),
+        captain=prepare_data(user.id, participant_team.captain),
+        second=(
+            prepare_data(user.id, participant_team.second)
+            if participant_team.second
+            else None
         ),
-        second=schemas_raid.RaidParticipantRestrictedComplete(
-            **participant_team.second.model_dump(),
-        )
-        if participant_team.second
-        else None,
-        validation_progress=participant_team.validation_progress,
     )
 
 
@@ -709,22 +773,6 @@ async def upload_document(
     )
     try:
         await cruds_raid.create_document(document_schema, edition.id, db)
-
-        document_key = {
-            DocumentType.idCard: "id_card_id",
-            DocumentType.medicalCertificate: "medical_certificate_id",
-            DocumentType.studentCard: "student_card_id",
-            DocumentType.raidRules: "raid_rules_id",
-            DocumentType.parentAuthorization: "parent_authorization_id",
-            DocumentType.schoolAuthorization: "school_authorization_id",
-        }[document_type]
-        await cruds_raid.assign_document(
-            user.id,
-            edition.id,
-            document_id,
-            document_key,
-            db,
-        )
     except Exception:
         # Rollback: delete the uploaded file if DB operations fail
         await delete_file_from_data(directory="raid", filename=document_id)
@@ -749,15 +797,16 @@ async def read_document(
     if not document:
         raise HTTPException(status_code=404, detail="Document not found.")
 
+    information = await get_core_data(coredata_raid.RaidInformation, db)
+    if document_id in {information.raid_rules_id, information.raid_information_id}:
+        return await get_file_from_data(
+            default_asset="assets/pdf/default_PDF.pdf",
+            directory="raid",
+            filename=str(document_id),
+        )
+
     participant = await cruds_raid.get_user_by_document_id(document_id, db)
     if not participant:
-        information = await get_core_data(coredata_raid.RaidInformation, db)
-        if document_id in {information.raid_rules_id, information.raid_information_id}:
-            return await get_file_from_data(
-                default_asset="assets/pdf/default_PDF.pdf",
-                directory="raid",
-                filename=str(document_id),
-            )
         raise HTTPException(
             status_code=404,
             detail="Participant owning the document not found.",
@@ -830,43 +879,78 @@ async def set_security_file(
 
     participant = await get_participant_or_404(participant_id, edition.id, db)
 
-    if not security_file.consent_given:
+    # Consent gates MEDICAL DATA ONLY
+    medical_fields_provided = any(
+        value is not None
+        for value in (
+            security_file.allergy,
+            security_file.ongoing_treatment,
+            security_file.sicknesses,
+            security_file.hospitalization,
+            security_file.surgical_operation,
+            security_file.trauma,
+            security_file.family,
+            security_file.file_id,
+        )
+    )
+    if not security_file.consent_given and medical_fields_provided:
         raise HTTPException(
             status_code=400,
             detail="Consent must be given to register medical data",
         )
 
     if participant.security_file_id:
-        await cruds_raid.update_security_file(
-            security_file_id=participant.security_file_id,
-            security_file=security_file,
-            db=db,
-        )
+        if security_file.consent_given:
+            await cruds_raid.update_security_file(
+                security_file_id=participant.security_file_id,
+                security_file=security_file,
+                db=db,
+            )
+        else:
+            await cruds_raid.update_security_file_emergency(
+                security_file_id=participant.security_file_id,
+                emergency_person_firstname=security_file.emergency_person_firstname
+                or "",
+                emergency_person_name=security_file.emergency_person_name or "",
+                emergency_person_phone=security_file.emergency_person_phone or "",
+                db=db,
+            )
         return await cruds_raid.get_security_file_by_security_id(
             participant.security_file_id,
             db,
         )
 
     new_security_file_id = str(uuid.uuid4())
+    # Creation without consent stores the emergency contact only
     security_file_schema = schemas_raid.SecurityFile(
         id=new_security_file_id,
         validation=DocumentValidation.pending,
-        allergy=security_file.allergy,
-        asthma=security_file.asthma,
-        intensive_care_unit=security_file.intensive_care_unit,
-        intensive_care_unit_when=security_file.intensive_care_unit_when,
-        ongoing_treatment=security_file.ongoing_treatment,
-        sicknesses=security_file.sicknesses,
-        hospitalization=security_file.hospitalization,
-        surgical_operation=security_file.surgical_operation,
-        trauma=security_file.trauma,
-        family=security_file.family,
+        allergy=security_file.allergy if security_file.consent_given else None,
+        asthma=security_file.asthma if security_file.consent_given else False,
+        intensive_care_unit=security_file.intensive_care_unit
+        if security_file.consent_given
+        else None,
+        intensive_care_unit_when=security_file.intensive_care_unit_when
+        if security_file.consent_given
+        else None,
+        ongoing_treatment=security_file.ongoing_treatment
+        if security_file.consent_given
+        else None,
+        sicknesses=security_file.sicknesses if security_file.consent_given else None,
+        hospitalization=security_file.hospitalization
+        if security_file.consent_given
+        else None,
+        surgical_operation=security_file.surgical_operation
+        if security_file.consent_given
+        else None,
+        trauma=security_file.trauma if security_file.consent_given else None,
+        family=security_file.family if security_file.consent_given else None,
         emergency_person_firstname=security_file.emergency_person_firstname,
         emergency_person_name=security_file.emergency_person_name,
         emergency_person_phone=security_file.emergency_person_phone,
         file_id=security_file.file_id,
         consent_given=security_file.consent_given,
-        consent_given_at=datetime.now(UTC),
+        consent_given_at=datetime.now(UTC) if security_file.consent_given else None,
     )
     await cruds_raid.add_security_file(security_file_schema, edition.id, db)
     await cruds_raid.assign_security_file(
@@ -1000,6 +1084,16 @@ async def create_invite_token(
         raise HTTPException(status_code=404, detail="Team not found.")
     if team.id != team_id:
         raise HTTPException(status_code=403, detail="You are not in the team.")
+    me_participant = await cruds_raid.get_participant_by_user_id(
+        user.id,
+        edition.id,
+        db,
+    )
+    if me_participant is None or me_participant.status != RaidRegistrationStatus.draft:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not a participant in draft state.",
+        )
 
     existing = await cruds_raid.get_invite_token_by_team_id(team_id, db)
     if existing:
@@ -1037,6 +1131,17 @@ async def join_team(
     if user_team and user_team.second_id:
         raise HTTPException(status_code=403, detail="You are already in a team.")
 
+    me_participant = await cruds_raid.get_participant_by_user_id(
+        user.id,
+        edition.id,
+        db,
+    )
+    if me_participant is None or me_participant.status != RaidRegistrationStatus.draft:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not a participant in draft state.",
+        )
+
     team = await cruds_raid.get_team_by_id(invite_token.team_id, db)
     if not team:
         raise HTTPException(status_code=404, detail="Team not found.")
@@ -1048,9 +1153,6 @@ async def join_team(
             detail="You are already the captain of this team.",
         )
 
-    # A participant may already have an incomplete team and an active invite.
-    # Remove that invite before deleting the old team, otherwise the foreign
-    # key from raid_invite.team_id causes an IntegrityError (HTTP 500).
     if user_team:
         await cruds_raid.delete_team_invite_tokens(user_team.id, db)
         await cruds_raid.delete_team(user_team.id, db)
@@ -1251,6 +1353,11 @@ async def get_payment_url(
     participant = await cruds_raid.get_participant_by_user_id(user.id, edition.id, db)
     if not participant:
         raise HTTPException(status_code=403, detail="You are not a participant.")
+    if participant.status != RaidRegistrationStatus.submitted:
+        raise HTTPException(
+            status_code=400,
+            detail="Participant is not in submitted state; the dossier must be submitted before paying",
+        )
     price, checkout_name = calculate_raid_payment(participant, raid_prices)
 
     user_dict = {k: v for k, v in user.__dict__.items() if not k.startswith("_")}
@@ -1267,7 +1374,7 @@ async def get_payment_url(
         schemas_raid.RaidParticipantCheckout(
             participant_user_id=user.id,
             edition_id=edition.id,
-            checkout_id=str(checkout.id),
+            checkout_id=checkout.id,
         ),
         db=db,
     )
@@ -1294,6 +1401,8 @@ async def get_volunteer_payment_url(
     volunteer = await cruds_raid.get_volunteer_by_user_id(user.id, edition.id, db)
     if not volunteer:
         raise HTTPException(status_code=403, detail="You are not a volunteer.")
+    if volunteer.cancelled:
+        raise HTTPException(status_code=400, detail="Volunteer is cancelled")
     price, checkout_name = calculate_volunteer_payment(volunteer, raid_prices)
 
     user_dict = {k: v for k, v in user.__dict__.items() if not k.startswith("_")}
@@ -1310,7 +1419,7 @@ async def get_volunteer_payment_url(
         schemas_raid.RaidVolunteerCheckout(
             volunteer_user_id=user.id,
             edition_id=edition.id,
-            checkout_id=str(checkout.id),
+            checkout_id=checkout.id,
         ),
         db=db,
     )
@@ -1404,9 +1513,15 @@ async def create_volunteer(
     db: AsyncSession = Depends(get_db),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    if await cruds_raid.get_volunteer_by_user_id(user.id, edition.id, db):
+    existing_volunteer = await cruds_raid.get_volunteer_by_user_id(
+        user.id,
+        edition.id,
+        db,
+    )
+    if existing_volunteer is not None and not existing_volunteer.cancelled:
         raise HTTPException(status_code=403, detail="You are already a volunteer.")
     await ensure_user_is_not_participant_in_edition(user.id, edition.id, db)
+    await ensure_user_is_not_team_member(user.id, edition.id, db)
 
     volunteer_create = schemas_raid.RaidVolunteerCreate(
         user_id=user.id,
@@ -1425,7 +1540,27 @@ async def create_volunteer(
         is_utility_vehicle_driver=volunteer.is_utility_vehicle_driver,
         is_parcours_helper=volunteer.is_parcours_helper,
     )
-    await cruds_raid.create_volunteer(volunteer_create, db)
+    if existing_volunteer is not None:
+        await cruds_raid.update_volunteer(
+            user.id,
+            edition.id,
+            schemas_raid.RaidVolunteerEdit(**volunteer.model_dump()),
+            db,
+        )
+        await cruds_raid.update_volunteer_cancellation(
+            user.id,
+            edition.id,
+            False,
+            db,
+        )
+        await cruds_raid.update_volunteer_validation(
+            user.id,
+            edition.id,
+            False,
+            db,
+        )
+    else:
+        await cruds_raid.create_volunteer(volunteer_create, db)
     return await get_volunteer_or_404(user.id, edition.id, db)
 
 
@@ -1535,6 +1670,41 @@ async def cancel_volunteer(
         raise HTTPException(status_code=403, detail="You are not the volunteer.")
     await get_volunteer_or_404(user_id, edition.id, db)
     await cruds_raid.update_volunteer_cancellation(user_id, edition.id, True, db)
+
+
+@module.router.patch(
+    "/raid/volunteers/{user_id}/reopen",
+    status_code=204,
+)
+async def reopen_volunteer(
+    user_id: str,
+    user: models_users.CoreUser = Depends(
+        is_user_allowed_to([RaidPermissions.access_raid]),
+    ),
+    db: AsyncSession = Depends(get_db),
+    edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
+):
+    """Un-cancel a cancelled volunteer (self or admin)."""
+    is_raid_admin = await has_user_permission(user, RaidPermissions.manage_raid, db)
+    if user.id != user_id and not is_raid_admin:
+        raise HTTPException(status_code=403, detail="You are not the volunteer.")
+    volunteer = await get_volunteer_or_404(user_id, edition.id, db)
+    if not volunteer.cancelled:
+        raise HTTPException(
+            status_code=400,
+            detail="Volunteer is not cancelled; nothing to reopen.",
+        )
+
+    participant = await cruds_raid.get_participant_by_user_id(user_id, edition.id, db)
+    if (
+        participant is not None
+        and participant.status != RaidRegistrationStatus.cancelled
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Participant registration is live; cancel it before reopening the volunteer track.",
+        )
+    await cruds_raid.update_volunteer_cancellation(user_id, edition.id, False, db)
 
 
 @module.router.delete(

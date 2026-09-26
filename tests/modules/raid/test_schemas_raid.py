@@ -5,8 +5,10 @@ Focus on the Pydantic validators that encode new business rules:
 - `situation=otherSchool` requires `other_school` to be set.
 - Switching back to `centrale` clears `other_school`.
 - Pydantic-level required fields on the edition / volunteer schemas.
+- Team preview document counters and teammate security-file privacy.
 """
 
+import datetime
 from datetime import date
 from uuid import uuid4
 
@@ -18,11 +20,14 @@ from app.core.users.schemas_users import CoreUser
 from app.modules.raid import schemas_raid
 from app.modules.raid.raid_type import (
     Difficulty,
+    DocumentType,
+    DocumentValidation,
     MeetingPlace,
     RaidRegistrationStatus,
     Situation,
     Size,
 )
+from app.modules.raid.utils.utils_raid import prepare_data
 
 # -- RaidParticipantUpdate: situation validators ---------------------------
 
@@ -208,12 +213,15 @@ def test_team_preview_progress_with_no_participants() -> None:
         name="T",
         number=None,
         captain_id="u1",
-        captain=schemas_raid.RaidParticipantPreview(
+        captain=schemas_raid.RaidParticipantRestricted(
             user_id="u1",
             edition_id=uuid4(),
             status=RaidRegistrationStatus.draft,
             payment=False,
             t_shirt_payment=False,
+            attestation_on_honour=False,
+            is_minor=False,
+            has_scholarship=False,
             user=_dummy_core_user("u1"),
         ),
         second=None,
@@ -232,12 +240,15 @@ def test_team_preview_progress_with_filled_meta_only() -> None:
         name="T",
         number=42,
         captain_id="u1",
-        captain=schemas_raid.RaidParticipantPreview(
+        captain=schemas_raid.RaidParticipantRestricted(
             user_id="u1",
             edition_id=uuid4(),
             status=RaidRegistrationStatus.draft,
             payment=False,
             t_shirt_payment=False,
+            attestation_on_honour=False,
+            is_minor=False,
+            has_scholarship=False,
             user=_dummy_core_user("u1"),
         ),
         second=None,
@@ -245,6 +256,169 @@ def test_team_preview_progress_with_filled_meta_only() -> None:
         meeting_place=MeetingPlace.centrale,
     )
     assert preview.validation_progress == 10  # (2/2)*10 + 0 captain/second
+
+
+# Team preview document counters -------------------------------------------
+
+
+def _participant_restricted(
+    uid: str,
+    **overrides,
+) -> schemas_raid.RaidParticipantRestricted:
+    fields = {
+        "user_id": uid,
+        "edition_id": uuid4(),
+        "status": RaidRegistrationStatus.draft,
+        "payment": False,
+        "t_shirt_payment": False,
+        "attestation_on_honour": False,
+        "is_minor": False,
+        "has_scholarship": False,
+        "user": _dummy_core_user(uid),
+    }
+    fields.update(overrides)
+    return schemas_raid.RaidParticipantRestricted(**fields)
+
+
+def _document(validation: DocumentValidation) -> schemas_raid.Document:
+    return schemas_raid.Document(
+        id=str(uuid4()),
+        type=DocumentType.idCard,
+        name="doc",
+        uploaded_at=datetime.datetime.now(tz=datetime.UTC).date(),
+        validation=validation,
+    )
+
+
+def test_preview_document_counters_all_accepted() -> None:
+    """A centrale student with every required upload accepted: 5/5."""
+    doc = _document(DocumentValidation.accepted)
+    participant = _participant_restricted(
+        "u1",
+        situation=Situation.centrale,
+        id_card=doc,
+        id_card_id=doc.id,
+        medical_certificate=doc,
+        medical_certificate_id=doc.id,
+        raid_rules=doc,
+        raid_rules_id=doc.id,
+        student_card=doc,
+        student_card_id=doc.id,
+    )
+    preview = schemas_raid.RaidTeamPreview(
+        id="tid",
+        edition_id=uuid4(),
+        name="T",
+        number=None,
+        captain_id="u1",
+        captain=participant,
+        second=None,
+        difficulty=None,
+        meeting_place=None,
+    )
+    assert preview.captain.number_of_document == 4
+    assert preview.captain.number_of_validated_document == 4
+
+
+def test_preview_document_counters_pending_not_counted() -> None:
+    """Uploaded but pending documents count in the total, not in validated."""
+    accepted = _document(DocumentValidation.accepted)
+    pending = _document(DocumentValidation.pending)
+    participant = _participant_restricted(
+        "u1",
+        situation=Situation.centrale,
+        id_card=accepted,
+        id_card_id=accepted.id,
+        medical_certificate=pending,
+        medical_certificate_id=pending.id,
+        raid_rules=accepted,
+        raid_rules_id=accepted.id,
+        student_card=accepted,
+        student_card_id=accepted.id,
+    )
+    preview = schemas_raid.RaidTeamPreview(
+        id="tid",
+        edition_id=uuid4(),
+        name="T",
+        number=None,
+        captain_id="u1",
+        captain=participant,
+        second=None,
+        difficulty=None,
+        meeting_place=None,
+    )
+    assert preview.captain.number_of_document == 4
+    assert preview.captain.number_of_validated_document == 3
+
+
+def test_preview_document_counters_scholarship_adds_required_slot() -> None:
+    """has_scholarship adds the school authorization to the required total."""
+    doc = _document(DocumentValidation.accepted)
+    base = {
+        "situation": Situation.centrale,
+        "id_card": doc,
+        "id_card_id": doc.id,
+        "medical_certificate": doc,
+        "medical_certificate_id": doc.id,
+        "raid_rules": doc,
+        "raid_rules_id": doc.id,
+        "student_card": doc,
+        "student_card_id": doc.id,
+    }
+    without = _participant_restricted("u1", **base)
+    with_scholarship = _participant_restricted(
+        "u1",
+        has_scholarship=True,
+        school_authorization=doc,
+        school_authorization_id=doc.id,
+        **base,
+    )
+    assert without.number_of_document == 4
+    assert with_scholarship.number_of_document == 5
+    assert with_scholarship.number_of_validated_document == 5
+
+
+# Security-file privacy (prepare_data) --------------------------------------
+
+
+def _participant_with_security_file(
+    uid: str,
+) -> schemas_raid.RaidParticipant:
+    return schemas_raid.RaidParticipant(
+        user_id=uid,
+        edition_id=uuid4(),
+        status=RaidRegistrationStatus.validated,
+        payment=True,
+        t_shirt_payment=False,
+        attestation_on_honour=True,
+        is_minor=False,
+        has_scholarship=False,
+        user=_dummy_core_user(uid),
+        security_file=schemas_raid.SecurityFile(
+            id="sf1",
+            validation=DocumentValidation.accepted,
+            asthma=False,
+            consent_given=True,
+            emergency_person_firstname="Jane",
+            emergency_person_name="Doe",
+            emergency_person_phone="+33612345678",
+        ),
+    )
+
+
+def test_prepare_data_keeps_own_security_file() -> None:
+    """The requesting user always sees their own security file."""
+    participant = _participant_with_security_file("u1")
+    data = prepare_data("u1", participant)
+    assert data.security_file is not None
+    assert data.security_file.emergency_person_phone == "+33612345678"
+
+
+def test_prepare_data_hides_teammate_security_file() -> None:
+    """A teammate's security file is stripped (health-data privacy)."""
+    participant = _participant_with_security_file("u2")
+    data = prepare_data("u1", participant)
+    assert data.security_file is None
 
 
 # Shared helper --------------------------------------------------------------
