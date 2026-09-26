@@ -892,6 +892,70 @@ def test_validate_document_as_admin(client: TestClient) -> None:
     assert r.status_code == 204
 
 
+async def test_cannot_attach_document_owned_by_another_participant(
+    client: TestClient,
+) -> None:
+    """Regression: a document already attached to another participant's
+    dossier must be rejected."""
+    async with get_TestingSessionLocal()() as db:
+        doc = models_raid.Document(
+            id=str(uuid.uuid4()),
+            edition_id=active_edition.id,
+            name="someone_elses_id_card.pdf",
+            uploaded_at=datetime.datetime.now(tz=datetime.UTC).date(),
+            type=DocumentType.idCard,
+            validation=DocumentValidation.pending,
+        )
+        db.add(doc)
+        await db.flush()
+        await db.execute(
+            update(models_raid.RaidParticipant)
+            .where(
+                models_raid.RaidParticipant.user_id == user_captain.id,
+                models_raid.RaidParticipant.edition_id == active_edition.id,
+            )
+            .values(id_card_id=doc.id),
+        )
+        await db.commit()
+        doc_id = doc.id
+
+    r = client.patch(
+        f"/raid/participants/{user_second.id}",
+        json={"id_card_id": doc_id},
+        headers={"Authorization": f"Bearer {token_second}"},
+    )
+    assert r.status_code == 403
+    async with get_TestingSessionLocal()() as db:
+        participant = await cruds_raid.get_participant_by_user_id(
+            user_second.id,
+            active_edition.id,
+            db,
+        )
+        assert participant is not None
+        assert participant.id_card_id != doc_id
+
+
+async def test_can_reattach_own_document(client: TestClient) -> None:
+    """The ownership check must not block a participant re-attaching a
+    document that is already theirs."""
+    async with get_TestingSessionLocal()() as db:
+        participant = await cruds_raid.get_participant_by_user_id(
+            user_captain.id,
+            active_edition.id,
+            db,
+        )
+        assert participant is not None
+        doc_id = participant.id_card_id
+    assert doc_id
+
+    r = client.patch(
+        f"/raid/participants/{user_captain.id}",
+        json={"id_card_id": doc_id},
+        headers={"Authorization": f"Bearer {token_captain}"},
+    )
+    assert r.status_code == 204
+
+
 @pytest.mark.parametrize(
     "target_validation",
     [DocumentValidation.refused, DocumentValidation.temporary],

@@ -341,6 +341,13 @@ async def update_participant(
                 status_code=404,
                 detail=f"Document {label} not found.",
             )
+        if doc_id:
+            attached_to = await cruds_raid.get_user_by_document_id(doc_id, db)
+            if attached_to is not None and attached_to.user_id != user_id:
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Document {label} is already attached to another participant.",
+                )
 
     if participant_update.security_file_id:
         if user.id != user_id and not is_raid_admin:
@@ -705,6 +712,11 @@ async def update_team(
         raise HTTPException(status_code=404, detail="Team not found.")
     if existing_team is not None and existing_team.id != team_id and not is_raid_admin:
         raise HTTPException(status_code=403, detail="You can only edit your own team.")
+    if existing_team is None:
+        # An admin editing a team they are not a member of: the team must at
+        # least exist in this edition.
+        if await cruds_raid.get_team_by_id(team_id, db) is None:
+            raise HTTPException(status_code=404, detail="Team not found.")
     await cruds_raid.update_team(team_id, team, db)
 
 
