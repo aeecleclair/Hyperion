@@ -489,9 +489,15 @@ def calculate_volunteer_payment(
     return price, checkout_name
 
 
-# Clear out the security file on every card except the requesting user's own
-def prepare_data(user_id: str, participant: schemas_raid.RaidParticipant) -> dict:
-    data = participant.model_dump()
+# Strip the security file on every participant card except the requesting
+# user's own.
+def prepare_data(
+    user_id: str,
+    participant: schemas_raid.RaidParticipant,
+) -> schemas_raid.RaidParticipant:
+    """Return a copy of `participant` with the security file cleared, unless
+    the participant is the requesting user."""
+    data = participant.model_copy(deep=True)
     if participant.user_id != user_id:
-        data["security_file"] = None
+        data.security_file = None
     return data

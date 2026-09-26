@@ -410,15 +410,15 @@ def test_prepare_data_keeps_own_security_file() -> None:
     """The requesting user always sees their own security file."""
     participant = _participant_with_security_file("u1")
     data = prepare_data("u1", participant)
-    assert data["security_file"] is not None
-    assert data["security_file"]["emergency_person_phone"] == "+33612345678"
+    assert data.security_file is not None
+    assert data.security_file.emergency_person_phone == "+33612345678"
 
 
 def test_prepare_data_hides_teammate_security_file() -> None:
     """A teammate's security file is stripped (health-data privacy)."""
     participant = _participant_with_security_file("u2")
     data = prepare_data("u1", participant)
-    assert data["security_file"] is None
+    assert data.security_file is None
 
 
 # Shared helper --------------------------------------------------------------

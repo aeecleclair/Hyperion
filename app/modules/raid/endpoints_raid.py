@@ -584,14 +584,15 @@ async def get_my_team(
     if not participant_team:
         raise HTTPException(status_code=404, detail="You do not have a team.")
 
-    response = participant_team.model_dump()
-    response["captain"] = prepare_data(user.id, participant_team.captain)
-    response["second"] = (
-        prepare_data(user.id, participant_team.second)
-        if participant_team.second
-        else None
+    return schemas_raid.RaidTeamIncludingSecurityFile(
+        **participant_team.model_dump(exclude={"captain", "second"}),
+        captain=prepare_data(user.id, participant_team.captain),
+        second=(
+            prepare_data(user.id, participant_team.second)
+            if participant_team.second
+            else None
+        ),
     )
-    return response
 
 
 @module.router.get(
