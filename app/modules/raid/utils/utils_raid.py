@@ -78,9 +78,8 @@ async def validate_payment(
         edition_id = participant_checkout.edition_id
         # Rebuild the exact expected total from the participant's CURRENT state
         # (the same function that priced the checkout when it was created).
-        # Matching prices from the global grid is ambiguous (two situations can
-        # share a price) and breaks as soon as the payer adds a HelloAsso
-        # donation: HelloAsso reports amount + tip in the webhook.
+        # Matching prices from the global grid is ambiguous because two
+        # situations can share the same price.
         participant = await cruds_raid.get_participant_by_user_id(
             participant_user_id,
             edition_id,
@@ -110,15 +109,12 @@ async def validate_payment(
                 f"participant {participant_user_id} owes nothing.",
             )
             return
-        if paid_amount < expected_amount:
+        if paid_amount != expected_amount:
             hyperion_error_logger.error(
                 f"RAID: invalid payment amount for checkout {checkout_id}: "
-                f"expected at least {expected_amount}, got {paid_amount}.",
+                f"expected {expected_amount}, got {paid_amount}.",
             )
             return
-        # paid_amount >= expected_amount: the excess (if any) is a HelloAsso
-        # donation. Confirm every component that was part of the checkout and
-        # is still unpaid.
         if not participant.payment:
             await cruds_raid.confirm_payment(participant_user_id, edition_id, db)
         if (
@@ -167,10 +163,10 @@ async def validate_payment(
                 f"volunteer {volunteer_user_id} owes nothing.",
             )
             return
-        if paid_amount < expected_amount:
+        if paid_amount != expected_amount:
             hyperion_error_logger.error(
                 f"RAID: invalid payment amount for checkout {checkout_id}: "
-                f"expected at least {expected_amount}, got {paid_amount}.",
+                f"expected {expected_amount}, got {paid_amount}.",
             )
             return
         if not volunteer.payment:
