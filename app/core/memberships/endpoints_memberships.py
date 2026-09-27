@@ -291,8 +291,7 @@ async def update_association_membership(
 
 @router.post(
     "/memberships/{membership_id}/renew-documents",
-    status_code=201,
-    response_model=schemas_memberships.MembershipRenewalErrors,
+    status_code=204,
 )
 async def renew_users_membership_document(
     renewal_criterion: schemas_memberships.MembershipRenewalCriterion,
@@ -723,15 +722,11 @@ async def renew_user_membership_document(
             documenso=documenso,
             db=db,
         )
-        return schemas_memberships.MembershipRenewalErrors(errors={})
+        return schemas_memberships.MembershipRenewalErrors(error=None)
     except Exception as e:
         if isinstance(e, DocumentCreationError):
-            return schemas_memberships.MembershipRenewalErrors(
-                errors={e.user_email: e.message},
-            )
-        return schemas_memberships.MembershipRenewalErrors(
-            errors={db_user_membership.user_id: str(e)},
-        )
+            return schemas_memberships.MembershipRenewalErrors(error=e.message)
+        return schemas_memberships.MembershipRenewalErrors(error=str(e))
 
 
 @router.delete(

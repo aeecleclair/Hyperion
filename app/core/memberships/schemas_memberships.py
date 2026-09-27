@@ -42,7 +42,7 @@ class MembershipRenewalCriterion(BaseModel):
 
 
 class MembershipRenewalErrors(BaseModel):
-    errors: dict[str, str]
+    error: str | None = None
 
 
 class UserMembershipBase(BaseModel):

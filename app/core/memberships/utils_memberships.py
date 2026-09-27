@@ -327,17 +327,24 @@ async def renew_memberships_documents_list(
             else:
                 errors[target.user.email] = str(e)
 
+    content = (
+        f"Membership documents renewal report for {association_membership.name}:\n\n"
+    )
+    content += f"Summary:\nTotal users processed: {len(targets)}\nTotal errors: {len(errors)}\nSuccessful renewals: {len(targets) - len(errors)}\n\nErrors:\n"
+    content += "\n".join(
+        [f"  - {email}: {error}" for email, error in errors.items()],
+    )
     if settings.SMTP_ACTIVE:
-        content = f"Membership documents renewal report for {association_membership.name}:\n\n"
-        content += f"Summary:\nTotal users processed: {len(targets)}\nTotal errors: {len(errors)}\nSuccessful renewals: {len(targets) - len(errors)}\n\nErrors:\n"
-        content += "\n".join(
-            [f"  - {email}: {error}" for email, error in errors.items()],
-        )
         await send_email(
             recipient=report_user.email,
             subject=f"Membership documents renewal report for {association_membership.name}",
             content=content,
             settings=settings,
+        )
+    else:
+        hyperion_error_logger.info(
+            "SMTP is not active, skipping sending membership documents renewal report email. Report content:\n%s",
+            content,
         )
 
 

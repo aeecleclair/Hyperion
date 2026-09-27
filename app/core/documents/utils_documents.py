@@ -24,6 +24,7 @@ from app.core.groups.schemas_groups import CoreGroup
 from app.core.users.schemas_users import CoreUser
 from app.core.utils.config import Settings
 from app.module import all_modules
+from app.utils.mail.mailworker import send_email
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
@@ -328,6 +329,50 @@ async def use_template_for_user(
         created_at=document.created_at,
         updated_at=document.updated_at,
     )
+
+
+async def use_template_for_users(
+    users: set[CoreUser],
+    template: schemas_documents.Template,
+    documenso: DocumensoAPIWrapper,
+    db: AsyncSession,
+    module: str,
+    settings: Settings,
+    report_user: CoreUser,
+) -> None:
+    errors: dict[str, str] = {}
+    for user in users:
+        try:
+            await use_template_for_user(
+                user=user,
+                template=template,
+                documenso=documenso,
+                db=db,
+                module=module,
+            )
+        except Exception as e:
+            if isinstance(e, DocumentCreationError):
+                errors[e.user_email] = e.message
+            else:
+                errors[user.email] = str(e)
+
+    content = f"Document batch use report for template '{template.name}':\n\n"
+    content += f"Summary:\nTotal users processed: {len(users)}\nTotal errors: {len(errors)}\nSuccessful renewals: {len(users) - len(errors)}\n\nErrors:\n"
+    content += "\n".join(
+        [f"  - {email}: {error}" for email, error in errors.items()],
+    )
+    if settings.SMTP_ACTIVE:
+        await send_email(
+            recipient=report_user.email,
+            subject=f"Document batch use report for template '{template.name}'",
+            content=content,
+            settings=settings,
+        )
+    else:
+        hyperion_error_logger.info(
+            "SMTP is not active, skipping sending document batch use report email. Report content:\n%s",
+            content,
+        )
 
 
 async def delete_document(

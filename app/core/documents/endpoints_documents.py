@@ -30,6 +30,7 @@ from app.core.documents.utils_documents import (
     handle_document_callback,
     handle_template_creation_webhook,
     use_template_for_user,
+    use_template_for_users,
 )
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users, schemas_users
@@ -43,10 +44,12 @@ from app.dependencies import (
 from app.types.module import CoreModule
 from app.utils.tools import is_user_member_of_any_group
 
+MODULE_ROOT = "documents"
+
 router = APIRouter(tags=["Documents"])
 
 core_module = CoreModule(
-    root="documents",
+    root=MODULE_ROOT,
     tag="Documents",
     router=router,
     factory=None,
@@ -431,29 +434,19 @@ async def use_template(
         for each_user in existing_users:
             errors[each_user.email] = "Document already exists for this user"
 
-    # Retrieve the target user to fill in the recipient fields
-    documents = await asyncio.gather(
-        *[
-            use_template_for_user(
-                user=user,
-                template=db_template,
-                documenso=documenso,
-                db=db,
-                module="documents",
-            )
-            for user in users
-        ],
-        return_exceptions=True,
+    background_taks.add_task(
+        use_template_for_users,
+        users=users,
+        template=db_template,
+        documenso=documenso,
+        db=db,
+        module=MODULE_ROOT,
+        settings=settings,
+        report_user=user,
     )
-    for res in documents:
-        if isinstance(res, DocumentCreationError):
-            errors[res.user_email] = res.message
 
     return schemas_documents.TemplateUseResponse(
         errors=errors,
-        documents=[
-            doc for doc in documents if isinstance(doc, schemas_documents.Document)
-        ],
     )
 
 

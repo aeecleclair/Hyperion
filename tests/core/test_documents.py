@@ -1033,7 +1033,12 @@ async def test_use_template_invalid_destination_folder(
 
 async def test_use_template_for_a_recipient_generate_email(
     client_no_raise: TestClient,
+    mocker: MockerFixture,
 ):
+    mock_logger = mocker.patch(
+        "app.core.documents.utils_documents.hyperion_error_logger.info",
+    )
+
     emailTemplate = DocumentTemplate(
         id=uuid4(),
         documenso_id=4,
@@ -1053,10 +1058,15 @@ async def test_use_template_for_a_recipient_generate_email(
         headers={"Authorization": f"Bearer {user_team1_token}"},
     )
     assert response.status_code == 201, response.text
-    assert len(response.json()["errors"]) == 1
-    assert (
-        response.json()["errors"][user_lambda.email]
-        == "Template is set to generate email, which is not supported"
+    assert len(response.json()["errors"]) == 0
+
+    mock_logger.assert_called_once_with(
+        "SMTP is not active, skipping sending document batch use report email. Report content:\n%s",
+        "Document batch use report for template 'Template Generate Email':\n\n"
+        "Summary:\nTotal users processed: 1\n"
+        "Total errors: 1\n"
+        "Successful renewals: 0\n\n"
+        f"Errors:\n  - {user_lambda.email}: Template is set to generate email, which is not supported",
     )
 
 
@@ -1106,6 +1116,9 @@ async def test_use_template_for_a_recipient(
             title="Mocked Document Title",
         ),
     )
+    mock_logger = mocker.patch(
+        "app.core.documents.utils_documents.hyperion_error_logger.info",
+    )
     response = client_no_raise.post(
         f"/documents/templates/{templateTeam1.id}/documents/",
         json={
@@ -1117,7 +1130,16 @@ async def test_use_template_for_a_recipient(
     assert response.status_code == 201, response.text
     response_data = response.json()
     assert len(response_data["errors"]) == 0
-    assert len(response_data["documents"]) == 1
+
+    mock_logger.assert_called_once_with(
+        "SMTP is not active, skipping sending document batch use report email. Report content:\n%s",
+        "Document batch use report for template 'Template 1':\n\n"
+        "Summary:\n"
+        "Total users processed: 1\n"
+        "Total errors: 0\n"
+        "Successful renewals: 1\n\n"
+        "Errors:\n",
+    )
 
     documents = client_no_raise.get(
         f"/documents/templates/{templateTeam1.id}/documents",
