@@ -217,6 +217,14 @@ class RaidParticipantUpdate(BaseModel):
             raise ValueError(msg)
         if self.situation == Situation.centrale and self.other_school:
             self.other_school = None
+        # Only students may claim the scholarship rate.
+        if self.has_scholarship and self.situation not in (
+            None,
+            Situation.centrale,
+            Situation.otherSchool,
+        ):
+            msg = "Scholarship is only available for students."
+            raise ValueError(msg)
         return self
 
 
@@ -229,9 +237,9 @@ class RaidTeamPreview(RaidTeamBase):
     edition_id: UUID
     number: int | None = None
     captain_id: str
-    captain: RaidParticipantPreview
+    captain: RaidParticipantRestricted
     second_id: str | None = None
-    second: RaidParticipantPreview | None = None
+    second: RaidParticipantRestricted | None = None
     difficulty: Difficulty | None = None
     meeting_place: MeetingPlace | None = None
 
@@ -333,7 +341,7 @@ class PaymentUrl(BaseModel):
 class RaidParticipantCheckout(BaseModel):
     participant_user_id: str
     edition_id: UUID
-    checkout_id: str
+    checkout_id: UUID
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -341,7 +349,7 @@ class RaidParticipantCheckout(BaseModel):
 class RaidVolunteerCheckout(BaseModel):
     volunteer_user_id: str
     edition_id: UUID
-    checkout_id: str
+    checkout_id: UUID
 
     model_config = ConfigDict(from_attributes=True)
 

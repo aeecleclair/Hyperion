@@ -252,7 +252,7 @@ class RaidParticipantCheckout(Base):
     )
     participant_user_id: Mapped[str]
     edition_id: Mapped[UUID]
-    checkout_id: Mapped[str] = mapped_column(ForeignKey("checkout_checkout.id"))
+    checkout_id: Mapped[UUID] = mapped_column(ForeignKey("checkout_checkout.id"))
 
     __table_args__ = (
         ForeignKeyConstraint(
@@ -271,7 +271,7 @@ class RaidVolunteerCheckout(Base):
     )
     volunteer_user_id: Mapped[str]
     edition_id: Mapped[UUID]
-    checkout_id: Mapped[str] = mapped_column(ForeignKey("checkout_checkout.id"))
+    checkout_id: Mapped[UUID] = mapped_column(ForeignKey("checkout_checkout.id"))
 
     __table_args__ = (
         ForeignKeyConstraint(
