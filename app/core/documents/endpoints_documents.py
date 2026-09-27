@@ -1,4 +1,3 @@
-import asyncio
 import uuid
 from io import BytesIO
 
@@ -9,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.documents import cruds_documents, schemas_documents
 from app.core.documents.exceptions_documents import (
-    DocumentCreationError,
     ElementTeamNotFoundError,
     ElementTemplateNotFoundError,
     PayloadParsingError,
@@ -29,7 +27,6 @@ from app.core.documents.utils_documents import (
     configure_documenso_api_wrapper,
     handle_document_callback,
     handle_template_creation_webhook,
-    use_template_for_user,
     use_template_for_users,
 )
 from app.core.groups.groups_type import GroupType
