@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
@@ -321,6 +322,7 @@ async def renew_memberships_documents_list(
                 documenso=documenso,
                 db=db,
             )
+            await asyncio.sleep(0.1)
         except Exception as e:
             if isinstance(e, DocumentCreationError):
                 errors[e.user_email] = e.message

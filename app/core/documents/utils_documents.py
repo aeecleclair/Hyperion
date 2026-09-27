@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import uuid
 from datetime import UTC, datetime
@@ -350,6 +351,7 @@ async def use_template_for_users(
                 db=db,
                 module=module,
             )
+            await asyncio.sleep(0.1)
         except Exception as e:
             if isinstance(e, DocumentCreationError):
                 errors[e.user_email] = e.message
