@@ -2,10 +2,12 @@ from datetime import date
 
 from app.modules.raid.raid_type import Difficulty, DocumentType, DocumentValidation
 
+PDF_EMPTY_PLACEHOLDER = "-"
+
 
 def nullable_number_to_string(number: float | None) -> str:
     if number is None:
-        return "Non défini"
+        return PDF_EMPTY_PLACEHOLDER
     return str(number)
 
 
@@ -20,7 +22,7 @@ def get_difficulty_label(difficulty: Difficulty | None) -> str:
         return "Sportif"
     if difficulty == Difficulty.expert:
         return "Expert"
-    return "Non défini"
+    return PDF_EMPTY_PLACEHOLDER
 
 
 def get_meeting_place_label(meeting_place: str | None) -> str:
@@ -31,12 +33,12 @@ def get_meeting_place_label(meeting_place: str | None) -> str:
     }
     if meeting_place in labels:
         return labels[meeting_place]
-    return "Non défini"
+    return PDF_EMPTY_PLACEHOLDER
 
 
 def get_size_label(size: str | None) -> str:
     if size is None:
-        return "Non défini"
+        return PDF_EMPTY_PLACEHOLDER
     return size
 
 
@@ -49,7 +51,7 @@ def get_situation_label(situation: str | None) -> str:
     }
     if situation in labels:
         return labels[situation]
-    return "Non défini"
+    return PDF_EMPTY_PLACEHOLDER
 
 
 def get_document_label(document_type: DocumentType) -> str:

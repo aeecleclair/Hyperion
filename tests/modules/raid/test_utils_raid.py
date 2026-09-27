@@ -384,6 +384,20 @@ async def test_validate_payment_invalid_amount(mocker: MockerFixture) -> None:
             return_value=Mock(participant_user_id="user1", edition_id=uuid4()),
         ),
     )
+
+    # Unpaid non-student: expected total = external price = 90
+    participant = Mock()
+    participant.payment = False
+    participant.t_shirt_payment = False
+    participant.t_shirt_size = None
+    participant.has_scholarship = False
+    participant.school_authorization = None
+    participant.situation = Situation.other
+    participant.student_card_id = None
+    mocker.patch(
+        "app.modules.raid.cruds_raid.get_participant_by_user_id",
+        new=AsyncMock(return_value=participant),
+    )
     mocker.patch(
         "app.modules.raid.utils.utils_raid.get_core_data",
         new=AsyncMock(
@@ -391,20 +405,32 @@ async def test_validate_payment_invalid_amount(mocker: MockerFixture) -> None:
                 student_price=50,
                 t_shirt_price=15,
                 external_price=90,
+                scholarship_price=25,
             ),
         ),
     )
 
     checkout_payment = Mock()
     checkout_payment.checkout_id = "checkout_123"
-    checkout_payment.paid_amount = 999  # Invalid amount
+    checkout_payment.paid_amount = 5  # Underpaid: 5 < 90 expected
 
+    mock_confirm_payment = mocker.patch(
+        "app.modules.raid.cruds_raid.confirm_payment",
+        new=AsyncMock(),
+    )
+    mock_confirm_t_shirt = mocker.patch(
+        "app.modules.raid.cruds_raid.confirm_t_shirt_payment",
+        new=AsyncMock(),
+    )
     mock_logger = mocker.patch(
         "app.modules.raid.utils.utils_raid.hyperion_error_logger",
     )
     await validate_payment(checkout_payment, db)
 
-    mock_logger.error.assert_called_with("Invalid payment amount")
+    error_messages = [str(call.args[0]) for call in mock_logger.error.call_args_list]
+    assert any("invalid payment amount" in message for message in error_messages)
+    mock_confirm_payment.assert_not_called()
+    mock_confirm_t_shirt.assert_not_called()
 
 
 # -- get_all_security_files_zip / get_all_team_files_zip --------------------

@@ -65,8 +65,8 @@
           ("Taille du t-shirt", capitaine.tshirt), ("Situation",
           capitaine.situation), ("Régime alimentaire", capitaine.regime),
           ("Attestation sur l'honneur", capitaine.attestation), ("Documents
-          validés", capitaine.documents_valides ~ ' / 3'), ("Paiement",
-          capitaine.paiement) ] %}
+          validés", capitaine.documents_valides ~ ' / ' ~
+          capitaine.documents_total), ("Paiement", capitaine.paiement) ] %}
           <tr class="border border-gray-400 table-row">
             <td class="font-semibold border border-gray-300">{{ label }}</td>
             <td class="border border-gray-300">{{ value }}</td>
@@ -79,6 +79,7 @@
     <div class="section">
       <h2 class="text-sm font-semibold mb-1">Coéquipier</h2>
 
+      {% if participant %}
       <table class="w-full table-auto border-collapse border border-gray-400">
         <tbody>
           {% for label, value in [ ("Nom", participant.nom), ("Prénom",
@@ -89,8 +90,8 @@
           participant.tshirt), ("Situation", participant.situation), ("Régime
           alimentaire", participant.regime), ("Attestation sur l'honneur",
           participant.attestation), ("Documents validés",
-          participant.documents_valides ~ ' / 3'), ("Paiement",
-          participant.paiement) ] %}
+          participant.documents_valides ~ ' / ' ~ participant.documents_total),
+          ("Paiement", participant.paiement) ] %}
           <tr class="border border-gray-400 table-row">
             <td class="font-semibold border border-gray-300">{{ label }}</td>
             <td class="border border-gray-300">{{ value }}</td>
@@ -98,6 +99,9 @@
           {% endfor %}
         </tbody>
       </table>
+      {% else %}
+      <p>Aucun coéquipier dans cette équipe.</p>
+      {% endif %}
     </div>
   </body>
 </html>

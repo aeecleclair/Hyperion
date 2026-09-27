@@ -510,6 +510,25 @@ async def update_security_file_id(
     await db.flush()
 
 
+async def update_security_file_emergency(
+    security_file_id: str,
+    emergency_person_firstname: str,
+    emergency_person_name: str,
+    emergency_person_phone: str,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        update(models_raid.SecurityFile)
+        .where(models_raid.SecurityFile.id == security_file_id)
+        .values(
+            emergency_person_firstname=emergency_person_firstname,
+            emergency_person_name=emergency_person_name,
+            emergency_person_phone=emergency_person_phone,
+        ),
+    )
+    await db.flush()
+
+
 async def assign_security_file(
     user_id: str,
     edition_id: UUID,

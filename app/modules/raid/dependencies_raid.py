@@ -102,3 +102,17 @@ async def ensure_user_is_not_volunteer_in_edition(
             status_code=400,
             detail="User is already a volunteer in this edition",
         )
+
+
+async def ensure_user_is_not_team_member(
+    user_id: str,
+    edition_id: UUID,
+    db: AsyncSession,
+) -> None:
+    """Cross-track guard: a team member holds a participant slot."""
+    team = await cruds_raid.get_team_by_participant_id(user_id, edition_id, db)
+    if team is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="User is already in a team in this edition",
+        )
