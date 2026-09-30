@@ -673,18 +673,22 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         get_redis_client,
     )
 
-    # @app.middleware("http")
-    async def profile_request(request: Request, call_next):
-        profiler = Profiler(async_mode="strict")
-        profiler.start()
-        response = await call_next(request)
-        profiler.stop()
-        # deleting the file if it already exists to avoid appending to it
-        if Path("profile.html").exists():
-            await Path("profile.html").unlink()
-        profiler.write_html("profile.html")  # rapport interactif
-        print(profiler.output_text(unicode=True, color=True))
-        return response
+    if settings.ENABLE_PROFILING:
+        hyperion_error_logger.info(
+            "Profiling is enabled, requests will be profiled and an HTML report will be generated",
+        )
+        @app.middleware("http")
+        async def profile_request(request: Request, call_next):
+            if request.query_params.get("profile") != "true":
+                return await call_next(request)
+            file_path = Path("data/core/profile.html")
+            profiler = Profiler(async_mode="strict")
+            profiler.start()
+            response = await call_next(request)
+            profiler.stop()
+            profiler.write_html(file_path)  # rapport interactif
+            hyperion_error_logger.info(profiler.output_text(unicode=True, color=True))
+            return response
 
     @app.middleware("http")
     async def logging_middleware(

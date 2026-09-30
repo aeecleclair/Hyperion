@@ -4,11 +4,14 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.core_endpoints import schemas_core
+from app.core.groups.groups_type import GroupType
 from app.core.mypayment.utils_mypayment import patch_payment_identity_in_text
+from app.core.users.models_users import CoreUser
 from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
     get_settings,
+    is_user_in,
 )
 from app.types.module import CoreModule
 from app.utils.tools import patch_identity_in_text
@@ -185,3 +188,22 @@ async def get_variables(settings: Settings = Depends(get_settings)):
 )
 async def get_favicon():
     return FileResponse("assets/images/favicon.ico")
+
+
+@router.get(
+    "/get_profile_report",
+    status_code=200,
+)
+async def get_profile_report(
+    user: CoreUser = Depends(is_user_in(GroupType.admin)),
+):
+    """
+    Return last saved profile in data/core/profile.html .
+    Only accessible by admin users. If profiling is not enabled, return an error message.
+    """
+
+    profile_file_path = Path("data/core/profile.html")
+    if not await profile_file_path.exists():
+        return {"error": "No profile report found."}
+
+    return FileResponse(profile_file_path)
