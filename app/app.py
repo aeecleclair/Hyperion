@@ -677,6 +677,7 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         hyperion_error_logger.info(
             "Profiling is enabled, requests will be profiled and an HTML report will be generated",
         )
+
         @app.middleware("http")
         async def profile_request(request: Request, call_next):
             if request.query_params.get("profile") != "true":

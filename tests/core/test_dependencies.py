@@ -65,26 +65,26 @@ async def init_objects() -> None:
     user_with_needed_group = await create_user_with_groups([group2.id])
 
 
-def test_exclude_access_on_group(
+async def test_exclude_access_on_group(
     client: TestClient,
 ) -> None:
-    user = is_user(
+    user = await is_user(
         excluded_groups=[group1.id],
     )(admin_user)
     assert user == admin_user
-    user = is_user(
+    user = await is_user(
         excluded_groups=[group1.id],
     )(user_external)
     assert user == user_external
-    user = is_user(
+    user = await is_user(
         excluded_groups=[group1.id],
     )(user_with_restricted_account_type)
     assert user == user_with_restricted_account_type
-    user = is_user(
+    user = await is_user(
         excluded_groups=[group1.id],
     )(user_with_needed_account_type)
     assert user == user_with_needed_account_type
-    user = is_user(
+    user = await is_user(
         excluded_groups=[group1.id],
     )(user_with_needed_group)
     assert user == user_with_needed_group
@@ -92,19 +92,19 @@ def test_exclude_access_on_group(
         HTTPException,
         match="Unauthorized, user is a member of any of the groups ",
     ):
-        is_user(
+        await is_user(
             excluded_groups=[group1.id],
         )(user_with_restricted_group)
 
 
-def test_restrict_access_on_group(
+async def test_restrict_access_on_group(
     client: TestClient,
 ) -> None:
-    user = is_user(
+    user = await is_user(
         included_groups=[group2.id],
     )(admin_user)
     assert user == admin_user
-    user = is_user(
+    user = await is_user(
         included_groups=[group2.id],
     )(user_with_needed_group)
     assert user == user_with_needed_group
@@ -112,40 +112,40 @@ def test_restrict_access_on_group(
         HTTPException,
         match="Unauthorized, user is not a member of an allowed group",
     ):
-        is_user(
+        await is_user(
             included_groups=[group2.id],
         )(user_with_restricted_group)
     with pytest.raises(
         HTTPException,
         match="Unauthorized, user is not a member of an allowed group",
     ):
-        is_user(
+        await is_user(
             included_groups=[group2.id],
         )(user_external)
     with pytest.raises(
         HTTPException,
         match="Unauthorized, user is not a member of an allowed group",
     ):
-        is_user(
+        await is_user(
             included_groups=[group2.id],
         )(user_with_needed_account_type)
     with pytest.raises(
         HTTPException,
         match="Unauthorized, user is not a member of an allowed group",
     ):
-        is_user(
+        await is_user(
             included_groups=[group2.id],
         )(user_with_restricted_account_type)
 
 
-def test_restrict_access_on_account_type(
+async def test_restrict_access_on_account_type(
     client: TestClient,
 ) -> None:
-    user = is_user(
+    user = await is_user(
         included_account_types=[AccountType.demo],
     )(admin_user)
     assert user == admin_user
-    user = is_user(
+    user = await is_user(
         included_account_types=[AccountType.demo],
     )(user_with_needed_account_type)
     assert user == user_with_needed_account_type
@@ -153,52 +153,52 @@ def test_restrict_access_on_account_type(
         HTTPException,
         match="Unauthorized, user account type is not allowed",
     ):
-        is_user(
+        await is_user(
             included_account_types=[AccountType.demo],
         )(user_with_restricted_group)
     with pytest.raises(
         HTTPException,
         match="Unauthorized, user account type is not allowed",
     ):
-        is_user(
+        await is_user(
             included_account_types=[AccountType.demo],
         )(user_external)
     with pytest.raises(
         HTTPException,
         match="Unauthorized, user account type is not allowed",
     ):
-        is_user(
+        await is_user(
             included_account_types=[AccountType.demo],
         )(user_with_needed_group)
     with pytest.raises(
         HTTPException,
         match="Unauthorized, user account type is not allowed",
     ):
-        is_user(
+        await is_user(
             included_account_types=[AccountType.demo],
         )(user_with_restricted_account_type)
 
 
-def test_exclude_access_on_account_type(
+async def test_exclude_access_on_account_type(
     client: TestClient,
 ) -> None:
-    user = is_user(
+    user = await is_user(
         excluded_account_types=[AccountType.staff],
     )(admin_user)
     assert user == admin_user
-    user = is_user(
+    user = await is_user(
         excluded_account_types=[AccountType.staff],
     )(user_external)
     assert user == user_external
-    user = is_user(
+    user = await is_user(
         excluded_account_types=[AccountType.staff],
     )(user_with_needed_account_type)
     assert user == user_with_needed_account_type
-    user = is_user(
+    user = await is_user(
         excluded_account_types=[AccountType.staff],
     )(user_with_needed_group)
     assert user == user_with_needed_group
-    user = is_user(
+    user = await is_user(
         excluded_account_types=[AccountType.staff],
     )(user_with_restricted_group)
     assert user == user_with_restricted_group
@@ -206,31 +206,31 @@ def test_exclude_access_on_account_type(
         HTTPException,
         match="Unauthorized, user account type is not allowed",
     ):
-        is_user(
+        await is_user(
             excluded_account_types=[AccountType.staff],
         )(user_with_restricted_account_type)
 
 
-def test_exclude_access_on_external(
+async def test_exclude_access_on_external(
     client: TestClient,
 ) -> None:
-    user = is_user(
+    user = await is_user(
         exclude_external=True,
     )(admin_user)
     assert user == admin_user
-    user = is_user(
+    user = await is_user(
         exclude_external=True,
     )(user_with_restricted_account_type)
     assert user == user_with_restricted_account_type
-    user = is_user(
+    user = await is_user(
         exclude_external=True,
     )(user_with_needed_account_type)
     assert user == user_with_needed_account_type
-    user = is_user(
+    user = await is_user(
         exclude_external=True,
     )(user_with_needed_group)
     assert user == user_with_needed_group
-    user = is_user(
+    user = await is_user(
         exclude_external=True,
     )(user_with_restricted_group)
     assert user == user_with_restricted_group
@@ -238,6 +238,6 @@ def test_exclude_access_on_external(
         HTTPException,
         match="Unauthorized, user is an external user",
     ):
-        is_user(
+        await is_user(
             exclude_external=True,
         )(user_external)

@@ -275,7 +275,7 @@ async def get_notification_tool(
 @lru_cache
 def get_payment_tool(
     name: HelloAssoConfigName,
-) -> Callable[[], PaymentTool]:
+) -> Callable[[], Coroutine[Any, Any, PaymentTool]]:
     async def get_payment_tool() -> PaymentTool:
         payment_tools = GLOBAL_STATE["payment_tools"]
         if name not in payment_tools:
@@ -382,7 +382,7 @@ def is_user(
     excluded_account_types: list[AccountType] | None = None,
     included_account_types: list[AccountType] | None = None,
     exclude_external: bool = False,
-) -> Callable[[models_users.CoreUser], models_users.CoreUser]:
+) -> Callable[[models_users.CoreUser], Coroutine[Any, Any, models_users.CoreUser]]:
     """
     A dependency that will:
         * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
