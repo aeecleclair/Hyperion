@@ -397,7 +397,7 @@ def is_user(
     excluded_account_types = excluded_account_types or []
     included_account_types = included_account_types or list(AccountType)
 
-    def is_user(
+    async def is_user(
         user: models_users.CoreUser = Depends(
             get_user_from_token_with_scopes([[ScopeType.API]]),
         ),
@@ -503,7 +503,6 @@ def is_user_in(
 
 def is_user_allowed_to(
     permissions_name: list[ModulePermissions],
-    db: AsyncSession = Depends(get_db),
 ) -> Callable[[models_users.CoreUser], Coroutine[Any, Any, models_users.CoreUser]]:
     """
     Generate a dependency which will:

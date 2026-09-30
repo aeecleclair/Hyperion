@@ -7,7 +7,7 @@ from warnings import deprecated
 
 from sqlalchemy import ForeignKey, and_, delete, not_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy_utils import get_referencing_foreign_keys
 
 from app.core.groups import models_groups
@@ -117,7 +117,7 @@ async def get_user_by_id(
         .where(models_users.CoreUser.id == user_id)
         .options(
             # The group relationship need to be loaded
-            selectinload(models_users.CoreUser.groups),
+            joinedload(models_users.CoreUser.groups),
         ),
     )
     return result.scalars().first()
