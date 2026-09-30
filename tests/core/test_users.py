@@ -121,12 +121,12 @@ def test_get_account_types(client: TestClient) -> None:
     assert data == list(AccountType)
 
 
-def test_restrict_access_on_group(client: TestClient) -> None:
+async def test_restrict_access_on_group(client: TestClient) -> None:
     with pytest.raises(
         HTTPException,
         match="Unauthorized, user is a member of any of the groups ",
     ):
-        is_user(
+        await is_user(
             excluded_groups=[group_amap.id],
         )(user_with_group)
 

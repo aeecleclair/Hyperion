@@ -256,7 +256,7 @@ def get_notification_manager() -> NotificationManager:
     return GLOBAL_STATE["notification_manager"]
 
 
-def get_notification_tool(
+async def get_notification_tool(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     notification_manager: NotificationManager = Depends(get_notification_manager),
@@ -275,8 +275,8 @@ def get_notification_tool(
 @lru_cache
 def get_payment_tool(
     name: HelloAssoConfigName,
-) -> Callable[[], PaymentTool]:
-    def get_payment_tool() -> PaymentTool:
+) -> Callable[[], Coroutine[Any, Any, PaymentTool]]:
+    async def get_payment_tool() -> PaymentTool:
         payment_tools = GLOBAL_STATE["payment_tools"]
         if name not in payment_tools:
             hyperion_error_logger.warning(
@@ -289,7 +289,7 @@ def get_payment_tool(
     return get_payment_tool
 
 
-def get_mail_templates() -> calypsso.MailTemplates:
+async def get_mail_templates() -> calypsso.MailTemplates:
     """
     Dependency that returns the mail templates manager.
     """
@@ -297,7 +297,7 @@ def get_mail_templates() -> calypsso.MailTemplates:
     return GLOBAL_STATE["mail_templates"]
 
 
-def get_token_data(
+async def get_token_data(
     settings: Settings = Depends(get_settings),
     token: str = Depends(security.oauth2_scheme),
     request_id: str = Depends(get_request_id),
@@ -382,7 +382,7 @@ def is_user(
     excluded_account_types: list[AccountType] | None = None,
     included_account_types: list[AccountType] | None = None,
     exclude_external: bool = False,
-) -> Callable[[models_users.CoreUser], models_users.CoreUser]:
+) -> Callable[[models_users.CoreUser], Coroutine[Any, Any, models_users.CoreUser]]:
     """
     A dependency that will:
         * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
@@ -397,7 +397,7 @@ def is_user(
     excluded_account_types = excluded_account_types or []
     included_account_types = included_account_types or list(AccountType)
 
-    def is_user(
+    async def is_user(
         user: models_users.CoreUser = Depends(
             get_user_from_token_with_scopes([[ScopeType.API]]),
         ),
@@ -438,11 +438,11 @@ def is_user(
     return is_user
 
 
-def is_user_a_member(
+async def is_user_a_member(
     user: models_users.CoreUser = Depends(
         is_user(exclude_external=True),
     ),
-    request_id: str = Depends(get_request_id),
+    # request_id: str = Depends(get_request_id),
 ) -> models_users.CoreUser:
     """
     A dependency that will:
@@ -459,7 +459,7 @@ def is_user_an_ecl_member(
     user: models_users.CoreUser = Depends(
         is_user(included_account_types=get_ecl_account_types()),
     ),
-    request_id: str = Depends(get_request_id),
+    # request_id: str = Depends(get_request_id),
 ) -> models_users.CoreUser:
     """
     A dependency that will:
@@ -503,7 +503,6 @@ def is_user_in(
 
 def is_user_allowed_to(
     permissions_name: list[ModulePermissions],
-    db: AsyncSession = Depends(get_db),
 ) -> Callable[[models_users.CoreUser], Coroutine[Any, Any, models_users.CoreUser]]:
     """
     Generate a dependency which will:

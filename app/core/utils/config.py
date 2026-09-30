@@ -212,6 +212,10 @@ class Settings(BaseSettings):
     # By default, only production's records are logged
     LOG_DEBUG_MESSAGES: bool = False
 
+    # if True, a middleware will be added to profile requests which have the query parameter `?profile=true` in the url.
+    # Profiling will be done using the `pyinstrument` library and the result will be printed in the logs and an HTML report can be downloaded.
+    ENABLE_PROFILING: bool = False
+
     # Origins for the CORS middleware. `["http://localhost"]` can be used for development.
     # See https://fastapi.tiangolo.com/tutorial/cors/
     # It should begin with 'http://' or 'https:// and should never end with a '/'

@@ -102,6 +102,10 @@ SQLITE_DB: app.db # If set, the application use a SQLite database instead of Pos
 DATABASE_DEBUG: False # If True, will print all SQL queries in the console
 LOG_DEBUG_MESSAGES: False
 
+# if True, a middleware will be added to profile requests which have the query parameter `?profile=true` in the url.
+# Profiling will be done using the `pyinstrument` library and the result will be printed in the logs and an HTML report can be downloaded.
+ENABLE_PROFILING: False
+
 #############
 # Factories #
 #############
