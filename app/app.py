@@ -673,12 +673,15 @@ def get_application(settings: Settings, drop_db: bool = False) -> FastAPI:
         get_redis_client,
     )
 
-    @app.middleware("http")
+    # @app.middleware("http")
     async def profile_request(request: Request, call_next):
-        profiler = Profiler(async_mode="enabled")
+        profiler = Profiler(async_mode="strict")
         profiler.start()
         response = await call_next(request)
         profiler.stop()
+        # deleting the file if it already exists to avoid appending to it
+        if Path("profile.html").exists():
+            await Path("profile.html").unlink()
         profiler.write_html("profile.html")  # rapport interactif
         print(profiler.output_text(unicode=True, color=True))
         return response
