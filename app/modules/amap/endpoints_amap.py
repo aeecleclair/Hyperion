@@ -610,7 +610,7 @@ async def edit_order_from_delivery(
         ):
             raise HTTPException(status_code=400, detail="Invalid request")
 
-        amount = 0.0
+        amount = 0
         for product_id, product_quantity in zip(
             order.products_ids,
             order.products_quantity,
@@ -624,7 +624,6 @@ async def edit_order_from_delivery(
         db_order = schemas_amap.OrderComplete(
             order_id=order_id,
             ordering_date=previous_order.ordering_date,
-            delivery_date=delivery.delivery_date,
             delivery_id=previous_order.delivery_id,
             user_id=previous_order.user_id,
             amount=amount,
@@ -666,7 +665,7 @@ async def edit_order_from_delivery(
                 date=date,
             )
             hyperion_amap_logger.info(
-                f"Edit_order: Order {order_id} has been edited for user {db_order.user_id}. Amount was {previous_amount}€, is now {amount}€. ({request_id})",
+                f"Edit_order: Order {order_id} has been edited for user {db_order.user_id}. Amount was {(previous_amount / 100):.2f}€, is now {(amount / 100):.2f}€. ({request_id})",
             )
 
         finally:
@@ -739,7 +738,7 @@ async def remove_order(
             amount=amount,
         )
         hyperion_amap_logger.info(
-            f"Delete_order: Order {order_id} by {order.user_id} was deleted. {amount}€ were refunded. ({request_id})",
+            f"Delete_order: Order {order_id} by {order.user_id} was deleted. {(amount / 100):.2f}€ were refunded. ({request_id})",
         )
         return Response(status_code=204)
 
@@ -960,7 +959,7 @@ async def create_cash_of_user(
     )
 
     hyperion_amap_logger.info(
-        f"Create_cash_of_user: A cash has been created for user {cash_db.user_id} for an amount of {cash_db.balance}€. ({request_id})",
+        f"Create_cash_of_user: A cash has been created for user {cash_db.user_id} for an amount of {(cash_db.balance / 100):.2f}€. ({request_id})",
     )
 
     # We can not directly return the cash_db because it does not contain the user.
@@ -1016,7 +1015,7 @@ async def edit_cash_by_id(
     await cruds_amap.add_cash(user_id=user_id, amount=balance.balance, db=db)
 
     hyperion_amap_logger.info(
-        f"Edit_cash_by_id: Cash has been updated for user {cash.user_id} from an amount of {cash.balance}€ to an amount of {balance.balance}€. ({request_id})",
+        f"Edit_cash_by_id: Cash has been updated for user {cash.user_id} from an amount of {(cash.balance / 100):.2f}€ to an amount of {(balance.balance / 100):.2f}€. ({request_id})",
     )
 
 
