@@ -1379,11 +1379,12 @@ async def get_payment_url(
     participant = await cruds_raid.get_participant_by_user_id(user.id, edition.id, db)
     if not participant:
         raise HTTPException(status_code=403, detail="You are not a participant.")
-    if participant.status != RaidRegistrationStatus.submitted:
-        raise HTTPException(
-            status_code=400,
-            detail="Participant is not in submitted state; the dossier must be submitted before paying",
-        )
+    # TODO: re-enable this check when we want to enforce payment only after submission
+    # if participant.status != RaidRegistrationStatus.submitted:
+    #     raise HTTPException(
+    #         status_code=400,
+    #         detail="Participant is not in submitted state; the dossier must be submitted before paying",
+    #     )
     price, checkout_name = calculate_raid_payment(participant, raid_prices)
 
     user_dict = {k: v for k, v in user.__dict__.items() if not k.startswith("_")}
