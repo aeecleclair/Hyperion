@@ -568,7 +568,7 @@ def test_admin_validate_fails_before_prerequisites(client: TestClient) -> None:
 
 
 def test_validate_draft_rejected_submit_first(client: TestClient) -> None:
-    """Lifecycle order: draft -> submitted -> (pay) -> validated."""
+    """Lifecycle order: draft -> submitted -> validated."""
     r = client.patch(
         f"/raid/participants/{user_captain.id}/validate",
         headers={"Authorization": f"Bearer {token_admin}"},
@@ -577,6 +577,18 @@ def test_validate_draft_rejected_submit_first(client: TestClient) -> None:
     assert "submitted" in r.json()["detail"]
 
 
+# TEMPORARY: the "must be submitted before paying" gate of GET /raid/pay has
+# been disabled on purpose in endpoints_raid.py (see get_payment_url, commit
+# e52fb9dc), so paying is served again for draft and cancelled participants.
+# The tests marked with this reason encode the previous rule: they are skipped,
+# not deleted, so CI keeps reporting them until the gate is restored.
+PAY_STATUS_GATE_DISABLED = (
+    "GET /raid/pay no longer requires a submitted participant "
+    "(status gate commented out in get_payment_url, commit e52fb9dc)"
+)
+
+
+@pytest.mark.skip(reason=PAY_STATUS_GATE_DISABLED)
 def test_pay_in_draft_rejected_submit_first(client: TestClient) -> None:
     """Payment happens after the dossier is submitted (pricing depends on the
     submitted dossier), never while still editing it in draft."""
@@ -730,8 +742,13 @@ def test_cancel_by_self(client: TestClient) -> None:
     assert r2.status_code == 200
     assert r2.json()["status"] == "cancelled"
 
-    r3 = client.get("/raid/pay", headers={"Authorization": f"Bearer {token_solo}"})
-    assert r3.status_code == 400
+
+@pytest.mark.skip(reason=PAY_STATUS_GATE_DISABLED)
+def test_pay_after_cancel_rejected(client: TestClient) -> None:
+    """A cancelled participant is no longer served a payment link."""
+    # user_solo was cancelled by test_cancel_by_self.
+    r = client.get("/raid/pay", headers={"Authorization": f"Bearer {token_solo}"})
+    assert r.status_code == 400
 
 
 async def test_cancelled_participant_can_re_register(
@@ -1467,8 +1484,9 @@ async def _submit_minimum_dossier(
     security file, required documents) and submit it.
 
     Lifecycle order under test elsewhere: draft -> submitted -> pay ->
-    validated. Pricing tests call this because /raid/pay only serves
-    submitted dossiers.
+    validated. Pricing tests call this to exercise a realistic payment
+    state; note that /raid/pay does not enforce it anymore (see
+    PAY_STATUS_GATE_DISABLED).
     """
     async with get_TestingSessionLocal()() as db:
         docs = {}
