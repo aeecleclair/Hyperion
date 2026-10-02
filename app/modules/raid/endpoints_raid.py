@@ -1379,6 +1379,7 @@ async def get_payment_url(
     participant = await cruds_raid.get_participant_by_user_id(user.id, edition.id, db)
     if not participant:
         raise HTTPException(status_code=403, detail="You are not a participant.")
+    # TODO: re-enable this check when we want to enforce payment only after submission
     # if participant.status != RaidRegistrationStatus.submitted:
     #     raise HTTPException(
     #         status_code=400,
