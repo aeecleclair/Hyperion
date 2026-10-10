@@ -51,7 +51,7 @@ jobs:
 
     steps:
       - name: Check out the code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Fetch full main branch history # We don't known the the base commit of the PR
         run: git fetch origin main --unshallow
@@ -73,14 +73,14 @@ jobs:
 
       # Setup Python (faster than using Python container)
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         id: setup-python
         with:
           python-version-file: .python-version
 
       - name: Cache uv folder
         id: cache-uv
-        uses: actions/cache@v4.3.0
+        uses: actions/cache@v6.1.0
         with:
           path: ~/.cache/uv
           key: ${{ runner.os }}-python-${{ steps.setup-python.outputs.python-version }}-uv-${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}
@@ -93,7 +93,7 @@ jobs:
 
       - name: Cache .pytest_cache folder
         id: pytest_cache
-        uses: actions/cache@v4.3.0
+        uses: actions/cache@v6.1.0
         with:
           path: .pytest_cache
           key: pytest_cache-${{ github.head_ref }}
@@ -108,6 +108,6 @@ jobs:
         if: github.event_name == 'pull_request'
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5.5.1
+        uses: codecov/codecov-action@v7.0.0
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
