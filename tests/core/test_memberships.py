@@ -519,7 +519,7 @@ async def test_document_renewal_unknown_membership(client: TestClient):
     response = client.post(
         f"/memberships/{uuid.uuid4()}/renew-documents",
         headers={"Authorization": f"Bearer {token_admin}"},
-        json={"active_date": datetime.now(tz=UTC).date().isoformat()},
+        json={"membership_active_date": datetime.now(tz=UTC).date().isoformat()},
     )
     assert response.status_code == 404
 
@@ -528,7 +528,7 @@ async def test_document_renewal_user(client: TestClient):
     response = client.post(
         f"/memberships/{useecl_association_membership.id}/renew-documents",
         headers={"Authorization": f"Bearer {token_user}"},
-        json={"active_date": datetime.now(tz=UTC).date().isoformat()},
+        json={"membership_active_date": datetime.now(tz=UTC).date().isoformat()},
     )
     assert response.status_code == 403
 
@@ -537,7 +537,7 @@ async def test_document_renewal_no_template_id(client: TestClient):
     response = client.post(
         f"/memberships/{aeecl_association_membership.id}/renew-documents",
         headers={"Authorization": f"Bearer {token_admin}"},
-        json={"active_date": datetime.now(tz=UTC).date().isoformat()},
+        json={"membership_active_date": datetime.now(tz=UTC).date().isoformat()},
     )
     assert response.status_code == 400
 
@@ -566,6 +566,9 @@ async def test_document_renewal_admin(client: TestClient, mocker: MockerFixture)
             title="Mocked Document Title",
         ),
     )
+    mock_logger = mocker.patch(
+        "app.core.memberships.utils_memberships.hyperion_error_logger.info",
+    )
     targeted_membership = models_memberships.CoreAssociationUserMembership(
         id=uuid.uuid4(),
         user_id=admin_user.id,
@@ -579,13 +582,23 @@ async def test_document_renewal_admin(client: TestClient, mocker: MockerFixture)
         f"/memberships/{useecl_association_membership.id}/renew-documents",
         headers={"Authorization": f"Bearer {token_admin}"},
         json={
-            "active_date": (datetime.now(tz=UTC) + timedelta(days=2))
+            "membership_active_date": (datetime.now(tz=UTC) + timedelta(days=2))
             .date()
             .isoformat(),
         },
     )
-    assert response.status_code == 201
+    assert response.status_code == 204
     assert mock_use.called
+
+    mock_logger.assert_called_with(
+        "SMTP is not active, skipping sending membership documents renewal report email. Report content:\n%s",
+        f"Membership documents renewal report for {useecl_association_membership.name}:\n\n"
+        "Summary:\n"
+        "Total users processed: 1\n"
+        "Total errors: 0\n"
+        "Successful renewals: 1\n\n"
+        "Errors:\n",
+    )
 
     membership_response = client.get(
         f"/memberships/users/{admin_user.id}/{useecl_association_membership.id}",

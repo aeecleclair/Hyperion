@@ -92,7 +92,6 @@ class TemplateUse(BaseModel):
 
 class TemplateUseResponse(BaseModel):
     errors: dict[str, str]
-    documents: list["Document"]
 
 
 class DocumentBase(BaseModel):

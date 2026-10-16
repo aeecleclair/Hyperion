@@ -1,15 +1,13 @@
-import asyncio
 import uuid
 from io import BytesIO
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import TypeAdapter
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.documents import cruds_documents, schemas_documents
 from app.core.documents.exceptions_documents import (
-    DocumentCreationError,
     ElementTeamNotFoundError,
     ElementTemplateNotFoundError,
     PayloadParsingError,
@@ -29,7 +27,7 @@ from app.core.documents.utils_documents import (
     configure_documenso_api_wrapper,
     handle_document_callback,
     handle_template_creation_webhook,
-    use_template_for_user,
+    use_template_for_users,
 )
 from app.core.groups.groups_type import GroupType
 from app.core.users import cruds_users, schemas_users
@@ -43,10 +41,12 @@ from app.dependencies import (
 from app.types.module import CoreModule
 from app.utils.tools import is_user_member_of_any_group
 
+MODULE_ROOT = "documents"
+
 router = APIRouter(tags=["Documents"])
 
 core_module = CoreModule(
-    root="documents",
+    root=MODULE_ROOT,
     tag="Documents",
     router=router,
     factory=None,
@@ -370,6 +370,7 @@ async def update_template(
 async def use_template(
     template_id: uuid.UUID,
     parameters: schemas_documents.TemplateUse,
+    background_taks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: schemas_users.CoreUser = Depends(is_user()),
     settings: Settings = Depends(get_settings),
@@ -430,29 +431,19 @@ async def use_template(
         for each_user in existing_users:
             errors[each_user.email] = "Document already exists for this user"
 
-    # Retrieve the target user to fill in the recipient fields
-    documents = await asyncio.gather(
-        *[
-            use_template_for_user(
-                user=user,
-                template=db_template,
-                documenso=documenso,
-                db=db,
-                module="documents",
-            )
-            for user in users
-        ],
-        return_exceptions=True,
+    background_taks.add_task(
+        use_template_for_users,
+        users=users,
+        template=db_template,
+        documenso=documenso,
+        db=db,
+        module=MODULE_ROOT,
+        settings=settings,
+        report_user=user,
     )
-    for res in documents:
-        if isinstance(res, DocumentCreationError):
-            errors[res.user_email] = res.message
 
     return schemas_documents.TemplateUseResponse(
         errors=errors,
-        documents=[
-            doc for doc in documents if isinstance(doc, schemas_documents.Document)
-        ],
     )
 
 
