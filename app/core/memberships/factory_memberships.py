@@ -69,6 +69,47 @@ class CoreMembershipsFactory(Factory):
                         valid=True,
                     ),
                 )
+        for user_id in CoreUsersFactory.demo_users_id:
+            # Valid memberships
+            await cruds_memberships.create_user_membership(
+                db=db,
+                user_membership=UserMembershipSimple(
+                    id=uuid4(),
+                    user_id=user_id,
+                    association_membership_id=cls.memberships_ids[0],
+                    start_date=datetime.datetime(
+                        random.randint(2020, 2023),  # noqa: S311
+                        random.randint(1, 12),  # noqa: S311
+                        random.randint(1, 28),  # noqa: S311
+                        tzinfo=datetime.UTC,
+                    ),
+                    end_date=datetime.datetime.now(
+                        datetime.UTC,
+                    ).date()
+                    + datetime.timedelta(days=365),
+                    valid=True,
+                ),
+            )
+            # Expired memberships
+            await cruds_memberships.create_user_membership(
+                db=db,
+                user_membership=UserMembershipSimple(
+                    id=uuid4(),
+                    user_id=user_id,
+                    association_membership_id=cls.memberships_ids[1],
+                    start_date=datetime.datetime(
+                        random.randint(2020, 2023),  # noqa: S311
+                        random.randint(1, 12),  # noqa: S311
+                        random.randint(1, 28),  # noqa: S311
+                        tzinfo=datetime.UTC,
+                    ),
+                    end_date=datetime.datetime.now(
+                        datetime.UTC,
+                    ).date()
+                    - datetime.timedelta(days=365),
+                    valid=True,
+                ),
+            )
         await db.commit()
 
     @classmethod
