@@ -522,8 +522,6 @@ def is_user_allowed_to(
         """
         A dependency that checks that user has the permission with the given name then returns the corresponding user.
         """
-        if GroupType.admin in [group.id for group in user.groups]:
-            return user
 
         allowed_group_ids: list[str] = []
         allowed_account_types: list[AccountType] = []
