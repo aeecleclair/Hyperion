@@ -235,7 +235,6 @@ async def start_signature_flow(
     db: AsyncSession,
     settings: Settings,
 ):
-
     for cdr_document in product.document_constraints:
         existing_signature = await cruds_cdr.get_signature_by_user_id_and_document_id(
             db=db,
@@ -796,7 +795,6 @@ def construct_dataframe_from_users_purchases(
     users_curriculum: dict[str, str],
     export_io: BytesIO,
 ):
-
     product_structure, col_idx = build_product_structure(
         products,
         variants,
