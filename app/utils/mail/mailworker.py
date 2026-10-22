@@ -30,6 +30,8 @@ def send_email(
         recipient = [recipient]
 
     context = ssl.create_default_context()
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    context.maximum_version = ssl.TLSVersion.TLSv1_2
 
     msg = EmailMessage()
     msg.set_content(content, subtype="html", charset="utf-8")
