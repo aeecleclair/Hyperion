@@ -37,11 +37,12 @@ class MembershipDateFilter(BaseModel):
 
 
 class MembershipRenewalCriterion(BaseModel):
-    active_date: date
+    membership_active_date: date
+    last_document_max_date: date | None = None
 
 
 class MembershipRenewalErrors(BaseModel):
-    errors: dict[str, str]
+    error: str | None = None
 
 
 class UserMembershipBase(BaseModel):
