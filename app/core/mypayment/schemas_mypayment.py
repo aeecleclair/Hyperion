@@ -90,6 +90,7 @@ class UserStore(Store):
     can_see_history: bool
     can_cancel: bool
     can_manage_sellers: bool
+    can_manage_ticketing: bool
 
 
 class StoreUpdate(BaseModel):
@@ -102,6 +103,7 @@ class SellerCreation(BaseModel):
     can_see_history: bool
     can_cancel: bool
     can_manage_sellers: bool
+    can_manage_ticketing: bool
 
 
 class SellerUpdate(BaseModel):
@@ -109,6 +111,7 @@ class SellerUpdate(BaseModel):
     can_see_history: bool | None = None
     can_cancel: bool | None = None
     can_manage_sellers: bool | None = None
+    can_manage_ticketing: bool | None = None
 
 
 class Seller(BaseModel):
@@ -118,6 +121,7 @@ class Seller(BaseModel):
     can_see_history: bool
     can_cancel: bool
     can_manage_sellers: bool
+    can_manage_ticketing: bool
 
     user: schemas_users.CoreUserSimple
 
