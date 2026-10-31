@@ -8,7 +8,7 @@ from app.core.groups.groups_type import GroupType
 from app.core.users import models_users
 from app.modules.phonebook import models_phonebook
 from app.modules.phonebook.endpoints_phonebook import PhonebookPermissions
-from app.modules.phonebook.types_phonebook import RoleTags
+from app.modules.phonebook.others.types_phonebook import RoleTags
 from tests.commons import (
     add_object_to_db,
     create_api_access_token,

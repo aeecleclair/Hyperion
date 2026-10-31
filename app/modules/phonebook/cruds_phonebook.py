@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.users import models_users
-from app.modules.phonebook import models_phonebook, schemas_phonebook, types_phonebook
+from app.modules.phonebook import models_phonebook, schemas_phonebook
+from app.modules.phonebook.others.types_phonebook import RoleTags
 
 
 # ---------------------------------------------------------------------------- #
@@ -26,7 +27,7 @@ async def is_user_president(
     )
     return (
         membership is not None
-        and types_phonebook.RoleTags.president.value in membership.role_tags.split(";")
+        and RoleTags.president.value in membership.role_tags.split(";")
     )
 
 
@@ -55,12 +56,6 @@ async def get_all_associations(
         )
         for association in result.scalars().all()
     ]
-
-
-async def get_all_role_tags() -> list[str]:
-    """Return all RoleTags from Enum"""
-
-    return [tag.value for tag in types_phonebook.RoleTags]
 
 
 async def get_all_groupements(
