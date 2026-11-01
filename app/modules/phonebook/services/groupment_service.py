@@ -3,7 +3,6 @@ from collections.abc import Sequence
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.users import models_users
 from app.modules.phonebook import cruds_phonebook, schemas_phonebook
 from app.modules.phonebook.others import exceptions_phonebook
 

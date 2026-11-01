@@ -17,19 +17,64 @@ async def get_all_associations(
     return await cruds_phonebook.get_all_associations(db)
 
 
+async def association_if_exists(
+    association_id: str,
+    db: AsyncSession,
+) -> schemas_phonebook.AssociationComplete:
+    association = await cruds_phonebook.get_association_by_id(association_id, db)
+    if association is None:
+        raise exceptions_phonebook.NotFoundException(  # noqa: TRY003
+            "Association not found.",
+        )
+    return association
+
+
+async def validate_rights_or_is_president(
+    association_id: str,
+    mandate_year: int,
+    groupement_id: uuid.UUID,
+    user: models_users.CoreUser,
+    db: AsyncSession,
+    detail: str,
+) -> None:
+    if not await has_association_groupement_manager_rights(
+        db=db,
+        user=user,
+        groupement_id=groupement_id,
+    ) or not await cruds_phonebook.is_user_president(
+        association_id=association_id,
+        mandate_year=mandate_year,
+        user=user,
+        db=db,
+    ):
+        raise exceptions_phonebook.ForbiddenException(detail)
+
+
+async def validate_rights(
+    db: AsyncSession,
+    user: models_users.CoreUser,
+    groupement_id: uuid.UUID,
+    detail: str,
+) -> None:
+    if not await has_association_groupement_manager_rights(
+        db=db,
+        user=user,
+        groupement_id=groupement_id,
+    ):
+        raise exceptions_phonebook.ForbiddenException(detail)
+
+
 async def create_association(
     association: schemas_phonebook.AssociationBase,
     db: AsyncSession,
     user: models_users.CoreUser,
 ) -> schemas_phonebook.AssociationComplete:
-    if not await has_association_groupement_manager_rights(
-        db=db,
-        user=user,
-        groupement_id=association.groupement_id,
-    ):
-        raise exceptions_phonebook.ForbiddenException(  # noqa: TRY003
-            f"You are not allowed to create an association for groupement {association.groupement_id}",
-        )
+    await validate_rights(
+        db,
+        user,
+        association.groupement_id,
+        f"You are not allowed to create an association for groupement {association.groupement_id}",
+    )
 
     association_id = str(uuid.uuid4())
     association_model = schemas_phonebook.AssociationComplete(
@@ -61,28 +106,15 @@ async def update_association(
     user: models_users.CoreUser,
     db: AsyncSession,
 ) -> None:
-    association = await cruds_phonebook.get_association_by_id(association_id, db)
-    if association is None:
-        raise exceptions_phonebook.NotFoundException(  # noqa: TRY003
-            "Association not found.",
-        )
-
-    if not (
-        await has_association_groupement_manager_rights(
-            db=db,
-            user=user,
-            groupement_id=association.groupement_id,
-        )
-        or await cruds_phonebook.is_user_president(
-            association_id=association_id,
-            mandate_year=association.mandate_year,
-            user=user,
-            db=db,
-        )
-    ):
-        raise exceptions_phonebook.ForbiddenException(  # noqa: TRY003
-            f"You are not allowed to update association {association_id}",
-        )
+    association = await association_if_exists(association_id, db)
+    await validate_rights_or_is_president(
+        association_id,
+        association.mandate_year,
+        association.groupement_id,
+        user,
+        db,
+        f"You are not allowed to create an association for groupement {association.groupement_id}",
+    )
 
     await cruds_phonebook.update_association(
         association_id=association_id,
@@ -108,19 +140,14 @@ async def deactivate_association(
     user: models_users.CoreUser,
     db: AsyncSession,
 ) -> None:
-    association = await cruds_phonebook.get_association_by_id(association_id, db)
-    if association is None:
-        raise exceptions_phonebook.NotFoundException(  # noqa: TRY003
-            "Association not found.",
-        )
-    if not await has_association_groupement_manager_rights(
-        db=db,
-        user=user,
-        groupement_id=association.groupement_id,
-    ):
-        raise exceptions_phonebook.ForbiddenException(  # noqa: TRY003
-            f"You are not allowed to deactivate association {association_id}",
-        )
+    association = await association_if_exists(association_id, db)
+    await validate_rights(
+        db,
+        user,
+        association.groupement_id,
+        f"You are not allowed to deactivate association {association_id}",
+    )
+
     await cruds_phonebook.deactivate_association(association_id, db)
 
 
@@ -129,21 +156,18 @@ async def delete_association(
     db: AsyncSession,
     user: models_users.CoreUser,
 ) -> None:
-    association = await cruds_phonebook.get_association_by_id(association_id, db)
-    if association is None:
-        raise exceptions_phonebook.NotFoundException("Association does not exist.")  # noqa: TRY003
-    if not await has_association_groupement_manager_rights(
-        db=db,
-        user=user,
-        groupement_id=association.groupement_id,
-    ):
-        raise exceptions_phonebook.ForbiddenException(  # noqa: TRY003
-            f"You are not allowed to delete association {association_id}",
-        )
+    association = await association_if_exists(association_id, db)
+    await validate_rights(
+        db,
+        user,
+        association.groupement_id,
+        f"You are not allowed to delete association {association_id}",
+    )
     if not association.deactivated:
         raise exceptions_phonebook.BadRequestException(  # noqa: TRY003
             "Only deactivated associations can be deleted.",
         )
+
     await cruds_phonebook.delete_association(
         association_id=association_id,
         db=db,
@@ -155,30 +179,19 @@ async def create_association_logo_validation(
     user: models_users.CoreUser,
     db: AsyncSession,
 ) -> None:
-    association = await cruds_phonebook.get_association_by_id(association_id, db)
-    if association is None:
-        raise exceptions_phonebook.NotFoundException("The Association does not exist.")  # noqa: TRY003
-
-    if not await has_association_groupement_manager_rights(
-        db=db,
-        user=user,
-        groupement_id=association.groupement_id,
-    ) and not await cruds_phonebook.is_user_president(
-        association_id=association_id,
-        mandate_year=association.mandate_year,
-        user=user,
-        db=db,
-    ):
-        raise exceptions_phonebook.ForbiddenException(  # noqa: TRY003
-            f"You are not allowed to update association {association_id}",
-        )
+    association = await association_if_exists(association_id, db)
+    await validate_rights_or_is_president(
+        association_id,
+        association.mandate_year,
+        association.groupement_id,
+        user,
+        db,
+        f"You are not allowed to update association {association_id}",
+    )
 
 
 async def read_association_logo_validation(
     association_id: str,
     db: AsyncSession,
 ) -> None:
-    association = await cruds_phonebook.get_association_by_id(association_id, db)
-
-    if association is None:
-        raise exceptions_phonebook.NotFoundException("The Association does not exist.")  # noqa: TRY003
+    await association_if_exists(association_id, db)

@@ -1,5 +1,4 @@
 import uuid
-from collections.abc import Sequence
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
