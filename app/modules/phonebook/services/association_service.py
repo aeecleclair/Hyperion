@@ -7,7 +7,9 @@ from app.core.users import models_users
 from app.modules.phonebook import cruds_phonebook, schemas_phonebook
 from app.modules.phonebook.others import exceptions_phonebook
 from app.modules.phonebook.others.shared import (
-    has_association_groupement_manager_rights,
+    association_if_exists,
+    validate_rights,
+    validate_rights_or_is_president,
 )
 
 
@@ -15,53 +17,6 @@ async def get_all_associations(
     db: AsyncSession,
 ) -> Sequence[schemas_phonebook.AssociationComplete]:
     return await cruds_phonebook.get_all_associations(db)
-
-
-async def association_if_exists(
-    association_id: str,
-    db: AsyncSession,
-) -> schemas_phonebook.AssociationComplete:
-    association = await cruds_phonebook.get_association_by_id(association_id, db)
-    if association is None:
-        raise exceptions_phonebook.NotFoundException(  # noqa: TRY003
-            "Association not found.",
-        )
-    return association
-
-
-async def validate_rights_or_is_president(
-    association_id: str,
-    mandate_year: int,
-    groupement_id: uuid.UUID,
-    user: models_users.CoreUser,
-    db: AsyncSession,
-    detail: str,
-) -> None:
-    if not await has_association_groupement_manager_rights(
-        db=db,
-        user=user,
-        groupement_id=groupement_id,
-    ) or not await cruds_phonebook.is_user_president(
-        association_id=association_id,
-        mandate_year=mandate_year,
-        user=user,
-        db=db,
-    ):
-        raise exceptions_phonebook.ForbiddenException(detail)
-
-
-async def validate_rights(
-    db: AsyncSession,
-    user: models_users.CoreUser,
-    groupement_id: uuid.UUID,
-    detail: str,
-) -> None:
-    if not await has_association_groupement_manager_rights(
-        db=db,
-        user=user,
-        groupement_id=groupement_id,
-    ):
-        raise exceptions_phonebook.ForbiddenException(detail)
 
 
 async def create_association(
