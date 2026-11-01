@@ -13,18 +13,22 @@ async def get_all_groupements(
     return await cruds_phonebook.get_all_groupements(db)
 
 
-async def create_groupement(
-    groupement_base: schemas_phonebook.AssociationGroupementBase,
-    db: AsyncSession,
-) -> schemas_phonebook.AssociationGroupement:
+async def validate_groupement_name_unique(name: str, db: AsyncSession) -> None:
     groupement_db = await cruds_phonebook.get_groupement_by_name(
-        groupement_name=groupement_base.name,
+        groupement_name=name,
         db=db,
     )
     if groupement_db is not None:
         raise exceptions_phonebook.BadRequestException(  # noqa: TRY003
-            f"Groupement with name {groupement_base.name} already exists.",
+            f"Groupement with name {name} already exists.",
         )
+
+
+async def create_groupement(
+    groupement_base: schemas_phonebook.AssociationGroupementBase,
+    db: AsyncSession,
+) -> schemas_phonebook.AssociationGroupement:
+    await validate_groupement_name_unique(groupement_base.name, db)
 
     groupement = schemas_phonebook.AssociationGroupement(
         id=uuid.uuid4(),
@@ -42,7 +46,7 @@ async def update_groupement(
     groupement_id: uuid.UUID,
     groupement_edit: schemas_phonebook.AssociationGroupementBase,
     db: AsyncSession,
-):
+) -> None:
     groupement = await cruds_phonebook.get_groupement_by_id(
         groupement_id=groupement_id,
         db=db,
@@ -52,14 +56,7 @@ async def update_groupement(
             "Groupement not found.",
         )
     if groupement.name != groupement_edit.name:
-        existing_groupement = await cruds_phonebook.get_groupement_by_name(
-            groupement_name=groupement_edit.name,
-            db=db,
-        )
-        if existing_groupement is not None:
-            raise exceptions_phonebook.BadRequestException(  # noqa: TRY003
-                f"Groupement with name {groupement_edit.name} already exists.",
-            )
+        await validate_groupement_name_unique(groupement_edit.name, db)
 
     await cruds_phonebook.update_groupement(
         groupement_id=groupement_id,
