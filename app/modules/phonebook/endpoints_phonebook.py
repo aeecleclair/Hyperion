@@ -1,15 +1,14 @@
 import logging
 import uuid
 
-from fastapi import Depends, File, HTTPException, UploadFile
+from fastapi import Depends, File, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.permissions.cruds_permissions import get_permissions_by_permission_name
 from app.core.permissions.type_permissions import ModulePermissions
-from app.core.users import cruds_users, models_users
+from app.core.users import models_users
 from app.dependencies import (
     get_db,
     is_user_allowed_to,
@@ -17,7 +16,6 @@ from app.dependencies import (
 )
 from app.modules.phonebook import cruds_phonebook, schemas_phonebook
 from app.modules.phonebook.others.factory_phonebook import PhonebookFactory
-from app.modules.phonebook.others.types_phonebook import RoleTags
 from app.modules.phonebook.services import (
     association_service,
     groupment_service,
