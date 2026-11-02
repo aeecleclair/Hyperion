@@ -89,7 +89,7 @@ async def get_all_associations(
 
 
 @module.router.get(
-    "/phonebook/roletags",
+    "/phonebook/roletags/",
     response_model=schemas_phonebook.RoleTagsReturn,
     status_code=200,
 )
