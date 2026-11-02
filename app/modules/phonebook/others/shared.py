@@ -4,8 +4,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.permissions.cruds_permissions import get_permissions_by_permission_name
 from app.core.users import models_users
-from app.modules.phonebook import cruds_phonebook, schemas_phonebook
-from app.modules.phonebook.endpoints_phonebook import PhonebookPermissions
+from app.modules.phonebook import (
+    cruds_phonebook,
+    endpoints_phonebook,
+    schemas_phonebook,
+)
 from app.modules.phonebook.others import exceptions_phonebook
 from app.utils.tools import is_user_member_of_any_group
 
@@ -25,7 +28,7 @@ async def has_association_groupement_manager_rights(
 
     permissions = await get_permissions_by_permission_name(
         db=db,
-        permission_name=PhonebookPermissions.manage_phonebook,
+        permission_name=endpoints_phonebook.PhonebookPermissions.manage_phonebook,
     )
 
     return is_user_member_of_any_group(
