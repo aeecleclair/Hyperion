@@ -48,49 +48,58 @@ class FailedToUpdateObjectInDB(Exception):
     """Exception raised when an object cannot be updated in the database."""
 
 
-async def override_init_state(
-    app: FastAPI,
-    settings: Settings,
-    hyperion_error_logger: logging.Logger,
-) -> None:
-    """
-    Initialize the state of the application. This dependency should be used at the start of the application lifespan.
-    """
+def override_init_state(
+    enable_redis: bool = True,
+):
+    async def override_init_state(
+        app: FastAPI,
+        settings: Settings,
+        hyperion_error_logger: logging.Logger,
+    ) -> None:
+        """
+        Initialize the state of the application. This dependency should be used at the start of the application lifespan.
+        """
 
-    engine = init_test_engine(settings=settings)
+        engine = init_test_engine(settings=settings)
 
-    SessionLocal = init_test_SessionLocal(engine=engine)
+        SessionLocal = init_test_SessionLocal(engine=engine)
 
-    redis_client = init_redis_client(
-        settings=settings,
-        hyperion_error_logger=hyperion_error_logger,
-    )
+        redis_client = (
+            init_redis_client(
+                settings=settings,
+                hyperion_error_logger=hyperion_error_logger,
+            )
+            if enable_redis
+            else None
+        )
 
-    # Even if we have a Redis client, we still want to use the OfflineScheduler for tests
-    # as tests are not able to run tasks in the future. The event loop of the test may not be running long enough
-    # to execute the tasks.
-    scheduler = OfflineScheduler()
+        # Even if we have a Redis client, we still want to use the OfflineScheduler for tests
+        # as tests are not able to run tasks in the future. The event loop of the test may not be running long enough
+        # to execute the tasks.
+        scheduler = OfflineScheduler()
 
-    ws_manager = await init_websocket_connection_manager(
-        settings=settings,
-    )
+        ws_manager = await init_websocket_connection_manager(
+            settings=settings,
+        )
 
-    notification_manager = NotificationManager(settings=settings)
+        notification_manager = NotificationManager(settings=settings)
 
-    payment_tools = init_test_payment_tools()
+        payment_tools = init_test_payment_tools()
 
-    mail_templates = init_mail_templates(settings=settings)
+        mail_templates = init_mail_templates(settings=settings)
 
-    dependencies.GLOBAL_STATE = GlobalState(
-        engine=engine,
-        SessionLocal=SessionLocal,
-        redis_client=redis_client,
-        scheduler=scheduler,
-        ws_manager=ws_manager,
-        notification_manager=notification_manager,
-        payment_tools=payment_tools,
-        mail_templates=mail_templates,
-    )
+        dependencies.GLOBAL_STATE = GlobalState(
+            engine=engine,
+            SessionLocal=SessionLocal,
+            redis_client=redis_client,
+            scheduler=scheduler,
+            ws_manager=ws_manager,
+            notification_manager=notification_manager,
+            payment_tools=payment_tools,
+            mail_templates=mail_templates,
+        )
+
+    return override_init_state
 
 
 def create_test_settings(**kwargs) -> Settings:
@@ -308,7 +317,13 @@ def create_api_access_token(
     Create a JWT access token for the `user` with the scope `API`
     """
 
-    access_token_data = schemas_auth.TokenData(sub=user.id, scopes="API")
+    access_token_data = schemas_auth.TokenData(
+        sub=user.id,
+        scopes="API",
+        account_type=user.account_type,
+        group_ids=[group.id for group in user.groups],
+        school_id=user.school_id,
+    )
     return security.create_access_token(
         data=access_token_data,
         settings=override_get_settings(),

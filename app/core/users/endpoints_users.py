@@ -18,7 +18,7 @@ from fastapi import (
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth import cruds_auth
+from app.core.auth import cruds_auth, schemas_auth
 from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification.utils_notification import get_user_notification_topics
@@ -29,14 +29,14 @@ from app.core.users.tools_users import get_account_type_and_school_id_from_email
 from app.core.utils import security
 from app.core.utils.config import Settings
 from app.dependencies import (
+    filter_user_token,
     get_db,
     get_mail_templates,
     get_notification_manager,
     get_request_id,
+    get_request_user,
     get_settings,
-    is_user,
-    is_user_an_ecl_member,
-    is_user_in,
+    is_user_admin,
 )
 from app.types import standard_responses
 from app.types.content_type import ContentType
@@ -76,7 +76,7 @@ S3_USER_SUBFOLDER = "users"
 async def read_users(
     accountTypes: list[AccountType] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.TokenData = Depends(is_user_admin()),
 ):
     """
     Return all users from database as a list of `CoreUserSimple`
@@ -95,7 +95,7 @@ async def read_users(
 )
 async def count_users(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.TokenData = Depends(is_user_admin()),
 ):
     """
     Return the number of users in the database
@@ -118,7 +118,7 @@ async def search_users(
     includedGroups: list[str] = Query(default=[]),
     excludedGroups: list[str] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_an_ecl_member),
+    token: schemas_auth.TokenData = Depends(filter_user_token()),
 ):
     """
     Search for a user using Jaro_Winkler distance algorithm.
@@ -146,7 +146,7 @@ async def search_users(
 )
 async def get_account_types(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.TokenData = Depends(is_user_admin()),
 ):
     """
     Return all account types hardcoded in the system
@@ -161,7 +161,8 @@ async def get_account_types(
     status_code=200,
 )
 async def read_current_user(
-    user: models_users.CoreUser = Depends(is_user()),
+    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    user: schemas_users.CoreUser = Depends(get_request_user()),
 ):
     """
     Return `CoreUser` representation of current user
@@ -241,7 +242,7 @@ async def batch_create_users(
     settings: Settings = Depends(get_settings),
     request_id: str = Depends(get_request_id),
     mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.TokenData = Depends(is_user_admin()),
 ):
     """
     Batch user account creation process. All users will be sent an email with a link to activate their account.
@@ -383,7 +384,10 @@ async def activate_user(
     # - used a first token to activate its account
     # - tries to use the second one
     # Though usually all activation tokens linked to the email should have been deleted when the account was activated
-    db_user = await cruds_users.get_user_by_email(db=db, email=unconfirmed_user.email)
+    db_user = await cruds_users.get_user_by_email_schema(
+        db=db,
+        email=unconfirmed_user.email,
+    )
     if db_user is not None:
         raise HTTPException(
             status_code=400,
@@ -435,7 +439,15 @@ async def activate_user(
     )
 
     # We want to subscribe the user to all topics by default
-    topics = await get_user_notification_topics(user=confirmed_user, db=db)
+    topics = await get_user_notification_topics(
+        token=schemas_auth.TokenData(
+            sub=confirmed_user.id,
+            group_ids=[],
+            account_type=confirmed_user.account_type,
+            school_id=confirmed_user.school_id,
+        ),
+        db=db,
+    )
     for topic in topics:
         await notification_manager.subscribe_user_to_topic(
             topic_id=topic.id,
@@ -452,7 +464,7 @@ async def activate_user(
 )
 async def init_s3_for_users(
     db: AsyncSession = Depends(get_db),
-    _: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    _: schemas_auth.TokenData = Depends(is_user_admin()),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -719,7 +731,8 @@ async def reset_password(
 async def migrate_mail(
     mail_migration: schemas_users.MailMigrationRequest,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    _: schemas_auth.TokenData = Depends(filter_user_token()),
+    user: schemas_users.CoreUser = Depends(get_request_user()),
     mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     settings: Settings = Depends(get_settings),
 ):
@@ -746,7 +759,7 @@ async def migrate_mail(
         return
 
     # We need to make sur the user will keep the same school if he is not a no_school user
-    _, new_school_id = await get_account_type_and_school_id_from_email(
+    __, new_school_id = await get_account_type_and_school_id_from_email(
         email=mail_migration.new_email,
         db=db,
     )
@@ -901,7 +914,7 @@ async def change_password(
 async def read_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.TokenData = Depends(is_user_admin()),
 ):
     """
     Return `CoreUser` representation of user with id `user_id`
@@ -920,7 +933,7 @@ async def read_user(
 #    "/users/{user_id}",
 #    status_code=204,
 ## )
-# async def delete_user(user_id: str, db: AsyncSession = Depends(get_db), user: models_users.CoreUser = Depends(is_user_in(GroupType.admin))):
+# async def delete_user(user_id: str, db: AsyncSession = Depends(get_db), token: schemas_auth.TokenData = Depends(is_user_in(GroupType.admin))):
 #    """Delete user from database by id"""
 #    # TODO: WARNING - deleting an user without removing its relations ship in other tables will have unexpected consequences
 #
@@ -932,7 +945,7 @@ async def read_user(
     status_code=204,
 )
 async def delete_user(
-    user: models_users.CoreUser = Depends(is_user()),
+    user: schemas_users.CoreUser = Depends(get_request_user()),
 ):
     """
     This endpoint will ask administrators to process to the user deletion.
@@ -950,7 +963,7 @@ async def delete_user(
 async def update_current_user(
     user_update: schemas_users.CoreUserUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    token: schemas_auth.TokenData = Depends(filter_user_token()),
 ):
     """
     Update the current user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
@@ -958,7 +971,7 @@ async def update_current_user(
     **The user must be authenticated to use this endpoint**
     """
 
-    await cruds_users.update_user(db=db, user_id=user.id, user_update=user_update)
+    await cruds_users.update_user(db=db, user_id=token.id, user_update=user_update)
 
 
 @router.post(
@@ -969,7 +982,8 @@ async def merge_users(
     user_fusion: schemas_users.CoreUserFusionRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    _: schemas_auth.TokenData = Depends(is_user_admin()),
+    user: schemas_users.CoreUser = Depends(get_request_user()),
     settings: Settings = Depends(get_settings),
     mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
 ):
@@ -1025,7 +1039,7 @@ async def update_user(
     user_id: str,
     user_update: schemas_users.CoreUserUpdateAdmin,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.TokenData = Depends(is_user_admin()),
 ):
     """
     Update an user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
@@ -1046,7 +1060,7 @@ async def update_user(
 )
 async def create_current_user_profile_picture(
     image: UploadFile = File(...),
-    user: models_users.CoreUser = Depends(is_user()),
+    token: schemas_auth.TokenData = Depends(filter_user_token()),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -1058,7 +1072,7 @@ async def create_current_user_profile_picture(
     await save_file_as_data(
         upload_file=image,
         directory="profile-pictures",
-        filename=str(user.id),
+        filename=str(token.id),
         max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,
@@ -1076,7 +1090,7 @@ async def create_current_user_profile_picture(
     status_code=200,
 )
 async def read_own_profile_picture(
-    user: models_users.CoreUser = Depends(is_user()),
+    token: schemas_auth.TokenData = Depends(filter_user_token()),
 ):
     """
     Get the profile picture of the authenticated user.
@@ -1084,7 +1098,7 @@ async def read_own_profile_picture(
 
     return await get_file_from_data(
         directory="profile-pictures",
-        filename=str(user.id),
+        filename=str(token.id),
         default_asset="assets/images/default_profile_picture.png",
     )
 

@@ -1,4 +1,5 @@
 import bisect
+import json
 import logging
 import os
 import re
@@ -19,14 +20,16 @@ from fastapi.templating import Jinja2Templates
 from jellyfish import jaro_winkler_similarity
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pydantic import ValidationError
+from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import schemas_auth
 from app.core.core_endpoints import cruds_core, models_core
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.permissions import cruds_permissions
 from app.core.permissions.type_permissions import ModulePermissions
-from app.core.users import cruds_users, models_users, schemas_users
+from app.core.users import cruds_users, models_users
 from app.core.users.models_users import CoreUser
 from app.core.utils import security
 from app.types import core_data
@@ -101,15 +104,14 @@ def sort_user(
     return [user for user, _ in reversed(scored)]
 
 
-def is_user_member_of_any_group(
-    user: models_users.CoreUser | schemas_users.CoreUser,
+def is_user_token_from_any_group(
+    token: schemas_auth.TokenData,
     allowed_groups: list[str] | list[GroupType],
 ) -> bool:
     """
     Check if the user is a member of the group.
     """
-    user_groups_id = [group.id for group in user.groups]
-    return any(group_id in user_groups_id for group_id in allowed_groups)
+    return any(group_id in token.group_ids for group_id in allowed_groups)
 
 
 async def is_group_id_valid(group_id: str, db: AsyncSession) -> bool:
@@ -130,26 +132,72 @@ async def is_user_id_valid(user_id: str, db: AsyncSession) -> bool:
     return await cruds_users.get_user_by_id(db=db, user_id=user_id) is not None
 
 
-async def has_user_permission(
-    user: models_users.CoreUser | schemas_users.CoreUser,
+# Keep permissions in Redis for 1 hour
+PERMISSION_CACHE_TTL = 3600
+
+
+async def get_cached_permission_requirements(
     permission_name: ModulePermissions,
     db: AsyncSession,
+    redis_client: Redis | None = None,
+) -> tuple[list[str], list[AccountType]]:
+    hyperion_security_logger.debug(
+        f"Fetching permission requirements for {permission_name} (redis_client={redis_client})",
+    )
+    cache_key = f"core:permissions:{permission_name}"
+    if redis_client is not None:
+        cached_data = redis_client.get(cache_key)
+
+        if cached_data is not None:
+            # Decode the JSON payload from Redis
+            data = json.loads(cached_data)
+            account_types = [AccountType(acc) for acc in data["account_types"]]
+            return (data["groups"], account_types)
+
+    # Cache miss: fetch from PostgreSQL
+    perm_config = await cruds_permissions.get_permissions_by_permission_name(
+        db,
+        permission_name,
+    )
+    hyperion_security_logger.debug(
+        f"Fetched permission requirements for {permission_name} from PostgreSQL: groups={perm_config.groups}, account_types={perm_config.account_types}",
+    )
+
+    if redis_client is not None:
+        # Save to Redis and set expiration
+        redis_client.set(
+            cache_key,
+            json.dumps(
+                {
+                    "groups": perm_config.groups,
+                    "account_types": [acc.value for acc in perm_config.account_types],
+                },
+            ),
+            ex=PERMISSION_CACHE_TTL,
+        )
+
+    return perm_config.groups, perm_config.account_types
+
+
+async def has_user_token_permission(
+    token: schemas_auth.TokenData,
+    permission_name: ModulePermissions,
+    db: AsyncSession,
+    redis_client: Redis | None = None,
 ) -> bool:
     """
     Check if the user has the permission to perform the action.
     """
-    if GroupType.admin in [group.id for group in user.groups]:
+    if GroupType.admin in token.group_ids:
         return True
-    permissions = await cruds_permissions.get_permissions_by_permission_name(
+    groups, account_types = await get_cached_permission_requirements(
         permission_name=permission_name,
         db=db,
+        redis_client=redis_client,
     )
     return (
-        is_user_member_of_any_group(
-            user,
-            permissions.groups,
-        )
-        or user.account_type in permissions.account_types
+        any(group_id in token.group_ids for group_id in groups)
+        or token.account_type in account_types
     )
 
 

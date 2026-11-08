@@ -5,9 +5,9 @@ from datetime import UTC, datetime
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import schemas_auth
 from app.core.groups.groups_type import AccountType
 from app.core.permissions.type_permissions import ModulePermissions
-from app.core.users import models_users
 from app.dependencies import (
     get_db,
     is_user_allowed_to,
@@ -21,7 +21,7 @@ from app.modules.seed_library.factory_seed_library import SeedLibraryFactory
 from app.modules.seed_library.types_seed_library import PlantState, SpeciesType
 from app.types.module import Module
 from app.utils import tools
-from app.utils.tools import has_user_permission
+from app.utils.tools import has_user_token_permission
 
 
 class SeedLibraryPermissions(ModulePermissions):
@@ -48,7 +48,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def get_all_species(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([SeedLibraryPermissions.access_seed_library]),
     ),
 ):
@@ -64,7 +64,7 @@ async def get_all_species(
     status_code=200,
 )
 async def get_all_species_types(
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([SeedLibraryPermissions.access_seed_library]),
     ),
 ):
@@ -84,7 +84,7 @@ async def get_all_species_types(
 async def create_species(
     species_base: schemas_seed_library.SpeciesBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([SeedLibraryPermissions.manage_seed_library]),
     ),
 ):
@@ -135,7 +135,7 @@ async def create_species(
 async def update_species(
     species_id: uuid.UUID,
     species_edit: schemas_seed_library.SpeciesEdit,
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([SeedLibraryPermissions.manage_seed_library]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -193,7 +193,7 @@ async def update_species(
 async def delete_species(
     species_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([SeedLibraryPermissions.manage_seed_library]),
     ),
 ):
@@ -226,7 +226,7 @@ async def delete_species(
 )
 async def get_waiting_plants(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([SeedLibraryPermissions.access_seed_library]),
     ),
 ):
@@ -243,14 +243,14 @@ async def get_waiting_plants(
 )
 async def get_my_plants(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([SeedLibraryPermissions.access_seed_library]),
     ),
 ):
     """
     Return all plants where user ={user_id} from database as a list of PlantsComplete schemas
     """
-    return await cruds_seed_library.get_plants_by_user_id(user.id, db)
+    return await cruds_seed_library.get_plants_by_user_id(token.id, db)
 
 
 @module.router.get(
@@ -261,7 +261,7 @@ async def get_my_plants(
 async def get_plants_by_user_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([SeedLibraryPermissions.manage_seed_library]),
     ),
 ):
@@ -279,7 +279,7 @@ async def get_plants_by_user_id(
 async def get_plant_by_id(
     plant_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([SeedLibraryPermissions.access_seed_library]),
     ),
 ):
@@ -300,7 +300,7 @@ async def get_plant_by_id(
 async def create_plant(
     plant_base: schemas_seed_library.PlantCreation,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([SeedLibraryPermissions.access_seed_library]),
     ),
 ):
@@ -310,8 +310,8 @@ async def create_plant(
     """
     if plant_base.ancestor_id is None:
         if not (
-            await has_user_permission(
-                user=user,
+            await has_user_token_permission(
+                token=token,
                 permission_name=SeedLibraryPermissions.manage_seed_library,
                 db=db,
             )
@@ -367,7 +367,7 @@ async def create_plant(
 async def update_plant(
     plant_id: uuid.UUID,
     plant_edit: schemas_seed_library.PlantEdit,
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([SeedLibraryPermissions.access_seed_library]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -380,7 +380,7 @@ async def update_plant(
     if plant is None:
         raise HTTPException(404, "Plant not found")
 
-    if plant.borrower_id != user.id:
+    if plant.borrower_id != token.id:
         raise HTTPException(
             status_code=403,
             detail=f"You are not allowed to update plant {plant_id} since you do not own the plant",
@@ -399,7 +399,7 @@ async def update_plant(
 async def update_plant_admin(
     plant_id: uuid.UUID,
     plant_edit: schemas_seed_library.PlantEdit,
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([SeedLibraryPermissions.manage_seed_library]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -425,7 +425,7 @@ async def update_plant_admin(
 )
 async def borrow_plant(
     plant_id: uuid.UUID,
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([SeedLibraryPermissions.access_seed_library]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -438,7 +438,7 @@ async def borrow_plant(
     if plant is None:
         raise HTTPException(404, "Plant not found")
 
-    await cruds_seed_library.borrow_plant(user.id, plant_id, db)
+    await cruds_seed_library.borrow_plant(token.id, plant_id, db)
 
 
 @module.router.delete(
@@ -448,7 +448,7 @@ async def borrow_plant(
 async def delete_plant(
     plant_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([SeedLibraryPermissions.manage_seed_library]),
     ),
 ):
@@ -480,7 +480,7 @@ async def delete_plant(
 )
 async def get_seed_library_information(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([SeedLibraryPermissions.access_seed_library]),
     ),
 ):
@@ -496,7 +496,7 @@ async def get_seed_library_information(
 )
 async def update_seed_library_information(
     information: coredata_seed_library.SeedLibraryInformation,
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([SeedLibraryPermissions.manage_seed_library]),
     ),
     db: AsyncSession = Depends(get_db),

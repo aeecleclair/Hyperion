@@ -2,10 +2,12 @@
 
 from datetime import datetime
 from typing import Literal
+from uuid import UUID
 
 from fastapi import Form
 from pydantic import BaseModel, field_validator
 
+from app.core.groups.groups_type import AccountType
 from app.utils import validators
 from app.utils.examples import examples_auth
 
@@ -99,7 +101,18 @@ class TokenData(BaseModel):
     iat: datetime | None = None
     nonce: str | None = None
     scopes: str = ""
+    account_type: AccountType
+    group_ids: list[str]
+    school_id: UUID
     # exp and iat elements are added by the token generation function
+
+    @property
+    def id(self) -> str:
+        """
+        Returns the user id from the token data.
+        This is a convenience property to avoid having to use `token_data.sub` everywhere.
+        """
+        return self.sub
 
 
 class TokenReq(BaseModel):

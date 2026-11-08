@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import schemas_auth
 from app.core.groups.groups_type import AccountType
 from app.core.notification.schemas_notification import Message
 from app.core.permissions.type_permissions import ModulePermissions
-from app.core.users import models_users
 from app.dependencies import (
     get_db,
     get_notification_tool,
@@ -24,7 +24,7 @@ from app.utils.communication.notifications import NotificationTool
 from app.utils.tools import (
     is_group_id_valid,
     is_user_id_valid,
-    is_user_member_of_any_group,
+    is_user_token_from_any_group,
 )
 
 if TYPE_CHECKING:
@@ -55,7 +55,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def read_loaners(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([LoanPermissions.manage_loaners]),
     ),
 ):
@@ -76,7 +76,7 @@ async def read_loaners(
 async def create_loaner(
     loaner: schemas_loan.LoanerBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([LoanPermissions.manage_loaners]),
     ),
 ):
@@ -114,7 +114,7 @@ async def create_loaner(
 async def delete_loaner(
     loaner_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([LoanPermissions.manage_loaners]),
     ),
 ):
@@ -152,7 +152,7 @@ async def update_loaner(
     loaner_id: str,
     loaner_update: schemas_loan.LoanerUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([LoanPermissions.manage_loaners]),
     ),
 ):
@@ -178,7 +178,7 @@ async def get_loans_by_loaner(
     loaner_id: str,
     returned: bool | None = None,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([LoanPermissions.access_loan]),
     ),
 ):
@@ -204,7 +204,10 @@ async def get_loans_by_loaner(
         )
 
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_any_group(user, [loaner.group_manager_id]):
+    if not is_user_token_from_any_group(
+        token,
+        allowed_groups=[loaner.group_manager_id],
+    ):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loaner_id} loaner",
@@ -249,7 +252,7 @@ async def get_loans_by_loaner(
 async def get_items_by_loaner(
     loaner_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([LoanPermissions.access_loan]),
     ),
 ):
@@ -270,7 +273,7 @@ async def get_items_by_loaner(
             detail="Invalid loaner_id",
         )
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_any_group(user, [loaner.group_manager_id]):
+    if not is_user_token_from_any_group(token, [loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loaner_id} loaner",
@@ -295,7 +298,7 @@ async def create_items_for_loaner(
     loaner_id: str,
     item: schemas_loan.ItemBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([LoanPermissions.access_loan]),
     ),
 ):
@@ -316,7 +319,7 @@ async def create_items_for_loaner(
             detail="Invalid loaner_id",
         )
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_any_group(user, [loaner.group_manager_id]):
+    if not is_user_token_from_any_group(token, [loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loaner_id} loaner",
@@ -361,7 +364,7 @@ async def update_items_for_loaner(
     item_id: str,
     item_update: schemas_loan.ItemUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([LoanPermissions.access_loan]),
     ),
 ):
@@ -396,7 +399,7 @@ async def update_items_for_loaner(
             detail=f"Item {item_id} does not belong to {loaner_id} loaner",
         )
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_any_group(user, [loaner.group_manager_id]):
+    if not is_user_token_from_any_group(token, [loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loaner_id} loaner",
@@ -413,7 +416,7 @@ async def delete_loaner_item(
     loaner_id: str,
     item_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([LoanPermissions.access_loan]),
     ),
 ):
@@ -448,7 +451,7 @@ async def delete_loaner_item(
             detail="Invalid loaner_id",
         )
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_any_group(user, [loaner.group_manager_id]):
+    if not is_user_token_from_any_group(token, [loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loaner_id} loaner",
@@ -466,7 +469,7 @@ async def delete_loaner_item(
 async def get_current_user_loans(
     returned: bool | None = None,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([LoanPermissions.access_loan]),
     ),
 ):
@@ -480,7 +483,7 @@ async def get_current_user_loans(
 
     loans_borrowed = await cruds_loan.get_loans_by_borrower(
         db=db,
-        borrower_id=user.id,
+        borrower_id=token.id,
         returned=returned,
     )
 
@@ -512,7 +515,7 @@ async def get_current_user_loans(
 )
 async def get_current_user_loaners(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([LoanPermissions.access_loan]),
     ),
 ):
@@ -527,9 +530,9 @@ async def get_current_user_loaners(
     user_loaners: list[models_loan.Loaner] = [
         loaner
         for loaner in existing_loaners
-        if is_user_member_of_any_group(
+        if is_user_token_from_any_group(
             allowed_groups=[loaner.group_manager_id],
-            user=user,
+            token=token,
         )
     ]
 
@@ -544,7 +547,7 @@ async def get_current_user_loaners(
 async def create_loan(
     loan_creation: schemas_loan.LoanCreation,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([LoanPermissions.access_loan]),
     ),
     notification_tool: NotificationTool = Depends(get_notification_tool),
@@ -567,7 +570,7 @@ async def create_loan(
             detail="Invalid loaner_id",
         )
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_any_group(user, [loaner.group_manager_id]):
+    if not is_user_token_from_any_group(token, [loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loan_creation.loaner_id} loaner",
@@ -699,7 +702,7 @@ async def update_loan(
     loan_id: str,
     loan_update: schemas_loan.LoanUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([LoanPermissions.access_loan]),
     ),
 ):
@@ -724,7 +727,7 @@ async def update_loan(
         )
 
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_any_group(user, [loan.loaner.group_manager_id]):
+    if not is_user_token_from_any_group(token, [loan.loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loan.loaner_id} loaner",
@@ -822,7 +825,7 @@ async def update_loan(
 async def delete_loan(
     loan_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([LoanPermissions.access_loan]),
     ),
 ):
@@ -844,7 +847,7 @@ async def delete_loan(
         )
 
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_any_group(user, [loan.loaner.group_manager_id]):
+    if not is_user_token_from_any_group(token, [loan.loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loan.loaner_id} loaner",
@@ -874,7 +877,7 @@ async def delete_loan(
 async def return_loan(
     loan_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([LoanPermissions.access_loan]),
     ),
     scheduler: Scheduler = Depends(get_scheduler),
@@ -898,7 +901,7 @@ async def return_loan(
         )
 
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_any_group(user, [loan.loaner.group_manager_id]):
+    if not is_user_token_from_any_group(token, [loan.loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loan.loaner_id} loaner",
@@ -937,7 +940,7 @@ async def extend_loan(
     loan_id: str,
     loan_extend: schemas_loan.LoanExtend,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([LoanPermissions.access_loan]),
     ),
     notification_tool: NotificationTool = Depends(get_notification_tool),
@@ -961,7 +964,7 @@ async def extend_loan(
         )
     end = loan.end
     # The user should be a member of the loaner's manager group
-    if not is_user_member_of_any_group(user, [loan.loaner.group_manager_id]):
+    if not is_user_token_from_any_group(token, [loan.loaner.group_manager_id]):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {loan.loaner_id} loaner",

@@ -9,7 +9,7 @@ from app.core.groups.groups_type import (
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import models_users
 from app.types.scopes_type import ScopeType
-from app.utils.tools import is_user_member_of_any_group
+from app.utils.tools import is_user_token_from_any_group
 
 
 class BaseAuthClient:
@@ -159,7 +159,7 @@ class NextcloudAuthClient(BaseAuthClient):
             "groups": [group.name for group in user.groups] + [user.account_type.value],
             "email": user.email,
             "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture",
-            "is_admin": is_user_member_of_any_group(user, [GroupType.admin]),
+            "is_admin": is_user_token_from_any_group(user, [GroupType.admin]),
         }
 
 
@@ -369,7 +369,7 @@ class OverleafAuthClient(BaseAuthClient):
             "firstname": user.firstname,
             "lastname": user.name,
             "email": user.email,
-            "is_admin": is_user_member_of_any_group(user, [GroupType.admin]),
+            "is_admin": is_user_token_from_any_group(user, [GroupType.admin]),
         }
 
 

@@ -17,17 +17,17 @@ import redis
 import starlette
 import starlette.datastructures
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
+from redis import Redis
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
 )
 
 from app.core.auth import schemas_auth
-from app.core.groups.groups_type import AccountType, GroupType, get_ecl_account_types
+from app.core.groups.groups_type import AccountType, GroupType
 from app.core.payment.payment_tool import PaymentTool
 from app.core.payment.types_payment import HelloAssoConfigName
-from app.core.permissions import cruds_permissions
 from app.core.permissions.type_permissions import ModulePermissions
-from app.core.users import cruds_users, models_users
+from app.core.users import cruds_users, schemas_users
 from app.core.utils import security
 from app.core.utils.config import Settings, construct_prod_settings
 from app.types.exceptions import (
@@ -53,10 +53,7 @@ from app.utils.state import (
     init_SessionLocal,
     init_websocket_connection_manager,
 )
-from app.utils.tools import (
-    is_user_external,
-    is_user_member_of_any_group,
-)
+from app.utils.tools import get_cached_permission_requirements
 
 # We could maybe use hyperion.security
 hyperion_access_logger = logging.getLogger("hyperion.access")
@@ -312,43 +309,61 @@ def get_token_data(
     )
 
 
-def get_user_id_from_token_with_scopes(
+def get_token_with_scopes(
     scopes: list[list[ScopeType]],
 ) -> Callable[
     [schemas_auth.TokenData],
-    Coroutine[Any, Any, str],
+    schemas_auth.TokenData,
 ]:
     """
     Generate a dependency which will:
      * check the request header contain a valid JWT token
      * make sure the token contain the given scopes
-     * return the corresponding user_id of the token
+     * return the token data
 
     This endpoint allows to require scopes other than the API scope. This should only be used by the auth endpoints.
     To restrict an endpoint from the API, use `is_user_in`.
     """
 
-    async def get_current_user_id(
+    def get_current_token_data(
         token_data: schemas_auth.TokenData = Depends(get_token_data),
-    ) -> str:
+    ) -> schemas_auth.TokenData:
         """
         Dependency that makes sure the token is valid, contains the expected scopes and returns the corresponding user_id.
         The expected scopes are passed as list of list of scopes, each list of scopes is an "AND" condition, and the list of list of scopes is an "OR" condition.
         """
 
-        return auth_utils.get_user_id_from_token_with_scopes(
-            scopes=scopes,
-            token_data=token_data,
-        )
+        access_granted = False
+        if scopes == []:
+            access_granted = True
+        else:
+            for scope_set in scopes:
+                # `token_data.scopes` contain a " " separated list of scopes
+                # `scope_set` is a list of scopes that must be present in the token
+                # If one of the scope set is present in the token, the access is granted
 
-    return get_current_user_id
+                scope_set_present = True
+                for scope in scope_set:
+                    scope_set_present = scope_set_present and (
+                        scope in token_data.scopes.split(" ")
+                    )
+                access_granted = access_granted or scope_set_present
+
+        if not access_granted:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Unauthorized, token does not contain at least one of the following scope_set {[[scope.value for scope in scope_set] for scope_set in scopes]}",
+            )
+        return token_data
+
+    return get_current_token_data
 
 
-def get_user_from_token_with_scopes(
-    scopes: list[list[ScopeType]],
+def get_request_user(
+    scopes: list[list[ScopeType]] | None = None,
 ) -> Callable[
-    [AsyncSession, str],
-    Coroutine[Any, Any, models_users.CoreUser],
+    [AsyncSession, schemas_auth.TokenData],
+    Coroutine[Any, Any, schemas_users.CoreUser],
 ]:
     """
     Generate a dependency which will:
@@ -359,16 +374,17 @@ def get_user_from_token_with_scopes(
     This endpoint allows to require scopes other than the API scope. This should only be used by the auth endpoints.
     To restrict an endpoint from the API, use `is_user_in`.
     """
+    scopes = scopes or [[ScopeType.API]]
 
     async def get_user_from_user_id(
         db: AsyncSession = Depends(get_db),
-        user_id: str = Depends(get_user_id_from_token_with_scopes(scopes)),
-    ) -> models_users.CoreUser:
+        token: schemas_auth.TokenData = Depends(get_token_with_scopes(scopes)),
+    ) -> schemas_users.CoreUser:
         """
         Dependency that makes sure the token is valid, contains the expected scopes and returns the corresponding user.
         The expected scopes are passed as list of list of scopes, each list of scopes is an "AND" condition, and the list of list of scopes is an "OR" condition.
         """
-        user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
+        user = await cruds_users.get_user_by_id_schema(db=db, user_id=token.id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         return user
@@ -376,108 +392,64 @@ def get_user_from_token_with_scopes(
     return get_user_from_user_id
 
 
-def is_user(
+def filter_user_token(
+    *,
     excluded_groups: list[GroupType | str] | None = None,
     included_groups: list[GroupType | str] | None = None,
     excluded_account_types: list[AccountType] | None = None,
     included_account_types: list[AccountType] | None = None,
     exclude_external: bool = False,
-) -> Callable[[models_users.CoreUser], models_users.CoreUser]:
+) -> Callable[[schemas_auth.TokenData], schemas_auth.TokenData]:
     """
     A dependency that will:
         * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
-        * make sure the user making the request exists
-
-    To check if the user is not external, use is_user_a_member dependency
-    To check if the user is not external and is the member of a group, use is_user_in generator
-    To check if the user has an ecl account type, use is_user_an_ecl_member dependency
+        * filter the user based on the provided groups and account types
     """
 
     excluded_groups = excluded_groups or []
     excluded_account_types = excluded_account_types or []
     included_account_types = included_account_types or list(AccountType)
 
-    def is_user(
-        user: models_users.CoreUser = Depends(
-            get_user_from_token_with_scopes([[ScopeType.API]]),
+    def filter_token(
+        token: schemas_auth.TokenData = Depends(
+            get_token_with_scopes([[ScopeType.API]]),
         ),
-    ) -> models_users.CoreUser:
-        groups_id: list[str] = [group.id for group in user.groups]
-        if GroupType.admin in groups_id:
-            return user
-        if user.account_type in excluded_account_types:
+    ) -> schemas_auth.TokenData:
+        if GroupType.admin in token.group_ids:
+            return token
+        if token.account_type in excluded_account_types:
             raise HTTPException(
                 status_code=403,
                 detail="Unauthorized, user account type is not allowed",
             )
-        if exclude_external and is_user_external(user):
+        if exclude_external and token.account_type == AccountType.external:
             raise HTTPException(
                 status_code=403,
                 detail="Unauthorized, user is an external user",
             )
-        if is_user_member_of_any_group(user, excluded_groups):
+        if any(group_id in token.group_ids for group_id in excluded_groups):
             raise HTTPException(
                 status_code=403,
                 detail=f"Unauthorized, user is a member of any of the groups {excluded_groups}",
             )
-        if included_groups is not None and not is_user_member_of_any_group(
-            user,
-            included_groups,
+        if included_groups is not None and not any(
+            group_id in token.group_ids for group_id in included_groups
         ):
             raise HTTPException(
                 status_code=403,
                 detail="Unauthorized, user is not a member of an allowed group",
             )
-        if user.account_type not in included_account_types:
+        if token.account_type not in included_account_types:
             raise HTTPException(
                 status_code=403,
                 detail="Unauthorized, user account type is not allowed",
             )
-        return user
+        return token
 
-    return is_user
-
-
-def is_user_a_member(
-    user: models_users.CoreUser = Depends(
-        is_user(exclude_external=True),
-    ),
-    request_id: str = Depends(get_request_id),
-) -> models_users.CoreUser:
-    """
-    A dependency that will:
-        * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
-        * make sure the user making the request exists
-        * make sure the user is not an external user
-
-    To check if the user is the member of a group, use is_user_in generator
-    """
-    return user
+    return filter_token
 
 
-def is_user_an_ecl_member(
-    user: models_users.CoreUser = Depends(
-        is_user(included_account_types=get_ecl_account_types()),
-    ),
-    request_id: str = Depends(get_request_id),
-) -> models_users.CoreUser:
-    """
-    A dependency that will:
-        * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
-        * make sure the user making the request exists and is a member of Student, Staff, Association or AE
-        * make sure the user is not an external user
-        * make sure the user making the request exists
-
-    To check if the user is the member of a group, use is_user_in generator
-    """
-
-    return user
-
-
-def is_user_in(
-    group_id: GroupType,
-    exclude_external: bool = False,
-) -> Callable[[models_users.CoreUser], Coroutine[Any, Any, models_users.CoreUser]]:
+def is_user_admin() -> Callable[[schemas_auth.TokenData], schemas_auth.TokenData]:
     """
     Generate a dependency which will:
         * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
@@ -486,79 +458,65 @@ def is_user_in(
         * return the corresponding user `models_users.CoreUser` object
     """
 
-    async def is_user_in(
-        user: models_users.CoreUser = Depends(
-            is_user(included_groups=[group_id], exclude_external=exclude_external),
+    def is_user_in(
+        token: schemas_auth.TokenData = Depends(
+            filter_user_token(included_groups=[GroupType.admin]),
         ),
-        request_id: str = Depends(get_request_id),
-    ) -> models_users.CoreUser:
+    ) -> schemas_auth.TokenData:
         """
         A dependency that checks that user is a member of the group with the given id then returns the corresponding user.
         """
 
-        return user
+        return token
 
     return is_user_in
 
 
 def is_user_allowed_to(
     permissions_name: list[ModulePermissions],
-    db: AsyncSession = Depends(get_db),
-) -> Callable[[models_users.CoreUser], Coroutine[Any, Any, models_users.CoreUser]]:
-    """
-    Generate a dependency which will:
-        * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
-        * make sure the user making the request exists
-        * make sure the user has the permission with the given name
-        * return the corresponding user `models_users.CoreUser` object
+) -> Callable[
+    [schemas_auth.TokenData, AsyncSession],
+    Coroutine[Any, Any, schemas_auth.TokenData],
+]:
 
-    The query is a _logical OR_: the user needs to have at least ONE of the permissions in the list to be allowed to access the endpoint.
-    """
-
-    async def is_user_allowed_to(
-        user: models_users.CoreUser = Depends(
-            is_user(),
+    async def _is_user_allowed_to(
+        token: schemas_auth.TokenData = Depends(
+            get_token_with_scopes([[ScopeType.API]]),
         ),
         db: AsyncSession = Depends(get_db),
-    ) -> models_users.CoreUser:
-        """
-        A dependency that checks that user has the permission with the given name then returns the corresponding user.
-        """
-        if GroupType.admin in [group.id for group in user.groups]:
-            return user
+        redis_client: Redis = Depends(get_redis_client),
+    ) -> schemas_auth.TokenData:
 
-        allowed_group_ids: list[str] = []
-        allowed_account_types: list[AccountType] = []
+        if GroupType.admin in token.group_ids:
+            return token
+
+        allowed_group_ids: set[str] = set()
+        allowed_account_types: set[AccountType] = set()
+        hyperion_error_logger.debug(
+            f"Checking if user {token} has any of the following permissions: {[permission.value for permission in permissions_name]}",
+        )
         for permission_name in permissions_name:
-            allowed_group_ids.extend(
-                (
-                    await cruds_permissions.get_permissions_by_permission_name(
-                        db,
-                        permission_name,
-                    )
-                ).groups,
+            groups, account_types = await get_cached_permission_requirements(
+                permission_name,
+                db,
+                redis_client,
             )
-            allowed_account_types.extend(
-                (
-                    await cruds_permissions.get_permissions_by_permission_name(
-                        db,
-                        permission_name,
-                    )
-                ).account_types,
-            )
+            allowed_group_ids.update(groups)
+            allowed_account_types.update(account_types)
 
-        if (
-            not any(
-                group_id in [group.id for group in user.groups]
-                for group_id in allowed_group_ids
-            )
-            and user.account_type not in allowed_account_types
-        ):
+        user_has_group = any(g_id in allowed_group_ids for g_id in token.group_ids)
+        user_has_account = token.account_type in allowed_account_types
+
+        hyperion_error_logger.debug(
+            f"User {token} has groups {token.group_ids} and account type {token.account_type}. Allowed groups: {allowed_group_ids}, allowed account types: {allowed_account_types}. User has group: {user_has_group}, user has account: {user_has_account}",
+        )
+
+        if not (user_has_group or user_has_account):
             raise HTTPException(
                 status_code=403,
                 detail="Unauthorized, user does not have the required permission",
             )
 
-        return user
+        return token
 
-    return is_user_allowed_to
+    return _is_user_allowed_to

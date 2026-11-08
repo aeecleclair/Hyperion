@@ -5,10 +5,10 @@ from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import schemas_auth
 from app.core.groups.groups_type import AccountType
 from app.core.notification.schemas_notification import Message, Topic
 from app.core.permissions.type_permissions import ModulePermissions
-from app.core.users import models_users
 from app.dependencies import (
     get_db,
     get_notification_tool,
@@ -62,7 +62,7 @@ module = Module(
 async def get_paper_pdf(
     paper_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PHPermissions.access_ph]),
     ),
 ):
@@ -87,7 +87,7 @@ async def get_paper_pdf(
 )
 async def get_papers(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PHPermissions.access_ph]),
     ),
 ):
@@ -107,7 +107,7 @@ async def get_papers(
 )
 async def get_papers_admin(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PHPermissions.manage_ph]),
     ),
 ):
@@ -127,7 +127,7 @@ async def get_papers_admin(
 async def create_paper(
     paper: schemas_ph.PaperBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PHPermissions.manage_ph]),
     ),
     notification_tool: NotificationTool = Depends(get_notification_tool),
@@ -180,7 +180,7 @@ async def create_paper(
 async def create_paper_pdf_and_cover(
     paper_id: uuid.UUID,
     pdf: UploadFile = File(...),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PHPermissions.manage_ph]),
     ),
     request_id: str = Depends(get_request_id),
@@ -216,7 +216,7 @@ async def create_paper_pdf_and_cover(
 )
 async def get_cover(
     paper_id: uuid.UUID,
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PHPermissions.access_ph]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -242,7 +242,7 @@ async def get_cover(
 async def update_paper(
     paper_id: uuid.UUID,
     paper_update: schemas_ph.PaperUpdate,
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PHPermissions.manage_ph]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -267,7 +267,7 @@ async def update_paper(
 )
 async def delete_paper(
     paper_id: uuid.UUID,
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PHPermissions.manage_ph]),
     ),
     db: AsyncSession = Depends(get_db),
