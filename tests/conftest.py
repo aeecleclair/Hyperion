@@ -136,6 +136,38 @@ def client(test_app: FastAPI) -> Generator[TestClient]:
 
 
 @pytest.fixture(scope="module", autouse=True)
+def client_with_redis(test_app: FastAPI) -> Generator[TestClient]:
+    """
+    TestClient fixture with Redis enabled.
+
+    A parameters can be passed to the fixture using indirect parameterization:
+     - `use_factory`: Whether to use factories when creating test data (default: False)
+    ```python
+    @pytest.mark.parametrize("test_app", [True], indirect=True)
+    async def test_example(client: TestClient):
+        ...
+    ```
+    """
+
+    test_app.dependency_overrides[init_state] = override_init_state(
+        enable_redis=True,
+    )
+
+    # The TestClient should be used as a context manager in order for the lifespan to be called
+    # See https://www.starlette.io/lifespan/#running-lifespan-in-tests
+    #
+    # Patch get_number_of_workers to return 1 so that use_lock_for_workers always runs
+    # init_db directly. Without this, xdist workers are seen as siblings of the pytest
+    # controller's children, causing get_number_of_workers() to return N > 1 and the
+    # locking logic to skip init_db on all but one worker, leaving DBs without tables.
+    with (
+        patch("app.utils.initialization.get_number_of_workers", return_value=1),
+        TestClient(test_app, raise_server_exceptions=True) as client,
+    ):
+        yield client
+
+
+@pytest.fixture(scope="module", autouse=True)
 def client_no_raise(test_app: FastAPI) -> Generator[TestClient]:
     """
     TestClient fixture. This client does not raise exceptions on server errors, and instead returns a proper 500 Internal Server Error response.

@@ -11,7 +11,6 @@ from app.core.groups.groups_type import AccountType
 from app.core.notification.schemas_notification import Message, Topic
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users, schemas_users
-from app.core.users.endpoints_users import read_user
 from app.dependencies import (
     get_db,
     get_notification_tool,
@@ -892,7 +891,7 @@ async def get_cash_by_id(
 
     **The user must be a member of the group AMAP to use this endpoint or can only access the endpoint for its own user_id**
     """
-    user_db = await cruds_users.get_user_by_id(db=db, user_id=user_id)
+    user_db = await cruds_users.get_user_by_id_schema(db=db, user_id=user_id)
     if user_db is None:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -941,7 +940,7 @@ async def create_cash_of_user(
     **The user must be a member of a group authorized to use manage AMAP to use this endpoint**
     """
 
-    user_db = await read_user(user_id=user_id, db=db)
+    user_db = await cruds_users.get_user_by_id_schema(db=db, user_id=user_id)
     if not user_db:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -1006,7 +1005,7 @@ async def edit_cash_by_id(
 
     **The user must be a member of a group authorized to use manage AMAP to use this endpoint**
     """
-    user_db = await read_user(user_id=user_id, db=db)
+    user_db = await cruds_users.get_user_by_id_schema(db=db, user_id=user_id)
     if not user_db:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -1041,7 +1040,7 @@ async def get_orders_of_user(
 
     **The user must be a member of the group AMAP to use this endpoint or can only access the endpoint for its own user_id**
     """
-    user_requested = await read_user(user_id=user_id, db=db)
+    user_requested = await cruds_users.get_user_by_id_schema(db=db, user_id=user_id)
     if not user_requested:
         raise HTTPException(status_code=404, detail="User not found")
 
