@@ -1,5 +1,4 @@
 import bisect
-import json
 import logging
 import os
 import re
@@ -27,7 +26,7 @@ from app.core.auth import schemas_auth
 from app.core.core_endpoints import cruds_core, models_core
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import AccountType, GroupType
-from app.core.permissions import cruds_permissions
+from app.core.permissions.cruds_permissions import get_cached_permission_requirements
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users, models_users
 from app.core.users.models_users import CoreUser
@@ -130,53 +129,6 @@ async def is_user_id_valid(user_id: str, db: AsyncSession) -> bool:
     Test if the provided user_id is a valid user.
     """
     return await cruds_users.get_user_by_id(db=db, user_id=user_id) is not None
-
-
-# Keep permissions in Redis for 1 hour
-PERMISSION_CACHE_TTL = 3600
-
-
-async def get_cached_permission_requirements(
-    permission_name: ModulePermissions,
-    db: AsyncSession,
-    redis_client: Redis | None = None,
-) -> tuple[list[str], list[AccountType]]:
-    hyperion_security_logger.debug(
-        f"Fetching permission requirements for {permission_name} (redis_client={redis_client})",
-    )
-    cache_key = f"core:permissions:{permission_name}"
-    if redis_client is not None:
-        cached_data = redis_client.get(cache_key)
-
-        if cached_data is not None:
-            # Decode the JSON payload from Redis
-            data = json.loads(cached_data)
-            account_types = [AccountType(acc) for acc in data["account_types"]]
-            return (data["groups"], account_types)
-
-    # Cache miss: fetch from PostgreSQL
-    perm_config = await cruds_permissions.get_permissions_by_permission_name(
-        db,
-        permission_name,
-    )
-    hyperion_security_logger.debug(
-        f"Fetched permission requirements for {permission_name} from PostgreSQL: groups={perm_config.groups}, account_types={perm_config.account_types}",
-    )
-
-    if redis_client is not None:
-        # Save to Redis and set expiration
-        redis_client.set(
-            cache_key,
-            json.dumps(
-                {
-                    "groups": perm_config.groups,
-                    "account_types": [acc.value for acc in perm_config.account_types],
-                },
-            ),
-            ex=PERMISSION_CACHE_TTL,
-        )
-
-    return perm_config.groups, perm_config.account_types
 
 
 async def has_user_token_permission(

@@ -11,19 +11,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import filter_user_token, is_user_admin
 from app.core.groups import cruds_groups, models_groups, schemas_groups
 from app.core.groups.factory_groups import CoreGroupsFactory
 from app.core.groups.groups_type import GroupType
 from app.core.notification.utils_notification import get_topics_restricted_to_group_id
 from app.core.users import cruds_users, schemas_users
-from app.dependencies import (
-    filter_user_token,
-    get_db,
-    get_notification_manager,
-    get_request_id,
-    get_request_user,
-    is_user_admin,
-)
+from app.core.users.dependencies_users import get_request_user
+from app.dependencies import get_db, get_notification_manager, get_request_id
 from app.types.module import CoreModule
 from app.utils.communication.notifications import NotificationManager
 

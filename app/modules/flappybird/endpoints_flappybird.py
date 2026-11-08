@@ -5,9 +5,10 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import is_user_allowed_to
 from app.core.groups.groups_type import AccountType
 from app.core.permissions.type_permissions import ModulePermissions
-from app.dependencies import get_db, is_user_allowed_to
+from app.dependencies import get_db
 from app.modules.flappybird import (
     cruds_flappybird,
     models_flappybird,

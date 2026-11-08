@@ -7,19 +7,15 @@ from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import is_user_allowed_to
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import AccountType
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users, schemas_users
+from app.core.users.dependencies_users import get_request_user
 from app.core.users.endpoints_users import read_user
 from app.core.users.utils_users import user_schema_to_model
-from app.dependencies import (
-    get_db,
-    get_redis_client,
-    get_request_id,
-    get_request_user,
-    is_user_allowed_to,
-)
+from app.dependencies import get_db, get_redis_client, get_request_id
 from app.modules.raffle import cruds_raffle, models_raffle, schemas_raffle
 from app.modules.raffle.types_raffle import RaffleStatusType
 from app.types import standard_responses

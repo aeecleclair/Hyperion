@@ -8,36 +8,28 @@ async def get_users(db: AsyncSession = Depends(get_db)):
 """
 
 import logging
-from collections.abc import AsyncGenerator, Callable, Coroutine
+from collections.abc import AsyncGenerator, Callable
 from functools import lru_cache
-from typing import Annotated, Any, cast
+from typing import Annotated, cast
 
 import calypsso
 import redis
 import starlette
 import starlette.datastructures
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
-from redis import Redis
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
 )
 
-from app.core.auth import schemas_auth
-from app.core.groups.groups_type import AccountType, GroupType
 from app.core.payment.payment_tool import PaymentTool
 from app.core.payment.types_payment import HelloAssoConfigName
-from app.core.permissions.type_permissions import ModulePermissions
-from app.core.users import cruds_users, schemas_users
-from app.core.utils import security
 from app.core.utils.config import Settings, construct_prod_settings
 from app.types.exceptions import (
     InvalidAppStateTypeError,
     PaymentToolCredentialsNotSetException,
 )
 from app.types.scheduler import Scheduler
-from app.types.scopes_type import ScopeType
 from app.types.websocket import WebsocketConnectionManager
-from app.utils.auth import auth_utils
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.state import (
     GlobalState,
@@ -53,7 +45,6 @@ from app.utils.state import (
     init_SessionLocal,
     init_websocket_connection_manager,
 )
-from app.utils.tools import get_cached_permission_requirements
 
 # We could maybe use hyperion.security
 hyperion_access_logger = logging.getLogger("hyperion.access")
@@ -292,231 +283,3 @@ def get_mail_templates() -> calypsso.MailTemplates:
     """
 
     return GLOBAL_STATE["mail_templates"]
-
-
-def get_token_data(
-    settings: Settings = Depends(get_settings),
-    token: str = Depends(security.oauth2_scheme),
-    request_id: str = Depends(get_request_id),
-) -> schemas_auth.TokenData:
-    """
-    Dependency that returns the token payload data
-    """
-    return auth_utils.get_token_data(
-        settings=settings,
-        token=token,
-        request_id=request_id,
-    )
-
-
-def get_token_with_scopes(
-    scopes: list[list[ScopeType]],
-) -> Callable[
-    [schemas_auth.TokenData],
-    schemas_auth.TokenData,
-]:
-    """
-    Generate a dependency which will:
-     * check the request header contain a valid JWT token
-     * make sure the token contain the given scopes
-     * return the token data
-
-    This endpoint allows to require scopes other than the API scope. This should only be used by the auth endpoints.
-    To restrict an endpoint from the API, use `is_user_in`.
-    """
-
-    def get_current_token_data(
-        token_data: schemas_auth.TokenData = Depends(get_token_data),
-    ) -> schemas_auth.TokenData:
-        """
-        Dependency that makes sure the token is valid, contains the expected scopes and returns the corresponding user_id.
-        The expected scopes are passed as list of list of scopes, each list of scopes is an "AND" condition, and the list of list of scopes is an "OR" condition.
-        """
-
-        access_granted = False
-        if scopes == []:
-            access_granted = True
-        else:
-            for scope_set in scopes:
-                # `token_data.scopes` contain a " " separated list of scopes
-                # `scope_set` is a list of scopes that must be present in the token
-                # If one of the scope set is present in the token, the access is granted
-
-                scope_set_present = True
-                for scope in scope_set:
-                    scope_set_present = scope_set_present and (
-                        scope in token_data.scopes.split(" ")
-                    )
-                access_granted = access_granted or scope_set_present
-
-        if not access_granted:
-            raise HTTPException(
-                status_code=403,
-                detail=f"Unauthorized, token does not contain at least one of the following scope_set {[[scope.value for scope in scope_set] for scope_set in scopes]}",
-            )
-        return token_data
-
-    return get_current_token_data
-
-
-def get_request_user(
-    scopes: list[list[ScopeType]] | None = None,
-) -> Callable[
-    [AsyncSession, schemas_auth.TokenData],
-    Coroutine[Any, Any, schemas_users.CoreUser],
-]:
-    """
-    Generate a dependency which will:
-     * check the request header contain a valid JWT token
-     * make sure the token contain the given scopes
-     * return the corresponding user `models_users.CoreUser` object
-
-    This endpoint allows to require scopes other than the API scope. This should only be used by the auth endpoints.
-    To restrict an endpoint from the API, use `is_user_in`.
-    """
-    scopes = scopes or [[ScopeType.API]]
-
-    async def get_user_from_user_id(
-        db: AsyncSession = Depends(get_db),
-        token: schemas_auth.TokenData = Depends(get_token_with_scopes(scopes)),
-    ) -> schemas_users.CoreUser:
-        """
-        Dependency that makes sure the token is valid, contains the expected scopes and returns the corresponding user.
-        The expected scopes are passed as list of list of scopes, each list of scopes is an "AND" condition, and the list of list of scopes is an "OR" condition.
-        """
-        user = await cruds_users.get_user_by_id_schema(db=db, user_id=token.id)
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        return user
-
-    return get_user_from_user_id
-
-
-def filter_user_token(
-    *,
-    excluded_groups: list[GroupType | str] | None = None,
-    included_groups: list[GroupType | str] | None = None,
-    excluded_account_types: list[AccountType] | None = None,
-    included_account_types: list[AccountType] | None = None,
-    exclude_external: bool = False,
-) -> Callable[[schemas_auth.TokenData], schemas_auth.TokenData]:
-    """
-    A dependency that will:
-        * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
-        * filter the user based on the provided groups and account types
-    """
-
-    excluded_groups = excluded_groups or []
-    excluded_account_types = excluded_account_types or []
-    included_account_types = included_account_types or list(AccountType)
-
-    def filter_token(
-        token: schemas_auth.TokenData = Depends(
-            get_token_with_scopes([[ScopeType.API]]),
-        ),
-    ) -> schemas_auth.TokenData:
-        if GroupType.admin in token.group_ids:
-            return token
-        if token.account_type in excluded_account_types:
-            raise HTTPException(
-                status_code=403,
-                detail="Unauthorized, user account type is not allowed",
-            )
-        if exclude_external and token.account_type == AccountType.external:
-            raise HTTPException(
-                status_code=403,
-                detail="Unauthorized, user is an external user",
-            )
-        if any(group_id in token.group_ids for group_id in excluded_groups):
-            raise HTTPException(
-                status_code=403,
-                detail=f"Unauthorized, user is a member of any of the groups {excluded_groups}",
-            )
-        if included_groups is not None and not any(
-            group_id in token.group_ids for group_id in included_groups
-        ):
-            raise HTTPException(
-                status_code=403,
-                detail="Unauthorized, user is not a member of an allowed group",
-            )
-        if token.account_type not in included_account_types:
-            raise HTTPException(
-                status_code=403,
-                detail="Unauthorized, user account type is not allowed",
-            )
-        return token
-
-    return filter_token
-
-
-def is_user_admin() -> Callable[[schemas_auth.TokenData], schemas_auth.TokenData]:
-    """
-    Generate a dependency which will:
-        * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
-        * make sure the user making the request exists and is a member of the group with the given id
-        * make sure the user is not an external user if `exclude_external` is True
-        * return the corresponding user `models_users.CoreUser` object
-    """
-
-    def is_user_in(
-        token: schemas_auth.TokenData = Depends(
-            filter_user_token(included_groups=[GroupType.admin]),
-        ),
-    ) -> schemas_auth.TokenData:
-        """
-        A dependency that checks that user is a member of the group with the given id then returns the corresponding user.
-        """
-
-        return token
-
-    return is_user_in
-
-
-def is_user_allowed_to(
-    permissions_name: list[ModulePermissions],
-) -> Callable[
-    [schemas_auth.TokenData, AsyncSession],
-    Coroutine[Any, Any, schemas_auth.TokenData],
-]:
-
-    async def _is_user_allowed_to(
-        token: schemas_auth.TokenData = Depends(
-            get_token_with_scopes([[ScopeType.API]]),
-        ),
-        db: AsyncSession = Depends(get_db),
-        redis_client: Redis = Depends(get_redis_client),
-    ) -> schemas_auth.TokenData:
-
-        if GroupType.admin in token.group_ids:
-            return token
-
-        allowed_group_ids: set[str] = set()
-        allowed_account_types: set[AccountType] = set()
-        hyperion_error_logger.debug(
-            f"Checking if user {token} has any of the following permissions: {[permission.value for permission in permissions_name]}",
-        )
-        for permission_name in permissions_name:
-            groups, account_types = await get_cached_permission_requirements(
-                permission_name,
-                db,
-                redis_client,
-            )
-            allowed_group_ids.update(groups)
-            allowed_account_types.update(account_types)
-
-        user_has_group = any(g_id in allowed_group_ids for g_id in token.group_ids)
-        user_has_account = token.account_type in allowed_account_types
-
-        hyperion_error_logger.debug(
-            f"User {token} has groups {token.group_ids} and account type {token.account_type}. Allowed groups: {allowed_group_ids}, allowed account types: {allowed_account_types}. User has group: {user_has_group}, user has account: {user_has_account}",
-        )
-
-        if not (user_has_group or user_has_account):
-            raise HTTPException(
-                status_code=403,
-                detail="Unauthorized, user does not have the required permission",
-            )
-
-        return token
-
-    return _is_user_allowed_to

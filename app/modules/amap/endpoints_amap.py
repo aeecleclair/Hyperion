@@ -7,6 +7,7 @@ from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import is_user_allowed_to
 from app.core.groups.groups_type import AccountType
 from app.core.notification.schemas_notification import Message, Topic
 from app.core.permissions.type_permissions import ModulePermissions
@@ -16,7 +17,6 @@ from app.dependencies import (
     get_notification_tool,
     get_redis_client,
     get_request_id,
-    is_user_allowed_to,
 )
 from app.modules.amap import cruds_amap, models_amap, schemas_amap
 from app.modules.amap.factory_amap import AmapFactory

@@ -5,18 +5,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import is_user_admin
 from app.core.groups.groups_type import AccountType
-from app.core.schools import (
-    cruds_schools,
-    schemas_schools,
-)
+from app.core.schools import cruds_schools, schemas_schools
 from app.core.schools.factory_schools import CoreSchoolsFactory
 from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users, schemas_users
-from app.dependencies import (
-    get_db,
-    is_user_admin,
-)
+from app.dependencies import get_db
 from app.types.module import CoreModule
 
 router = APIRouter(tags=["Schools"])

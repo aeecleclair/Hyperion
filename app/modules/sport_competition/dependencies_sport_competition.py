@@ -7,12 +7,9 @@ from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import get_token_with_scopes
 from app.core.groups import groups_type
-from app.dependencies import (
-    get_db,
-    get_redis_client,
-    get_token_with_scopes,
-)
+from app.dependencies import get_db, get_redis_client
 from app.modules.sport_competition import (
     cruds_sport_competition,
     schemas_sport_competition,
@@ -20,9 +17,7 @@ from app.modules.sport_competition import (
 from app.modules.sport_competition.permissions_sport_competition import (
     SportCompetitionPermissions,
 )
-from app.modules.sport_competition.types_sport_competition import (
-    CompetitionGroupType,
-)
+from app.modules.sport_competition.types_sport_competition import CompetitionGroupType
 from app.types.scopes_type import ScopeType
 from app.utils.tools import has_user_token_permission
 

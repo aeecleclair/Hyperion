@@ -9,17 +9,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import is_user_allowed_to
 from app.core.groups.groups_type import AccountType
 from app.core.payment.payment_tool import PaymentTool
 from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import schemas_users
-from app.dependencies import (
-    get_db,
-    get_payment_tool,
-    get_request_user,
-    is_user_allowed_to,
-)
+from app.core.users.dependencies_users import get_request_user
+from app.dependencies import get_db, get_payment_tool
 from app.modules.raid import coredata_raid, cruds_raid, schemas_raid
 from app.modules.raid.dependencies_raid import (
     ensure_user_is_not_participant_in_edition,

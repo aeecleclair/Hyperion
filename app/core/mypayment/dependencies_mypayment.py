@@ -2,9 +2,10 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import filter_user_token
 from app.core.mypayment.coredata_mypayment import MyPaymentBankAccountHolder
 from app.core.mypayment.cruds_mypayment import get_structure_by_id
-from app.dependencies import filter_user_token, get_db
+from app.dependencies import get_db
 from app.utils.tools import get_core_data
 
 

@@ -21,6 +21,11 @@ from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import (
+    filter_user_token,
+    get_token_with_scopes,
+    is_user_admin,
+)
 from app.core.core_endpoints import cruds_core
 from app.core.memberships.utils_memberships import (
     get_user_active_membership_to_association_membership,
@@ -64,20 +69,16 @@ from app.core.payment import schemas_payment
 from app.core.payment.payment_tool import PaymentTool
 from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.users import cruds_users, schemas_users
+from app.core.users.dependencies_users import get_request_user
 from app.core.utils import security
 from app.core.utils.config import Settings
 from app.dependencies import (
-    filter_user_token,
     get_db,
     get_mail_templates,
     get_notification_tool,
     get_payment_tool,
     get_request_id,
-    get_request_user,
     get_settings,
-    get_token_data,
-    get_token_with_scopes,
-    is_user_admin,
 )
 from app.types import standard_responses
 from app.types.module import CoreModule
@@ -2961,7 +2962,7 @@ async def download_invoice(
 async def create_structure_invoice(
     structure_id: UUID,
     db: AsyncSession = Depends(get_db),
-    token_data: schemas_auth.TokenData = Depends(get_token_data),
+    token: schemas_auth.TokenData = Depends(get_token_with_scopes([[ScopeType.API]])),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -2970,9 +2971,6 @@ async def create_structure_invoice(
     **The user must be the bank account holder**
     """
     now = await cruds_core.start_isolation_mode(db)
-    # Database isolation requires to be the first statement of the transaction
-    # We can't use reguler dependencies to check user permissions as they access the database
-    token = get_token_with_scopes([[ScopeType.API]])(token_data)
     user = await cruds_users.get_user_by_id_schema(
         user_id=token.id,
         db=db,
