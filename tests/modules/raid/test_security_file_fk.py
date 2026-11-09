@@ -128,10 +128,6 @@ class TestSecurityFileFKViolation:
         # Mock the permission check
         with (
             patch(
-                "app.modules.raid.endpoints_raid.token.check_permission",
-                new=AsyncMock(return_value=False),
-            ),
-            patch(
                 "app.modules.raid.endpoints_raid.get_participant_or_404",
                 new=AsyncMock(return_value=participant),
             ),
@@ -184,10 +180,6 @@ class TestSecurityFileFKViolation:
         mock_security_file.id = "new_sec_file_id"
 
         with (
-            patch(
-                "app.modules.raid.endpoints_raid.token.check_permission",
-                new=AsyncMock(return_value=False),
-            ),
             patch(
                 "app.modules.raid.endpoints_raid.get_participant_or_404",
                 new=AsyncMock(return_value=participant),
@@ -246,10 +238,6 @@ class TestSecurityFileFKViolation:
         security_file_base = _create_mock_security_file_base()
 
         with (
-            patch(
-                "app.modules.raid.endpoints_raid.token.check_permission",
-                new=AsyncMock(return_value=False),
-            ),
             patch(
                 "app.modules.raid.endpoints_raid.get_participant_or_404",
                 new=AsyncMock(return_value=participant),
@@ -364,10 +352,6 @@ class TestSecurityFileFKEdgeCases:
 
         with (
             patch(
-                "app.modules.raid.endpoints_raid.token.check_permission",
-                new=AsyncMock(return_value=False),
-            ),
-            patch(
                 "app.modules.raid.endpoints_raid.get_participant_or_404",
                 new=AsyncMock(return_value=participant),
             ),
@@ -462,10 +446,6 @@ class TestSecurityFileConsentRules:
 
         with (
             patch(
-                "app.modules.raid.endpoints_raid.token.check_permission",
-                new=AsyncMock(return_value=False),
-            ),
-            patch(
                 "app.modules.raid.endpoints_raid.get_participant_or_404",
                 new=AsyncMock(return_value=participant),
             ),
@@ -515,10 +495,6 @@ class TestSecurityFileConsentRules:
         security_file = schemas_raid.SecurityFileBase(**self._base_kwargs())
 
         with (
-            patch(
-                "app.modules.raid.endpoints_raid.token.check_permission",
-                new=AsyncMock(return_value=False),
-            ),
             patch(
                 "app.modules.raid.endpoints_raid.get_participant_or_404",
                 new=AsyncMock(return_value=participant),
@@ -574,10 +550,6 @@ class TestSecurityFileConsentRules:
         )
 
         with (
-            patch(
-                "app.modules.raid.endpoints_raid.token.check_permission",
-                new=AsyncMock(return_value=False),
-            ),
             patch(
                 "app.modules.raid.endpoints_raid.get_participant_or_404",
                 new=AsyncMock(return_value=participant),

@@ -8,8 +8,7 @@ Focus on the Pydantic validators that encode new business rules:
 - Team preview document counters and teammate security-file privacy.
 """
 
-import datetime
-from datetime import date
+from datetime import UTC, date, datetime
 from uuid import uuid4
 
 import pytest
@@ -285,7 +284,7 @@ def _document(validation: DocumentValidation) -> schemas_raid.Document:
         id=str(uuid4()),
         type=DocumentType.idCard,
         name="doc",
-        uploaded_at=datetime.datetime.now(tz=datetime.UTC).date(),
+        uploaded_at=datetime.now(tz=UTC).date(),
         validation=validation,
     )
 

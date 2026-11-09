@@ -20,10 +20,6 @@ from app.types.exceptions import TokenClassMismatchError
 from app.types.scopes_type import ScopeType
 from app.utils.auth import auth_utils
 
-# We could maybe use hyperion.security
-hyperion_access_logger = logging.getLogger("hyperion.access")
-hyperion_error_logger = logging.getLogger("hyperion.error")
-
 # Keep permissions in Redis for 1 hour
 PERMISSION_CACHE_TTL = 3600
 
@@ -233,9 +229,6 @@ def is_user_allowed_to(
 
         allowed_group_ids: set[str] = set()
         allowed_account_types: set[AccountType] = set()
-        hyperion_error_logger.debug(
-            f"Checking if user {token} has any of the following permissions: {[permission.value for permission in permissions_name]}",
-        )
         for permission_name in permissions_name:
             groups, account_types = await get_cached_permission_requirements(
                 permission_name,
@@ -248,10 +241,6 @@ def is_user_allowed_to(
 
         user_has_group = any(g_id in allowed_group_ids for g_id in token.group_ids)
         user_has_account = token.account_type in allowed_account_types
-
-        hyperion_error_logger.debug(
-            f"User {token} has groups {token.group_ids} and account type {token.account_type}. Allowed groups: {allowed_group_ids}, allowed account types: {allowed_account_types}. User has group: {user_has_group}, user has account: {user_has_account}",
-        )
 
         if not (user_has_group or user_has_account):
             raise HTTPException(

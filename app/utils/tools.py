@@ -26,6 +26,7 @@ from app.core.groups import cruds_groups
 from app.core.groups.groups_type import AccountType
 from app.core.users import cruds_users, models_users
 from app.core.users.models_users import CoreUser
+from app.core.utils import security
 from app.types import core_data
 from app.types.content_type import ContentType
 from app.types.exceptions import (
@@ -520,7 +521,6 @@ async def create_and_send_email_migration(
      - you should check the email address format
      - you can choose if the user should become an external or a member user after the email change
     """
-    from app.core.utils import security
 
     confirmation_token = security.generate_token()
 
