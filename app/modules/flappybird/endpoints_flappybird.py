@@ -38,7 +38,7 @@ module = Module(
 )
 async def get_flappybird_score(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([FlappyBirdPermissions.access_flappybird]),
     ),
 ):
@@ -53,7 +53,7 @@ async def get_flappybird_score(
 )
 async def get_current_user_flappybird_personal_best(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([FlappyBirdPermissions.access_flappybird]),
     ),
 ):
@@ -94,7 +94,7 @@ async def get_current_user_flappybird_personal_best(
 )
 async def create_flappybird_score(
     flappybird_score: schemas_flappybird.FlappyBirdScoreBase,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([FlappyBirdPermissions.access_flappybird]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -139,7 +139,7 @@ async def create_flappybird_score(
 async def remove_flappybird_score(
     targeted_user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([FlappyBirdPermissions.manage_flappybird]),
     ),
 ):

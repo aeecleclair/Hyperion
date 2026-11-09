@@ -1,8 +1,5 @@
 """File defining the functions called by the endpoints, making queries to the table using the models"""
 
-import json
-
-from redis import Redis
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -81,47 +78,6 @@ async def get_permissions_by_permission_name(
         groups=[permission.group_id for permission in result_group],
         account_types=[permission.account_type for permission in result_account_type],
     )
-
-
-# Keep permissions in Redis for 1 hour
-PERMISSION_CACHE_TTL = 3600
-
-
-async def get_cached_permission_requirements(
-    permission_name: ModulePermissions,
-    db: AsyncSession,
-    redis_client: Redis | None = None,
-) -> tuple[list[str], list[AccountType]]:
-    cache_key = f"core:permissions:{permission_name}"
-    if redis_client is not None:
-        cached_data = redis_client.get(cache_key)
-
-        if cached_data is not None:
-            # Decode the JSON payload from Redis
-            data = json.loads(cached_data)
-            account_types = [AccountType(acc) for acc in data["account_types"]]
-            return (data["groups"], account_types)
-
-    # Cache miss: fetch from PostgreSQL
-    perm_config = await get_permissions_by_permission_name(
-        db,
-        permission_name,
-    )
-
-    if redis_client is not None:
-        # Save to Redis and set expiration
-        redis_client.set(
-            cache_key,
-            json.dumps(
-                {
-                    "groups": perm_config.groups,
-                    "account_types": [acc.value for acc in perm_config.account_types],
-                },
-            ),
-            ex=PERMISSION_CACHE_TTL,
-        )
-
-    return perm_config.groups, perm_config.account_types
 
 
 async def get_group_permission_by_group_id_and_permission_name(

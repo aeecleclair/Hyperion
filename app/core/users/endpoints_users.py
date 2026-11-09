@@ -75,7 +75,7 @@ S3_USER_SUBFOLDER = "users"
 async def read_users(
     accountTypes: list[AccountType] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Return all users from database as a list of `CoreUserSimple`
@@ -94,7 +94,7 @@ async def read_users(
 )
 async def count_users(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Return the number of users in the database
@@ -117,7 +117,7 @@ async def search_users(
     includedGroups: list[str] = Query(default=[]),
     excludedGroups: list[str] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Search for a user using Jaro_Winkler distance algorithm.
@@ -145,7 +145,7 @@ async def search_users(
 )
 async def get_account_types(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Return all account types hardcoded in the system
@@ -160,7 +160,7 @@ async def get_account_types(
     status_code=200,
 )
 async def read_current_user(
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     user: schemas_users.CoreUser = Depends(get_request_user()),
 ):
     """
@@ -241,7 +241,7 @@ async def batch_create_users(
     settings: Settings = Depends(get_settings),
     request_id: str = Depends(get_request_id),
     mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Batch user account creation process. All users will be sent an email with a link to activate their account.
@@ -439,11 +439,12 @@ async def activate_user(
 
     # We want to subscribe the user to all topics by default
     topics = await get_user_notification_topics(
-        token=schemas_auth.TokenData(
+        token=schemas_auth.FunctionalTokenData(
             sub=confirmed_user.id,
             group_ids=[],
             account_type=confirmed_user.account_type,
             school_id=confirmed_user.school_id,
+            settings=settings,
         ),
         db=db,
     )
@@ -913,7 +914,7 @@ async def change_password(
 async def read_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Return `CoreUser` representation of user with id `user_id`
@@ -932,7 +933,7 @@ async def read_user(
 #    "/users/{user_id}",
 #    status_code=204,
 ## )
-# async def delete_user(user_id: str, db: AsyncSession = Depends(get_db), token: schemas_auth.TokenData = Depends(is_user_in(GroupType.admin))):
+# async def delete_user(user_id: str, db: AsyncSession = Depends(get_db), token: schemas_auth.FunctionalTokenData = Depends(is_user_in(GroupType.admin))):
 #    """Delete user from database by id"""
 #    # TODO: WARNING - deleting an user without removing its relations ship in other tables will have unexpected consequences
 #
@@ -962,7 +963,7 @@ async def delete_user(
 async def update_current_user(
     user_update: schemas_users.CoreUserUpdate,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Update the current user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
@@ -1038,7 +1039,7 @@ async def update_user(
     user_id: str,
     user_update: schemas_users.CoreUserUpdateAdmin,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Update an user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
@@ -1059,7 +1060,7 @@ async def update_user(
 )
 async def create_current_user_profile_picture(
     image: UploadFile = File(...),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -1089,7 +1090,7 @@ async def create_current_user_profile_picture(
     status_code=200,
 )
 async def read_own_profile_picture(
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Get the profile picture of the authenticated user.

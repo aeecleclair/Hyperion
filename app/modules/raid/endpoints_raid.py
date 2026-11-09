@@ -56,7 +56,6 @@ from app.utils.tools import (
     get_core_data,
     get_file_from_data,
     get_random_string,
-    has_user_token_permission,
     save_file_as_data,
     set_core_data,
 )
@@ -93,7 +92,7 @@ module = Module(
 )
 async def list_editions(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
 ):
@@ -119,7 +118,7 @@ async def get_active_edition(
 async def create_edition(
     edition: schemas_raid.RaidEditionBase,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
 ):
@@ -148,7 +147,7 @@ async def update_edition(
     edition_id: uuid.UUID,
     edit: schemas_raid.RaidEditionEdit,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
 ):
@@ -167,7 +166,7 @@ async def update_edition(
 async def delete_edition(
     edition_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
 ):
@@ -203,7 +202,7 @@ async def delete_edition(
 )
 async def get_my_participant(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
@@ -220,7 +219,7 @@ async def get_my_participant(
 async def get_participant_by_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
@@ -237,7 +236,7 @@ async def get_participant_by_id(
     status_code=201,
 )
 async def create_participant(
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     user: schemas_users.CoreUser = Depends(get_request_user()),
@@ -292,7 +291,7 @@ async def create_participant(
 async def update_participant(
     user_id: str,
     participant_update: schemas_raid.RaidParticipantUpdate,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -300,8 +299,7 @@ async def update_participant(
 ):
     saved_participant = await get_participant_or_404(user_id, edition.id, db)
 
-    is_raid_admin = await has_user_token_permission(
-        token,
+    is_raid_admin = await token.check_permission(
         RaidPermissions.manage_raid,
         db,
     )
@@ -401,7 +399,7 @@ async def update_participant(
 )
 async def submit_participant(
     user_id: str,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -442,14 +440,13 @@ async def submit_participant(
 )
 async def reopen_participant(
     user_id: str,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     db: AsyncSession = Depends(get_db),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    is_raid_admin = await has_user_token_permission(
-        token,
+    is_raid_admin = await token.check_permission(
         RaidPermissions.manage_raid,
         db,
     )
@@ -476,7 +473,7 @@ async def reopen_participant(
 async def validate_participant(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
@@ -508,13 +505,12 @@ async def validate_participant(
 async def cancel_participant(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    is_raid_admin = await has_user_token_permission(
-        token,
+    is_raid_admin = await token.check_permission(
         RaidPermissions.manage_raid,
         db,
     )
@@ -557,7 +553,7 @@ async def cancel_participant(
 )
 async def create_team(
     team: schemas_raid.RaidTeamBase,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -594,7 +590,7 @@ async def create_team(
 )
 async def get_my_team(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
@@ -636,7 +632,7 @@ async def get_my_team(
 async def get_team_by_participant_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
@@ -660,7 +656,7 @@ async def get_team_by_participant_id(
 )
 async def get_all_teams(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
@@ -676,7 +672,7 @@ async def get_all_teams(
 async def get_team_by_id(
     team_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
 ):
@@ -713,7 +709,7 @@ async def update_team(
     team_id: str,
     team: schemas_raid.RaidTeamUpdate,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
@@ -723,8 +719,7 @@ async def update_team(
         edition.id,
         db,
     )
-    is_raid_admin = await has_user_token_permission(
-        token,
+    is_raid_admin = await token.check_permission(
         RaidPermissions.manage_raid,
         db,
     )
@@ -747,7 +742,7 @@ async def update_team(
 async def delete_team(
     team_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
 ):
@@ -764,7 +759,7 @@ async def delete_team(
 )
 async def delete_all_teams(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
@@ -789,7 +784,7 @@ async def delete_all_teams(
 async def upload_document(
     document_type: DocumentType,
     file: UploadFile = File(...),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -834,7 +829,7 @@ async def upload_document(
 async def read_document(
     document_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
@@ -858,8 +853,7 @@ async def read_document(
             detail="Participant owning the document not found.",
         )
 
-    is_raid_admin = await has_user_token_permission(
-        token,
+    is_raid_admin = await token.check_permission(
         RaidPermissions.manage_raid,
         db,
     )
@@ -898,7 +892,7 @@ async def validate_document(
     document_id: str,
     validation: DocumentValidation,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
 ):
@@ -919,7 +913,7 @@ async def set_security_file(
     security_file: schemas_raid.SecurityFileBase,
     participant_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
@@ -1027,7 +1021,7 @@ async def set_security_file(
 async def confirm_payment(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
@@ -1042,7 +1036,7 @@ async def confirm_payment(
 async def confirm_t_shirt_payment(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
@@ -1064,7 +1058,7 @@ async def confirm_t_shirt_payment(
 async def confirm_volunteer_payment(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
@@ -1079,7 +1073,7 @@ async def confirm_volunteer_payment(
 async def confirm_volunteer_t_shirt_payment(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
@@ -1101,7 +1095,7 @@ async def confirm_volunteer_t_shirt_payment(
 async def validate_attestation_on_honour(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
@@ -1124,7 +1118,7 @@ async def validate_attestation_on_honour(
 async def create_invite_token(
     team_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
@@ -1234,7 +1228,7 @@ async def kick_team_member(
     team_id: str,
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
 ):
@@ -1263,7 +1257,7 @@ async def merge_teams(
     team1_id: str,
     team2_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
 ):
@@ -1309,7 +1303,7 @@ async def merge_teams(
 )
 async def get_raid_information(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
 ):
@@ -1323,7 +1317,7 @@ async def get_raid_information(
 async def update_raid_information(
     raid_information: coredata_raid.RaidInformation,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
@@ -1356,7 +1350,7 @@ async def update_raid_information(
 )
 async def get_raid_price(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
 ):
@@ -1370,7 +1364,7 @@ async def get_raid_price(
 async def update_raid_price(
     raid_price: coredata_raid.RaidPrice,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
 ):
@@ -1389,7 +1383,7 @@ async def update_raid_price(
 )
 async def get_payment_url(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     user: schemas_users.CoreUser = Depends(get_request_user()),
@@ -1444,7 +1438,7 @@ async def get_payment_url(
 )
 async def get_volunteer_payment_url(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     user: schemas_users.CoreUser = Depends(get_request_user()),
@@ -1495,13 +1489,12 @@ async def get_volunteer_payment_url(
 )
 async def download_security_files_zip(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    has_medical_permission = await has_user_token_permission(
-        token,
+    has_medical_permission = await token.check_permission(
         RaidPermissions.read_medical_data,
         db,
     )
@@ -1538,7 +1531,7 @@ async def download_security_files_zip(
 )
 async def download_team_files_zip(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
@@ -1564,7 +1557,7 @@ async def download_team_files_zip(
 )
 async def create_volunteer(
     volunteer: schemas_raid.RaidVolunteerBase,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -1627,7 +1620,7 @@ async def create_volunteer(
     status_code=200,
 )
 async def get_my_volunteer(
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -1644,7 +1637,7 @@ async def get_my_volunteer(
 async def list_participants(
     status: RaidRegistrationStatus | None = None,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
@@ -1660,7 +1653,7 @@ async def list_participants(
 async def list_volunteers(
     validated: bool | None = None,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
@@ -1675,14 +1668,13 @@ async def list_volunteers(
 async def update_volunteer(
     user_id: str,
     volunteer_edit: schemas_raid.RaidVolunteerEdit,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     db: AsyncSession = Depends(get_db),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    is_raid_admin = await has_user_token_permission(
-        token,
+    is_raid_admin = await token.check_permission(
         RaidPermissions.manage_raid,
         db,
     )
@@ -1704,7 +1696,7 @@ async def update_volunteer(
 async def validate_volunteer(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.manage_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
@@ -1721,13 +1713,12 @@ async def validate_volunteer(
 async def cancel_volunteer(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    is_raid_admin = await has_user_token_permission(
-        token,
+    is_raid_admin = await token.check_permission(
         RaidPermissions.manage_raid,
         db,
     )
@@ -1743,15 +1734,14 @@ async def cancel_volunteer(
 )
 async def reopen_volunteer(
     user_id: str,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     db: AsyncSession = Depends(get_db),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
     """Un-cancel a cancelled volunteer (self or admin)."""
-    is_raid_admin = await has_user_token_permission(
-        token,
+    is_raid_admin = await token.check_permission(
         RaidPermissions.manage_raid,
         db,
     )
@@ -1783,13 +1773,12 @@ async def reopen_volunteer(
 async def delete_volunteer(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RaidPermissions.access_raid]),
     ),
     edition: schemas_raid.RaidEdition = Depends(get_current_raid_edition),
 ):
-    is_raid_admin = await has_user_token_permission(
-        token,
+    is_raid_admin = await token.check_permission(
         RaidPermissions.manage_raid,
         db,
     )

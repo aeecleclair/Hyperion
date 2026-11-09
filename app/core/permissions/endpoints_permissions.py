@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, cast
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import schemas_auth
 from app.core.auth.dependencies_auth import filter_user_token, is_user_admin
 from app.core.permissions import cruds_permissions, schemas_permissions
 from app.core.permissions.factory_permissions import CorePermissionsFactory
@@ -39,7 +40,7 @@ hyperion_security_logger = logging.getLogger("hyperion.security")
     status_code=200,
 )
 async def read_permissions_list(
-    user=Depends(filter_user_token()),
+    user: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Return all permissions from database
@@ -55,7 +56,7 @@ async def read_permissions_list(
 )
 async def read_permissions(
     db: AsyncSession = Depends(get_db),
-    user=Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Return all permissions from database
@@ -72,7 +73,7 @@ async def read_permissions(
 async def read_permission(
     permission_name: str,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Return permission with name from database
@@ -102,7 +103,7 @@ async def create_permission(
     permission: schemas_permissions.CoreGroupPermission
     | schemas_permissions.CoreAccountTypePermission,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Create a new permission in database
@@ -133,7 +134,7 @@ async def delete_permission(
     permission: schemas_permissions.CoreGroupPermission
     | schemas_permissions.CoreAccountTypePermission,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Delete a permission from database by name

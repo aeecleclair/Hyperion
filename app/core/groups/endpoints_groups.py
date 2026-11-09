@@ -41,7 +41,7 @@ hyperion_security_logger = logging.getLogger("hyperion.security")
 )
 async def read_groups(
     db: AsyncSession = Depends(get_db),
-    user=Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Return all groups from database as a list of dictionaries
@@ -58,7 +58,7 @@ async def read_groups(
 async def read_group(
     group_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Return group with id from database as a dictionary. This includes a list of users being members of the group.
@@ -80,7 +80,7 @@ async def read_group(
 async def create_group(
     group: schemas_groups.CoreGroupCreate,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Create a new group.
@@ -112,7 +112,7 @@ async def update_group(
     group_id: str,
     group_update: schemas_groups.CoreGroupUpdate,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Update the name or the description of a group.
@@ -146,7 +146,7 @@ async def update_group(
 async def create_membership(
     membership: schemas_groups.CoreMembership,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
     user: schemas_users.CoreUser = Depends(get_request_user()),
     request_id: str = Depends(get_request_id),
 ):
@@ -184,7 +184,7 @@ async def create_membership(
 async def create_batch_membership(
     batch_membership: schemas_groups.CoreBatchMembership,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
     user: schemas_users.CoreUser = Depends(get_request_user()),
     request_id: str = Depends(get_request_id),
 ):
@@ -231,7 +231,7 @@ async def create_batch_membership(
 async def delete_membership(
     membership: schemas_groups.CoreMembershipDelete,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
     user: schemas_users.CoreUser = Depends(get_request_user()),
     request_id: str = Depends(get_request_id),
     notification_manager: NotificationManager = Depends(get_notification_manager),
@@ -273,7 +273,7 @@ async def delete_membership(
 async def delete_batch_membership(
     batch_membership: schemas_groups.CoreBatchDeleteMembership,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
     user: schemas_users.CoreUser = Depends(get_request_user()),
     request_id: str = Depends(get_request_id),
     notification_manager: NotificationManager = Depends(get_notification_manager),
@@ -322,7 +322,7 @@ async def delete_batch_membership(
 async def delete_group(
     group_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Delete group from database.

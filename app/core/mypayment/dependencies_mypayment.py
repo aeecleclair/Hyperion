@@ -10,7 +10,7 @@ from app.utils.tools import get_core_data
 
 
 async def is_user_bank_account_holder(
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     db: AsyncSession = Depends(get_db),
 ) -> schemas_auth.TokenData:
     """Check if the user is a bank account holder."""

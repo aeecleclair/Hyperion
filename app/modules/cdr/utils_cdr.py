@@ -33,8 +33,6 @@ from app.types.exceptions import ObjectExpectedInDbNotFoundError
 from app.types.websocket import HyperionWebsocketsRoom
 from app.utils.tools import (
     get_core_data,
-    has_user_token_permission,
-    is_user_token_from_any_group,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -113,7 +111,7 @@ async def validate_payment(
 
 async def is_user_in_a_seller_group(
     seller_id: UUID,
-    token: schemas_auth.TokenData,
+    token: schemas_auth.FunctionalTokenData,
     db: AsyncSession,
 ):
     """
@@ -127,11 +125,9 @@ async def is_user_in_a_seller_group(
             detail="Seller not found.",
         )
 
-    if is_user_token_from_any_group(
-        token=token,
-        allowed_groups=[str(seller.group_id)],
-    ) or await has_user_token_permission(
-        token,
+    if token.is_from_any_group(
+        allowed_groups=[seller.group_id],
+    ) or await token.check_permission(
         CdrPermissions.manage_cdr,
         db,
     ):

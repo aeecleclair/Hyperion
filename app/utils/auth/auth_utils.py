@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from app.core.auth import schemas_auth
 from app.core.utils import security
 from app.core.utils.config import Settings
+from app.types.scopes_type import ScopeType
 
 hyperion_access_logger = logging.getLogger("hyperion.access")
 
@@ -55,4 +56,37 @@ def get_token_data(
             detail="Could not validate credentials",
         ) from None
 
+    return token_data
+
+
+def get_token_with_scopes(
+    scopes: list[list[ScopeType]],
+    token_data: schemas_auth.TokenData,
+) -> schemas_auth.TokenData:
+    """
+    Dependency that makes sure the token is valid, contains the expected scopes and returns the corresponding user_id.
+    The expected scopes are passed as list of list of scopes, each list of scopes is an "AND" condition, and the list of list of scopes is an "OR" condition.
+    """
+
+    access_granted = False
+    if scopes == []:
+        access_granted = True
+    else:
+        for scope_set in scopes:
+            # `token_data.scopes` contain a " " separated list of scopes
+            # `scope_set` is a list of scopes that must be present in the token
+            # If one of the scope set is present in the token, the access is granted
+
+            scope_set_present = True
+            for scope in scope_set:
+                scope_set_present = scope_set_present and (
+                    scope in token_data.scopes.split(" ")
+                )
+            access_granted = access_granted or scope_set_present
+
+    if not access_granted:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Unauthorized, token does not contain at least one of the following scope_set {[[scope.value for scope in scope_set] for scope_set in scopes]}",
+        )
     return token_data

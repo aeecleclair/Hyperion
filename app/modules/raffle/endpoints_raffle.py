@@ -24,8 +24,6 @@ from app.types.module import Module
 from app.utils.redis import locker_get, locker_set
 from app.utils.tools import (
     get_file_from_data,
-    has_user_token_permission,
-    is_user_token_from_any_group,
     save_file_as_data,
 )
 
@@ -55,7 +53,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def get_raffle(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
 ):
@@ -73,7 +71,7 @@ async def get_raffle(
 async def create_raffle(
     raffle: schemas_raffle.RaffleBase,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.manage_raffle]),
     ),
 ):
@@ -99,7 +97,7 @@ async def edit_raffle(
     raffle_id: str,
     raffle_update: schemas_raffle.RaffleEdit,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
 ):
@@ -113,7 +111,7 @@ async def edit_raffle(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_token_from_any_group(token, [raffle.group_id]):
+    if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{token.id} user is unauthorized to manage the raffle {raffle_id}",
@@ -139,7 +137,7 @@ async def edit_raffle(
 async def delete_raffle(
     raffle_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
 ):
@@ -152,7 +150,7 @@ async def delete_raffle(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_token_from_any_group(token, [raffle.group_id]):
+    if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{token.id} user is unauthorized to manage the raffle {raffle_id}",
@@ -175,7 +173,7 @@ async def delete_raffle(
 async def get_raffles_by_group_id(
     group_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
 ):
@@ -193,7 +191,7 @@ async def get_raffles_by_group_id(
 async def get_raffle_stats(
     raffle_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
 ):
@@ -223,7 +221,7 @@ async def get_raffle_stats(
 async def create_current_raffle_logo(
     raffle_id: str,
     image: UploadFile = File(...),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
     request_id: str = Depends(get_request_id),
@@ -238,7 +236,7 @@ async def create_current_raffle_logo(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_token_from_any_group(token, [raffle.group_id]):
+    if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{token.id} user is unauthorized to manage the raffle {raffle_id}",
@@ -272,7 +270,7 @@ async def create_current_raffle_logo(
 )
 async def read_raffle_logo(
     raffle_id: str,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -298,7 +296,7 @@ async def read_raffle_logo(
 )
 async def get_pack_tickets(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
 ):
@@ -316,7 +314,7 @@ async def get_pack_tickets(
 async def create_packticket(
     packticket: schemas_raffle.PackTicketBase,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
 ):
@@ -329,7 +327,7 @@ async def create_packticket(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_token_from_any_group(token, [raffle.group_id]):
+    if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{token.id} user is unauthorized to manage the raffle {packticket.raffle_id}",
@@ -351,7 +349,7 @@ async def edit_packticket(
     packticket_id: str,
     packticket_update: schemas_raffle.PackTicketEdit,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
 ):
@@ -373,7 +371,7 @@ async def edit_packticket(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_token_from_any_group(token, [raffle.group_id]):
+    if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{token.id} user is unauthorized to manage the raffle {packticket.raffle_id}",
@@ -399,7 +397,7 @@ async def edit_packticket(
 async def delete_packticket(
     packticket_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
 ):
@@ -420,7 +418,7 @@ async def delete_packticket(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_token_from_any_group(token, [raffle.group_id]):
+    if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{token.id} user is unauthorized to manage the raffle {packticket.raffle_id}",
@@ -437,7 +435,7 @@ async def delete_packticket(
 async def get_pack_tickets_by_raffle_id(
     raffle_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
 ):
@@ -454,7 +452,7 @@ async def get_pack_tickets_by_raffle_id(
 )
 async def get_tickets(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.manage_raffle]),
     ),
 ):
@@ -475,7 +473,7 @@ async def buy_ticket(
     pack_id: str,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis | None = Depends(get_redis_client),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
     user: schemas_users.CoreUser = Depends(get_request_user()),
@@ -556,7 +554,7 @@ async def buy_ticket(
 async def get_tickets_by_userid(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
 ):
@@ -571,7 +569,7 @@ async def get_tickets_by_userid(
 
     if not (
         user_id == token.id
-        or await has_user_token_permission(token, RafflePermissions.manage_raffle, db)
+        or await token.check_permission(RafflePermissions.manage_raffle, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -589,7 +587,7 @@ async def get_tickets_by_userid(
 async def get_tickets_by_raffleid(
     raffle_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
 ):
@@ -609,7 +607,7 @@ async def get_tickets_by_raffleid(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_token_from_any_group(token, [raffle.group_id]):
+    if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{token.id} user is unauthorized to manage the raffle {raffle_id}",
@@ -625,7 +623,7 @@ async def get_tickets_by_raffleid(
 )
 async def get_prizes(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
 ):
@@ -643,7 +641,7 @@ async def get_prizes(
 async def create_prize(
     prize: schemas_raffle.PrizeBase,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
 ):
@@ -656,7 +654,7 @@ async def create_prize(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_token_from_any_group(token, [raffle.group_id]):
+    if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{token.id} user is unauthorized to manage the raffle {raffle.id}",
@@ -681,7 +679,7 @@ async def edit_prize(
     prize_id: str,
     prize_update: schemas_raffle.PrizeEdit,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
 ):
@@ -700,7 +698,7 @@ async def edit_prize(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_token_from_any_group(token, [raffle.group_id]):
+    if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{token.id} user is unauthorized to manage the raffle {raffle.id}",
@@ -722,7 +720,7 @@ async def edit_prize(
 async def delete_prize(
     prize_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
 ):
@@ -741,7 +739,7 @@ async def delete_prize(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_token_from_any_group(token, [raffle.group_id]):
+    if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{token.id} user is unauthorized to manage the raffle {raffle.id}",
@@ -758,7 +756,7 @@ async def delete_prize(
 async def get_prizes_by_raffleid(
     raffle_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
 ):
@@ -777,7 +775,7 @@ async def get_prizes_by_raffleid(
 async def create_prize_picture(
     prize_id: str,
     image: UploadFile = File(...),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
     request_id: str = Depends(get_request_id),
@@ -797,7 +795,7 @@ async def create_prize_picture(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_token_from_any_group(token, [raffle.group_id]):
+    if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{token.id} user is unauthorized to manage the raffle {raffle.id}",
@@ -831,7 +829,7 @@ async def create_prize_picture(
 )
 async def read_prize_logo(
     prize_id: str,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -857,7 +855,7 @@ async def read_prize_logo(
 )
 async def get_users_cash(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.manage_cash]),
     ),
 ):
@@ -877,7 +875,7 @@ async def get_users_cash(
 async def get_cash_by_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
 ):
@@ -890,8 +888,7 @@ async def get_cash_by_id(
     if user_db is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if user_id == token.id or await has_user_token_permission(
-        token,
+    if user_id == token.id or await token.check_permission(
         RafflePermissions.manage_cash,
         db,
     ):
@@ -917,7 +914,7 @@ async def create_cash_of_user(
     user_id: str,
     cash: schemas_raffle.CashEdit,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.manage_cash]),
     ),
 ):
@@ -961,7 +958,7 @@ async def edit_cash_by_id(
     user_id: str,
     balance: schemas_raffle.CashEdit,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.manage_cash]),
     ),
     redis_client: Redis = Depends(get_redis_client),
@@ -1010,7 +1007,7 @@ async def edit_cash_by_id(
 async def draw_winner(
     prize_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
 ):
@@ -1023,7 +1020,7 @@ async def draw_winner(
     if not raffle:
         raise HTTPException(status_code=404, detail="Raffle not found")
 
-    if not is_user_token_from_any_group(token, [raffle.group_id]):
+    if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{token.id} user is unauthorized to manage the raffle {raffle.id}",
@@ -1053,7 +1050,7 @@ async def draw_winner(
 async def open_raffle(
     raffle_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
 ):
@@ -1073,7 +1070,7 @@ async def open_raffle(
             detail=f"You can't mark a raffle as open if it is not in creation mode. The current mode is {raffle.status}.",
         )
 
-    if not is_user_token_from_any_group(token, [raffle.group_id]):
+    if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{token.id} user is unauthorized to manage the raffle {raffle_id}",
@@ -1093,7 +1090,7 @@ async def open_raffle(
 async def lock_raffle(
     raffle_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RafflePermissions.access_raffle]),
     ),
 ):
@@ -1113,7 +1110,7 @@ async def lock_raffle(
             detail=f"You can't mark a raffle as locked if it is not in open mode. The current mode is {raffle.status}.",
         )
 
-    if not is_user_token_from_any_group(token, [raffle.group_id]):
+    if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
             detail=f"{token.id} user is unauthorized to manage the raffle {raffle_id}",

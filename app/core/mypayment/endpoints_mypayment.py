@@ -121,7 +121,7 @@ RETENTION_DURATION = 10 * 365  # 10 years in days
     status_code=200,
 )
 async def get_bank_account_holder(
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     db: AsyncSession = Depends(get_db),
 ) -> schemas_mypayment.Structure:
     """
@@ -150,7 +150,7 @@ async def get_bank_account_holder(
 async def set_bank_account_holder(
     bank_account_info: MyPaymentBankAccountHolder,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """Set the bank account holder information."""
 
@@ -179,7 +179,7 @@ async def set_bank_account_holder(
 )
 async def get_structures(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Get all structures.
@@ -197,7 +197,7 @@ async def get_structures(
 async def create_structure(
     structure: schemas_mypayment.StructureBase,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Create a new structure.
@@ -257,7 +257,7 @@ async def update_structure(
     structure_id: UUID,
     structure_update: schemas_mypayment.StructureUpdate,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Update a structure.
@@ -296,7 +296,7 @@ async def update_structure(
 async def delete_structure(
     structure_id: UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Delete a structure. Only structures without stores can be deleted.
@@ -327,7 +327,7 @@ async def create_structure_administrator(
     structure_id: UUID,
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Create a new administrator for a structure.
@@ -421,7 +421,7 @@ async def delete_structure_administrator(
     structure_id: UUID,
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Delete an administrator for a structure.
@@ -488,7 +488,7 @@ async def init_transfer_structure_manager(
     transfer_info: schemas_mypayment.StructureTranfert,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     user: schemas_users.CoreUser = Depends(get_request_user()),
     mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     settings: Settings = Depends(get_settings),
@@ -649,7 +649,7 @@ async def create_store(
     structure_id: UUID,
     store: schemas_mypayment.StoreBase,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Create a store. The structure manager will be added as a seller for the store.
@@ -756,7 +756,7 @@ async def get_store_history(
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Get all transactions for the store.
@@ -879,7 +879,7 @@ async def export_store_history(
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Export store payment history as a CSV file.
@@ -983,7 +983,7 @@ async def export_store_history(
 )
 async def get_user_stores(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Get all stores for the current user.
@@ -1028,7 +1028,7 @@ async def update_store(
     store_id: UUID,
     store_update: schemas_mypayment.StoreUpdate,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Update a store
@@ -1080,7 +1080,7 @@ async def update_store(
 async def delete_store(
     store_id: UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Delete a store. Only stores without transactions can be deleted.
@@ -1154,7 +1154,7 @@ async def create_store_seller(
     store_id: UUID,
     seller: schemas_mypayment.SellerCreation,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Create a store seller.
@@ -1224,7 +1224,7 @@ async def create_store_seller(
 async def get_store_sellers(
     store_id: UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Get all sellers for the given store.
@@ -1267,7 +1267,7 @@ async def update_store_seller(
     seller_user_id: str,
     seller_update: schemas_mypayment.SellerUpdate,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Update a store seller permissions.
@@ -1342,7 +1342,7 @@ async def delete_store_seller(
     store_id: UUID,
     seller_user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Delete a store seller.
@@ -1413,7 +1413,7 @@ async def delete_store_seller(
 )
 async def register_user(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Sign MyECL Pay TOS for the given user.
@@ -1470,7 +1470,7 @@ async def register_user(
 )
 async def get_user_tos(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -1509,7 +1509,7 @@ async def sign_tos(
     signature: schemas_mypayment.TOSSignature,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     user: schemas_users.CoreUser = Depends(get_request_user()),
     mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     settings: Settings = Depends(get_settings),
@@ -1572,7 +1572,7 @@ async def sign_tos(
 )
 async def get_user_devices(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Get user devices.
@@ -1604,7 +1604,7 @@ async def get_user_devices(
 async def get_user_device(
     wallet_device_id: UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Get user devices.
@@ -1649,7 +1649,7 @@ async def get_user_device(
 )
 async def get_user_wallet(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Get user wallet.
@@ -1690,7 +1690,7 @@ async def create_user_devices(
     wallet_device_creation: schemas_mypayment.WalletDeviceCreation,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     user: schemas_users.CoreUser = Depends(get_request_user()),
     mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     settings: Settings = Depends(get_settings),
@@ -1840,7 +1840,7 @@ async def activate_user_device(
 async def revoke_user_devices(
     wallet_device_id: UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     settings: Settings = Depends(get_settings),
 ):
@@ -1904,7 +1904,7 @@ async def revoke_user_devices(
 )
 async def get_user_wallet_history(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     start_date: datetime | None = None,
     end_date: datetime | None = None,
 ):
@@ -2034,7 +2034,7 @@ async def get_user_wallet_history(
 async def init_ha_transfer(
     transfer_info: schemas_mypayment.TransferInfo,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     user: schemas_users.CoreUser = Depends(get_request_user()),
     settings: Settings = Depends(get_settings),
     payment_tool: PaymentTool = Depends(
@@ -2190,7 +2190,7 @@ async def validate_can_scan_qrcode(
     store_id: UUID,
     scan_info: schemas_mypayment.ScanInfo,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Validate if a given QR Code can be scanned by the seller.
@@ -2277,7 +2277,7 @@ async def store_scan_qrcode(
     store_id: UUID,
     scan_info: schemas_mypayment.ScanInfo,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     request_id: str = Depends(get_request_id),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     settings: Settings = Depends(get_settings),
@@ -2517,7 +2517,7 @@ async def refund_transaction(
     transaction_id: UUID,
     refund_info: schemas_mypayment.RefundInfo,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     settings: Settings = Depends(get_settings),
 ):
@@ -2709,7 +2709,7 @@ async def refund_transaction(
 async def cancel_transaction(
     transaction_id: UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     request_id: str = Depends(get_request_id),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     settings: Settings = Depends(get_settings),
@@ -2849,7 +2849,7 @@ async def get_invoices(
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_bank_account_holder),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_bank_account_holder),
 ) -> list[schemas_mypayment.Invoice]:
     """
     Get all invoices.
@@ -2877,7 +2877,7 @@ async def get_structure_invoices(
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ) -> list[schemas_mypayment.Invoice]:
     """
     Get all invoices.
@@ -2918,7 +2918,7 @@ async def get_structure_invoices(
 async def download_invoice(
     invoice_id: UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     invoice = await cruds_mypayment.get_invoice_by_id(invoice_id, db)
     if invoice is None:
@@ -2962,7 +2962,9 @@ async def download_invoice(
 async def create_structure_invoice(
     structure_id: UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(get_token_with_scopes([[ScopeType.API]])),
+    token: schemas_auth.FunctionalTokenData = Depends(
+        get_token_with_scopes([[ScopeType.API]]),
+    ),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -3128,7 +3130,7 @@ async def update_invoice_paid_status(
     invoice_id: UUID,
     paid: bool,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_bank_account_holder),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_bank_account_holder),
 ):
     """
     Update the paid status of a structure invoice.
@@ -3161,7 +3163,7 @@ async def update_invoice_paid_status(
 async def aknowledge_invoice_as_received(
     invoice_id: UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Update the received status of a structure invoice.
@@ -3255,7 +3257,7 @@ async def aknowledge_invoice_as_received(
 async def delete_structure_invoice(
     invoice_id: UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_bank_account_holder),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_bank_account_holder),
 ):
     """
     Delete a structure invoice.

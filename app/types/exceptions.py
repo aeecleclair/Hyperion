@@ -76,6 +76,13 @@ class AuthHTTPException(ContentHTTPException):
         super().__init__(status_code=status_code, content=content)
 
 
+class TokenClassMismatchError(Exception):
+    def __init__(self, actual_token_class: str, expected_token_class: str):
+        super().__init__(
+            f"Token class mismatch: expected {expected_token_class}, got {actual_token_class}",
+        )
+
+
 class PaymentToolCredentialsNotSetException(Exception):
     def __init__(self):
         super().__init__("HelloAsso API credentials are not set")

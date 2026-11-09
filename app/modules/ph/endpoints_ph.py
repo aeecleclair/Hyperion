@@ -62,7 +62,7 @@ module = Module(
 async def get_paper_pdf(
     paper_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PHPermissions.access_ph]),
     ),
 ):
@@ -87,7 +87,7 @@ async def get_paper_pdf(
 )
 async def get_papers(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PHPermissions.access_ph]),
     ),
 ):
@@ -107,7 +107,7 @@ async def get_papers(
 )
 async def get_papers_admin(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PHPermissions.manage_ph]),
     ),
 ):
@@ -127,7 +127,7 @@ async def get_papers_admin(
 async def create_paper(
     paper: schemas_ph.PaperBase,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PHPermissions.manage_ph]),
     ),
     notification_tool: NotificationTool = Depends(get_notification_tool),
@@ -180,7 +180,7 @@ async def create_paper(
 async def create_paper_pdf_and_cover(
     paper_id: uuid.UUID,
     pdf: UploadFile = File(...),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PHPermissions.manage_ph]),
     ),
     request_id: str = Depends(get_request_id),
@@ -216,7 +216,7 @@ async def create_paper_pdf_and_cover(
 )
 async def get_cover(
     paper_id: uuid.UUID,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PHPermissions.access_ph]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -242,7 +242,7 @@ async def get_cover(
 async def update_paper(
     paper_id: uuid.UUID,
     paper_update: schemas_ph.PaperUpdate,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PHPermissions.manage_ph]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -267,7 +267,7 @@ async def update_paper(
 )
 async def delete_paper(
     paper_id: uuid.UUID,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PHPermissions.manage_ph]),
     ),
     db: AsyncSession = Depends(get_db),

@@ -23,7 +23,6 @@ from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.tools import (
     get_file_from_data,
-    has_user_token_permission,
     save_file_as_data,
 )
 
@@ -52,7 +51,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def get_sections(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to(
             [CampaignPermissions.vote, CampaignPermissions.manage_campaign],
         ),
@@ -74,7 +73,7 @@ async def get_sections(
 async def add_section(
     section: schemas_campaign.SectionBase,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CampaignPermissions.manage_campaign]),
     ),
 ):
@@ -109,7 +108,7 @@ async def add_section(
 async def delete_section(
     section_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CampaignPermissions.manage_campaign]),
     ),
 ):
@@ -138,7 +137,7 @@ async def delete_section(
 )
 async def get_lists(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to(
             [CampaignPermissions.vote, CampaignPermissions.manage_campaign],
         ),
@@ -161,7 +160,7 @@ async def get_lists(
 async def add_list(
     campaign_list: schemas_campaign.ListBase,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CampaignPermissions.manage_campaign]),
     ),
 ):
@@ -234,7 +233,7 @@ async def add_list(
 async def delete_list(
     list_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CampaignPermissions.manage_campaign]),
     ),
 ):
@@ -263,7 +262,7 @@ async def delete_list(
 async def delete_lists_by_type(
     list_type: ListType | None = None,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CampaignPermissions.manage_campaign]),
     ),
 ):
@@ -297,7 +296,7 @@ async def update_list(
     list_id: str,
     campaign_list: schemas_campaign.ListEdit,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CampaignPermissions.manage_campaign]),
     ),
 ):
@@ -342,7 +341,7 @@ async def update_list(
 )
 async def get_voters(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CampaignPermissions.access_campaign]),
     ),
 ):
@@ -364,7 +363,7 @@ async def get_voters(
 async def add_voter(
     group_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CampaignPermissions.manage_campaign]),
     ),
 ):
@@ -401,7 +400,7 @@ async def add_voter(
 )
 async def delete_voters(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CampaignPermissions.manage_campaign]),
     ),
 ):
@@ -423,7 +422,7 @@ async def delete_voters(
 async def delete_voter(
     group_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CampaignPermissions.manage_campaign]),
     ),
 ):
@@ -461,7 +460,7 @@ async def delete_voter(
 )
 async def open_vote(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CampaignPermissions.manage_campaign]),
     ),
 ):
@@ -500,7 +499,7 @@ async def open_vote(
 )
 async def close_vote(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CampaignPermissions.manage_campaign]),
     ),
 ):
@@ -528,7 +527,7 @@ async def close_vote(
 )
 async def count_voting(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CampaignPermissions.manage_campaign]),
     ),
 ):
@@ -556,7 +555,7 @@ async def count_voting(
 )
 async def publish_vote(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CampaignPermissions.manage_campaign]),
     ),
 ):
@@ -584,7 +583,7 @@ async def publish_vote(
 )
 async def reset_vote(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CampaignPermissions.manage_campaign]),
     ),
 ):
@@ -628,7 +627,7 @@ async def reset_vote(
 async def vote(
     vote: schemas_campaign.VoteBase,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CampaignPermissions.vote]),
     ),
 ):
@@ -690,7 +689,7 @@ async def vote(
 )
 async def get_sections_already_voted(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CampaignPermissions.vote]),
     ),
 ):
@@ -718,7 +717,7 @@ async def get_sections_already_voted(
 )
 async def get_results(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to(
             [CampaignPermissions.vote, CampaignPermissions.manage_campaign],
         ),
@@ -734,8 +733,7 @@ async def get_results(
 
     if (
         status == StatusType.counting
-        and await has_user_token_permission(
-            token,
+        and await token.check_permission(
             CampaignPermissions.manage_campaign,
             db,
         )
@@ -772,7 +770,7 @@ async def get_results(
 )
 async def get_status_vote(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to(
             [CampaignPermissions.vote, CampaignPermissions.manage_campaign],
         ),
@@ -796,7 +794,7 @@ async def get_status_vote(
 async def get_stats_for_section(
     section_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CampaignPermissions.vote]),
     ),
 ):
@@ -823,7 +821,7 @@ async def get_stats_for_section(
 async def create_campaigns_logo(
     list_id: str,
     image: UploadFile = File(...),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CampaignPermissions.manage_campaign]),
     ),
     request_id: str = Depends(get_request_id),
@@ -871,7 +869,7 @@ async def create_campaigns_logo(
 )
 async def read_campaigns_logo(
     list_id: str,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to(
             [CampaignPermissions.vote, CampaignPermissions.manage_campaign],
         ),

@@ -16,7 +16,7 @@ from app.types.scopes_type import ScopeType
 def get_request_user(
     scopes: list[list[ScopeType]] | None = None,
 ) -> Callable[
-    [AsyncSession, schemas_auth.TokenData],
+    [AsyncSession, schemas_auth.FunctionalTokenData],
     Coroutine[Any, Any, schemas_users.CoreUser],
 ]:
     """
@@ -32,7 +32,9 @@ def get_request_user(
 
     async def get_user_from_user_id(
         db: AsyncSession = Depends(get_db),
-        token: schemas_auth.TokenData = Depends(get_token_with_scopes(scopes)),
+        token: schemas_auth.FunctionalTokenData = Depends(
+            get_token_with_scopes(scopes),
+        ),
     ) -> schemas_users.CoreUser:
         """
         Dependency that makes sure the token is valid, contains the expected scopes and returns the corresponding user.

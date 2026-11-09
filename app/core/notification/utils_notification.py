@@ -6,11 +6,10 @@ from app.core.auth import schemas_auth
 from app.core.groups.groups_type import AccountType
 from app.core.notification import cruds_notification, schemas_notification
 from app.core.notification.models_notification import NotificationTopic
-from app.utils.tools import is_user_token_from_any_group
 
 
 async def get_user_notification_topics(
-    token: schemas_auth.TokenData,
+    token: schemas_auth.FunctionalTokenData,
     db: AsyncSession,
 ) -> list[schemas_notification.TopicUser]:
     """
@@ -34,10 +33,7 @@ async def get_user_notification_topics(
             if token.account_type == AccountType.external:
                 continue
         if topic.restrict_to_group_id:
-            if not is_user_token_from_any_group(
-                token=token,
-                allowed_groups=[topic.restrict_to_group_id],
-            ):
+            if not token.is_from_any_group(allowed_groups=[topic.restrict_to_group_id]):
                 continue
 
         result.append(

@@ -24,7 +24,6 @@ from app.modules.amap.types_amap import DeliveryStatusType
 from app.types.module import Module
 from app.utils.communication.notifications import NotificationTool
 from app.utils.redis import locker_get, locker_set
-from app.utils.tools import has_user_token_permission
 
 
 class AmapPermissions(ModulePermissions):
@@ -61,7 +60,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def get_products(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
@@ -81,7 +80,7 @@ async def get_products(
 async def create_product(
     product: schemas_amap.ProductSimple,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
@@ -103,7 +102,7 @@ async def create_product(
 async def get_product_by_id(
     product_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.access_amap]),
     ),
 ):
@@ -126,7 +125,7 @@ async def edit_product(
     product_id: str,
     product_update: schemas_amap.ProductEdit,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
@@ -154,7 +153,7 @@ async def edit_product(
 async def delete_product(
     product_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
@@ -184,7 +183,7 @@ async def delete_product(
 )
 async def get_deliveries(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.access_amap]),
     ),
 ):
@@ -202,7 +201,7 @@ async def get_deliveries(
 async def create_delivery(
     delivery: schemas_amap.DeliveryBase,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
@@ -228,7 +227,7 @@ async def create_delivery(
 async def delete_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
@@ -259,7 +258,7 @@ async def edit_delivery(
     delivery_id: str,
     delivery: schemas_amap.DeliveryUpdate,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
@@ -290,7 +289,7 @@ async def add_product_to_delivery(
     products_ids: schemas_amap.DeliveryProductsUpdate,
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
@@ -324,7 +323,7 @@ async def remove_product_from_delivery(
     delivery_id: str,
     products_ids: schemas_amap.DeliveryProductsUpdate,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
@@ -401,7 +400,7 @@ async def get_orders_from_delivery(
 async def get_order_by_id(
     order_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
@@ -433,7 +432,7 @@ async def add_order_to_delievery(
     order: schemas_amap.OrderBase,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis | None = Depends(get_redis_client),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.access_amap]),
     ),
     request_id: str = Depends(get_request_id),
@@ -459,7 +458,7 @@ async def add_order_to_delievery(
 
     if not (
         token.id == order.user_id
-        or await has_user_token_permission(token, AmapPermissions.manage_amap, db)
+        or await token.check_permission(AmapPermissions.manage_amap, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -560,7 +559,7 @@ async def edit_order_from_delivery(
     order: schemas_amap.OrderEdit,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis | None = Depends(get_redis_client),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.access_amap]),
     ),
     request_id: str = Depends(get_request_id),
@@ -590,7 +589,7 @@ async def edit_order_from_delivery(
 
     if not (
         token.id == previous_order.user_id
-        or await has_user_token_permission(token, AmapPermissions.manage_amap, db)
+        or await token.check_permission(AmapPermissions.manage_amap, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -680,7 +679,7 @@ async def remove_order(
     order_id: str,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis | None = Depends(get_redis_client),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.access_amap]),
     ),
     request_id: str = Depends(get_request_id),
@@ -690,8 +689,7 @@ async def remove_order(
 
     **A member of the group AMAP can delete orders of other users**
     """
-    is_user_admin = await has_user_token_permission(
-        token,
+    is_user_admin = await token.check_permission(
         AmapPermissions.manage_amap,
         db,
     )
@@ -757,7 +755,7 @@ async def remove_order(
 async def open_ordering_of_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
     notification_tool: NotificationTool = Depends(get_notification_tool),
@@ -792,7 +790,7 @@ async def open_ordering_of_delivery(
 async def lock_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
@@ -815,7 +813,7 @@ async def lock_delivery(
 async def mark_delivery_as_delivered(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
@@ -838,7 +836,7 @@ async def mark_delivery_as_delivered(
 async def archive_of_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
@@ -862,7 +860,7 @@ async def archive_of_delivery(
 )
 async def get_users_cash(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
@@ -882,7 +880,7 @@ async def get_users_cash(
 async def get_cash_by_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.access_amap]),
     ),
 ):
@@ -897,7 +895,7 @@ async def get_cash_by_id(
 
     if not (
         user_id == token.id
-        or await has_user_token_permission(token, AmapPermissions.manage_amap, db)
+        or await token.check_permission(AmapPermissions.manage_amap, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -928,7 +926,7 @@ async def create_cash_of_user(
     user_id: str,
     cash: schemas_amap.CashEdit,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
     request_id: str = Depends(get_request_id),
@@ -994,7 +992,7 @@ async def edit_cash_by_id(
     user_id: str,
     balance: schemas_amap.CashEdit,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
     request_id: str = Depends(get_request_id),
@@ -1031,7 +1029,7 @@ async def edit_cash_by_id(
 async def get_orders_of_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.access_amap]),
     ),
 ):
@@ -1046,7 +1044,7 @@ async def get_orders_of_user(
 
     if not (
         user_id == token.id
-        or await has_user_token_permission(token, AmapPermissions.manage_amap, db)
+        or await token.check_permission(AmapPermissions.manage_amap, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -1079,7 +1077,7 @@ async def get_orders_of_user(
 )
 async def get_information(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.access_amap]),
     ),
 ):
@@ -1105,7 +1103,7 @@ async def get_information(
 async def edit_information(
     edit_information: schemas_amap.InformationEdit,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):

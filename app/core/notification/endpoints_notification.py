@@ -22,7 +22,6 @@ from app.dependencies import (
 from app.types.module import CoreModule
 from app.types.scheduler import Scheduler
 from app.utils.communication.notifications import NotificationManager, NotificationTool
-from app.utils.tools import is_user_token_from_any_group
 
 router = APIRouter(tags=["Notifications"])
 
@@ -51,7 +50,7 @@ core_module = CoreModule(
 async def register_firebase_device(
     firebase_token: str = Body(embed=True),
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
@@ -111,7 +110,7 @@ async def register_firebase_device(
 async def unregister_firebase_device(
     firebase_token: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
@@ -144,7 +143,7 @@ async def unregister_firebase_device(
 async def subscribe_to_topic(
     topic_id: UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
@@ -164,10 +163,7 @@ async def subscribe_to_topic(
         )
 
     if topic.restrict_to_group_id is not None:
-        if not is_user_token_from_any_group(
-            token=token,
-            allowed_groups=[topic.restrict_to_group_id],
-        ):
+        if not token.is_from_any_group(allowed_groups=[topic.restrict_to_group_id]):
             raise HTTPException(
                 status_code=400,
                 detail="You are not in a group allowed to subscribe to this topic.",
@@ -192,7 +188,7 @@ async def subscribe_to_topic(
 async def unsubscribe_to_topic(
     topic_id: UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
@@ -215,7 +211,7 @@ async def unsubscribe_to_topic(
 )
 async def get_topics(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Return all available topics for a user
@@ -231,7 +227,7 @@ async def get_topics(
 )
 async def send_notification(
     notification_request: schemas_notification.GroupNotificationRequest,
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -256,7 +252,7 @@ async def send_notification(
 )
 async def send_test_notification(
     user_id: str | None = None,
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -281,7 +277,7 @@ async def send_test_notification(
 )
 async def send_test_future_notification(
     user_id: str | None = None,
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     scheduler: Scheduler = Depends(get_scheduler),
 ):
@@ -309,7 +305,7 @@ async def send_test_future_notification(
     status_code=204,
 )
 async def send_test_notification_topic(
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -333,7 +329,7 @@ async def send_test_notification_topic(
     status_code=204,
 )
 async def send_test_future_notification_topic(
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     scheduler: Scheduler = Depends(get_scheduler),
 ):
@@ -363,7 +359,7 @@ async def send_test_future_notification_topic(
 )
 async def get_devices(
     user_id: str | None = None,
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
     db: AsyncSession = Depends(get_db),
 ):
     """

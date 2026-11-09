@@ -31,7 +31,6 @@ from app.core.users import cruds_users
 from app.core.users.utils_users import user_model_to_schema
 from app.dependencies import get_db, get_settings
 from app.types.module import CoreModule
-from app.utils.tools import is_user_token_from_any_group
 
 router = APIRouter(tags=["Memberships"])
 
@@ -51,7 +50,7 @@ core_module = CoreModule(
 )
 async def read_associations_memberships(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Return all memberships from database as a list of dictionaries
@@ -68,7 +67,7 @@ async def read_associations_memberships(
 async def read_association_membership_by_id(
     association_membership_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Return membership with the given ID.
@@ -84,8 +83,7 @@ async def read_association_membership_by_id(
     if db_association_membership is None:
         raise HTTPException(status_code=404, detail="Association Membership not found")
 
-    if not is_user_token_from_any_group(
-        token,
+    if not token.is_from_any_group(
         [
             db_association_membership.manager_group_id,
             GroupType.admin,
@@ -110,7 +108,7 @@ async def read_association_membership(
     minimalEndDate: date = Query(None),
     maximalEndDate: date = Query(None),
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Return membership with the given ID.
@@ -127,8 +125,7 @@ async def read_association_membership(
     if db_association_membership is None:
         raise HTTPException(status_code=404, detail="Association Membership not found")
 
-    if not is_user_token_from_any_group(
-        token,
+    if not token.is_from_any_group(
         [
             db_association_membership.manager_group_id,
             GroupType.admin,
@@ -157,7 +154,7 @@ async def read_association_membership(
 async def create_association_membership(
     membership: schemas_memberships.MembershipBase,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Create a new membership.
@@ -214,7 +211,7 @@ async def update_association_membership(
     association_membership_id: uuid.UUID,
     membership: schemas_memberships.MembershipEdit,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Update a membership.
@@ -229,8 +226,7 @@ async def update_association_membership(
     )
     if db_association_membership is None:
         raise HTTPException(status_code=404, detail="Association Membership not found")
-    if not is_user_token_from_any_group(
-        token,
+    if not token.is_from_any_group(
         [
             GroupType.admin,
             db_association_membership.manager_group_id,
@@ -294,7 +290,7 @@ async def renew_users_membership_document(
     renewal_criterion: schemas_memberships.MembershipRenewalCriterion,
     membership_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     settings=Depends(get_settings),
 ):
     """
@@ -311,8 +307,7 @@ async def renew_users_membership_document(
     if db_association_membership is None:
         raise HTTPException(status_code=404, detail="Association Membership not found")
 
-    if not is_user_token_from_any_group(
-        token,
+    if not token.is_from_any_group(
         [
             GroupType.admin,
             db_association_membership.manager_group_id,
@@ -370,7 +365,7 @@ async def renew_users_membership_document(
 async def delete_association_membership(
     association_membership_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Delete a membership.
@@ -412,7 +407,7 @@ async def delete_association_membership(
 async def read_user_memberships(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Return all memberships for a user.
@@ -420,10 +415,7 @@ async def read_user_memberships(
     # Check if the user is trying to access their own memberships or if they are an admin
     # If the user is not an admin or the user_id does not match the current user,
     # filter the query to get the managed memberships from user's groups.
-    if user_id != token.id and not is_user_token_from_any_group(
-        token,
-        [GroupType.admin],
-    ):
+    if user_id != token.id and not token.is_from_any_group([GroupType.admin]):
         return await cruds_memberships.get_user_memberships_by_user_id(
             db,
             user_id,
@@ -444,7 +436,7 @@ async def read_user_association_membership_history(
     user_id: str,
     association_membership_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Return all user memberships for a specific association membership for a user.
@@ -459,8 +451,7 @@ async def read_user_association_membership_history(
     if db_membership is None:
         raise HTTPException(status_code=404, detail="Association membership not found")
 
-    if not is_user_token_from_any_group(
-        token,
+    if not token.is_from_any_group(
         [GroupType.admin, db_membership.manager_group_id],
     ):
         raise HTTPException(status_code=403, detail="Unauthorized")
@@ -481,7 +472,7 @@ async def create_user_membership(
     user_id: str,
     user_membership: schemas_memberships.UserMembershipBase,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     settings=Depends(get_settings),
 ):
     """
@@ -501,8 +492,7 @@ async def create_user_membership(
             status_code=404,
             detail="Association membership not found",
         )
-    if not is_user_token_from_any_group(
-        token,
+    if not token.is_from_any_group(
         [
             GroupType.admin,
             db_association_membership.manager_group_id,
@@ -540,7 +530,7 @@ async def add_batch_membership(
     association_membership_id: uuid.UUID,
     memberships_details: list[schemas_memberships.MembershipUserMappingEmail],
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     settings=Depends(get_settings),
 ):
     """
@@ -562,8 +552,7 @@ async def add_batch_membership(
             detail="Association membership not found",
         )
 
-    if not is_user_token_from_any_group(
-        token,
+    if not token.is_from_any_group(
         [
             GroupType.admin,
             db_association_membership.manager_group_id,
@@ -616,7 +605,7 @@ async def update_user_membership(
     membership_id: uuid.UUID,
     user_membership: schemas_memberships.UserMembershipEdit,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Update a user membership.
@@ -631,8 +620,7 @@ async def update_user_membership(
     if db_user_membership is None:
         raise HTTPException(status_code=404, detail="User membership not found")
 
-    if not is_user_token_from_any_group(
-        token,
+    if not token.is_from_any_group(
         [GroupType.admin, db_user_membership.association_membership.manager_group_id],
     ):
         raise HTTPException(status_code=403, detail="Unauthorized")
@@ -663,7 +651,7 @@ async def update_user_membership(
 async def renew_user_membership_document(
     membership_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     settings=Depends(get_settings),
 ):
     """
@@ -685,8 +673,7 @@ async def renew_user_membership_document(
     )
     if db_association_membership is None:
         raise ValueError
-    if not is_user_token_from_any_group(
-        token,
+    if not token.is_from_any_group(
         [GroupType.admin, db_association_membership.manager_group_id],
     ):
         raise HTTPException(status_code=403, detail="Unauthorized")
@@ -731,7 +718,7 @@ async def renew_user_membership_document(
 async def delete_user_membership(
     membership_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     settings=Depends(get_settings),
 ):
     """
@@ -753,8 +740,7 @@ async def delete_user_membership(
     if db_membership is None:
         raise ValueError
 
-    if not is_user_token_from_any_group(
-        token,
+    if not token.is_from_any_group(
         [GroupType.admin, db_membership.manager_group_id],
     ):
         raise HTTPException(status_code=403, detail="Unauthorized")
@@ -774,7 +760,7 @@ async def synchronize_membership_with_group(
     membership_id: uuid.UUID,
     group_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Synchronize a membership with a group.
