@@ -6,6 +6,7 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.core.groups import models_groups
+from app.core.groups.groups_type import AccountType
 from app.core.payment import models_payment
 from app.core.schools import models_schools
 from app.core.schools.schools_type import SchoolType
@@ -25,6 +26,7 @@ from app.modules.sport_competition.types_sport_competition import (
     SportCategory,
 )
 from tests.commons import (
+    add_account_type_permission,
     add_object_to_db,
     create_api_access_token,
     create_groups_with_permissions,
@@ -136,6 +138,11 @@ def variants():
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def setup():
+    await add_account_type_permission(
+        SportCompetitionPermissions.access_sport_competition,
+        AccountType.student,
+    )
+
     global admin_group
     admin_group = await create_groups_with_permissions(
         [SportCompetitionPermissions.manage_sport_competition],

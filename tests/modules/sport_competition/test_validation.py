@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import update
 
 from app.core.groups import models_groups
+from app.core.groups.groups_type import AccountType
 from app.core.schools import models_schools
 from app.core.users import cruds_users, models_users, schemas_users
 from app.modules.sport_competition import (
@@ -22,6 +23,7 @@ from app.modules.sport_competition.types_sport_competition import (
     SportCategory,
 )
 from tests.commons import (
+    add_account_type_permission,
     add_object_to_db,
     create_api_access_token,
     create_groups_with_permissions,
@@ -148,6 +150,11 @@ async def create_competition_user(
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
+    await add_account_type_permission(
+        SportCompetitionPermissions.access_sport_competition,
+        AccountType.student,
+    )
+
     global admin_group
     admin_group = await create_groups_with_permissions(
         [SportCompetitionPermissions.manage_sport_competition],

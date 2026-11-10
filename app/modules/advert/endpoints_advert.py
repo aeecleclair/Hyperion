@@ -6,22 +6,16 @@ from fastapi import Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import (
+    is_user_allowed_to,
+)
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification.schemas_notification import Message
 from app.core.notification.utils_notification import get_topic_by_root_and_identifier
 from app.core.permissions.type_permissions import ModulePermissions
-from app.core.users import models_users
-from app.dependencies import (
-    get_db,
-    get_notification_manager,
-    get_notification_tool,
-    is_user_allowed_to,
-)
-from app.modules.advert import (
-    cruds_advert,
-    models_advert,
-    schemas_advert,
-)
+from app.dependencies import get_db, get_notification_manager, get_notification_tool
+from app.modules.advert import cruds_advert, models_advert, schemas_advert
 from app.modules.advert.factory_advert import AdvertFactory
 from app.types import standard_responses
 from app.types.content_type import ContentType
@@ -29,9 +23,7 @@ from app.types.module import Module
 from app.utils.communication.notifications import NotificationManager, NotificationTool
 from app.utils.tools import (
     get_file_from_data,
-    has_user_permission,
     is_group_id_valid,
-    is_user_member_of_any_group,
     save_file_as_data,
 )
 
@@ -61,7 +53,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def read_advertisers(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AdvertPermissions.access_adverts]),
     ),
 ):
@@ -83,7 +75,7 @@ async def create_advertiser(
     advertiser: schemas_advert.AdvertiserBase,
     db: AsyncSession = Depends(get_db),
     notification_manager: NotificationManager = Depends(get_notification_manager),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AdvertPermissions.manage_advertisers]),
     ),
 ):
@@ -130,7 +122,7 @@ async def create_advertiser(
 async def delete_advertiser(
     advertiser_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AdvertPermissions.manage_advertisers]),
     ),
 ):
@@ -163,7 +155,7 @@ async def update_advertiser(
     advertiser_id: str,
     advertiser_update: schemas_advert.AdvertiserUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AdvertPermissions.manage_advertisers]),
     ),
 ):
@@ -196,7 +188,7 @@ async def update_advertiser(
 )
 async def get_current_user_advertisers(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AdvertPermissions.access_adverts]),
     ),
 ):
@@ -205,11 +197,10 @@ async def get_current_user_advertisers(
 
     **The user must be authenticated to use this endpoint**
     """
-    user_groups_ids = [group.id for group in user.groups]
 
     return await cruds_advert.get_advertisers_by_groups(
         db=db,
-        user_groups_ids=user_groups_ids,
+        user_groups_ids=token.group_ids,
     )
 
 
@@ -221,7 +212,7 @@ async def get_current_user_advertisers(
 async def read_adverts(
     advertisers: list[str] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AdvertPermissions.access_adverts]),
     ),
 ):
@@ -247,7 +238,7 @@ async def read_adverts(
 async def read_advert(
     advert_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AdvertPermissions.access_adverts]),
     ),
 ):
@@ -268,7 +259,7 @@ async def read_advert(
 async def create_advert(
     advert: schemas_advert.AdvertBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AdvertPermissions.access_adverts]),
     ),
     notification_tool: NotificationTool = Depends(get_notification_tool),
@@ -288,7 +279,9 @@ async def create_advert(
             detail="Invalid advertiser_id",
         )
 
-    if not is_user_member_of_any_group(user, [advertiser.group_manager_id]):
+    if not token.is_from_any_group(
+        allowed_groups=[advertiser.group_manager_id],
+    ):
         raise HTTPException(
             status_code=403,
             detail=f"Unauthorized to manage {advertiser.name} adverts",
@@ -333,7 +326,7 @@ async def update_advert(
     advert_id: str,
     advert_update: schemas_advert.AdvertUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AdvertPermissions.access_adverts]),
     ),
 ):
@@ -349,8 +342,7 @@ async def update_advert(
             detail="Invalid advert_id",
         )
 
-    if not is_user_member_of_any_group(
-        user,
+    if not token.is_from_any_group(
         [advert.advertiser.group_manager_id],
     ):
         raise HTTPException(
@@ -372,7 +364,7 @@ async def update_advert(
 async def delete_advert(
     advert_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AdvertPermissions.access_adverts]),
     ),
 ):
@@ -388,11 +380,9 @@ async def delete_advert(
             detail="Invalid advert_id",
         )
 
-    if not is_user_member_of_any_group(
-        user,
+    if not token.is_from_any_group(
         [advert.advertiser.group_manager_id],
-    ) and not await has_user_permission(
-        user,
+    ) and not await token.check_permission(
         AdvertPermissions.manage_advertisers,
         db,
     ):
@@ -412,7 +402,7 @@ async def delete_advert(
 async def read_advert_image(
     advert_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AdvertPermissions.access_adverts]),
     ),
 ):
@@ -443,7 +433,7 @@ async def read_advert_image(
 async def create_advert_image(
     advert_id: str,
     image: UploadFile = File(...),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([AdvertPermissions.access_adverts]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -460,8 +450,7 @@ async def create_advert_image(
             detail="The advert does not exist",
         )
 
-    if not is_user_member_of_any_group(
-        user,
+    if not token.is_from_any_group(
         [GroupType.admin, advert.advertiser.group_manager_id],
     ):
         raise HTTPException(

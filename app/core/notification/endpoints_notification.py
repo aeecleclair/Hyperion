@@ -4,26 +4,24 @@ from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.groups.groups_type import GroupType
+from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import filter_user_token, is_user_admin
+from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification import (
     cruds_notification,
     models_notification,
     schemas_notification,
 )
 from app.core.notification.utils_notification import get_user_notification_topics
-from app.core.users import models_users
 from app.dependencies import (
     get_db,
     get_notification_manager,
     get_notification_tool,
     get_scheduler,
-    is_user,
-    is_user_in,
 )
 from app.types.module import CoreModule
 from app.types.scheduler import Scheduler
 from app.utils.communication.notifications import NotificationManager, NotificationTool
-from app.utils.tools import is_user_external, is_user_member_of_any_group
 
 router = APIRouter(tags=["Notifications"])
 
@@ -52,7 +50,7 @@ core_module = CoreModule(
 async def register_firebase_device(
     firebase_token: str = Body(embed=True),
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
@@ -69,7 +67,7 @@ async def register_firebase_device(
     )
 
     if firebase_device is not None:
-        if firebase_device.user_id == user.id:
+        if firebase_device.user_id == token.id:
             # Update the register date
             await cruds_notification.update_firebase_devices_register_date(
                 firebase_device_token=firebase_token,
@@ -84,7 +82,7 @@ async def register_firebase_device(
         )
 
     user_topics = await cruds_notification.get_topic_memberships_by_user_id(
-        user_id=user.id,
+        user_id=token.id,
         db=db,
     )
     for topic_membership in user_topics:
@@ -94,7 +92,7 @@ async def register_firebase_device(
         )
 
     firebase_device = models_notification.FirebaseDevice(
-        user_id=user.id,
+        user_id=token.id,
         firebase_device_token=firebase_token,
         register_date=datetime.now(tz=UTC).date(),
     )
@@ -112,7 +110,7 @@ async def register_firebase_device(
 async def unregister_firebase_device(
     firebase_token: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
@@ -128,7 +126,7 @@ async def unregister_firebase_device(
     )
 
     topic_memberships = await cruds_notification.get_topic_memberships_by_user_id(
-        user_id=user.id,
+        user_id=token.id,
         db=db,
     )
     for topic_membership in topic_memberships:
@@ -145,7 +143,7 @@ async def unregister_firebase_device(
 async def subscribe_to_topic(
     topic_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
@@ -165,22 +163,19 @@ async def subscribe_to_topic(
         )
 
     if topic.restrict_to_group_id is not None:
-        if not is_user_member_of_any_group(
-            user=user,
-            allowed_groups=[topic.restrict_to_group_id],
-        ):
+        if not token.is_from_any_group(allowed_groups=[topic.restrict_to_group_id]):
             raise HTTPException(
                 status_code=400,
                 detail="You are not in a group allowed to subscribe to this topic.",
             )
-    if topic.restrict_to_members and is_user_external(user):
+    if topic.restrict_to_members and token.account_type == AccountType.external:
         raise HTTPException(
             status_code=400,
             detail="External users are not allowed to subscribe to this topic.",
         )
 
     await notification_manager.subscribe_user_to_topic(
-        user_id=user.id,
+        user_id=token.id,
         topic_id=topic_id,
         db=db,
     )
@@ -193,7 +188,7 @@ async def subscribe_to_topic(
 async def unsubscribe_to_topic(
     topic_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
@@ -203,7 +198,7 @@ async def unsubscribe_to_topic(
     """
 
     await notification_manager.unsubscribe_user_to_topic(
-        user_id=user.id,
+        user_id=token.id,
         topic_id=topic_id,
         db=db,
     )
@@ -216,14 +211,14 @@ async def unsubscribe_to_topic(
 )
 async def get_topics(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Return all available topics for a user
 
     **The user must be authenticated to use this endpoint**
     """
-    return await get_user_notification_topics(user=user, db=db)
+    return await get_user_notification_topics(token=token, db=db)
 
 
 @router.post(
@@ -232,7 +227,7 @@ async def get_topics(
 )
 async def send_notification(
     notification_request: schemas_notification.GroupNotificationRequest,
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -257,7 +252,7 @@ async def send_notification(
 )
 async def send_test_notification(
     user_id: str | None = None,
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -271,7 +266,7 @@ async def send_test_notification(
         action_module="test",
     )
     await notification_tool.send_notification_to_user(
-        user_id=user_id or user.id,
+        user_id=user_id or token.id,
         message=message,
     )
 
@@ -282,7 +277,7 @@ async def send_test_notification(
 )
 async def send_test_future_notification(
     user_id: str | None = None,
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     scheduler: Scheduler = Depends(get_scheduler),
 ):
@@ -297,7 +292,7 @@ async def send_test_future_notification(
         action_module="test",
     )
     await notification_tool.send_notification_to_users(
-        user_ids=[user_id or user.id],
+        user_ids=[user_id or token.id],
         message=message,
         defer_date=datetime.now(UTC) + timedelta(seconds=10),
         scheduler=scheduler,
@@ -310,7 +305,7 @@ async def send_test_future_notification(
     status_code=204,
 )
 async def send_test_notification_topic(
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
     notification_tool: NotificationTool = Depends(get_notification_tool),
 ):
     """
@@ -334,7 +329,7 @@ async def send_test_notification_topic(
     status_code=204,
 )
 async def send_test_future_notification_topic(
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     scheduler: Scheduler = Depends(get_scheduler),
 ):
@@ -364,7 +359,7 @@ async def send_test_future_notification_topic(
 )
 async def get_devices(
     user_id: str | None = None,
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -374,6 +369,6 @@ async def get_devices(
     **Only admins can use this endpoint**
     """
     return await cruds_notification.get_firebase_devices_by_user_id(
-        user_id=user_id or user.id,
+        user_id=user_id or token.id,
         db=db,
     )

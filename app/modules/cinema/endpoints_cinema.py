@@ -7,17 +7,17 @@ from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import is_user_allowed_to
 from app.core.groups.groups_type import AccountType
 from app.core.notification.schemas_notification import Message, Topic
 from app.core.permissions.type_permissions import ModulePermissions
-from app.core.users import models_users
 from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
     get_notification_tool,
     get_scheduler,
     get_settings,
-    is_user_allowed_to,
 )
 from app.modules.cinema import cruds_cinema, schemas_cinema
 from app.modules.cinema.factory_cinema import CinemaFactory
@@ -68,7 +68,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 async def get_movie(
     themoviedb_id: str,
     settings: Settings = Depends(get_settings),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CinemaPermissions.manage_sessions]),
     ),
 ):
@@ -127,7 +127,7 @@ async def get_movie(
 )
 async def get_sessions(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CinemaPermissions.access_cinema]),
     ),
 ):
@@ -142,7 +142,7 @@ async def get_sessions(
 async def create_session(
     session: schemas_cinema.CineSessionBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CinemaPermissions.manage_sessions]),
     ),
     notification_tool: NotificationTool = Depends(get_notification_tool),
@@ -192,7 +192,7 @@ async def update_session(
     session_id: str,
     session_update: schemas_cinema.CineSessionUpdate,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CinemaPermissions.manage_sessions]),
     ),
 ):
@@ -207,7 +207,7 @@ async def update_session(
 async def delete_session(
     session_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CinemaPermissions.manage_sessions]),
     ),
 ):
@@ -222,7 +222,7 @@ async def delete_session(
 async def create_campaigns_logo(
     session_id: str,
     image: UploadFile = File(...),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CinemaPermissions.manage_sessions]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -256,7 +256,7 @@ async def create_campaigns_logo(
 )
 async def read_session_poster(
     session_id: str,
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CinemaPermissions.access_cinema]),
     ),
     db: AsyncSession = Depends(get_db),

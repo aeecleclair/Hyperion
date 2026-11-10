@@ -16,6 +16,10 @@ from fastapi import (
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import (
+    is_user_allowed_to,
+)
 from app.core.groups import cruds_groups, schemas_groups
 from app.core.groups.groups_type import AccountType
 from app.core.memberships import cruds_memberships, schemas_memberships
@@ -26,8 +30,9 @@ from app.core.memberships.utils_memberships import (
 from app.core.payment.payment_tool import PaymentTool
 from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.permissions.type_permissions import ModulePermissions
-from app.core.users import cruds_users, models_users, schemas_users
-from app.core.users.cruds_users import get_user_by_id, get_users
+from app.core.users import cruds_users, schemas_users
+from app.core.users.cruds_users import get_user_by_id, get_user_by_id_schema, get_users
+from app.core.users.dependencies_users import get_request_user
 from app.core.users.utils_users import user_model_to_schema
 from app.core.utils.config import Settings
 from app.dependencies import (
@@ -37,7 +42,6 @@ from app.dependencies import (
     get_settings,
     get_unsafe_db,
     get_websocket_connection_manager,
-    is_user_allowed_to,
 )
 from app.modules.cdr import coredata_cdr, cruds_cdr, models_cdr, schemas_cdr
 from app.modules.cdr.dependencies_cdr import get_current_cdr_year
@@ -69,8 +73,6 @@ from app.types.websocket import (
 from app.utils.tools import (
     create_and_send_email_migration,
     get_core_data,
-    has_user_permission,
-    is_user_member_of_any_group,
     set_core_data,
 )
 
@@ -102,7 +104,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 )
 async def get_cdr_users(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
@@ -112,11 +114,8 @@ async def get_cdr_users(
     **User must be part of a seller group to use this endpoint**
     """
     if not (
-        await has_user_permission(user, CdrPermissions.manage_cdr, db)
-        or await cruds_cdr.get_sellers_by_group_ids(
-            db=db,
-            group_ids=[g.id for g in user.groups],
-        )
+        await token.check_permission(CdrPermissions.manage_cdr, db)
+        or await cruds_cdr.get_sellers_by_group_ids(db=db, group_ids=token.group_ids)
     ):
         raise HTTPException(
             status_code=403,
@@ -138,7 +137,7 @@ async def get_cdr_users(
 )
 async def get_cdr_users_pending_validation(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
@@ -149,11 +148,8 @@ async def get_cdr_users_pending_validation(
     **User must be part of a seller group to use this endpoint**
     """
     if not (
-        await has_user_permission(user, CdrPermissions.manage_cdr, db)
-        or await cruds_cdr.get_sellers_by_group_ids(
-            db=db,
-            group_ids=[g.id for g in user.groups],
-        )
+        await token.check_permission(CdrPermissions.manage_cdr, db)
+        or await cruds_cdr.get_sellers_by_group_ids(db=db, group_ids=token.group_ids)
     ):
         raise HTTPException(
             status_code=403,
@@ -198,7 +194,7 @@ async def get_cdr_users_pending_validation(
 )
 async def get_payment_total_by_seller(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.manage_cdr]),
     ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
@@ -221,7 +217,7 @@ async def get_payment_total_by_seller(
 )
 async def get_payment_total_per_type(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.manage_cdr]),
     ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
@@ -244,7 +240,7 @@ async def get_payment_total_per_type(
 )
 async def get_payment_total(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.manage_cdr]),
     ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
@@ -268,7 +264,7 @@ async def get_payment_total(
 async def get_cdr_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
@@ -277,19 +273,19 @@ async def get_cdr_user(
 
     **User must be part of a seller group or trying to get itself to use this endpoint**
     """
-    if user.id != user_id:
+    if token.id != user_id:
         if not (
-            await has_user_permission(user, CdrPermissions.manage_cdr, db)
+            await token.check_permission(CdrPermissions.manage_cdr, db)
             or await cruds_cdr.get_sellers_by_group_ids(
                 db=db,
-                group_ids=[g.id for g in user.groups],
+                group_ids=token.group_ids,
             )
         ):
             raise HTTPException(
                 status_code=403,
                 detail="You must be a seller to use this endpoint.",
             )
-    user_db = await get_user_by_id(db, user_id)
+    user_db = await get_user_by_id_schema(db, user_id)
     if not user_db:
         raise HTTPException(
             status_code=404,
@@ -327,7 +323,7 @@ async def update_cdr_user(
     user_id: str,
     user_update: schemas_cdr.CdrUserUpdate,
     db: AsyncSession = Depends(get_db),
-    seller_user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.manage_cdr]),
     ),
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
@@ -337,7 +333,7 @@ async def update_cdr_user(
     """
     Edit a user email, nickname and/or floor.
 
-    An email will be send to the user, to confirm its new address.
+    An email will be send to the token, to confirm its new address.
 
     **User must be part of a seller group to use this endpoint**
     """
@@ -451,7 +447,7 @@ async def update_cdr_user(
 )
 async def get_sellers(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.manage_cdr]),
     ),
 ):
@@ -470,7 +466,7 @@ async def get_sellers(
 )
 async def get_sellers_by_user_id(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
@@ -480,12 +476,9 @@ async def get_sellers_by_user_id(
     **User must be authenticated to use this endpoint**
     """
 
-    if await has_user_permission(user, CdrPermissions.manage_cdr, db):
+    if await token.check_permission(CdrPermissions.manage_cdr, db):
         return await cruds_cdr.get_sellers(db)
-    return await cruds_cdr.get_sellers_by_group_ids(
-        db,
-        [x.id for x in user.groups],
-    )
+    return await cruds_cdr.get_sellers_by_group_ids(db, token.group_ids)
 
 
 @module.router.get(
@@ -495,7 +488,7 @@ async def get_sellers_by_user_id(
 )
 async def get_online_sellers(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
@@ -642,7 +635,7 @@ async def generate_and_send_results(
 async def send_seller_results(
     seller_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
     # settings: Settings = Depends(get_settings),
@@ -653,7 +646,7 @@ async def send_seller_results(
     **User must be CDR Admin to use this endpoint**
     """
 
-    await is_user_in_a_seller_group(seller_id, user=user, db=db)
+    await is_user_in_a_seller_group(seller_id, token=token, db=db)
 
     res = await generate_and_send_results(seller_id=seller_id, db=db)
 
@@ -677,7 +670,7 @@ async def send_seller_results(
 )
 async def get_all_available_online_products(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
@@ -700,7 +693,7 @@ async def get_all_available_online_products(
 )
 async def get_all_products(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
@@ -710,11 +703,8 @@ async def get_all_products(
 
     **User must be part of a seller group to use this endpoint**
     """
-    sellers = await cruds_cdr.get_sellers_by_group_ids(
-        db,
-        [x.id for x in user.groups],
-    )
-    if not (sellers or await has_user_permission(user, CdrPermissions.manage_cdr, db)):
+    sellers = await cruds_cdr.get_sellers_by_group_ids(db, token.group_ids)
+    if not (sellers or await token.check_permission(CdrPermissions.manage_cdr, db)):
         raise HTTPException(
             status_code=403,
             detail="You must be a seller to get all documents.",
@@ -733,7 +723,7 @@ async def get_all_products(
 async def create_seller(
     seller: schemas_cdr.SellerBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.manage_cdr]),
     ),
 ):
@@ -742,10 +732,7 @@ async def create_seller(
 
     **User must be CDR Admin to use this endpoint**
     """
-    if await cruds_cdr.get_sellers_by_group_ids(
-        db=db,
-        group_ids=[seller.group_id],
-    ):
+    if await cruds_cdr.get_sellers_by_group_ids(db=db, group_ids=[seller.group_id]):
         raise HTTPException(
             status_code=403,
             detail="There is already a seller for this group.",
@@ -770,7 +757,7 @@ async def update_seller(
     seller_id: UUID,
     seller: schemas_cdr.SellerEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.manage_cdr]),
     ),
 ):
@@ -802,7 +789,7 @@ async def delete_seller(
     seller_id: UUID,
     db: AsyncSession = Depends(get_db),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.manage_cdr]),
     ),
 ):
@@ -835,7 +822,7 @@ async def delete_seller(
 async def get_products_by_seller_id(
     seller_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
@@ -845,7 +832,7 @@ async def get_products_by_seller_id(
 
     **User must be part of the seller's group to use this endpoint**
     """
-    await is_user_in_a_seller_group(seller_id, user=user, db=db)
+    await is_user_in_a_seller_group(seller_id, token=token, db=db)
     return await cruds_cdr.get_products_by_seller_id(
         db,
         seller_id,
@@ -861,7 +848,7 @@ async def get_products_by_seller_id(
 async def get_available_online_products(
     seller_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
@@ -887,7 +874,7 @@ async def create_product(
     seller_id: UUID,
     product: schemas_cdr.ProductBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
@@ -899,7 +886,7 @@ async def create_product(
     """
     await is_user_in_a_seller_group(
         seller_id,
-        user=user,
+        token=token,
         db=db,
     )
     status = await get_core_data(coredata_cdr.Status, db)
@@ -976,7 +963,7 @@ async def update_product(
     product_id: UUID,
     product: schemas_cdr.ProductEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
@@ -996,7 +983,7 @@ async def update_product(
 
     await is_user_in_a_seller_group(
         seller_id,
-        user,
+        token,
         db=db,
     )
     db_product = await check_request_consistency(
@@ -1082,7 +1069,7 @@ async def delete_product(
     seller_id: UUID,
     product_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
@@ -1093,7 +1080,7 @@ async def delete_product(
     """
     await is_user_in_a_seller_group(
         seller_id,
-        user,
+        token,
         db=db,
     )
 
@@ -1129,7 +1116,7 @@ async def create_product_variant(
     product_id: UUID,
     product_variant: schemas_cdr.ProductVariantBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
@@ -1141,7 +1128,7 @@ async def create_product_variant(
     """
     await is_user_in_a_seller_group(
         seller_id,
-        user,
+        token,
         db=db,
     )
     product = await check_request_consistency(
@@ -1219,7 +1206,7 @@ async def update_product_variant(
     variant_id: UUID,
     product_variant: schemas_cdr.ProductVariantEdit,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
@@ -1237,7 +1224,7 @@ async def update_product_variant(
 
     await is_user_in_a_seller_group(
         seller_id,
-        user,
+        token,
         db=db,
     )
 
@@ -1310,7 +1297,7 @@ async def delete_product_variant(
     product_id: UUID,
     variant_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
@@ -1321,7 +1308,7 @@ async def delete_product_variant(
     """
     await is_user_in_a_seller_group(
         seller_id,
-        user,
+        token,
         db=db,
     )
     await check_request_consistency(
@@ -1355,7 +1342,7 @@ async def delete_product_variant(
 async def get_seller_documents(
     seller_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
@@ -1366,7 +1353,7 @@ async def get_seller_documents(
     """
     await is_user_in_a_seller_group(
         seller_id,
-        user,
+        token,
         db=db,
     )
     return await cruds_cdr.get_documents_by_seller_id(db, seller_id=seller_id)
@@ -1379,7 +1366,7 @@ async def get_seller_documents(
 )
 async def get_all_sellers_documents(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
@@ -1388,11 +1375,8 @@ async def get_all_sellers_documents(
 
     **User must be part of a seller's group to use this endpoint**
     """
-    sellers = await cruds_cdr.get_sellers_by_group_ids(
-        db,
-        [x.id for x in user.groups],
-    )
-    if not (sellers or await has_user_permission(user, CdrPermissions.manage_cdr, db)):
+    sellers = await cruds_cdr.get_sellers_by_group_ids(db, token.group_ids)
+    if not (sellers or await token.check_permission(CdrPermissions.manage_cdr, db)):
         raise HTTPException(
             status_code=403,
             detail="You must be a seller to get all documents.",
@@ -1410,7 +1394,7 @@ async def create_document(
     seller_id: UUID,
     document: schemas_cdr.DocumentBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
@@ -1419,7 +1403,7 @@ async def create_document(
 
     **User must be part of the seller's group to use this endpoint**
     """
-    await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
+    await is_user_in_a_seller_group(seller_id=seller_id, token=token, db=db)
     status = await get_core_data(coredata_cdr.Status, db)
     if status.status == CdrStatus.closed:
         raise HTTPException(
@@ -1447,7 +1431,7 @@ async def delete_document(
     seller_id: UUID,
     document_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
@@ -1456,7 +1440,7 @@ async def delete_document(
 
     **User must be part of the seller's group to use this endpoint**
     """
-    await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
+    await is_user_in_a_seller_group(seller_id=seller_id, token=token, db=db)
     await check_request_consistency(db=db, seller_id=seller_id, document_id=document_id)
     if await cruds_cdr.get_document_constraints_by_document_id(
         db=db,
@@ -1481,7 +1465,7 @@ async def delete_document(
 async def get_purchases_by_user_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
@@ -1492,8 +1476,8 @@ async def get_purchases_by_user_id(
     **User must get his own purchases or be CDR Admin to use this endpoint**
     """
     if not (
-        user_id == user.id
-        or await has_user_permission(user, CdrPermissions.manage_cdr, db)
+        user_id == token.id
+        or await token.check_permission(CdrPermissions.manage_cdr, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -1565,12 +1549,12 @@ async def get_purchases_by_user_id(
 )
 async def get_my_purchases(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
-    return await get_purchases_by_user_id(user.id, db, user, cdr_year)
+    return await get_purchases_by_user_id(token.id, db, token, cdr_year)
 
 
 @module.router.get(
@@ -1580,13 +1564,13 @@ async def get_my_purchases(
 )
 async def get_all_my_purchases(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
     purchases = await cruds_cdr.get_all_purchases_by_user_id(
         db=db,
-        user_id=user.id,
+        user_id=token.id,
     )
     result = []
     for purchase in purchases:
@@ -1651,7 +1635,7 @@ async def get_purchases_by_user_id_by_seller_id(
     seller_id: UUID,
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
@@ -1661,8 +1645,8 @@ async def get_purchases_by_user_id_by_seller_id(
 
     **User must get his own purchases or be part of the seller's group to use this endpoint**
     """
-    if user_id != user.id:
-        await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
+    if user_id != token.id:
+        await is_user_in_a_seller_group(seller_id=seller_id, token=token, db=db)
 
     purchases = await cruds_cdr.get_purchases_by_user_id_by_seller_id(
         db=db,
@@ -1734,7 +1718,7 @@ async def create_purchase(
     product_variant_id: UUID,
     purchase: schemas_cdr.PurchaseBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
@@ -1774,8 +1758,8 @@ async def create_purchase(
             status_code=404,
             detail="Product unavailable.",
         )
-    if not (user_id == user.id and product.available_online):
-        await is_user_in_a_seller_group(product.seller_id, user=user, db=db)
+    if not (user_id == token.id and product.available_online):
+        await is_user_in_a_seller_group(product.seller_id, token=token, db=db)
 
     client_user = await cruds_users.get_user_by_id_schema(db=db, user_id=user_id)
     if client_user is None:
@@ -1799,7 +1783,7 @@ async def create_purchase(
     )
     db_action = models_cdr.CdrAction(
         id=uuid4(),
-        user_id=user.id,
+        user_id=token.id,
         subject_id=db_purchase.user_id,
         action_type=CdrLogActionType.purchase_add,
         action=str(db_purchase.__dict__),
@@ -1840,7 +1824,7 @@ async def create_purchase(
 async def create_purchase_batch(
     batch: schemas_cdr.BatchPurchase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
@@ -1881,7 +1865,7 @@ async def create_purchase_batch(
             detail="Product unavailable.",
         )
 
-    await is_user_in_a_seller_group(product.seller_id, user=user, db=db)
+    await is_user_in_a_seller_group(product.seller_id, token=token, db=db)
 
     for email in batch.user_emails:
         user_db = await cruds_users.get_user_by_email_schema(db=db, email=email)
@@ -1902,7 +1886,7 @@ async def create_purchase_batch(
             )
             db_action = models_cdr.CdrAction(
                 id=uuid4(),
-                user_id=user.id,
+                user_id=token.id,
                 subject_id=db_purchase.user_id,
                 action_type=CdrLogActionType.purchase_add,
                 action=str(db_purchase.__dict__),
@@ -2025,7 +2009,7 @@ async def mark_purchase_as_validated(
     product_variant_id: UUID,
     validated: bool,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.manage_cdr]),
     ),
     settings: Settings = Depends(get_settings),
@@ -2171,7 +2155,7 @@ async def mark_purchase_as_validated(
 async def validate_purchase_batch(
     batch: schemas_cdr.BatchValidation,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.manage_cdr]),
     ),
 ):
@@ -2186,7 +2170,7 @@ async def validate_purchase_batch(
                     batch.product_variant_id,
                     batch.validated,
                     db,
-                    user,
+                    token,
                 )
             except HTTPException as e:
                 hyperion_error_logger.info(
@@ -2204,7 +2188,7 @@ async def delete_purchase(
     user_id: str,
     product_variant_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
@@ -2232,8 +2216,8 @@ async def delete_purchase(
             status_code=404,
             detail="Invalid product.",
         )
-    if not (user_id == user.id and product.available_online):
-        await is_user_in_a_seller_group(product.seller_id, user=user, db=db)
+    if not (user_id == token.id and product.available_online):
+        await is_user_in_a_seller_group(product.seller_id, token=token, db=db)
 
     db_purchase = await cruds_cdr.get_purchase_by_id(
         user_id=user_id,
@@ -2297,7 +2281,7 @@ async def delete_purchase(
 
     db_action = models_cdr.CdrAction(
         id=uuid4(),
-        user_id=user.id,
+        user_id=token.id,
         subject_id=db_purchase.user_id,
         action_type=CdrLogActionType.purchase_delete,
         action=str(db_purchase.__dict__),
@@ -2321,7 +2305,7 @@ async def delete_purchase(
 async def get_signatures_by_user_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
@@ -2331,8 +2315,8 @@ async def get_signatures_by_user_id(
     **User must get his own signatures or be CDR Admin to use this endpoint**
     """
     if not (
-        user_id == user.id
-        or await has_user_permission(user, CdrPermissions.manage_cdr, db)
+        user_id == token.id
+        or await token.check_permission(CdrPermissions.manage_cdr, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -2350,7 +2334,7 @@ async def get_signatures_by_user_id_by_seller_id(
     seller_id: UUID,
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
@@ -2359,8 +2343,8 @@ async def get_signatures_by_user_id_by_seller_id(
 
     **User must get his own signatures or be part of the seller's group to use this endpoint**
     """
-    if user_id != user.id:
-        await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
+    if user_id != token.id:
+        await is_user_in_a_seller_group(seller_id=seller_id, token=token, db=db)
 
     return await cruds_cdr.get_signatures_by_user_id_by_seller_id(
         db=db,
@@ -2379,7 +2363,7 @@ async def create_signature(
     document_id: UUID,
     signature: schemas_cdr.SignatureBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
@@ -2407,8 +2391,8 @@ async def create_signature(
 
     sellers_groups = [str(seller.group_id) for seller in sellers]
     if not (
-        is_user_member_of_any_group(user=user, allowed_groups=sellers_groups)
-        or await has_user_permission(user, CdrPermissions.manage_cdr, db)
+        token.is_from_any_group(allowed_groups=sellers_groups)
+        or await token.check_permission(CdrPermissions.manage_cdr, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -2451,7 +2435,7 @@ async def delete_signature(
     user_id: str,
     document_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.manage_cdr]),
     ),
 ):
@@ -2485,7 +2469,7 @@ async def delete_signature(
 )
 async def get_curriculums(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
@@ -2505,7 +2489,7 @@ async def get_curriculums(
 async def create_curriculum(
     curriculum: schemas_cdr.CurriculumBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.manage_cdr]),
     ),
 ):
@@ -2537,7 +2521,7 @@ async def create_curriculum(
 async def delete_curriculum(
     curriculum_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.manage_cdr]),
     ),
 ):
@@ -2570,7 +2554,7 @@ async def create_curriculum_membership(
     user_id: str,
     curriculum_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
@@ -2581,8 +2565,8 @@ async def create_curriculum_membership(
     **User must add a curriculum to themself or be CDR Admin to use this endpoint**
     """
     if not (
-        user_id == user.id
-        or await has_user_permission(user, CdrPermissions.manage_cdr, db)
+        user_id == token.id
+        or await token.check_permission(CdrPermissions.manage_cdr, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -2598,7 +2582,7 @@ async def create_curriculum_membership(
             status_code=404,
             detail="Invalid curriculum_id",
         )
-    db_user = await get_user_by_id(db=db, user_id=user_id)
+    db_user = await get_user_by_id_schema(db=db, user_id=user_id)
     if not db_user:
         raise HTTPException(
             status_code=404,
@@ -2673,7 +2657,7 @@ async def update_curriculum_membership(
     user_id: str,
     curriculum_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
@@ -2684,14 +2668,14 @@ async def update_curriculum_membership(
     **User must add a curriculum to themself or be CDR Admin to use this endpoint**
     """
     if not (
-        user_id == user.id
-        or await has_user_permission(user, CdrPermissions.manage_cdr, db)
+        user_id == token.id
+        or await token.check_permission(CdrPermissions.manage_cdr, db)
     ):
         raise HTTPException(
             status_code=403,
             detail="You can't remove a curriculum to another user.",
         )
-    db_user = await get_user_by_id(db=db, user_id=user_id)
+    db_user = await get_user_by_id_schema(db=db, user_id=user_id)
     if not db_user:
         raise HTTPException(
             status_code=404,
@@ -2753,7 +2737,7 @@ async def delete_curriculum_membership(
     user_id: str,
     curriculum_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
     ws_manager: WebsocketConnectionManager = Depends(get_websocket_connection_manager),
@@ -2773,14 +2757,14 @@ async def delete_curriculum_membership(
             detail="Invalid curriculum_id",
         )
     if not (
-        user_id == user.id
-        or await has_user_permission(user, CdrPermissions.manage_cdr, db)
+        user_id == token.id
+        or await token.check_permission(CdrPermissions.manage_cdr, db)
     ):
         raise HTTPException(
             status_code=403,
             detail="You can't remove a curriculum to another user.",
         )
-    db_user = await get_user_by_id(db=db, user_id=user_id)
+    db_user = await get_user_by_id_schema(db=db, user_id=user_id)
     if not db_user:
         raise HTTPException(
             status_code=404,
@@ -2830,7 +2814,7 @@ async def delete_curriculum_membership(
 async def get_payments_by_user_id(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
@@ -2841,8 +2825,8 @@ async def get_payments_by_user_id(
     **User must get his own payments or be CDR Admin to use this endpoint**
     """
     if not (
-        user_id == user.id
-        or await has_user_permission(user, CdrPermissions.manage_cdr, db)
+        user_id == token.id
+        or await token.check_permission(CdrPermissions.manage_cdr, db)
     ):
         raise HTTPException(
             status_code=403,
@@ -2865,7 +2849,7 @@ async def create_payment(
     payment: schemas_cdr.PaymentBase,
     db: AsyncSession = Depends(get_db),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.manage_cdr]),
     ),
 ):
@@ -2889,7 +2873,7 @@ async def create_payment(
     )
     db_action = models_cdr.CdrAction(
         id=uuid4(),
-        user_id=user.id,
+        user_id=token.id,
         subject_id=user_id,
         action_type=CdrLogActionType.payment_add,
         action=str(db_payment.__dict__),
@@ -2910,7 +2894,7 @@ async def delete_payment(
     user_id: str,
     payment_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.manage_cdr]),
     ),
 ):
@@ -2935,7 +2919,7 @@ async def delete_payment(
         )
     db_action = models_cdr.CdrAction(
         id=uuid4(),
-        user_id=user.id,
+        user_id=token.id,
         subject_id=user_id,
         action_type=CdrLogActionType.payment_delete,
         action=str(db_payment.__dict__),
@@ -2957,9 +2941,10 @@ async def delete_payment(
 async def get_payment_url(
     payment_request: schemas_cdr.PaymentUrlRequest | None = None,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
+    user: schemas_users.CoreUser = Depends(get_request_user()),
     settings: Settings = Depends(get_settings),
     payment_tool: PaymentTool = Depends(get_payment_tool(HelloAssoConfigName.CDR)),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
@@ -2974,14 +2959,14 @@ async def get_payment_url(
 
     target_user = user
 
-    if target_user_id is not None and target_user_id != user.id:
-        if not await has_user_permission(user, CdrPermissions.manage_cdr, db):
+    if target_user_id is not None and target_user_id != token.id:
+        if not await token.check_permission(CdrPermissions.manage_cdr, db):
             raise HTTPException(
                 status_code=403,
                 detail="You're not allowed to create a payment for another user.",
             )
 
-        requested_user = await get_user_by_id(
+        requested_user = await get_user_by_id_schema(
             db=db,
             user_id=target_user_id,
         )
@@ -3042,7 +3027,7 @@ async def get_payment_url(
     )
 
     redirection_uri = None
-    if target_user_id is not None and target_user_id != user.id:
+    if target_user_id is not None and target_user_id != token.id:
         redirection_uri = settings.CLIENT_URL + calypsso.get_message_relative_url(
             message_type=TypeMessage.payment_success,
         )
@@ -3088,7 +3073,7 @@ async def get_cdr_year(
 async def update_cdr_year(
     cdr_year: coredata_cdr.CdrYear,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.manage_cdr]),
     ),
 ):
@@ -3113,7 +3098,7 @@ async def get_status(
 async def update_status(
     status: coredata_cdr.Status,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.manage_cdr]),
     ),
 ):
@@ -3153,11 +3138,11 @@ async def update_status(
 )
 async def get_my_tickets(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
-    return await cruds_cdr.get_tickets_of_user(db=db, user_id=user.id)
+    return await cruds_cdr.get_tickets_of_user(db=db, user_id=token.id)
 
 
 @module.router.get(
@@ -3168,13 +3153,13 @@ async def get_my_tickets(
 async def get_tickets_of_user(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
     if not (
-        await has_user_permission(user, CdrPermissions.manage_cdr, db)
-        or user_id == user.id
+        await token.check_permission(CdrPermissions.manage_cdr, db)
+        or user_id == token.id
     ):
         raise HTTPException(
             status_code=403,
@@ -3191,7 +3176,7 @@ async def get_tickets_of_user(
 async def get_ticket_secret(
     ticket_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
@@ -3201,7 +3186,7 @@ async def get_ticket_secret(
             status_code=404,
             detail="Ticket not found.",
         )
-    if ticket.user_id != user.id:
+    if ticket.user_id != token.id:
         raise HTTPException(
             status_code=403,
             detail="You can't get another user ticket secret.",
@@ -3220,7 +3205,7 @@ async def get_ticket_by_secret(
     generator_id: UUID,
     secret: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
@@ -3234,7 +3219,7 @@ async def get_ticket_by_secret(
             status_code=404,
             detail="Product not found.",
         )
-    await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
+    await is_user_in_a_seller_group(seller_id=seller_id, token=token, db=db)
     ticket_generator = await cruds_cdr.get_ticket_generator(
         db=db,
         ticket_generator_id=generator_id,
@@ -3274,7 +3259,7 @@ async def scan_ticket(
     secret: UUID,
     ticket_data: schemas_cdr.TicketScan,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
@@ -3288,7 +3273,7 @@ async def scan_ticket(
             status_code=404,
             detail="Product not found.",
         )
-    await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
+    await is_user_in_a_seller_group(seller_id=seller_id, token=token, db=db)
     ticket_generator = await cruds_cdr.get_ticket_generator(
         db=db,
         ticket_generator_id=generator_id,
@@ -3346,7 +3331,7 @@ async def get_users_by_tag(
     generator_id: UUID,
     tag: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
@@ -3394,7 +3379,7 @@ async def get_tags_of_ticket(
     product_id: UUID,
     generator_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
@@ -3442,11 +3427,11 @@ async def generate_ticket_for_product(
     product_id: UUID,
     ticket_data: schemas_cdr.GenerateTicketBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
-    await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
+    await is_user_in_a_seller_group(seller_id=seller_id, token=token, db=db)
     product = await check_request_consistency(
         db=db,
         seller_id=seller_id,
@@ -3499,11 +3484,11 @@ async def delete_ticket_generator_for_product(
     product_id: UUID,
     ticket_generator_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
-    await is_user_in_a_seller_group(seller_id=seller_id, user=user, db=db)
+    await is_user_in_a_seller_group(seller_id=seller_id, token=token, db=db)
     product = await check_request_consistency(
         db=db,
         seller_id=seller_id,
@@ -3542,13 +3527,13 @@ async def get_custom_data_fields(
     seller_id: UUID,
     product_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
     await is_user_in_a_seller_group(
         seller_id,
-        user,
+        token,
         db=db,
     )
     await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
@@ -3565,13 +3550,13 @@ async def create_custom_data_field(
     product_id: UUID,
     custom_data_field: schemas_cdr.CustomDataFieldBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
     await is_user_in_a_seller_group(
         seller_id,
-        user,
+        token,
         db=db,
     )
     await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
@@ -3597,13 +3582,13 @@ async def update_custom_data_field(
     field_id: UUID,
     custom_data_field: schemas_cdr.CustomDataFieldBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
     await is_user_in_a_seller_group(
         seller_id,
-        user,
+        token,
         db=db,
     )
     await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
@@ -3640,13 +3625,13 @@ async def delete_customdata_field(
     product_id: UUID,
     field_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
     await is_user_in_a_seller_group(
         seller_id,
-        user,
+        token,
         db=db,
     )
     await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
@@ -3679,13 +3664,13 @@ async def get_customdata(
     user_id: str,
     field_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
     await is_user_in_a_seller_group(
         seller_id,
-        user,
+        token,
         db=db,
     )
     await check_request_consistency(db=db, seller_id=seller_id, product_id=product_id)
@@ -3711,7 +3696,7 @@ async def create_custom_data(
     field_id: UUID,
     custom_data: schemas_cdr.CustomDataBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
@@ -3723,16 +3708,16 @@ async def create_custom_data(
             detail="Field not found.",
         )
     if not (
-        await has_user_permission(user, CdrPermissions.manage_cdr, db)
+        await token.check_permission(CdrPermissions.manage_cdr, db)
         or seller_id
         in [
             s.id
             for s in await cruds_cdr.get_sellers_by_group_ids(
                 db=db,
-                group_ids=[g.id for g in user.groups],
+                group_ids=token.group_ids,
             )
         ]
-    ) and not (db_field.can_user_answer and user_id == user.id):
+    ) and not (db_field.can_user_answer and user_id == token.id):
         raise HTTPException(
             status_code=403,
             detail="You are not authorized to add data for this field.",
@@ -3766,7 +3751,7 @@ async def update_custom_data(
     field_id: UUID,
     custom_data: schemas_cdr.CustomDataBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
@@ -3778,16 +3763,16 @@ async def update_custom_data(
             detail="Field Data not found.",
         )
     if not (
-        await has_user_permission(user, CdrPermissions.manage_cdr, db)
+        await token.check_permission(CdrPermissions.manage_cdr, db)
         or seller_id
         in [
             s.id
             for s in await cruds_cdr.get_sellers_by_group_ids(
                 db=db,
-                group_ids=[g.id for g in user.groups],
+                group_ids=token.group_ids,
             )
         ]
-    ) and not (db_data.field.can_user_answer and user_id == user.id):
+    ) and not (db_data.field.can_user_answer and user_id == token.id):
         raise HTTPException(
             status_code=403,
             detail="You are not authorized to edit data for this field.",
@@ -3816,7 +3801,7 @@ async def delete_customdata(
     user_id: str,
     field_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
@@ -3828,16 +3813,16 @@ async def delete_customdata(
             detail="Field Data not found.",
         )
     if not (
-        await has_user_permission(user, CdrPermissions.manage_cdr, db)
+        await token.check_permission(CdrPermissions.manage_cdr, db)
         or seller_id
         in [
             s.id
             for s in await cruds_cdr.get_sellers_by_group_ids(
                 db=db,
-                group_ids=[g.id for g in user.groups],
+                group_ids=token.group_ids,
             )
         ]
-    ) and not (db_data.field.can_user_answer and user_id == user.id):
+    ) and not (db_data.field.can_user_answer and user_id == token.id):
         raise HTTPException(
             status_code=403,
             detail="You are not authorized to delete data for this field.",

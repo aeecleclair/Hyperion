@@ -2,10 +2,17 @@
 
 from datetime import datetime
 from typing import Literal
+from uuid import UUID
 
 from fastapi import Form
 from pydantic import BaseModel, field_validator
+from redis import Redis
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth.dependencies_auth import get_cached_permission_requirements
+from app.core.groups.groups_type import AccountType, GroupType
+from app.core.permissions.type_permissions import ModulePermissions
+from app.core.utils.config import Settings
 from app.utils import validators
 from app.utils.examples import examples_auth
 
@@ -99,7 +106,69 @@ class TokenData(BaseModel):
     iat: datetime | None = None
     nonce: str | None = None
     scopes: str = ""
+    account_type: AccountType
+    group_ids: list[str]
+    school_id: UUID
     # exp and iat elements are added by the token generation function
+
+    @property
+    def id(self) -> str:
+        """
+        Returns the user id from the token data.
+        This is a convenience property to avoid having to use `token_data.sub` everywhere.
+        """
+        return self.sub
+
+
+class FunctionalTokenData(TokenData):
+    """
+    Extends TokenData to add a method to check if the user has the permission to perform an action.
+    """
+
+    settings: Settings
+    redis_client: Redis | None = None
+
+    model_config = {
+        "arbitrary_types_allowed": True,
+    }
+
+    def is_from_any_group(
+        self,
+        allowed_groups: list[str] | list[GroupType],
+    ) -> bool:
+        """
+        Check if the user is a member of the group.
+        """
+        return any(group_id in self.group_ids for group_id in allowed_groups)
+
+    async def check_permission(
+        self,
+        permission_name: ModulePermissions,
+        db: AsyncSession,
+    ) -> bool:
+        """
+        Check if the user has the permission to perform the action.
+        """
+
+        if GroupType.admin in self.group_ids:
+            return True
+        groups, account_types = await get_cached_permission_requirements(
+            permission_name=permission_name,
+            db=db,
+            settings=self.settings,
+            redis_client=self.redis_client,
+        )
+        return (
+            any(group_id in self.group_ids for group_id in groups)
+            or self.account_type in account_types
+        )
+
+    def __str__(self) -> str:
+        """
+        Return a string representation of the token data.
+        We override the default __str__ method to avoid printing the settings which can contain sensitive information.
+        """
+        return f"FunctionalTokenData(sub={self.sub}, iss={self.iss}, aud={self.aud}, cid={self.cid}, iat={self.iat}, nonce={self.nonce}, scopes={self.scopes}, account_type={self.account_type}, group_ids={self.group_ids}, school_id={self.school_id})"
 
 
 class TokenReq(BaseModel):

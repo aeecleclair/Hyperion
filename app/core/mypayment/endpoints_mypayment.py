@@ -21,8 +21,12 @@ from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import (
+    filter_user_token,
+    get_token_with_scopes,
+    is_user_admin,
+)
 from app.core.core_endpoints import cruds_core
-from app.core.groups.groups_type import GroupType
 from app.core.memberships.utils_memberships import (
     get_user_active_membership_to_association_membership,
 )
@@ -65,7 +69,7 @@ from app.core.payment import schemas_payment
 from app.core.payment.payment_tool import PaymentTool
 from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.users import cruds_users, schemas_users
-from app.core.users.models_users import CoreUser
+from app.core.users.dependencies_users import get_request_user
 from app.core.utils import security
 from app.core.utils.config import Settings
 from app.dependencies import (
@@ -75,15 +79,10 @@ from app.dependencies import (
     get_payment_tool,
     get_request_id,
     get_settings,
-    get_token_data,
-    is_user,
-    is_user_an_ecl_member,
-    is_user_in,
 )
 from app.types import standard_responses
 from app.types.module import CoreModule
 from app.types.scopes_type import ScopeType
-from app.utils.auth.auth_utils import get_user_id_from_token_with_scopes
 from app.utils.communication.notifications import NotificationTool
 from app.utils.mail.mailworker import send_email
 from app.utils.tools import (
@@ -122,9 +121,9 @@ RETENTION_DURATION = 10 * 365  # 10 years in days
     status_code=200,
 )
 async def get_bank_account_holder(
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     db: AsyncSession = Depends(get_db),
-):
+) -> schemas_mypayment.Structure:
     """
     Get the current bank account holder information.
     """
@@ -151,7 +150,7 @@ async def get_bank_account_holder(
 async def set_bank_account_holder(
     bank_account_info: MyPaymentBankAccountHolder,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """Set the bank account holder information."""
 
@@ -180,7 +179,7 @@ async def set_bank_account_holder(
 )
 async def get_structures(
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Get all structures.
@@ -198,7 +197,7 @@ async def get_structures(
 async def create_structure(
     structure: schemas_mypayment.StructureBase,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Create a new structure.
@@ -258,7 +257,7 @@ async def update_structure(
     structure_id: UUID,
     structure_update: schemas_mypayment.StructureUpdate,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Update a structure.
@@ -297,7 +296,7 @@ async def update_structure(
 async def delete_structure(
     structure_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Delete a structure. Only structures without stores can be deleted.
@@ -328,7 +327,7 @@ async def create_structure_administrator(
     structure_id: UUID,
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Create a new administrator for a structure.
@@ -344,7 +343,7 @@ async def create_structure_administrator(
             status_code=404,
             detail="Structure does not exist",
         )
-    if structure.manager_user_id != user.id:
+    if structure.manager_user_id != token.id:
         raise HTTPException(
             status_code=403,
             detail="User is not the manager for this structure",
@@ -422,7 +421,7 @@ async def delete_structure_administrator(
     structure_id: UUID,
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Delete an administrator for a structure.
@@ -438,7 +437,7 @@ async def delete_structure_administrator(
             status_code=404,
             detail="Structure does not exist",
         )
-    if structure.manager_user_id != user.id:
+    if structure.manager_user_id != token.id:
         raise HTTPException(
             status_code=403,
             detail="User is not the manager for this structure",
@@ -489,7 +488,8 @@ async def init_transfer_structure_manager(
     transfer_info: schemas_mypayment.StructureTranfert,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    user: schemas_users.CoreUser = Depends(get_request_user()),
     mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     settings: Settings = Depends(get_settings),
 ):
@@ -508,7 +508,7 @@ async def init_transfer_structure_manager(
             status_code=404,
             detail="Structure does not exist",
         )
-    if structure.manager_user_id != user.id:
+    if structure.manager_user_id != token.id:
         raise HTTPException(
             status_code=403,
             detail="User is not the manager for this structure",
@@ -649,7 +649,7 @@ async def create_store(
     structure_id: UUID,
     store: schemas_mypayment.StoreBase,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Create a store. The structure manager will be added as a seller for the store.
@@ -667,7 +667,7 @@ async def create_store(
             status_code=404,
             detail="Structure does not exist",
         )
-    if structure.manager_user_id != user.id and user.id not in [
+    if structure.manager_user_id != token.id and token.id not in [
         user.id for user in structure.administrators
     ]:
         raise HTTPException(
@@ -756,7 +756,7 @@ async def get_store_history(
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Get all transactions for the store.
@@ -774,7 +774,7 @@ async def get_store_history(
         )
 
     seller = await cruds_mypayment.get_seller(
-        user_id=user.id,
+        user_id=token.id,
         store_id=store_id,
         db=db,
     )
@@ -879,7 +879,7 @@ async def export_store_history(
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Export store payment history as a CSV file.
@@ -895,7 +895,7 @@ async def export_store_history(
         )
 
     seller = await cruds_mypayment.get_seller(
-        user_id=user.id,
+        user_id=token.id,
         store_id=store_id,
         db=db,
     )
@@ -983,7 +983,7 @@ async def export_store_history(
 )
 async def get_user_stores(
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Get all stores for the current user.
@@ -991,7 +991,7 @@ async def get_user_stores(
     **The user must be authenticated to use this endpoint**
     """
     sellers = await cruds_mypayment.get_sellers_by_user_id(
-        user_id=user.id,
+        user_id=token.id,
         db=db,
     )
 
@@ -1028,7 +1028,7 @@ async def update_store(
     store_id: UUID,
     store_update: schemas_mypayment.StoreUpdate,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Update a store
@@ -1050,8 +1050,8 @@ async def update_store(
         db=db,
     )
     if structure is None or (
-        structure.manager_user_id != user.id
-        and user.id not in [user.id for user in structure.administrators]
+        structure.manager_user_id != token.id
+        and token.id not in [user.id for user in structure.administrators]
     ):
         raise HTTPException(
             status_code=403,
@@ -1080,7 +1080,7 @@ async def update_store(
 async def delete_store(
     store_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Delete a store. Only stores without transactions can be deleted.
@@ -1102,8 +1102,8 @@ async def delete_store(
         db=db,
     )
     if structure is None or (
-        structure.manager_user_id != user.id
-        and user.id not in [user.id for user in structure.administrators]
+        structure.manager_user_id != token.id
+        and token.id not in [user.id for user in structure.administrators]
     ):
         raise HTTPException(
             status_code=403,
@@ -1154,7 +1154,7 @@ async def create_store_seller(
     store_id: UUID,
     seller: schemas_mypayment.SellerCreation,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Create a store seller.
@@ -1178,7 +1178,7 @@ async def create_store_seller(
         )
 
     seller_admin = await cruds_mypayment.get_seller(
-        user_id=user.id,
+        user_id=token.id,
         store_id=store_id,
         db=db,
     )
@@ -1224,7 +1224,7 @@ async def create_store_seller(
 async def get_store_sellers(
     store_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Get all sellers for the given store.
@@ -1242,7 +1242,7 @@ async def get_store_sellers(
         )
 
     seller_admin = await cruds_mypayment.get_seller(
-        user_id=user.id,
+        user_id=token.id,
         store_id=store_id,
         db=db,
     )
@@ -1267,7 +1267,7 @@ async def update_store_seller(
     seller_user_id: str,
     seller_update: schemas_mypayment.SellerUpdate,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Update a store seller permissions.
@@ -1287,7 +1287,7 @@ async def update_store_seller(
         )
 
     seller_admin = await cruds_mypayment.get_seller(
-        user_id=user.id,
+        user_id=token.id,
         store_id=store_id,
         db=db,
     )
@@ -1306,7 +1306,7 @@ async def update_store_seller(
         or structure.manager_user_id == seller_user_id
         or (
             seller_user_id in [user.id for user in structure.administrators]
-            and structure.manager_user_id != user.id
+            and structure.manager_user_id != token.id
         )
     ):
         raise HTTPException(
@@ -1342,7 +1342,7 @@ async def delete_store_seller(
     store_id: UUID,
     seller_user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Delete a store seller.
@@ -1361,7 +1361,7 @@ async def delete_store_seller(
         )
 
     seller_admin = await cruds_mypayment.get_seller(
-        user_id=user.id,
+        user_id=token.id,
         store_id=store_id,
         db=db,
     )
@@ -1380,7 +1380,7 @@ async def delete_store_seller(
         or structure.manager_user_id == seller_user_id
         or (
             seller_user_id in [user.id for user in structure.administrators]
-            and structure.manager_user_id != user.id
+            and structure.manager_user_id != token.id
         )
     ):
         raise HTTPException(
@@ -1413,7 +1413,7 @@ async def delete_store_seller(
 )
 async def register_user(
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Sign MyECL Pay TOS for the given user.
@@ -1425,7 +1425,7 @@ async def register_user(
 
     # Check if user is already registered
     existing_user_payment = await cruds_mypayment.get_user_payment(
-        user_id=user.id,
+        user_id=token.id,
         db=db,
     )
     if existing_user_payment is not None:
@@ -1447,7 +1447,7 @@ async def register_user(
 
     # Create new payment user with wallet
     await cruds_mypayment.create_user_payment(
-        user_id=user.id,
+        user_id=token.id,
         wallet_id=wallet_id,
         accepted_tos_signature=datetime.now(UTC),
         accepted_tos_version=0,
@@ -1458,7 +1458,7 @@ async def register_user(
         wallet_id,
         extra={
             "s3_subfolder": MYPAYMENT_USERS_S3_SUBFOLDER,
-            "s3_filename": str(user.id),
+            "s3_filename": str(token.id),
         },
     )
 
@@ -1470,7 +1470,7 @@ async def register_user(
 )
 async def get_user_tos(
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -1480,7 +1480,7 @@ async def get_user_tos(
     """
     # Check if user is already registered
     existing_user_payment = await cruds_mypayment.get_user_payment(
-        user_id=user.id,
+        user_id=token.id,
         db=db,
     )
     if existing_user_payment is None:
@@ -1509,7 +1509,8 @@ async def sign_tos(
     signature: schemas_mypayment.TOSSignature,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    user: schemas_users.CoreUser = Depends(get_request_user()),
     mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     settings: Settings = Depends(get_settings),
 ):
@@ -1528,7 +1529,7 @@ async def sign_tos(
 
     # Check if user is already registered
     existing_user_payment = await cruds_mypayment.get_user_payment(
-        user_id=user.id,
+        user_id=token.id,
         db=db,
     )
     if existing_user_payment is None:
@@ -1539,7 +1540,7 @@ async def sign_tos(
 
     # Update existing user payment
     await cruds_mypayment.update_user_payment(
-        user_id=user.id,
+        user_id=token.id,
         accepted_tos_signature=datetime.now(UTC),
         accepted_tos_version=signature.accepted_tos_version,
         db=db,
@@ -1571,7 +1572,7 @@ async def sign_tos(
 )
 async def get_user_devices(
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Get user devices.
@@ -1580,7 +1581,7 @@ async def get_user_devices(
     """
     # Check if user is already registered
     user_payment = await cruds_mypayment.get_user_payment(
-        user_id=user.id,
+        user_id=token.id,
         db=db,
     )
     if user_payment is None:
@@ -1603,7 +1604,7 @@ async def get_user_devices(
 async def get_user_device(
     wallet_device_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Get user devices.
@@ -1612,7 +1613,7 @@ async def get_user_device(
     """
     # Check if user is already registered
     user_payment = await cruds_mypayment.get_user_payment(
-        user_id=user.id,
+        user_id=token.id,
         db=db,
     )
     if user_payment is None:
@@ -1648,7 +1649,7 @@ async def get_user_device(
 )
 async def get_user_wallet(
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Get user wallet.
@@ -1657,7 +1658,7 @@ async def get_user_wallet(
     """
     # Check if user is already registered
     user_payment = await cruds_mypayment.get_user_payment(
-        user_id=user.id,
+        user_id=token.id,
         db=db,
     )
     if user_payment is None:
@@ -1689,7 +1690,8 @@ async def create_user_devices(
     wallet_device_creation: schemas_mypayment.WalletDeviceCreation,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    user: schemas_users.CoreUser = Depends(get_request_user()),
     mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     settings: Settings = Depends(get_settings),
 ):
@@ -1701,7 +1703,7 @@ async def create_user_devices(
     """
     # Check if user is already registered
     user_payment = await cruds_mypayment.get_user_payment(
-        user_id=user.id,
+        user_id=token.id,
         db=db,
     )
     if user_payment is None or not is_user_latest_tos_signed(user_payment):
@@ -1748,7 +1750,7 @@ async def create_user_devices(
     hyperion_mypayment_logger.info(
         wallet_device_creation.ed25519_public_key,
         extra={
-            "s3_subfolder": f"{MYPAYMENT_DEVICES_S3_SUBFOLDER}/{user.id}",
+            "s3_subfolder": f"{MYPAYMENT_DEVICES_S3_SUBFOLDER}/{token.id}",
             "s3_filename": str(wallet_device_db.id),
         },
     )
@@ -1838,7 +1840,7 @@ async def activate_user_device(
 async def revoke_user_devices(
     wallet_device_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     settings: Settings = Depends(get_settings),
 ):
@@ -1849,7 +1851,7 @@ async def revoke_user_devices(
     """
     # Check if user is already registered
     user_payment = await cruds_mypayment.get_user_payment(
-        user_id=user.id,
+        user_id=token.id,
         db=db,
     )
     if user_payment is None or not is_user_latest_tos_signed(user_payment):
@@ -1902,7 +1904,7 @@ async def revoke_user_devices(
 )
 async def get_user_wallet_history(
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     start_date: datetime | None = None,
     end_date: datetime | None = None,
 ):
@@ -1912,7 +1914,7 @@ async def get_user_wallet_history(
     **The user must be authenticated to use this endpoint**
     """
     user_payment = await cruds_mypayment.get_user_payment(
-        user_id=user.id,
+        user_id=token.id,
         db=db,
     )
 
@@ -2032,7 +2034,8 @@ async def get_user_wallet_history(
 async def init_ha_transfer(
     transfer_info: schemas_mypayment.TransferInfo,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    user: schemas_users.CoreUser = Depends(get_request_user()),
     settings: Settings = Depends(get_settings),
     payment_tool: PaymentTool = Depends(
         get_payment_tool(HelloAssoConfigName.MYPAYMENT),
@@ -2044,7 +2047,7 @@ async def init_ha_transfer(
 
     if transfer_info.redirect_url not in settings.TRUSTED_PAYMENT_REDIRECT_URLS:
         hyperion_error_logger.warning(
-            f"User {user.id} tried to redirect to an untrusted URL: {transfer_info.redirect_url}",
+            f"User {token.id} tried to redirect to an untrusted URL: {transfer_info.redirect_url}",
         )
         raise HTTPException(
             status_code=400,
@@ -2058,7 +2061,7 @@ async def init_ha_transfer(
         )
 
     user_payment = await cruds_mypayment.get_user_payment(
-        user_id=user.id,
+        user_id=token.id,
         db=db,
     )
     if user_payment is None:
@@ -2101,7 +2104,7 @@ async def init_ha_transfer(
         phone=user.phone,
         created_on=user.created_on,
         groups=[],
-        id=user.id,
+        id=token.id,
         name=user.name,
         firstname=user.firstname,
         nickname=user.nickname,
@@ -2187,7 +2190,7 @@ async def validate_can_scan_qrcode(
     store_id: UUID,
     scan_info: schemas_mypayment.ScanInfo,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user_an_ecl_member),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Validate if a given QR Code can be scanned by the seller.
@@ -2211,7 +2214,7 @@ async def validate_can_scan_qrcode(
 
     seller = await cruds_mypayment.get_seller(
         store_id=store_id,
-        user_id=user.id,
+        user_id=token.id,
         db=db,
     )
 
@@ -2274,7 +2277,7 @@ async def store_scan_qrcode(
     store_id: UUID,
     scan_info: schemas_mypayment.ScanInfo,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user_an_ecl_member),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     request_id: str = Depends(get_request_id),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     settings: Settings = Depends(get_settings),
@@ -2340,7 +2343,7 @@ async def store_scan_qrcode(
 
         seller = await cruds_mypayment.get_seller(
             store_id=store_id,
-            user_id=user.id,
+            user_id=token.id,
             db=db,
         )
 
@@ -2473,7 +2476,7 @@ async def store_scan_qrcode(
             debited_wallet_id=debited_wallet_device.wallet_id,
             credited_wallet_id=store.wallet_id,
             transaction_type=TransactionType.DIRECT,
-            seller_user_id=user.id,
+            seller_user_id=token.id,
             total=scan_info.tot,
             creation=creation_date,
             status=TransactionStatus.CONFIRMED,
@@ -2514,7 +2517,7 @@ async def refund_transaction(
     transaction_id: UUID,
     refund_info: schemas_mypayment.RefundInfo,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user_an_ecl_member),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     settings: Settings = Depends(get_settings),
 ):
@@ -2569,7 +2572,7 @@ async def refund_transaction(
             )
         seller = await cruds_mypayment.get_seller(
             store_id=wallet_previously_credited.store.id,
-            user_id=user.id,
+            user_id=token.id,
             db=db,
         )
         if seller is None or not seller.can_cancel:
@@ -2589,7 +2592,7 @@ async def refund_transaction(
         #         status_code=404,
         #         detail="User does not exist",
         #     )
-        # if wallet_previously_credited.user.id != user.id:
+        # if wallet_previously_credited.token.id != token.id:
         #     raise HTTPException(
         #         status_code=403,
         #         detail="User is not allowed to refund this transaction",
@@ -2638,7 +2641,7 @@ async def refund_transaction(
         id=uuid.uuid4(),
         transaction_id=transaction_id,
         total=refund_amount,
-        seller_user_id=user.id
+        seller_user_id=token.id
         if wallet_previously_credited.type == WalletType.STORE
         else None,
         credited_wallet_id=wallet_previously_debited.id,
@@ -2706,7 +2709,7 @@ async def refund_transaction(
 async def cancel_transaction(
     transaction_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user_an_ecl_member),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     request_id: str = Depends(get_request_id),
     notification_tool: NotificationTool = Depends(get_notification_tool),
     settings: Settings = Depends(get_settings),
@@ -2754,7 +2757,7 @@ async def cancel_transaction(
             )
         seller = await cruds_mypayment.get_seller(
             store_id=canceller_wallet.store.id,
-            user_id=user.id,
+            user_id=token.id,
             db=db,
         )
         if seller is None:
@@ -2775,7 +2778,7 @@ async def cancel_transaction(
                 status_code=404,
                 detail="User does not exist",
             )
-        if canceller_wallet.user.id != user.id:
+        if canceller_wallet.user.id != token.id:
             raise HTTPException(
                 status_code=403,
                 detail="User is not allowed to cancel this transaction",
@@ -2846,7 +2849,7 @@ async def get_invoices(
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user_bank_account_holder),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_bank_account_holder),
 ) -> list[schemas_mypayment.Invoice]:
     """
     Get all invoices.
@@ -2874,7 +2877,7 @@ async def get_structure_invoices(
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ) -> list[schemas_mypayment.Invoice]:
     """
     Get all invoices.
@@ -2890,7 +2893,7 @@ async def get_structure_invoices(
             status_code=404,
             detail="Structure does not exist",
         )
-    if structure.manager_user_id != user.id and user.id not in [
+    if structure.manager_user_id != token.id and token.id not in [
         admin.id for admin in structure.administrators
     ]:
         raise HTTPException(
@@ -2915,7 +2918,7 @@ async def get_structure_invoices(
 async def download_invoice(
     invoice_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     invoice = await cruds_mypayment.get_invoice_by_id(invoice_id, db)
     if invoice is None:
@@ -2933,10 +2936,10 @@ async def download_invoice(
             detail="Structure does not exist",
         )
     bank_account_info = await get_bank_account_holder(
-        user=user,
+        token=token,
         db=db,
     )
-    if user.id not in (
+    if token.id not in (
         structure.manager_user_id,
         bank_account_info.manager_user_id,
         *[admin.id for admin in structure.administrators],
@@ -2959,7 +2962,9 @@ async def download_invoice(
 async def create_structure_invoice(
     structure_id: UUID,
     db: AsyncSession = Depends(get_db),
-    token_data: schemas_auth.TokenData = Depends(get_token_data),
+    token: schemas_auth.FunctionalTokenData = Depends(
+        get_token_with_scopes([[ScopeType.API]]),
+    ),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -2968,15 +2973,9 @@ async def create_structure_invoice(
     **The user must be the bank account holder**
     """
     now = await cruds_core.start_isolation_mode(db)
-    # Database isolation requires to be the first statement of the transaction
-    # We can't use reguler dependencies to check user permissions as they access the database
-    user_id = get_user_id_from_token_with_scopes(
-        scopes=[[ScopeType.API]],
-        token_data=token_data,
-    )
-    user = await cruds_users.get_user_by_id(
+    user = await cruds_users.get_user_by_id_schema(
+        user_id=token.id,
         db=db,
-        user_id=user_id,
     )
     if user is None:
         raise HTTPException(
@@ -2984,10 +2983,10 @@ async def create_structure_invoice(
             detail="User does not exist",
         )
     bank_holder_structure = await get_bank_account_holder(
-        user=user,
+        token=token,
         db=db,
     )
-    if bank_holder_structure.manager_user_id != user.id:
+    if bank_holder_structure.manager_user_id != token.id:
         raise HTTPException(
             status_code=403,
             detail="User is not the bank account holder",
@@ -3131,7 +3130,7 @@ async def update_invoice_paid_status(
     invoice_id: UUID,
     paid: bool,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user_bank_account_holder),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_bank_account_holder),
 ):
     """
     Update the paid status of a structure invoice.
@@ -3139,7 +3138,7 @@ async def update_invoice_paid_status(
     **The user must be the bank account holder**
     """
     hyperion_error_logger.debug(
-        f"User {user.id} requested to update the paid status of invoice {invoice_id} to {paid}",
+        f"User {token.id} requested to update the paid status of invoice {invoice_id} to {paid}",
     )
     invoice = await cruds_mypayment.get_invoice_by_id(
         invoice_id=invoice_id,
@@ -3164,7 +3163,7 @@ async def update_invoice_paid_status(
 async def aknowledge_invoice_as_received(
     invoice_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Update the received status of a structure invoice.
@@ -3199,7 +3198,7 @@ async def aknowledge_invoice_as_received(
             status_code=500,
             detail="Structure does not exist",
         )
-    if structure.manager_user_id != user.id and user.id not in [
+    if structure.manager_user_id != token.id and token.id not in [
         admin.id for admin in structure.administrators
     ]:
         raise HTTPException(
@@ -3258,7 +3257,7 @@ async def aknowledge_invoice_as_received(
 async def delete_structure_invoice(
     invoice_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: CoreUser = Depends(is_user_bank_account_holder),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_bank_account_holder),
 ):
     """
     Delete a structure invoice.

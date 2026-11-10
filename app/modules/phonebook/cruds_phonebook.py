@@ -5,7 +5,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.users import models_users
+from app.core.auth import schemas_auth
 from app.modules.phonebook import models_phonebook, schemas_phonebook, types_phonebook
 
 
@@ -15,12 +15,12 @@ from app.modules.phonebook import models_phonebook, schemas_phonebook, types_pho
 async def is_user_president(
     association_id: str,
     mandate_year: int,
-    user: models_users.CoreUser,
+    token: schemas_auth.TokenData,
     db: AsyncSession,
 ) -> bool:
     membership = await get_membership_by_association_id_user_id_and_mandate_year(
         association_id=association_id,
-        user_id=user.id,
+        user_id=token.id,
         mandate_year=mandate_year,
         db=db,
     )

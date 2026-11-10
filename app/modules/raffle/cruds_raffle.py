@@ -253,13 +253,21 @@ async def get_tickets(db: AsyncSession) -> Sequence[models_raffle.Ticket]:
 
 
 async def create_ticket(
-    tickets: Sequence[models_raffle.Ticket],
+    tickets: Sequence[schemas_raffle.TicketComplete],
     db: AsyncSession,
-) -> Sequence[models_raffle.Ticket]:
+):
     """Create a new ticket in databasend return it"""
-    db.add_all(tickets)
-    await db.flush()
-    return tickets
+    db.add_all(
+        [
+            models_raffle.Ticket(
+                id=ticket.id,
+                pack_id=ticket.pack_id,
+                user_id=ticket.user_id,
+                winning_prize=ticket.winning_prize,
+            )
+            for ticket in tickets
+        ],
+    )
 
 
 async def get_tickets_by_raffleid(

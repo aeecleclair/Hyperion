@@ -50,6 +50,15 @@ class CoreUser(CoreUserSimple):
     def __hash__(self) -> int:
         return hash(self.id)
 
+    @property
+    def full_name(self) -> str:
+        """
+        Return the full name of the user, including first name, name and nickname if it exists.
+        """
+        if self.nickname:
+            return f"{self.firstname} {self.name} ({self.nickname})"
+        return f"{self.firstname} {self.name}"
+
 
 class CoreUserUpdate(BaseModel):
     """Schema for user update"""

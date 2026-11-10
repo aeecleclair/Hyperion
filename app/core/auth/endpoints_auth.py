@@ -17,10 +17,14 @@ from fastapi import (
 )
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
+from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import cruds_auth, models_auth, schemas_auth
-from app.core.users import cruds_users, models_users
+from app.core.auth.dependencies_auth import get_token_data
+from app.core.auth.schemas_auth import FunctionalTokenData
+from app.core.users import cruds_users, schemas_users
+from app.core.users.dependencies_users import get_request_user
 from app.core.utils.config import Settings
 from app.core.utils.security import (
     authenticate_user,
@@ -30,18 +34,11 @@ from app.core.utils.security import (
     jws_algorithm,
     jwt_algorithm,
 )
-from app.dependencies import (
-    get_db,
-    get_request_id,
-    get_settings,
-    get_token_data,
-    get_user_from_token_with_scopes,
-)
-from app.types.exceptions import AuthHTTPException
+from app.dependencies import get_db, get_redis_client, get_request_id, get_settings
+from app.types.exceptions import AuthHTTPException, ObjectExpectedInDbNotFoundError
 from app.types.module import CoreModule
 from app.types.scopes_type import ScopeType
 from app.utils.auth.providers import BaseAuthClient
-from app.utils.tools import has_user_permission
 
 router = APIRouter(tags=["Auth"])
 
@@ -87,7 +84,13 @@ async def login_for_access_token(
         )
     # We put the user id in the subject field of the token.
     # The subject `sub` is a JWT registered claim name, see https://datatracker.ietf.org/doc/html/rfc7519#section-4.1
-    data = schemas_auth.TokenData(sub=user.id, scopes=ScopeType.auth)
+    data = schemas_auth.TokenData(
+        sub=user.id,
+        scopes=ScopeType.auth,
+        account_type=user.account_type,
+        group_ids=[group.id for group in user.groups],
+        school_id=user.school_id,
+    )
     access_token = create_access_token(settings=settings, data=data)
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -198,6 +201,7 @@ async def authorize_validation(
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
     request_id: str = Depends(get_request_id),
+    redis_client: Redis | None = Depends(get_redis_client),
 ):
     """
     Part 1 of the authorization code grant.
@@ -317,8 +321,15 @@ async def authorize_validation(
     # The auth_client may restrict the usage of the client to specific Hyperion permissions
     if auth_client.permission is not None:
         if not (
-            await has_user_permission(
-                user=user,
+            await FunctionalTokenData(
+                sub=user.id,
+                scopes=ScopeType.auth,
+                account_type=user.account_type,
+                group_ids=[group.id for group in user.groups],
+                school_id=user.school_id,
+                settings=settings,
+                redis_client=redis_client,
+            ).check_permission(
                 permission_name=auth_client.permission,
                 db=db,
             )
@@ -842,6 +853,10 @@ async def create_response_body(
         f"Token create_response_body: Granting scopes {granted_scopes} ({request_id})",
     )
 
+    user = await cruds_users.get_user_by_id_schema(db=db, user_id=db_row.user_id)
+    if user is None:
+        raise ObjectExpectedInDbNotFoundError("CoreUser", db_row.user_id)
+
     # The audience field should be the name of the service the access token gives access to
     # For the access token, it's always the API. We decide not to include this field as we know we are the one who issued the access token
     # For the id token, it's the service which will use it, we thus need to include aud=client_id
@@ -849,6 +864,9 @@ async def create_response_body(
     access_token_data = schemas_auth.TokenData(
         sub=db_row.user_id,
         scopes=granted_scopes,
+        account_type=user.account_type,
+        group_ids=[group.id for group in user.groups],
+        school_id=user.school_id,
     )
 
     id_token = None  # Will change if oidc is asked in scopes
@@ -877,6 +895,9 @@ async def create_response_body(
             iss=settings.OIDC_ISSUER,
             sub=db_row.user_id,
             aud=client_id,
+            account_type=user.account_type,
+            group_ids=[group.id for group in user.groups],
+            school_id=user.school_id,
         )
         if db_row.nonce is not None:
             # parameter for oidc only, required if provided by the client
@@ -890,7 +911,10 @@ async def create_response_body(
         # but instead require to include the user information in the id_token
         additional_data = {}
         if auth_client.return_userinfo_in_id_token:
-            user = await cruds_users.get_user_by_id(db=db, user_id=db_row.user_id)
+            user = await cruds_users.get_user_by_id_schema(
+                db=db,
+                user_id=db_row.user_id,
+            )
             if user is None:
                 hyperion_security_logger.error(
                     f"Create oidc response body: Could not find user {db_row.user_id} when trying the get userinfo but it should exist ({request_id})",
@@ -1049,8 +1073,8 @@ async def introspect_refresh_token(
     status_code=200,
 )
 async def auth_get_userinfo(
-    user: models_users.CoreUser = Depends(
-        get_user_from_token_with_scopes(
+    user: schemas_users.CoreUser = Depends(
+        get_request_user(
             [
                 [ScopeType.openid],  # For OpenID Connect
                 [ScopeType.profile],  # For OAuth2

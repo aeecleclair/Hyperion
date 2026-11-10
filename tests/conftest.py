@@ -98,7 +98,7 @@ def test_app(request, worker_id: str) -> FastAPI:
         drop_db=True,
     )  # Create the test's app
 
-    test_app.dependency_overrides[init_state] = override_init_state
+    test_app.dependency_overrides[init_state] = override_init_state()
     test_app.dependency_overrides[get_settings] = override_get_settings
 
     return test_app

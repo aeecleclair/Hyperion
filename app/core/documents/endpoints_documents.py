@@ -7,6 +7,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import TypeAdapter
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import filter_user_token, is_user_admin
 from app.core.documents import cruds_documents, schemas_documents
 from app.core.documents.exceptions_documents import (
     DocumentCreationError,
@@ -31,17 +33,10 @@ from app.core.documents.utils_documents import (
     handle_template_creation_webhook,
     use_template_for_user,
 )
-from app.core.groups.groups_type import GroupType
-from app.core.users import cruds_users, schemas_users
+from app.core.users import cruds_users
 from app.core.utils.config import Settings
-from app.dependencies import (
-    get_db,
-    get_settings,
-    is_user,
-    is_user_in,
-)
+from app.dependencies import get_db, get_settings
 from app.types.module import CoreModule
-from app.utils.tools import is_user_member_of_any_group
 
 router = APIRouter(tags=["Documents"])
 
@@ -63,7 +58,7 @@ core_module = CoreModule(
 )
 async def read_teams(
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Return all document teams.
@@ -81,7 +76,7 @@ async def read_teams(
 )
 async def read_user_teams(
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Return the document teams associated with the current user's groups.
@@ -89,7 +84,7 @@ async def read_user_teams(
 
     return await cruds_documents.get_teams_by_group_ids(
         db=db,
-        group_ids=[g.id for g in user.groups],
+        group_ids=token.group_ids,
     )
 
 
@@ -101,7 +96,7 @@ async def read_user_teams(
 async def create_team(
     team_base: schemas_documents.TeamBase,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -162,7 +157,7 @@ async def update_team(
     team_id: uuid.UUID,
     team_update: schemas_documents.TeamUpdate,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -227,7 +222,7 @@ async def update_team(
 async def delete_team(
     team_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Delete a document team.
@@ -254,7 +249,7 @@ async def delete_team(
 async def read_team_templates(
     team_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Return all templates for a given document team.
@@ -264,7 +259,7 @@ async def read_team_templates(
     team = await cruds_documents.get_team_by_id(db=db, team_id=team_id)
     if team is None:
         raise HTTPException(status_code=404, detail="Team not found")
-    if not is_user_member_of_any_group(user, [team.group_id]):
+    if not token.is_from_any_group([team.group_id]):
         raise HTTPException(
             status_code=403,
             detail="You do not have permission to view templates for this team",
@@ -284,7 +279,7 @@ async def read_team_templates(
 async def read_template(
     template_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Return a single template by id.
@@ -298,7 +293,7 @@ async def read_template(
     )
     if db_template is None:
         raise HTTPException(status_code=404, detail="Template not found")
-    if not is_user_member_of_any_group(user, [db_template.team.group_id]):
+    if not token.is_from_any_group(allowed_groups=[db_template.team.group_id]):
         raise HTTPException(
             status_code=403,
             detail="You do not have permission to view this template",
@@ -314,7 +309,7 @@ async def update_template(
     template_id: uuid.UUID,
     template_update: schemas_documents.TemplateEdit,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -335,7 +330,7 @@ async def update_template(
         raise ElementTeamNotFoundError(team_id=db_template.team_id)
 
     # Ensure the caller belongs to the group that owns this team
-    if not is_user_member_of_any_group(user, [db_team.group_id]):
+    if not token.is_from_any_group(allowed_groups=[db_team.group_id]):
         raise HTTPException(
             status_code=403,
             detail="You do not have permission to update this template",
@@ -371,7 +366,7 @@ async def use_template(
     template_id: uuid.UUID,
     parameters: schemas_documents.TemplateUse,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -394,7 +389,7 @@ async def use_template(
     if db_team is None:
         raise ElementTeamNotFoundError(team_id=db_template.team_id)
 
-    if not is_user_member_of_any_group(user, [db_team.group_id]):
+    if not token.is_from_any_group(allowed_groups=[db_team.group_id]):
         raise HTTPException(
             status_code=403,
             detail="You do not have permission to use this template",
@@ -467,14 +462,14 @@ async def use_template(
 )
 async def read_my_documents(
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Return all documents assigned to the current user.
     The signing token is never included in this listing.
     """
 
-    return await cruds_documents.get_documents_by_user_id(db=db, user_id=user.id)
+    return await cruds_documents.get_documents_by_user_id(db=db, user_id=token.id)
 
 
 @router.get(
@@ -485,7 +480,7 @@ async def read_my_documents(
 async def read_my_document_token(
     document_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Return the document with the signing token for a specific document.
@@ -499,7 +494,7 @@ async def read_my_document_token(
     if db_document is None:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    if db_document.user_id != user.id:
+    if db_document.user_id != token.id:
         raise HTTPException(status_code=403, detail="Access forbidden")
 
     return db_document
@@ -513,7 +508,7 @@ async def read_my_document_token(
 async def download_document_file(
     document_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -543,8 +538,7 @@ async def download_document_file(
     if db_team is None:
         raise ElementTeamNotFoundError(team_id=db_template.team_id)
 
-    if db_document.user_id != user.id and not is_user_member_of_any_group(
-        user,
+    if db_document.user_id != token.id and not token.is_from_any_group(
         [db_team.group_id],
     ):
         raise HTTPException(status_code=403, detail="Access forbidden")
@@ -571,7 +565,7 @@ async def download_document_file(
 async def read_template_documents(
     template_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: schemas_users.CoreUser = Depends(is_user()),
+    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
 ):
     """
     Return all documents generated from a given template
@@ -589,7 +583,7 @@ async def read_template_documents(
     db_team = await cruds_documents.get_team_by_id(db=db, team_id=db_template.team_id)
     if db_team is None:
         raise ElementTeamNotFoundError(team_id=db_template.team_id)
-    if not is_user_member_of_any_group(user, [db_team.group_id]):
+    if not token.is_from_any_group(allowed_groups=[db_team.group_id]):
         raise HTTPException(
             status_code=403,
             detail="You do not have permission to view documents for this template",
