@@ -668,7 +668,7 @@ async def create_store(
             detail="Structure does not exist",
         )
     if structure.manager_user_id != token.id and token.id not in [
-        token.id for user in structure.administrators
+        user.id for user in structure.administrators
     ]:
         raise HTTPException(
             status_code=403,
@@ -1051,7 +1051,7 @@ async def update_store(
     )
     if structure is None or (
         structure.manager_user_id != token.id
-        and token.id not in [token.id for user in structure.administrators]
+        and token.id not in [user.id for user in structure.administrators]
     ):
         raise HTTPException(
             status_code=403,
@@ -1103,7 +1103,7 @@ async def delete_store(
     )
     if structure is None or (
         structure.manager_user_id != token.id
-        and token.id not in [token.id for user in structure.administrators]
+        and token.id not in [user.id for user in structure.administrators]
     ):
         raise HTTPException(
             status_code=403,
@@ -1305,7 +1305,7 @@ async def update_store_seller(
         structure is None
         or structure.manager_user_id == seller_user_id
         or (
-            seller_user_id in [token.id for user in structure.administrators]
+            seller_user_id in [user.id for user in structure.administrators]
             and structure.manager_user_id != token.id
         )
     ):
@@ -1379,7 +1379,7 @@ async def delete_store_seller(
         structure is None
         or structure.manager_user_id == seller_user_id
         or (
-            seller_user_id in [token.id for user in structure.administrators]
+            seller_user_id in [user.id for user in structure.administrators]
             and structure.manager_user_id != token.id
         )
     ):

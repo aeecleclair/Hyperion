@@ -14,7 +14,6 @@ from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users, schemas_users
 from app.core.users.dependencies_users import get_request_user
 from app.core.users.endpoints_users import read_user
-from app.core.users.utils_users import user_schema_to_model
 from app.dependencies import get_db, get_redis_client, get_request_id
 from app.modules.raffle import cruds_raffle, models_raffle, schemas_raffle
 from app.modules.raffle.types_raffle import RaffleStatusType
@@ -504,14 +503,16 @@ async def buy_ticket(
             cash=balance,
             db=db,
         )
-    db_ticket = [
-        models_raffle.Ticket(id=str(uuid.uuid4()), pack_id=pack_id, user_id=token.id)
+    tickets = [
+        schemas_raffle.TicketComplete(
+            id=str(uuid.uuid4()),
+            pack_id=pack_id,
+            user_id=token.id,
+            user=user,
+            pack_ticket=pack_ticket,
+        )
         for i in range(pack_ticket.pack_size)
     ]
-
-    for ticket in db_ticket:
-        ticket.user = user_schema_to_model(user)
-        ticket.pack_ticket = pack_ticket
 
     redis_key = "raffle_" + token.id
 
@@ -528,7 +529,7 @@ async def buy_ticket(
         if new_amount < 0:
             raise HTTPException(status_code=400, detail="Not enough cash")
 
-        tickets = await cruds_raffle.create_ticket(tickets=db_ticket, db=db)
+        await cruds_raffle.create_ticket(tickets=tickets, db=db)
         await cruds_raffle.edit_cash(
             db=db,
             user_id=token.id,

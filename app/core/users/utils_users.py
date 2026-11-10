@@ -44,24 +44,3 @@ def user_model_to_schema(
             email_regex=model.school.email_regex,
         ),
     )
-
-
-def user_schema_to_model(
-    schema: schemas_users.CoreUser,
-) -> models_users.CoreUser:
-    """Convert a CoreUser schema to a CoreUser model."""
-    return models_users.CoreUser(
-        id=schema.id,
-        account_type=schema.account_type,
-        school_id=schema.school_id,
-        nickname=schema.nickname,
-        firstname=schema.firstname,
-        name=schema.name,
-        email=schema.email,
-        birthday=schema.birthday,
-        promo=schema.promo,
-        floor=schema.floor,
-        phone=schema.phone,
-        created_on=schema.created_on,
-        password_hash="",  # Placeholder, should be set separately
-    )

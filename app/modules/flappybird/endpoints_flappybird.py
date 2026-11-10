@@ -8,6 +8,7 @@ from app.core.auth import schemas_auth
 from app.core.auth.dependencies_auth import is_user_allowed_to
 from app.core.groups.groups_type import AccountType
 from app.core.permissions.type_permissions import ModulePermissions
+from app.core.users.utils_users import user_simple_model_to_schema
 from app.dependencies import get_db
 from app.modules.flappybird import (
     cruds_flappybird,
@@ -81,7 +82,7 @@ async def get_current_user_flappybird_personal_best(
         )
     return schemas_flappybird.FlappyBirdScoreCompleteFeedBack(
         value=user_personal_best_table.value,
-        user=user_personal_best_table.user,
+        user=user_simple_model_to_schema(user_personal_best_table.user),
         creation_time=user_personal_best_table.creation_time,
         position=position,
     )

@@ -172,13 +172,13 @@ async def get_cdr_users_pending_validation(
             account_type=user.account_type,
             school_id=user.school_id,
             curriculum=schemas_cdr.CurriculumComplete(
-                name=curriculum_memberships_mapping[token.id].name,
-                id=curriculum_memberships_mapping[token.id].id,
+                name=curriculum_memberships_mapping[user.id].name,
+                id=curriculum_memberships_mapping[user.id].id,
             )
-            if token.id in curriculum_memberships_mapping
+            if user.id in curriculum_memberships_mapping
             else None,
             promo=user.promo,
-            id=token.id,
+            id=user.id,
             name=user.name,
             firstname=user.firstname,
             nickname=user.nickname,

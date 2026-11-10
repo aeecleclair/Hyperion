@@ -297,6 +297,7 @@ class Ticket(Base):
     user: Mapped["CoreUser"] = relationship(
         "CoreUser",
         init=False,
+        lazy="joined",
     )
     product_variant: Mapped["ProductVariant"] = relationship(
         "ProductVariant",
