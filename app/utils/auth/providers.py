@@ -316,6 +316,7 @@ class RalllyAuthClient(BaseAuthClient):
         return {
             "sub": user.id,
             "name": user.full_name,
+            "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture",
             "email": user.email,
         }
 
