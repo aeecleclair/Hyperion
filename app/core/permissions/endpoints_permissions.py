@@ -14,8 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.auth import schemas_auth
 from app.core.auth.dependencies_auth import (
     CACHE_KEY_PREFIX,
-    filter_user_token,
     is_user_admin,
+    is_user_token,
 )
 from app.core.permissions import cruds_permissions, schemas_permissions
 from app.core.permissions.factory_permissions import CorePermissionsFactory
@@ -45,7 +45,7 @@ hyperion_security_logger = logging.getLogger("hyperion.security")
     status_code=200,
 )
 async def read_permissions_list(
-    user: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
 ):
     """
     Return all permissions from database
@@ -61,7 +61,7 @@ async def read_permissions_list(
 )
 async def read_permissions(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
 ):
     """
     Return all permissions from database

@@ -60,7 +60,7 @@ async def has_association_groupement_manager_rights(
     )
 
     return token.is_from_any_group(
-        allowed_groups=[groupement.manager_group_id, *permissions.groups],
+        [groupement.manager_group_id, *permissions.groups],
     )
 
 

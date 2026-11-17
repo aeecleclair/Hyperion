@@ -86,7 +86,7 @@ async def get_applicant_bookings(
 
     **Usable by the user or admins**
     """
-    if token.id == applicant_id or await token.check_permission(
+    if token.user_id == applicant_id or await token.check_permission(
         CalendarPermissions.manage_events,
         db,
     ):
@@ -155,7 +155,7 @@ async def add_event(
     db_event = schemas_calendar.EventReturn(
         id=event_id,
         decision=Decision.pending,
-        applicant_id=token.id,
+        applicant_id=token.user_id,
         name=event.name,
         description=event.description,
         start=event.start,
@@ -201,7 +201,7 @@ async def edit_bookings_id(
     event = await cruds_calendar.get_event(db=db, event_id=event_id)
 
     if event is not None and not (
-        (token.id == event.applicant_id and event.decision == Decision.pending)
+        (token.user_id == event.applicant_id and event.decision == Decision.pending)
         or await token.check_permission(
             CalendarPermissions.manage_events,
             db,
@@ -254,7 +254,7 @@ async def delete_bookings_id(
     event = await cruds_calendar.get_event(db=db, event_id=event_id)
 
     if event is not None and (
-        (token.id == event.applicant_id and event.decision == Decision.pending)
+        (token.user_id == event.applicant_id and event.decision == Decision.pending)
         or await token.check_permission(
             CalendarPermissions.manage_events,
             db,

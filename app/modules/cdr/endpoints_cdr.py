@@ -273,7 +273,7 @@ async def get_cdr_user(
 
     **User must be part of a seller group or trying to get itself to use this endpoint**
     """
-    if token.id != user_id:
+    if token.user_id != user_id:
         if not (
             await token.check_permission(CdrPermissions.manage_cdr, db)
             or await cruds_cdr.get_sellers_by_group_ids(
@@ -1476,7 +1476,7 @@ async def get_purchases_by_user_id(
     **User must get his own purchases or be CDR Admin to use this endpoint**
     """
     if not (
-        user_id == token.id
+        user_id == token.user_id
         or await token.check_permission(CdrPermissions.manage_cdr, db)
     ):
         raise HTTPException(
@@ -1554,7 +1554,7 @@ async def get_my_purchases(
     ),
     cdr_year: coredata_cdr.CdrYear = Depends(get_current_cdr_year),
 ):
-    return await get_purchases_by_user_id(token.id, db, token, cdr_year)
+    return await get_purchases_by_user_id(token.user_id, db, token, cdr_year)
 
 
 @module.router.get(
@@ -1570,7 +1570,7 @@ async def get_all_my_purchases(
 ):
     purchases = await cruds_cdr.get_all_purchases_by_user_id(
         db=db,
-        user_id=token.id,
+        user_id=token.user_id,
     )
     result = []
     for purchase in purchases:
@@ -1645,7 +1645,7 @@ async def get_purchases_by_user_id_by_seller_id(
 
     **User must get his own purchases or be part of the seller's group to use this endpoint**
     """
-    if user_id != token.id:
+    if user_id != token.user_id:
         await is_user_in_a_seller_group(seller_id=seller_id, token=token, db=db)
 
     purchases = await cruds_cdr.get_purchases_by_user_id_by_seller_id(
@@ -1758,7 +1758,7 @@ async def create_purchase(
             status_code=404,
             detail="Product unavailable.",
         )
-    if not (user_id == token.id and product.available_online):
+    if not (user_id == token.user_id and product.available_online):
         await is_user_in_a_seller_group(product.seller_id, token=token, db=db)
 
     client_user = await cruds_users.get_user_by_id_schema(db=db, user_id=user_id)
@@ -1783,7 +1783,7 @@ async def create_purchase(
     )
     db_action = models_cdr.CdrAction(
         id=uuid4(),
-        user_id=token.id,
+        user_id=token.user_id,
         subject_id=db_purchase.user_id,
         action_type=CdrLogActionType.purchase_add,
         action=str(db_purchase.__dict__),
@@ -1886,7 +1886,7 @@ async def create_purchase_batch(
             )
             db_action = models_cdr.CdrAction(
                 id=uuid4(),
-                user_id=token.id,
+                user_id=token.user_id,
                 subject_id=db_purchase.user_id,
                 action_type=CdrLogActionType.purchase_add,
                 action=str(db_purchase.__dict__),
@@ -2216,7 +2216,7 @@ async def delete_purchase(
             status_code=404,
             detail="Invalid product.",
         )
-    if not (user_id == token.id and product.available_online):
+    if not (user_id == token.user_id and product.available_online):
         await is_user_in_a_seller_group(product.seller_id, token=token, db=db)
 
     db_purchase = await cruds_cdr.get_purchase_by_id(
@@ -2281,7 +2281,7 @@ async def delete_purchase(
 
     db_action = models_cdr.CdrAction(
         id=uuid4(),
-        user_id=token.id,
+        user_id=token.user_id,
         subject_id=db_purchase.user_id,
         action_type=CdrLogActionType.purchase_delete,
         action=str(db_purchase.__dict__),
@@ -2315,7 +2315,7 @@ async def get_signatures_by_user_id(
     **User must get his own signatures or be CDR Admin to use this endpoint**
     """
     if not (
-        user_id == token.id
+        user_id == token.user_id
         or await token.check_permission(CdrPermissions.manage_cdr, db)
     ):
         raise HTTPException(
@@ -2343,7 +2343,7 @@ async def get_signatures_by_user_id_by_seller_id(
 
     **User must get his own signatures or be part of the seller's group to use this endpoint**
     """
-    if user_id != token.id:
+    if user_id != token.user_id:
         await is_user_in_a_seller_group(seller_id=seller_id, token=token, db=db)
 
     return await cruds_cdr.get_signatures_by_user_id_by_seller_id(
@@ -2391,7 +2391,7 @@ async def create_signature(
 
     sellers_groups = [str(seller.group_id) for seller in sellers]
     if not (
-        token.is_from_any_group(allowed_groups=sellers_groups)
+        token.is_from_any_group(sellers_groups)
         or await token.check_permission(CdrPermissions.manage_cdr, db)
     ):
         raise HTTPException(
@@ -2565,7 +2565,7 @@ async def create_curriculum_membership(
     **User must add a curriculum to themself or be CDR Admin to use this endpoint**
     """
     if not (
-        user_id == token.id
+        user_id == token.user_id
         or await token.check_permission(CdrPermissions.manage_cdr, db)
     ):
         raise HTTPException(
@@ -2668,7 +2668,7 @@ async def update_curriculum_membership(
     **User must add a curriculum to themself or be CDR Admin to use this endpoint**
     """
     if not (
-        user_id == token.id
+        user_id == token.user_id
         or await token.check_permission(CdrPermissions.manage_cdr, db)
     ):
         raise HTTPException(
@@ -2757,7 +2757,7 @@ async def delete_curriculum_membership(
             detail="Invalid curriculum_id",
         )
     if not (
-        user_id == token.id
+        user_id == token.user_id
         or await token.check_permission(CdrPermissions.manage_cdr, db)
     ):
         raise HTTPException(
@@ -2825,7 +2825,7 @@ async def get_payments_by_user_id(
     **User must get his own payments or be CDR Admin to use this endpoint**
     """
     if not (
-        user_id == token.id
+        user_id == token.user_id
         or await token.check_permission(CdrPermissions.manage_cdr, db)
     ):
         raise HTTPException(
@@ -2873,7 +2873,7 @@ async def create_payment(
     )
     db_action = models_cdr.CdrAction(
         id=uuid4(),
-        user_id=token.id,
+        user_id=token.user_id,
         subject_id=user_id,
         action_type=CdrLogActionType.payment_add,
         action=str(db_payment.__dict__),
@@ -2919,7 +2919,7 @@ async def delete_payment(
         )
     db_action = models_cdr.CdrAction(
         id=uuid4(),
-        user_id=token.id,
+        user_id=token.user_id,
         subject_id=user_id,
         action_type=CdrLogActionType.payment_delete,
         action=str(db_payment.__dict__),
@@ -2959,7 +2959,7 @@ async def get_payment_url(
 
     target_user = user
 
-    if target_user_id is not None and target_user_id != token.id:
+    if target_user_id is not None and target_user_id != token.user_id:
         if not await token.check_permission(CdrPermissions.manage_cdr, db):
             raise HTTPException(
                 status_code=403,
@@ -3027,7 +3027,7 @@ async def get_payment_url(
     )
 
     redirection_uri = None
-    if target_user_id is not None and target_user_id != token.id:
+    if target_user_id is not None and target_user_id != token.user_id:
         redirection_uri = settings.CLIENT_URL + calypsso.get_message_relative_url(
             message_type=TypeMessage.payment_success,
         )
@@ -3142,7 +3142,7 @@ async def get_my_tickets(
         is_user_allowed_to([CdrPermissions.access_cdr]),
     ),
 ):
-    return await cruds_cdr.get_tickets_of_user(db=db, user_id=token.id)
+    return await cruds_cdr.get_tickets_of_user(db=db, user_id=token.user_id)
 
 
 @module.router.get(
@@ -3159,7 +3159,7 @@ async def get_tickets_of_user(
 ):
     if not (
         await token.check_permission(CdrPermissions.manage_cdr, db)
-        or user_id == token.id
+        or user_id == token.user_id
     ):
         raise HTTPException(
             status_code=403,
@@ -3186,7 +3186,7 @@ async def get_ticket_secret(
             status_code=404,
             detail="Ticket not found.",
         )
-    if ticket.user_id != token.id:
+    if ticket.user_id != token.user_id:
         raise HTTPException(
             status_code=403,
             detail="You can't get another user ticket secret.",
@@ -3717,7 +3717,7 @@ async def create_custom_data(
                 group_ids=token.group_ids,
             )
         ]
-    ) and not (db_field.can_user_answer and user_id == token.id):
+    ) and not (db_field.can_user_answer and user_id == token.user_id):
         raise HTTPException(
             status_code=403,
             detail="You are not authorized to add data for this field.",
@@ -3772,7 +3772,7 @@ async def update_custom_data(
                 group_ids=token.group_ids,
             )
         ]
-    ) and not (db_data.field.can_user_answer and user_id == token.id):
+    ) and not (db_data.field.can_user_answer and user_id == token.user_id):
         raise HTTPException(
             status_code=403,
             detail="You are not authorized to edit data for this field.",
@@ -3822,7 +3822,7 @@ async def delete_customdata(
                 group_ids=token.group_ids,
             )
         ]
-    ) and not (db_data.field.can_user_answer and user_id == token.id):
+    ) and not (db_data.field.can_user_answer and user_id == token.user_id):
         raise HTTPException(
             status_code=403,
             detail="You are not authorized to delete data for this field.",

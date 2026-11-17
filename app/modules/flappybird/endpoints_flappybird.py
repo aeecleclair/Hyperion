@@ -61,7 +61,7 @@ async def get_current_user_flappybird_personal_best(
     user_personal_best_table = (
         await cruds_flappybird.get_flappybird_personal_best_by_user_id(
             db=db,
-            user_id=token.id,
+            user_id=token.user_id,
         )
     )
 
@@ -110,12 +110,12 @@ async def create_flappybird_score(
 
     db_flappybird_best_score = models_flappybird.FlappyBirdBestScore(
         id=score_id,
-        user_id=token.id,
+        user_id=token.user_id,
         value=flappybird_score.value,
         creation_time=creation_time,
     )
     personal_best = await cruds_flappybird.get_flappybird_personal_best_by_user_id(
-        user_id=token.id,
+        user_id=token.user_id,
         db=db,
     )
     if personal_best is None:
@@ -125,7 +125,7 @@ async def create_flappybird_score(
         )
     elif personal_best.value < flappybird_score.value:
         await cruds_flappybird.update_flappybird_best_score(
-            user_id=token.id,
+            user_id=token.user_id,
             best_score=flappybird_score.value,
             db=db,
         )

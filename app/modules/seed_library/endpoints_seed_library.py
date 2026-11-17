@@ -247,7 +247,7 @@ async def get_my_plants(
     """
     Return all plants where user ={user_id} from database as a list of PlantsComplete schemas
     """
-    return await cruds_seed_library.get_plants_by_user_id(token.id, db)
+    return await cruds_seed_library.get_plants_by_user_id(token.user_id, db)
 
 
 @module.router.get(
@@ -376,7 +376,7 @@ async def update_plant(
     if plant is None:
         raise HTTPException(404, "Plant not found")
 
-    if plant.borrower_id != token.id:
+    if plant.borrower_id != token.user_id:
         raise HTTPException(
             status_code=403,
             detail=f"You are not allowed to update plant {plant_id} since you do not own the plant",
@@ -434,7 +434,7 @@ async def borrow_plant(
     if plant is None:
         raise HTTPException(404, "Plant not found")
 
-    await cruds_seed_library.borrow_plant(token.id, plant_id, db)
+    await cruds_seed_library.borrow_plant(token.user_id, plant_id, db)
 
 
 @module.router.delete(

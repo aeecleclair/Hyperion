@@ -415,7 +415,7 @@ async def get_current_user_competition(
     """
     competition_user = await cruds_sport_competition.load_competition_user_by_id(
         db=db,
-        user_id=token.id,
+        user_id=token.user_id,
         edition_id=edition.id,
     )
     if not competition_user:
@@ -491,7 +491,7 @@ async def create_competition_user(
     existing_competition_user = (
         await cruds_sport_competition.load_competition_user_by_id(
             db=db,
-            user_id=token.id,
+            user_id=token.user_id,
             edition_id=edition.id,
         )
     )
@@ -501,7 +501,7 @@ async def create_competition_user(
             detail="Competition user already exists",
         )
     user_simple = schemas_sport_competition.CompetitionUserSimple(
-        user_id=token.id,
+        user_id=token.user_id,
         edition_id=edition.id,
         is_athlete=competition_user.is_athlete,
         is_cameraman=competition_user.is_cameraman,
@@ -537,7 +537,7 @@ async def edit_current_user_competition(
         user_edit.validated = False
     stored = await cruds_sport_competition.load_competition_user_by_id(
         db=db,
-        user_id=token.id,
+        user_id=token.user_id,
         edition_id=edition.id,
     )
     if stored is None:
@@ -588,7 +588,7 @@ async def edit_current_user_competition(
             detail="A user must be at least in one of the following categories: pompoms, fanfares, cameramen, athletes",
         )
     await cruds_sport_competition.update_competition_user(
-        token.id,
+        token.user_id,
         edition.id,
         user_edit,
         db,
@@ -792,7 +792,7 @@ async def validate_competition_user(
     for purchase in purchases:
         if purchase.product_variant.price == 0:
             await cruds_sport_competition.mark_purchase_as_validated(
-                token.id,
+                token.user_id,
                 purchase.product_variant_id,
                 True,
                 db,
@@ -1053,7 +1053,7 @@ async def get_current_user_groups(
     This is the user making the request.
     """
     return await cruds_sport_competition.load_user_competition_groups_memberships(
-        token.id,
+        token.user_id,
         edition.id,
         db,
     )
@@ -1792,7 +1792,7 @@ async def get_current_user_team_as_captain(
     ),
 ) -> schemas_sport_competition.TeamComplete:
     team = await cruds_sport_competition.load_team_by_captain_id(
-        token.id,
+        token.user_id,
         edition.id,
         db,
     )
@@ -1919,7 +1919,9 @@ async def create_team(
             SportCompetitionPermissions.manage_sport_competition,
             db,
         )
-    ) and (token.id != team_info.captain_id or token.school_id != team_info.school_id):
+    ) and (
+        token.user_id != team_info.captain_id or token.school_id != team_info.school_id
+    ):
         raise HTTPException(
             status_code=403,
             detail="Unauthorized action",
@@ -2007,13 +2009,13 @@ async def edit_team(
         )
     user_competition_groups = (
         await cruds_sport_competition.load_user_competition_groups_memberships(
-            token.id,
+            token.user_id,
             stored.edition_id,
             db,
         )
     )
     if (
-        token.id != stored.captain_id
+        token.user_id != stored.captain_id
         and not (
             await token.check_permission(
                 SportCompetitionPermissions.manage_sport_competition,
@@ -2090,13 +2092,13 @@ async def delete_team(
         )
     user_competition_groups = (
         await cruds_sport_competition.load_user_competition_groups_memberships(
-            token.id,
+            token.user_id,
             edition.id,
             db,
         )
     )
     if (
-        token.id != stored.captain_id
+        token.user_id != stored.captain_id
         and not (
             await token.check_permission(
                 SportCompetitionPermissions.manage_sport_competition,
@@ -2131,7 +2133,7 @@ async def get_current_user_participant(
     ),
 ) -> schemas_sport_competition.ParticipantComplete:
     participant = await cruds_sport_competition.load_participant_by_user_id(
-        token.id,
+        token.user_id,
         edition.id,
         db,
     )
@@ -2225,7 +2227,7 @@ async def download_participant_certificate(
                 db,
             )
         )
-        and token.id != user_id
+        and token.user_id != user_id
     ):
         raise HTTPException(
             status_code=403,
@@ -2417,7 +2419,7 @@ async def upload_participant_certificate(
     ),
 ) -> None:
     participant = await cruds_sport_competition.load_participant_by_ids(
-        token.id,
+        token.user_id,
         sport_id,
         edition.id,
         db,
@@ -2442,7 +2444,7 @@ async def upload_participant_certificate(
         ],  # TODO : Change this value
     )
     await cruds_sport_competition.update_participant_certificate_file_id(
-        token.id,
+        token.user_id,
         sport_id,
         edition.id,
         filename,
@@ -2638,7 +2640,7 @@ async def withdraw_from_sport(
         )
 
     participant = await cruds_sport_competition.load_participant_by_ids(
-        token.id,
+        token.user_id,
         sport_id,
         edition.id,
         db,
@@ -2650,12 +2652,12 @@ async def withdraw_from_sport(
         )
     if participant.user.validated:
         await cruds_sport_competition.invalidate_competition_user(
-            token.id,
+            token.user_id,
             edition.id,
             db,
         )
     await cruds_sport_competition.delete_participant_by_ids(
-        token.id,
+        token.user_id,
         sport_id,
         edition.id,
         db,
@@ -2766,7 +2768,7 @@ async def delete_participant_certificate_file(
     ),
 ) -> None:
     participant = await cruds_sport_competition.load_participant_by_ids(
-        token.id,
+        token.user_id,
         sport_id,
         edition.id,
         db,
@@ -2778,7 +2780,7 @@ async def delete_participant_certificate_file(
         )
     if participant.certificate_file_id is not None:
         await cruds_sport_competition.update_participant_certificate_file_id(
-            token.id,
+            token.user_id,
             sport_id,
             edition.id,
             None,
@@ -3860,7 +3862,7 @@ async def get_my_purchases(
         get_current_edition,
     ),
 ):
-    return await get_purchases_by_user_id(token.id, db, token, edition)
+    return await get_purchases_by_user_id(token.user_id, db, token, edition)
 
 
 @module.router.post(
@@ -3890,7 +3892,7 @@ async def create_purchase(
         )
 
     competition_user = await cruds_sport_competition.load_competition_user_by_id(
-        token.id,
+        token.user_id,
         edition.id,
         db,
     )
@@ -3925,13 +3927,13 @@ async def create_purchase(
         edition,
     )
     existing_db_purchase = await cruds_sport_competition.load_purchase_by_ids(
-        token.id,
+        token.user_id,
         purchase.product_variant_id,
         db,
     )
 
     db_purchase = schemas_sport_competition.Purchase(
-        user_id=token.id,
+        user_id=token.user_id,
         product_variant_id=purchase.product_variant_id,
         edition_id=edition.id,
         validated=False,
@@ -3948,7 +3950,7 @@ async def create_purchase(
     if existing_db_purchase:
         await cruds_sport_competition.update_purchase(
             db=db,
-            user_id=token.id,
+            user_id=token.user_id,
             product_variant_id=product_variant.id,
             purchase=schemas_sport_competition.PurchaseEdit(
                 quantity=purchase.quantity,
@@ -4114,7 +4116,7 @@ async def delete_purchase(
         )
 
     db_purchase = await cruds_sport_competition.load_purchase_by_ids(
-        token.id,
+        token.user_id,
         product_variant_id,
         db,
     )
@@ -4129,7 +4131,7 @@ async def delete_purchase(
             detail="You can't remove a validated purchase",
         )
     competition_user = await cruds_sport_competition.load_competition_user_by_id(
-        token.id,
+        token.user_id,
         edition.id,
         db,
     )
@@ -4141,7 +4143,7 @@ async def delete_purchase(
         )
 
     await cruds_sport_competition.delete_purchase(
-        token.id,
+        token.user_id,
         product_variant_id,
         db,
     )
@@ -4266,7 +4268,7 @@ async def get_payments_by_user_id(
     """
     competition_groups = (
         await cruds_sport_competition.load_user_competition_groups_memberships(
-            token.id,
+            token.user_id,
             edition.id,
             db,
         )
@@ -4279,7 +4281,7 @@ async def get_payments_by_user_id(
         )
 
     if not (
-        user_id == token.id
+        user_id == token.user_id
         or not (
             await token.check_permission(
                 SportCompetitionPermissions.manage_sport_competition,
@@ -4452,12 +4454,12 @@ async def get_payment_url(
             detail="Inscriptions are not enabled for this edition.",
         )
     purchases = await cruds_sport_competition.load_purchases_by_user_id(
-        token.id,
+        token.user_id,
         edition.id,
         db,
     )
     payments = await cruds_sport_competition.load_user_payments(
-        token.id,
+        token.user_id,
         edition.id,
         db,
     )
@@ -4477,7 +4479,7 @@ async def get_payment_url(
     user_schema = schemas_users.CoreUser(
         account_type=user.account_type,
         school_id=user.school_id,
-        id=token.id,
+        id=token.user_id,
         email=user.email,
         name=user.name,
         firstname=user.firstname,
@@ -4496,7 +4498,7 @@ async def get_payment_url(
         db=db,
         checkout=schemas_sport_competition.Checkout(
             id=uuid4(),
-            user_id=token.id,
+            user_id=token.user_id,
             edition_id=edition.id,
             checkout_id=checkout.id,
         ),
@@ -4682,7 +4684,7 @@ async def get_my_volunteer_registrations(
     Get my volunteer registrations.
     """
     return await cruds_sport_competition.load_volunteer_registrations_by_user_id(
-        token.id,
+        token.user_id,
         edition.id,
         db,
     )
@@ -4724,7 +4726,9 @@ async def register_to_volunteer_shift(
             status_code=404,
             detail="Volunteer shift not found.",
         )
-    if any(registration.user_id == token.id for registration in db_shift.registrations):
+    if any(
+        registration.user_id == token.user_id for registration in db_shift.registrations
+    ):
         raise HTTPException(
             status_code=400,
             detail="You are already registered to this volunteer shift.",
@@ -4737,13 +4741,13 @@ async def register_to_volunteer_shift(
 
     # Create or update the CompetitionUser with is_volunteer=True
     competition_user = await cruds_sport_competition.load_competition_user_by_id(
-        token.id,
+        token.user_id,
         edition.id,
         db,
     )
     if competition_user is None:
         new_user = schemas_sport_competition.CompetitionUserSimple(
-            user_id=token.id,
+            user_id=token.user_id,
             edition_id=edition.id,
             sport_category=SportCategory.masculine,
             is_volunteer=True,
@@ -4753,14 +4757,14 @@ async def register_to_volunteer_shift(
         await cruds_sport_competition.add_competition_user(new_user, db)
     elif not competition_user.is_volunteer:
         await cruds_sport_competition.update_competition_user(
-            token.id,
+            token.user_id,
             edition.id,
             schemas_sport_competition.CompetitionUserEdit(is_volunteer=True),
             db,
         )
 
     db_registration = schemas_sport_competition.VolunteerRegistration(
-        user_id=token.id,
+        user_id=token.user_id,
         shift_id=shift_id,
         edition_id=edition.id,
         validated=False,
@@ -4830,7 +4834,7 @@ async def unregister_from_volunteer_shift(
     Unregister from a volunteer shift.
     """
     db_registration = await cruds_sport_competition.load_volunteer_registration_by_ids(
-        token.id,
+        token.user_id,
         shift_id,
         db,
     )
@@ -4846,7 +4850,7 @@ async def unregister_from_volunteer_shift(
         )
 
     await cruds_sport_competition.delete_volunteer_registration(
-        token.id,
+        token.user_id,
         shift_id,
         db,
     )

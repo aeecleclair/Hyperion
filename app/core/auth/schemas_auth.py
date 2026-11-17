@@ -112,7 +112,7 @@ class TokenData(BaseModel):
     # exp and iat elements are added by the token generation function
 
     @property
-    def id(self) -> str:
+    def user_id(self) -> str:
         """
         Returns the user id from the token data.
         This is a convenience property to avoid having to use `token_data.sub` everywhere.

@@ -42,7 +42,7 @@ def get_request_user(
         Dependency that makes sure the token is valid, contains the expected scopes and returns the corresponding user.
         The expected scopes are passed as list of list of scopes, each list of scopes is an "AND" condition, and the list of list of scopes is an "OR" condition.
         """
-        user = await cruds_users.get_user_by_id_schema(db=db, user_id=token.id)
+        user = await cruds_users.get_user_by_id_schema(db=db, user_id=token.user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         return user

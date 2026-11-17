@@ -131,7 +131,7 @@ def get_token_with_scopes(
     return get_current_token_data
 
 
-def filter_user_token(
+def is_user_token(
     *,
     excluded_groups: list[GroupType | str] | None = None,
     included_groups: list[GroupType | str] | None = None,
@@ -166,14 +166,12 @@ def filter_user_token(
                 status_code=403,
                 detail="Unauthorized, user is an external user",
             )
-        if any(group_id in token.group_ids for group_id in excluded_groups):
+        if token.is_from_any_group(excluded_groups):
             raise HTTPException(
                 status_code=403,
                 detail=f"Unauthorized, user is a member of any of the groups {excluded_groups}",
             )
-        if included_groups is not None and not any(
-            group_id in token.group_ids for group_id in included_groups
-        ):
+        if included_groups is not None and not token.is_from_any_group(included_groups):
             raise HTTPException(
                 status_code=403,
                 detail="Unauthorized, user is not a member of an allowed group",
@@ -202,7 +200,7 @@ def is_user_admin() -> Callable[
 
     def is_user_in(
         token: schemas_auth.FunctionalTokenData = Depends(
-            filter_user_token(included_groups=[GroupType.admin]),
+            is_user_token(included_groups=[GroupType.admin]),
         ),
     ) -> schemas_auth.FunctionalTokenData:
         """
