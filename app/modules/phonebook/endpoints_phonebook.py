@@ -5,15 +5,16 @@ from fastapi import Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import schemas_auth
 from app.core.groups import cruds_groups, models_groups
-from app.core.groups.groups_type import AccountType, GroupType
+from app.core.groups.groups_type import AccountType
 from app.core.permissions.cruds_permissions import get_permissions_by_permission_name
 from app.core.permissions.type_permissions import ModulePermissions
-from app.core.users import cruds_users, models_users
+from app.core.users import cruds_users
 from app.dependencies import (
     get_db,
+    is_user_admin,
     is_user_allowed_to,
-    is_user_in,
 )
 from app.modules.phonebook import cruds_phonebook, schemas_phonebook
 from app.modules.phonebook.factory_phonebook import PhonebookFactory
@@ -23,7 +24,7 @@ from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.tools import (
     get_file_from_data,
-    is_user_member_of_any_group,
+    is_user_token_from_any_group,
     save_file_as_data,
 )
 
@@ -46,7 +47,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 
 async def has_association_groupement_manager_rights(
     db: AsyncSession,
-    user: models_users.CoreUser,
+    token: schemas_auth.TokenData,
     groupement_id: uuid.UUID,
 ) -> bool:
     """Check if the user has manager rights for the association groupement."""
@@ -62,8 +63,8 @@ async def has_association_groupement_manager_rights(
         permission_name=PhonebookPermissions.manage_phonebook,
     )
 
-    return is_user_member_of_any_group(
-        user=user,
+    return is_user_token_from_any_group(
+        token=token,
         allowed_groups=[groupement.manager_group_id, *permissions.groups],
     )
 
@@ -75,7 +76,7 @@ async def has_association_groupement_manager_rights(
 )
 async def get_all_associations(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
 ):
@@ -92,7 +93,7 @@ async def get_all_associations(
 )
 async def get_all_role_tags(
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
 ):
@@ -109,7 +110,7 @@ async def get_all_role_tags(
     status_code=200,
 )
 async def get_all_groupements(
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -127,7 +128,7 @@ async def get_all_groupements(
 )
 async def create_groupement(
     groupement_base: schemas_phonebook.AssociationGroupementBase,
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.manage_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -161,7 +162,7 @@ async def create_groupement(
 async def update_groupement(
     groupement_id: uuid.UUID,
     groupement_edit: schemas_phonebook.AssociationGroupementBase,
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.manage_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -202,7 +203,7 @@ async def update_groupement(
 )
 async def delete_groupement(
     groupement_id: uuid.UUID,
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.manage_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -230,7 +231,7 @@ async def delete_groupement(
 async def create_association(
     association: schemas_phonebook.AssociationBase,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
 ):
@@ -239,7 +240,7 @@ async def create_association(
     """
     if not await has_association_groupement_manager_rights(
         db=db,
-        user=user,
+        token=token,
         groupement_id=association.groupement_id,
     ):
         raise HTTPException(
@@ -278,7 +279,7 @@ async def create_association(
 async def update_association(
     association_id: str,
     association_edit: schemas_phonebook.AssociationEdit,
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -296,13 +297,13 @@ async def update_association(
     if not (
         await has_association_groupement_manager_rights(
             db=db,
-            user=user,
+            token=token,
             groupement_id=association.groupement_id,
         )
         or await cruds_phonebook.is_user_president(
             association_id=association_id,
             mandate_year=association.mandate_year,
-            user=user,
+            token=token,
             db=db,
         )
     ):
@@ -325,7 +326,7 @@ async def update_association(
 async def update_association_groups(
     association_id: str,
     association_groups_edit: schemas_phonebook.AssociationGroupsEdit,
-    user: models_users.CoreUser = Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.TokenData = Depends(is_user_admin()),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -344,7 +345,7 @@ async def update_association_groups(
 )
 async def deactivate_association(
     association_id: str,
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -360,7 +361,7 @@ async def deactivate_association(
         )
     if not await has_association_groupement_manager_rights(
         db=db,
-        user=user,
+        token=token,
         groupement_id=association.groupement_id,
     ):
         raise HTTPException(
@@ -377,7 +378,7 @@ async def deactivate_association(
 async def delete_association(
     association_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
 ):
@@ -392,7 +393,7 @@ async def delete_association(
         raise HTTPException(404, "Association does not exist.")
     if not await has_association_groupement_manager_rights(
         db=db,
-        user=user,
+        token=token,
         groupement_id=association.groupement_id,
     ):
         raise HTTPException(
@@ -417,7 +418,7 @@ async def delete_association(
 )
 async def get_association_members(
     association_id: str,
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -455,7 +456,7 @@ async def get_association_members(
 async def get_association_members_by_mandate_year(
     association_id: str,
     mandate_year: int,
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -496,7 +497,7 @@ async def get_association_members_by_mandate_year(
 async def get_member_details(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
 ):
@@ -522,7 +523,7 @@ async def get_member_details(
 )
 async def create_membership(
     membership: schemas_phonebook.MembershipBase,
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -551,13 +552,13 @@ async def create_membership(
     if not (
         await has_association_groupement_manager_rights(
             db=db,
-            user=user,
+            token=token,
             groupement_id=association.groupement_id,
         )
         or await cruds_phonebook.is_user_president(
             association_id=membership.association_id,
             mandate_year=association.mandate_year,
-            user=user,
+            token=token,
             db=db,
         )
     ):
@@ -571,7 +572,7 @@ async def create_membership(
             ";",
         ) and not await has_association_groupement_manager_rights(
             db=db,
-            user=user,
+            token=token,
             groupement_id=association.groupement_id,
         ):
             raise HTTPException(
@@ -633,7 +634,7 @@ async def create_membership(
 async def update_membership(
     updated_membership: schemas_phonebook.MembershipEdit,
     membership_id: str,
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -665,13 +666,13 @@ async def update_membership(
     if not (
         await has_association_groupement_manager_rights(
             db=db,
-            user=user,
+            token=token,
             groupement_id=association.groupement_id,
         )
         or await cruds_phonebook.is_user_president(
             association_id=old_membership.association_id,
             mandate_year=association.mandate_year,
-            user=user,
+            token=token,
             db=db,
         )
     ):
@@ -685,7 +686,7 @@ async def update_membership(
             ";",
         ) and not await has_association_groupement_manager_rights(
             db=db,
-            user=user,
+            token=token,
             groupement_id=association.groupement_id,
         ):
             raise HTTPException(
@@ -712,7 +713,7 @@ async def update_membership(
 )
 async def delete_membership(
     membership_id: str,
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -740,13 +741,13 @@ async def delete_membership(
     if not (
         await has_association_groupement_manager_rights(
             db=db,
-            user=user,
+            token=token,
             groupement_id=association.groupement_id,
         )
         or await cruds_phonebook.is_user_president(
             association_id=membership.association_id,
             mandate_year=association.mandate_year,
-            user=user,
+            token=token,
             db=db,
         )
     ):
@@ -773,7 +774,7 @@ async def delete_membership(
 async def create_association_logo(
     association_id: str,
     image: UploadFile = File(),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -788,12 +789,12 @@ async def create_association_logo(
 
     if not await has_association_groupement_manager_rights(
         db=db,
-        user=user,
+        token=token,
         groupement_id=association.groupement_id,
     ) and not await cruds_phonebook.is_user_president(
         association_id=association_id,
         mandate_year=association.mandate_year,
-        user=user,
+        token=token,
         db=db,
     ):
         raise HTTPException(
@@ -823,7 +824,7 @@ async def create_association_logo(
 async def read_association_logo(
     association_id: str,
     db: AsyncSession = Depends(get_db),
-    user: models_users.CoreUser = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
 ) -> FileResponse:

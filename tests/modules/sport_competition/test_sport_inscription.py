@@ -123,6 +123,10 @@ async def init_objects() -> None:
         SportCompetitionPermissions.volunteer_sport_competition,
         AccountType.student,
     )
+    await add_account_type_permission(
+        SportCompetitionPermissions.access_sport_competition,
+        AccountType.student,
+    )
 
     global admin_group
     admin_group = await create_groups_with_permissions(

@@ -2,14 +2,15 @@ from collections.abc import Sequence
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import schemas_auth
+from app.core.groups.groups_type import AccountType
 from app.core.notification import cruds_notification, schemas_notification
 from app.core.notification.models_notification import NotificationTopic
-from app.core.users.models_users import CoreUser
-from app.utils.tools import is_user_external, is_user_member_of_any_group
+from app.utils.tools import is_user_token_from_any_group
 
 
 async def get_user_notification_topics(
-    user: CoreUser,
+    token: schemas_auth.TokenData,
     db: AsyncSession,
 ) -> list[schemas_notification.TopicUser]:
     """
@@ -20,7 +21,7 @@ async def get_user_notification_topics(
     )
 
     memberships = await cruds_notification.get_topic_memberships_by_user_id(
-        user_id=user.id,
+        user_id=token.id,
         db=db,
     )
 
@@ -30,11 +31,11 @@ async def get_user_notification_topics(
 
     for topic in topics:
         if topic.restrict_to_members:
-            if is_user_external(user=user):
+            if token.account_type == AccountType.external:
                 continue
         if topic.restrict_to_group_id:
-            if not is_user_member_of_any_group(
-                user=user,
+            if not is_user_token_from_any_group(
+                token=token,
                 allowed_groups=[topic.restrict_to_group_id],
             ):
                 continue

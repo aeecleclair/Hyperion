@@ -9,6 +9,7 @@ from fastapi import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import schemas_auth
 from app.core.documents import utils_documents
 from app.core.documents.types_documenso import DocumentStatus
 from app.core.memberships.utils_memberships import membership_model_to_schema
@@ -32,8 +33,8 @@ from app.types.exceptions import ObjectExpectedInDbNotFoundError
 from app.types.websocket import HyperionWebsocketsRoom
 from app.utils.tools import (
     get_core_data,
-    has_user_permission,
-    is_user_member_of_any_group,
+    has_user_token_permission,
+    is_user_token_from_any_group,
 )
 
 hyperion_error_logger = logging.getLogger("hyperion.error")
@@ -112,7 +113,7 @@ async def validate_payment(
 
 async def is_user_in_a_seller_group(
     seller_id: UUID,
-    user: models_users.CoreUser,
+    token: schemas_auth.TokenData,
     db: AsyncSession,
 ):
     """
@@ -126,15 +127,15 @@ async def is_user_in_a_seller_group(
             detail="Seller not found.",
         )
 
-    if is_user_member_of_any_group(
-        user=user,
+    if is_user_token_from_any_group(
+        token=token,
         allowed_groups=[str(seller.group_id)],
-    ) or await has_user_permission(
-        user,
+    ) or await has_user_token_permission(
+        token,
         CdrPermissions.manage_cdr,
         db,
     ):
-        return user
+        return token
 
     hyperion_access_logger.warning(
         "Is_user_a_member_of: Unauthorized, user is not a seller",

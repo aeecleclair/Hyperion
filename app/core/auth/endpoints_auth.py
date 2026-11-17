@@ -20,6 +20,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import cruds_auth, models_auth, schemas_auth
+from app.core.auth.schemas_auth import TokenData
 from app.core.users import cruds_users, models_users
 from app.core.utils.config import Settings
 from app.core.utils.security import (
@@ -33,15 +34,15 @@ from app.core.utils.security import (
 from app.dependencies import (
     get_db,
     get_request_id,
+    get_request_user,
     get_settings,
     get_token_data,
-    get_user_from_token_with_scopes,
 )
-from app.types.exceptions import AuthHTTPException
+from app.types.exceptions import AuthHTTPException, ObjectExpectedInDbNotFoundError
 from app.types.module import CoreModule
 from app.types.scopes_type import ScopeType
 from app.utils.auth.providers import BaseAuthClient
-from app.utils.tools import has_user_permission
+from app.utils.tools import has_user_token_permission
 
 router = APIRouter(tags=["Auth"])
 
@@ -87,7 +88,13 @@ async def login_for_access_token(
         )
     # We put the user id in the subject field of the token.
     # The subject `sub` is a JWT registered claim name, see https://datatracker.ietf.org/doc/html/rfc7519#section-4.1
-    data = schemas_auth.TokenData(sub=user.id, scopes=ScopeType.auth)
+    data = schemas_auth.TokenData(
+        sub=user.id,
+        scopes=ScopeType.auth,
+        account_type=user.account_type,
+        group_ids=[group.id for group in user.groups],
+        school_id=user.school_id,
+    )
     access_token = create_access_token(settings=settings, data=data)
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -317,8 +324,14 @@ async def authorize_validation(
     # The auth_client may restrict the usage of the client to specific Hyperion permissions
     if auth_client.permission is not None:
         if not (
-            await has_user_permission(
-                user=user,
+            await has_user_token_permission(
+                token=TokenData(
+                    sub=user.id,
+                    scopes=ScopeType.auth,
+                    account_type=user.account_type,
+                    group_ids=[group.id for group in user.groups],
+                    school_id=user.school_id,
+                ),
                 permission_name=auth_client.permission,
                 db=db,
             )
@@ -842,6 +855,10 @@ async def create_response_body(
         f"Token create_response_body: Granting scopes {granted_scopes} ({request_id})",
     )
 
+    user = await cruds_users.get_user_by_id_schema(db=db, user_id=db_row.user_id)
+    if user is None:
+        raise ObjectExpectedInDbNotFoundError("CoreUser", db_row.user_id)
+
     # The audience field should be the name of the service the access token gives access to
     # For the access token, it's always the API. We decide not to include this field as we know we are the one who issued the access token
     # For the id token, it's the service which will use it, we thus need to include aud=client_id
@@ -849,6 +866,9 @@ async def create_response_body(
     access_token_data = schemas_auth.TokenData(
         sub=db_row.user_id,
         scopes=granted_scopes,
+        account_type=user.account_type,
+        group_ids=[group.id for group in user.groups],
+        school_id=user.school_id,
     )
 
     id_token = None  # Will change if oidc is asked in scopes
@@ -877,6 +897,9 @@ async def create_response_body(
             iss=settings.OIDC_ISSUER,
             sub=db_row.user_id,
             aud=client_id,
+            account_type=user.account_type,
+            group_ids=[group.id for group in user.groups],
+            school_id=user.school_id,
         )
         if db_row.nonce is not None:
             # parameter for oidc only, required if provided by the client
@@ -1050,7 +1073,7 @@ async def introspect_refresh_token(
 )
 async def auth_get_userinfo(
     user: models_users.CoreUser = Depends(
-        get_user_from_token_with_scopes(
+        get_request_user(
             [
                 [ScopeType.openid],  # For OpenID Connect
                 [ScopeType.profile],  # For OAuth2
