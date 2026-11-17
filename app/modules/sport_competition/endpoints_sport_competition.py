@@ -8,18 +8,15 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import is_user_allowed_to
 from app.core.groups.groups_type import AccountType
 from app.core.payment.payment_tool import PaymentTool
 from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.schools import cruds_schools
 from app.core.schools.schools_type import SchoolType
 from app.core.users import cruds_users, schemas_users
-from app.dependencies import (
-    get_db,
-    get_payment_tool,
-    get_request_user,
-    is_user_allowed_to,
-)
+from app.core.users.dependencies_users import get_request_user
+from app.dependencies import get_db, get_payment_tool
 from app.modules.sport_competition import (
     cruds_sport_competition,
     schemas_sport_competition,

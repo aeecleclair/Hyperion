@@ -7,15 +7,11 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import is_user_allowed_to
 from app.core.groups.groups_type import AccountType
 from app.core.notification.schemas_notification import Message
 from app.core.permissions.type_permissions import ModulePermissions
-from app.dependencies import (
-    get_db,
-    get_notification_tool,
-    get_scheduler,
-    is_user_allowed_to,
-)
+from app.dependencies import get_db, get_notification_tool, get_scheduler
 from app.modules.loan import cruds_loan, models_loan, schemas_loan
 from app.modules.loan.factory_loan import LoanFactory
 from app.types.module import Module

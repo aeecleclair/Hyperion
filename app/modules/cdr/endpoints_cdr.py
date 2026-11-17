@@ -17,6 +17,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import is_user_allowed_to
 from app.core.groups import cruds_groups, schemas_groups
 from app.core.groups.groups_type import AccountType
 from app.core.memberships import cruds_memberships, schemas_memberships
@@ -29,17 +30,16 @@ from app.core.payment.types_payment import HelloAssoConfigName
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users, schemas_users
 from app.core.users.cruds_users import get_user_by_id, get_user_by_id_schema, get_users
+from app.core.users.dependencies_users import get_request_user
 from app.core.users.utils_users import user_model_to_schema
 from app.core.utils.config import Settings
 from app.dependencies import (
     get_db,
     get_mail_templates,
     get_payment_tool,
-    get_request_user,
     get_settings,
     get_unsafe_db,
     get_websocket_connection_manager,
-    is_user_allowed_to,
 )
 from app.modules.cdr import coredata_cdr, cruds_cdr, models_cdr, schemas_cdr
 from app.modules.cdr.dependencies_cdr import get_current_cdr_year

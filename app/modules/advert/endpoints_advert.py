@@ -7,21 +7,13 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import is_user_allowed_to
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification.schemas_notification import Message
 from app.core.notification.utils_notification import get_topic_by_root_and_identifier
 from app.core.permissions.type_permissions import ModulePermissions
-from app.dependencies import (
-    get_db,
-    get_notification_manager,
-    get_notification_tool,
-    is_user_allowed_to,
-)
-from app.modules.advert import (
-    cruds_advert,
-    models_advert,
-    schemas_advert,
-)
+from app.dependencies import get_db, get_notification_manager, get_notification_tool
+from app.modules.advert import cruds_advert, models_advert, schemas_advert
 from app.modules.advert.factory_advert import AdvertFactory
 from app.types import standard_responses
 from app.types.content_type import ContentType

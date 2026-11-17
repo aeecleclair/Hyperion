@@ -20,8 +20,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import cruds_auth, models_auth, schemas_auth
+from app.core.auth.dependencies_auth import get_token_data
 from app.core.auth.schemas_auth import TokenData
 from app.core.users import cruds_users, models_users
+from app.core.users.dependencies_users import get_request_user
 from app.core.utils.config import Settings
 from app.core.utils.security import (
     authenticate_user,
@@ -31,13 +33,7 @@ from app.core.utils.security import (
     jws_algorithm,
     jwt_algorithm,
 )
-from app.dependencies import (
-    get_db,
-    get_request_id,
-    get_request_user,
-    get_settings,
-    get_token_data,
-)
+from app.dependencies import get_db, get_request_id, get_settings
 from app.types.exceptions import AuthHTTPException, ObjectExpectedInDbNotFoundError
 from app.types.module import CoreModule
 from app.types.scopes_type import ScopeType
