@@ -686,13 +686,13 @@ async def edit_user_school(
         is_user_allowed_to([SportCompetitionPermissions.manage_sport_competition]),
     ),
 ) -> None:
-    user = await cruds_users.get_user_by_id(db, user_id)
+    user = await cruds_users.get_user_by_id_schema(db, user_id)
     if user is None:
         raise HTTPException(
             status_code=404,
             detail="User not found in the database",
         )
-    if token.school_id != SchoolType.no_school.value:
+    if user.school_id != SchoolType.no_school.value:
         raise HTTPException(
             status_code=400,
             detail="User already has a school, cannot change it",

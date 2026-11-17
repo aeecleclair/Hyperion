@@ -58,13 +58,27 @@ async def get_applicant_events(
 
 async def add_event(
     db: AsyncSession,
-    event: models_calendar.Event,
-) -> models_calendar.Event:
+    event: schemas_calendar.EventComplete,
+):
     """Add an event to the database."""
 
-    db.add(event)
+    db.add(
+        models_calendar.Event(
+            id=event.id,
+            decision=event.decision,
+            applicant_id=event.applicant_id,
+            name=event.name,
+            description=event.description,
+            start=event.start,
+            end=event.end,
+            all_day=event.all_day,
+            recurrence_rule=event.recurrence_rule,
+            organizer=event.organizer,
+            location=event.location,
+            type=event.type,
+        ),
+    )
     await db.flush()
-    return event
 
 
 async def edit_event(

@@ -1,18 +1,29 @@
+import json
+
 import pytest
 import pytest_asyncio
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
+from pytest_mock import MockerFixture
 
-from app.core.auth.dependencies_auth import filter_user_token
+import app.core.auth.dependencies_auth
+from app import dependencies
+from app.core.auth.dependencies_auth import (
+    PERMISSION_CACHE_TTL,
+    filter_user_token,
+    get_cached_permission_requirements,
+)
 from app.core.auth.schemas_auth import FunctionalTokenData
 from app.core.groups import models_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.users import models_users
 from app.core.utils.config import Settings
+from app.modules.mypayment.endpoints_mypayment import MyPaymentPermissions
+from tests import commons
 from tests.commons import (
     create_groups_with_permissions,
     create_user_with_groups,
-    override_get_settings,
+    get_TestingSessionLocal,
 )
 
 group1: models_groups.CoreGroup
@@ -41,7 +52,7 @@ def construct_token_data_from_user(
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
-    settings = override_get_settings()
+    settings = commons.SETTINGS
 
     global \
         group1, \
@@ -54,11 +65,11 @@ async def init_objects() -> None:
         user_with_needed_group
 
     group1 = await create_groups_with_permissions(
-        [],
+        [MyPaymentPermissions.access_payment],
         "random group",
     )
     group2 = await create_groups_with_permissions(
-        [],
+        [MyPaymentPermissions.access_payment],
         "random group2",
     )
 
@@ -101,9 +112,7 @@ async def init_objects() -> None:
     )
 
 
-def test_exclude_access_on_group(
-    client: TestClient,
-) -> None:
+def test_exclude_access_on_group() -> None:
     user = filter_user_token(
         excluded_groups=[group1.id],
     )(admin_user)
@@ -277,3 +286,60 @@ def test_exclude_access_on_external(
         filter_user_token(
             exclude_external=True,
         )(user_external)
+
+
+async def test_permission_caching(client: TestClient, mocker: MockerFixture) -> None:
+
+    initial_ENABLE_REDIS_CACHE = commons.SETTINGS.ENABLE_REDIS_CACHE
+    commons.SETTINGS.ENABLE_REDIS_CACHE = True
+
+    redis_client = dependencies.GLOBAL_STATE["redis_client"]
+    if redis_client is None:
+        pytest.fail("No Redis available for this test")
+    spy_get = mocker.spy(redis_client, "get")
+    spy_set = mocker.spy(redis_client, "set")
+    spy_cruds = mocker.spy(
+        app.core.auth.dependencies_auth,
+        "get_permissions_by_permission_name",
+    )
+    key = f"core:permissions:{MyPaymentPermissions.access_payment}"
+
+    redis_client.delete(key)
+
+    async with get_TestingSessionLocal()() as db:
+        group_ids, account_types = await get_cached_permission_requirements(
+            MyPaymentPermissions.access_payment,
+            db,
+            commons.SETTINGS,
+            redis_client,
+        )
+    spy_get.assert_called_once_with(key)
+    spy_cruds.assert_called_once_with(
+        db,
+        MyPaymentPermissions.access_payment,
+    )
+    spy_set.assert_called_once_with(
+        key,
+        json.dumps(
+            {
+                "groups": group_ids,
+                "account_types": [account_type.value for account_type in account_types],
+            },
+        ),
+        ex=PERMISSION_CACHE_TTL,
+    )
+    spy_get.reset_mock()
+    spy_cruds.reset_mock()
+    spy_set.reset_mock()
+    async with get_TestingSessionLocal()() as db:
+        group_ids, account_types = await get_cached_permission_requirements(
+            MyPaymentPermissions.access_payment,
+            db,
+            commons.SETTINGS,
+            redis_client,
+        )
+    spy_get.assert_called_once_with(key)
+    spy_cruds.assert_not_called()
+    spy_set.assert_not_called()
+
+    commons.SETTINGS.ENABLE_REDIS_CACHE = initial_ENABLE_REDIS_CACHE
