@@ -22,6 +22,8 @@ from app.utils.auth import auth_utils
 # Keep permissions in Redis for 1 hour
 PERMISSION_CACHE_TTL = 3600
 
+CACHE_KEY_PREFIX = "core:permissions:"
+
 
 async def get_cached_permission_requirements(
     permission_name: ModulePermissions,
@@ -29,7 +31,7 @@ async def get_cached_permission_requirements(
     settings: Settings,
     redis_client: Redis | None = None,
 ) -> tuple[list[str], list[AccountType]]:
-    cache_key = f"core:permissions:{permission_name}"
+    cache_key = CACHE_KEY_PREFIX + permission_name
     if settings.ENABLE_REDIS_CACHE and redis_client is not None:
         cached_data = redis_client.get(cache_key)
 

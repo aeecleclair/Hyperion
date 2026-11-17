@@ -8,13 +8,18 @@ import logging
 from typing import TYPE_CHECKING, cast
 
 from fastapi import APIRouter, Depends, HTTPException
+from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
-from app.core.auth.dependencies_auth import filter_user_token, is_user_admin
+from app.core.auth.dependencies_auth import (
+    CACHE_KEY_PREFIX,
+    filter_user_token,
+    is_user_admin,
+)
 from app.core.permissions import cruds_permissions, schemas_permissions
 from app.core.permissions.factory_permissions import CorePermissionsFactory
-from app.dependencies import get_db
+from app.dependencies import get_db, get_redis_client
 from app.module import full_name_permissions_list, permissions_list
 from app.types.module import CoreModule
 from app.utils.tools import is_group_id_valid
@@ -104,6 +109,7 @@ async def create_permission(
     | schemas_permissions.CoreAccountTypePermission,
     db: AsyncSession = Depends(get_db),
     token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
+    redis_client: Redis | None = Depends(get_redis_client),
 ):
     """
     Create a new permission in database
@@ -123,6 +129,8 @@ async def create_permission(
         await cruds_permissions.create_group_permission(permission, db)
     else:
         await cruds_permissions.create_account_type_permission(permission, db)
+    if redis_client is not None:
+        redis_client.delete(CACHE_KEY_PREFIX + permission.permission_name)
     return {"message": "Permission created successfully"}
 
 
@@ -135,6 +143,7 @@ async def delete_permission(
     | schemas_permissions.CoreAccountTypePermission,
     db: AsyncSession = Depends(get_db),
     token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
+    redis_client: Redis | None = Depends(get_redis_client),
 ):
     """
     Delete a permission from database by name
@@ -178,4 +187,6 @@ async def delete_permission(
                 detail="Permission not found",
             )
         await cruds_permissions.delete_account_type_permission(db, permission)
+    if redis_client is not None:
+        redis_client.delete(CACHE_KEY_PREFIX + permission.permission_name)
     return {"message": "Permission deleted successfully"}
