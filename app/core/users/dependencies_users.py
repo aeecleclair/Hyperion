@@ -29,13 +29,10 @@ def get_request_user(
     To restrict an endpoint from the API, use `is_user_in`.
     """
 
-    if scopes is None:
-        scopes = [[ScopeType.API]]
-
     async def get_user_from_user_id(
         db: AsyncSession = Depends(get_db),
         token: schemas_auth.FunctionalTokenData = Depends(
-            get_token_with_scopes(scopes),
+            get_token_with_scopes(scopes or [[ScopeType.API]]),
         ),
     ) -> schemas_users.CoreUser:
         """
