@@ -14,7 +14,6 @@ from app.modules.calendar import cruds_calendar, models_calendar, schemas_calend
 from app.modules.calendar.factory_calendar import CalendarFactory
 from app.modules.calendar.types_calendar import Decision
 from app.types.module import Module
-from app.utils.tools import has_user_token_permission
 
 
 class CalendarPermissions(ModulePermissions):
@@ -41,7 +40,7 @@ ical_file_path = "data/ics/ae_calendar.ics"
 )
 async def get_events(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CalendarPermissions.manage_events]),
     ),
 ):
@@ -56,7 +55,7 @@ async def get_events(
 )
 async def get_confirmed_events(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CalendarPermissions.access_calendar]),
     ),
 ):
@@ -76,7 +75,7 @@ async def get_confirmed_events(
 async def get_applicant_bookings(
     applicant_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CalendarPermissions.access_calendar]),
     ),
 ):
@@ -85,8 +84,7 @@ async def get_applicant_bookings(
 
     **Usable by the user or admins**
     """
-    if token.id == applicant_id or await has_user_token_permission(
-        token,
+    if token.id == applicant_id or await token.check_permission(
         CalendarPermissions.manage_events,
         db,
     ):
@@ -105,7 +103,7 @@ async def get_applicant_bookings(
 async def get_event_by_id(
     event_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CalendarPermissions.access_calendar]),
     ),
 ):
@@ -125,7 +123,7 @@ async def get_event_by_id(
 async def get_event_applicant(
     event_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CalendarPermissions.manage_events]),
     ),
 ):
@@ -143,7 +141,7 @@ async def get_event_applicant(
 async def add_event(
     event: schemas_calendar.EventBase,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CalendarPermissions.access_calendar]),
     ),
 ):
@@ -169,7 +167,7 @@ async def edit_bookings_id(
     event_id: str,
     event_edit: schemas_calendar.EventEdit,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CalendarPermissions.access_calendar]),
     ),
 ):
@@ -182,8 +180,7 @@ async def edit_bookings_id(
 
     if event is not None and not (
         (token.id == event.applicant_id and event.decision == Decision.pending)
-        or await has_user_token_permission(
-            token,
+        or await token.check_permission(
             CalendarPermissions.manage_events,
             db,
         )
@@ -204,7 +201,7 @@ async def confirm_booking(
     event_id: str,
     decision: Decision,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CalendarPermissions.manage_events]),
     ),
 ):
@@ -223,7 +220,7 @@ async def confirm_booking(
 async def delete_bookings_id(
     event_id,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CalendarPermissions.access_calendar]),
     ),
 ):
@@ -236,8 +233,7 @@ async def delete_bookings_id(
 
     if event is not None and (
         (token.id == event.applicant_id and event.decision == Decision.pending)
-        or await has_user_token_permission(
-            token,
+        or await token.check_permission(
             CalendarPermissions.manage_events,
             db,
         )
@@ -257,7 +253,7 @@ async def delete_bookings_id(
 )
 async def recreate_ical_file(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CalendarPermissions.create_ical]),
     ),
 ):

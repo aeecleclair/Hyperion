@@ -45,7 +45,7 @@ module = Module(
 )
 async def get_recommendation(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RecommendationPermissions.access_recommendation]),
     ),
 ):
@@ -66,7 +66,7 @@ async def get_recommendation(
 async def create_recommendation(
     recommendation: schemas_recommendation.RecommendationBase,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RecommendationPermissions.manage_recommendation]),
     ),
 ):
@@ -96,7 +96,7 @@ async def edit_recommendation(
     recommendation_id: uuid.UUID,
     recommendation: schemas_recommendation.RecommendationEdit,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RecommendationPermissions.manage_recommendation]),
     ),
 ):
@@ -123,7 +123,7 @@ async def edit_recommendation(
 async def delete_recommendation(
     recommendation_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RecommendationPermissions.manage_recommendation]),
     ),
 ):
@@ -150,7 +150,7 @@ async def delete_recommendation(
 async def read_recommendation_image(
     recommendation_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RecommendationPermissions.access_recommendation]),
     ),
 ):
@@ -182,7 +182,7 @@ async def read_recommendation_image(
 async def create_recommendation_image(
     recommendation_id: uuid.UUID,
     image: UploadFile = File(),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([RecommendationPermissions.manage_recommendation]),
     ),
     db: AsyncSession = Depends(get_db),

@@ -3,13 +3,12 @@ from collections.abc import Callable, Coroutine
 from typing import Any
 
 from fastapi import Depends, HTTPException
-from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
 from app.core.auth.dependencies_auth import get_token_with_scopes
 from app.core.groups import groups_type
-from app.dependencies import get_db, get_redis_client
+from app.dependencies import get_db
 from app.modules.sport_competition import (
     cruds_sport_competition,
     schemas_sport_competition,
@@ -19,7 +18,6 @@ from app.modules.sport_competition.permissions_sport_competition import (
 )
 from app.modules.sport_competition.types_sport_competition import CompetitionGroupType
 from app.types.scopes_type import ScopeType
-from app.utils.tools import has_user_token_permission
 
 hyperion_access_logger = logging.getLogger("hyperion.access")
 
@@ -27,7 +25,7 @@ hyperion_access_logger = logging.getLogger("hyperion.access")
 def is_competition_user() -> Callable[
     [
         AsyncSession,
-        schemas_auth.TokenData,
+        schemas_auth.FunctionalTokenData,
         schemas_sport_competition.CompetitionEdition,
     ],
     Coroutine[Any, Any, schemas_sport_competition.CompetitionUser],
@@ -44,7 +42,7 @@ def is_competition_user() -> Callable[
 
     async def get_user_from_user_id(
         db: AsyncSession = Depends(get_db),
-        token: schemas_auth.TokenData = Depends(
+        token: schemas_auth.FunctionalTokenData = Depends(
             get_token_with_scopes([[ScopeType.API]]),
         ),
         edition: schemas_sport_competition.CompetitionEdition = Depends(
@@ -72,8 +70,12 @@ def has_user_competition_access(
     competition_group: CompetitionGroupType | None = None,
     exclude_external: bool = False,
 ) -> Callable[
-    [schemas_auth.TokenData],
-    Coroutine[Any, Any, schemas_auth.TokenData],
+    [
+        schemas_auth.FunctionalTokenData,
+        schemas_sport_competition.CompetitionEdition,
+        AsyncSession,
+    ],
+    Coroutine[Any, Any, schemas_auth.FunctionalTokenData],
 ]:
     """
     Generate a dependency which will:
@@ -83,15 +85,14 @@ def has_user_competition_access(
     """
 
     async def is_user_a_member_of(
-        token: schemas_auth.TokenData = Depends(
+        token: schemas_auth.FunctionalTokenData = Depends(
             get_token_with_scopes([[ScopeType.API]]),
         ),
         edition: schemas_sport_competition.CompetitionEdition = Depends(
             get_current_edition,
         ),
         db: AsyncSession = Depends(get_db),
-        redis_client: Redis = Depends(get_redis_client),
-    ) -> schemas_auth.TokenData:
+    ) -> schemas_auth.FunctionalTokenData:
         """
         A dependency that checks that user is a member of the group with the given id then returns the corresponding user.
         """
@@ -108,11 +109,9 @@ def has_user_competition_access(
                 detail="User is not a member of the group",
             )
         if competition_group is not None and not (
-            await has_user_token_permission(
-                token,
+            await token.check_permission(
                 SportCompetitionPermissions.manage_sport_competition,
                 db,
-                redis_client,
             )
         ):
             user_groups = (

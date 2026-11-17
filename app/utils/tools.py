@@ -19,18 +19,13 @@ from fastapi.templating import Jinja2Templates
 from jellyfish import jaro_winkler_similarity
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pydantic import ValidationError
-from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth import schemas_auth
 from app.core.core_endpoints import cruds_core, models_core
 from app.core.groups import cruds_groups
-from app.core.groups.groups_type import AccountType, GroupType
-from app.core.permissions.cruds_permissions import get_cached_permission_requirements
-from app.core.permissions.type_permissions import ModulePermissions
+from app.core.groups.groups_type import AccountType
 from app.core.users import cruds_users, models_users
 from app.core.users.models_users import CoreUser
-from app.core.utils import security
 from app.types import core_data
 from app.types.content_type import ContentType
 from app.types.exceptions import (
@@ -103,16 +98,6 @@ def sort_user(
     return [user for user, _ in reversed(scored)]
 
 
-def is_user_token_from_any_group(
-    token: schemas_auth.TokenData,
-    allowed_groups: list[str] | list[GroupType],
-) -> bool:
-    """
-    Check if the user is a member of the group.
-    """
-    return any(group_id in token.group_ids for group_id in allowed_groups)
-
-
 async def is_group_id_valid(group_id: str, db: AsyncSession) -> bool:
     """
     Test if the provided group_id is a valid group.
@@ -129,28 +114,6 @@ async def is_user_id_valid(user_id: str, db: AsyncSession) -> bool:
     Test if the provided user_id is a valid user.
     """
     return await cruds_users.get_user_by_id(db=db, user_id=user_id) is not None
-
-
-async def has_user_token_permission(
-    token: schemas_auth.TokenData,
-    permission_name: ModulePermissions,
-    db: AsyncSession,
-    redis_client: Redis | None = None,
-) -> bool:
-    """
-    Check if the user has the permission to perform the action.
-    """
-    if GroupType.admin in token.group_ids:
-        return True
-    groups, account_types = await get_cached_permission_requirements(
-        permission_name=permission_name,
-        db=db,
-        redis_client=redis_client,
-    )
-    return (
-        any(group_id in token.group_ids for group_id in groups)
-        or token.account_type in account_types
-    )
 
 
 async def save_file_as_data(
@@ -557,6 +520,8 @@ async def create_and_send_email_migration(
      - you should check the email address format
      - you can choose if the user should become an external or a member user after the email change
     """
+    from app.core.utils import security
+
     confirmation_token = security.generate_token()
 
     migration_object = models_users.CoreUserEmailMigrationCode(

@@ -68,7 +68,7 @@ async def read_school(
 async def create_school(
     school: schemas_schools.CoreSchoolBase,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(dependency=is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(dependency=is_user_admin()),
 ):
     """
     Create a new school and add users to it based on the email regex.
@@ -119,7 +119,7 @@ async def update_school(
     school_id: uuid.UUID,
     school_update: schemas_schools.CoreSchoolUpdate,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Update the name or the description of a school.
@@ -177,7 +177,7 @@ async def update_school(
 async def delete_school(
     school_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Delete school from database.

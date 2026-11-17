@@ -21,7 +21,6 @@ from app.types.content_type import ContentType
 from app.types.module import Module
 from app.utils.tools import (
     get_file_from_data,
-    is_user_token_from_any_group,
     save_file_as_data,
 )
 
@@ -44,7 +43,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 
 async def has_association_groupement_manager_rights(
     db: AsyncSession,
-    token: schemas_auth.TokenData,
+    token: schemas_auth.FunctionalTokenData,
     groupement_id: uuid.UUID,
 ) -> bool:
     """Check if the user has manager rights for the association groupement."""
@@ -60,8 +59,7 @@ async def has_association_groupement_manager_rights(
         permission_name=PhonebookPermissions.manage_phonebook,
     )
 
-    return is_user_token_from_any_group(
-        token=token,
+    return token.is_from_any_group(
         allowed_groups=[groupement.manager_group_id, *permissions.groups],
     )
 
@@ -73,7 +71,7 @@ async def has_association_groupement_manager_rights(
 )
 async def get_all_associations(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
 ):
@@ -90,7 +88,7 @@ async def get_all_associations(
 )
 async def get_all_role_tags(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
 ):
@@ -107,7 +105,7 @@ async def get_all_role_tags(
     status_code=200,
 )
 async def get_all_groupements(
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -125,7 +123,7 @@ async def get_all_groupements(
 )
 async def create_groupement(
     groupement_base: schemas_phonebook.AssociationGroupementBase,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.manage_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -159,7 +157,7 @@ async def create_groupement(
 async def update_groupement(
     groupement_id: uuid.UUID,
     groupement_edit: schemas_phonebook.AssociationGroupementBase,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.manage_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -200,7 +198,7 @@ async def update_groupement(
 )
 async def delete_groupement(
     groupement_id: uuid.UUID,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.manage_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -228,7 +226,7 @@ async def delete_groupement(
 async def create_association(
     association: schemas_phonebook.AssociationBase,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
 ):
@@ -276,7 +274,7 @@ async def create_association(
 async def update_association(
     association_id: str,
     association_edit: schemas_phonebook.AssociationEdit,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -323,7 +321,7 @@ async def update_association(
 async def update_association_groups(
     association_id: str,
     association_groups_edit: schemas_phonebook.AssociationGroupsEdit,
-    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -342,7 +340,7 @@ async def update_association_groups(
 )
 async def deactivate_association(
     association_id: str,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -375,7 +373,7 @@ async def deactivate_association(
 async def delete_association(
     association_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
 ):
@@ -415,7 +413,7 @@ async def delete_association(
 )
 async def get_association_members(
     association_id: str,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -453,7 +451,7 @@ async def get_association_members(
 async def get_association_members_by_mandate_year(
     association_id: str,
     mandate_year: int,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -494,7 +492,7 @@ async def get_association_members_by_mandate_year(
 async def get_member_details(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
 ):
@@ -520,7 +518,7 @@ async def get_member_details(
 )
 async def create_membership(
     membership: schemas_phonebook.MembershipBase,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -631,7 +629,7 @@ async def create_membership(
 async def update_membership(
     updated_membership: schemas_phonebook.MembershipEdit,
     membership_id: str,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -710,7 +708,7 @@ async def update_membership(
 )
 async def delete_membership(
     membership_id: str,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -771,7 +769,7 @@ async def delete_membership(
 async def create_association_logo(
     association_id: str,
     image: UploadFile = File(),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -821,7 +819,7 @@ async def create_association_logo(
 async def read_association_logo(
     association_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([PhonebookPermissions.access_phonebook]),
     ),
 ) -> FileResponse:

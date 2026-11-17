@@ -68,7 +68,7 @@ hyperion_error_logger = logging.getLogger("hyperion.error")
 async def get_movie(
     themoviedb_id: str,
     settings: Settings = Depends(get_settings),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CinemaPermissions.manage_sessions]),
     ),
 ):
@@ -127,7 +127,7 @@ async def get_movie(
 )
 async def get_sessions(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CinemaPermissions.access_cinema]),
     ),
 ):
@@ -142,7 +142,7 @@ async def get_sessions(
 async def create_session(
     session: schemas_cinema.CineSessionBase,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CinemaPermissions.manage_sessions]),
     ),
     notification_tool: NotificationTool = Depends(get_notification_tool),
@@ -192,7 +192,7 @@ async def update_session(
     session_id: str,
     session_update: schemas_cinema.CineSessionUpdate,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CinemaPermissions.manage_sessions]),
     ),
 ):
@@ -207,7 +207,7 @@ async def update_session(
 async def delete_session(
     session_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CinemaPermissions.manage_sessions]),
     ),
 ):
@@ -222,7 +222,7 @@ async def delete_session(
 async def create_campaigns_logo(
     session_id: str,
     image: UploadFile = File(...),
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CinemaPermissions.manage_sessions]),
     ),
     db: AsyncSession = Depends(get_db),
@@ -256,7 +256,7 @@ async def create_campaigns_logo(
 )
 async def read_session_poster(
     session_id: str,
-    token: schemas_auth.TokenData = Depends(
+    token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CinemaPermissions.access_cinema]),
     ),
     db: AsyncSession = Depends(get_db),
