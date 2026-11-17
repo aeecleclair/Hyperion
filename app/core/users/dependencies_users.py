@@ -28,7 +28,9 @@ def get_request_user(
     This endpoint allows to require scopes other than the API scope. This should only be used by the auth endpoints.
     To restrict an endpoint from the API, use `is_user_in`.
     """
-    scopes = scopes or [[ScopeType.API]]
+
+    if scopes is None:
+        scopes = [[ScopeType.API]]
 
     async def get_user_from_user_id(
         db: AsyncSession = Depends(get_db),
