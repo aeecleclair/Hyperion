@@ -226,29 +226,13 @@ def is_user_allowed_to(
             get_token_with_scopes([[ScopeType.API]]),
         ),
         db: AsyncSession = Depends(get_db),
-        redis_client: Redis = Depends(get_redis_client),
-        settings: Settings = Depends(get_settings),
     ) -> schemas_auth.FunctionalTokenData:
-
-        if GroupType.admin in token.group_ids:
-            return token
-
-        allowed_group_ids: set[str] = set()
-        allowed_account_types: set[AccountType] = set()
-        for permission_name in permissions_name:
-            groups, account_types = await get_cached_permission_requirements(
-                permission_name,
-                db,
-                settings,
-                redis_client,
-            )
-            allowed_group_ids.update(groups)
-            allowed_account_types.update(account_types)
-
-        user_has_group = any(g_id in allowed_group_ids for g_id in token.group_ids)
-        user_has_account = token.account_type in allowed_account_types
-
-        if not (user_has_group or user_has_account):
+        if not any(
+            [
+                await token.check_permission(permission_name, db)
+                for permission_name in permissions_name
+            ],
+        ):
             raise HTTPException(
                 status_code=403,
                 detail="Unauthorized, user does not have the required permission",
