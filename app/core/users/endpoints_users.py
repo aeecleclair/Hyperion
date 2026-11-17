@@ -922,7 +922,7 @@ async def read_user(
     **The user must be authenticated to use this endpoint**
     """
 
-    db_user = await cruds_users.get_user_by_id(db=db, user_id=user_id)
+    db_user = await cruds_users.get_user_by_id_schema(db=db, user_id=user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user

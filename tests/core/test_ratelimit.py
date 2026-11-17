@@ -1,8 +1,10 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from tests import commons
 
 
+@pytest.mark.parametrize("test_app", [[False, True]], indirect=True)
 def test_limiter(client: TestClient) -> None:
     # Enable the rate limiter for this test
 
