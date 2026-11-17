@@ -156,20 +156,20 @@ async def init_objects() -> None:
     await add_object_to_db(cash)
 
 
-def test_get_raffles(client_with_redis: TestClient) -> None:
+def test_get_raffles(client: TestClient) -> None:
     token = create_api_access_token(student_user)
 
-    response = client_with_redis.get(
+    response = client.get(
         "/tombola/raffles",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
 
 
-def test_create_raffle(client_with_redis: TestClient) -> None:
+def test_create_raffle(client: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
-    response = client_with_redis.post(
+    response = client.post(
         "/tombola/raffles",
         json={
             "name": "test",
@@ -181,10 +181,10 @@ def test_create_raffle(client_with_redis: TestClient) -> None:
     assert response.status_code == 201
 
 
-def test_edit_raffle(client_with_redis: TestClient) -> None:
+def test_edit_raffle(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
-    response = client_with_redis.patch(
+    response = client.patch(
         f"/tombola/raffles/{raffle_to_delete.id}",
         json={
             "name": "testupdate",
@@ -194,7 +194,7 @@ def test_edit_raffle(client_with_redis: TestClient) -> None:
     )
     assert response.status_code == 204
 
-    response = client_with_redis.get(
+    response = client.get(
         "/tombola/raffles/",
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -203,11 +203,11 @@ def test_edit_raffle(client_with_redis: TestClient) -> None:
     assert modified_raffle["name"] == "testupdate"
 
 
-def test_create_raffle_logo(client_with_redis: TestClient) -> None:
+def test_create_raffle_logo(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
     with Path("assets/images/default_campaigns_logo.png").open("rb") as image:
-        response = client_with_redis.post(
+        response = client.post(
             f"/tombola/raffles/{raffle.id}/logo",
             files={"image": ("logo.png", image, "image/png")},
             headers={"Authorization": f"Bearer {token}"},
@@ -216,10 +216,10 @@ def test_create_raffle_logo(client_with_redis: TestClient) -> None:
     assert response.status_code == 201
 
 
-def test_read_raffle_logo(client_with_redis: TestClient) -> None:
+def test_read_raffle_logo(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
-    response = client_with_redis.get(
+    response = client.get(
         f"/tombola/raffles/{raffle.id}/logo",
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -227,11 +227,11 @@ def test_read_raffle_logo(client_with_redis: TestClient) -> None:
     assert response.status_code == 200
 
 
-def test_create_prize_picture(client_with_redis: TestClient) -> None:
+def test_create_prize_picture(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
     with Path("assets/images/default_campaigns_logo.png").open("rb") as image:
-        response = client_with_redis.post(
+        response = client.post(
             f"/tombola/prizes/{prize.id}/picture",
             files={"image": ("logo.png", image, "image/png")},
             headers={"Authorization": f"Bearer {token}"},
@@ -240,10 +240,10 @@ def test_create_prize_picture(client_with_redis: TestClient) -> None:
     assert response.status_code == 201
 
 
-def test_read_prize_picture(client_with_redis: TestClient) -> None:
+def test_read_prize_picture(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
-    response = client_with_redis.get(
+    response = client.get(
         f"/tombola/prizes/{prize.id}/picture",
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -251,16 +251,16 @@ def test_read_prize_picture(client_with_redis: TestClient) -> None:
     assert response.status_code == 200
 
 
-def test_open_raffle(client_with_redis: TestClient) -> None:
+def test_open_raffle(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
-    response = client_with_redis.patch(
+    response = client.patch(
         f"/tombola/raffles/{raffle_to_delete.id}/open",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
 
-    response = client_with_redis.get(
+    response = client.get(
         "/tombola/raffles/",
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -269,16 +269,16 @@ def test_open_raffle(client_with_redis: TestClient) -> None:
     assert modified_raffle["status"] == RaffleStatusType.open
 
 
-def test_lock_raffle(client_with_redis: TestClient) -> None:
+def test_lock_raffle(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
-    response = client_with_redis.patch(
+    response = client.patch(
         f"/tombola/raffles/{raffle_to_delete.id}/lock",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
 
-    response = client_with_redis.get(
+    response = client.get(
         "/tombola/raffles/",
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -287,10 +287,10 @@ def test_lock_raffle(client_with_redis: TestClient) -> None:
     assert modified_raffle["status"] == RaffleStatusType.lock
 
 
-def test_get_raffle_stats(client_with_redis: TestClient) -> None:
+def test_get_raffle_stats(client: TestClient) -> None:
     token = create_api_access_token(student_user)
 
-    response = client_with_redis.get(
+    response = client.get(
         f"/tombola/raffles/{raffle.id}/stats",
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -299,30 +299,30 @@ def test_get_raffle_stats(client_with_redis: TestClient) -> None:
 
 
 # # tickets
-def test_get_tickets(client_with_redis: TestClient) -> None:
+def test_get_tickets(client: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
-    response = client_with_redis.get(
+    response = client.get(
         "/tombola/tickets",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
 
 
-def test_get_tickets_by_raffle_id(client_with_redis: TestClient) -> None:
+def test_get_tickets_by_raffle_id(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
-    response = client_with_redis.get(
+    response = client.get(
         f"/tombola/raffles/{raffle.id}/tickets",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
 
 
-def test_get_tickets_by_user_id(client_with_redis: TestClient) -> None:
+def test_get_tickets_by_user_id(client: TestClient) -> None:
     token = create_api_access_token(student_user)
 
-    response = client_with_redis.get(
+    response = client.get(
         f"/tombola/users/{student_user.id}/tickets",
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -331,10 +331,10 @@ def test_get_tickets_by_user_id(client_with_redis: TestClient) -> None:
     assert len(response.json()) == 2
 
 
-def test_buy_tickets(client_with_redis: TestClient) -> None:
+def test_buy_tickets(client: TestClient) -> None:
     token = create_api_access_token(student_user)
 
-    response = client_with_redis.post(
+    response = client.post(
         f"/tombola/tickets/buy/{packticket.id}",
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -345,7 +345,7 @@ def test_buy_tickets(client_with_redis: TestClient) -> None:
 # def test_edit_tickets():
 #     token = create_api_access_token(BDE_user)
 
-#     response = client_with_redis.patch(
+#     response = client.patch(
 #         f"/tombola/tickets/{ticket.id}",
 #         json={
 #             "user_id": BDE_user.id,
@@ -362,7 +362,7 @@ def test_buy_tickets(client_with_redis: TestClient) -> None:
 # def test_delete_tickets():
 #     token = create_api_access_token(BDE_user)
 
-#     response = client_with_redis.delete(
+#     response = client.delete(
 #         f"/tombola/tickets/{ticket.id}",
 #         headers={"Authorization": f"Bearer {token}"},
 #     )
@@ -370,30 +370,30 @@ def test_buy_tickets(client_with_redis: TestClient) -> None:
 
 
 # # pack_tickets
-def test_get_packtickets(client_with_redis: TestClient) -> None:
+def test_get_packtickets(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
-    response = client_with_redis.get(
+    response = client.get(
         "/tombola/pack_tickets",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
 
 
-def test_get_packtickets_by_raffle_id(client_with_redis: TestClient) -> None:
+def test_get_packtickets_by_raffle_id(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
-    response = client_with_redis.get(
+    response = client.get(
         f"/tombola/raffles/{raffle.id}/pack_tickets",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
 
 
-def test_create_packtickets(client_with_redis: TestClient) -> None:
+def test_create_packtickets(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
-    response = client_with_redis.post(
+    response = client.post(
         "/tombola/pack_tickets",
         json={
             "raffle_id": raffle.id,
@@ -405,10 +405,10 @@ def test_create_packtickets(client_with_redis: TestClient) -> None:
     assert response.status_code == 201
 
 
-def test_edit_packtickets(client_with_redis: TestClient) -> None:
+def test_edit_packtickets(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
-    response = client_with_redis.patch(
+    response = client.patch(
         f"/tombola/pack_tickets/{packticket.id}",
         json={
             "raffle_id": raffle.id,
@@ -420,10 +420,10 @@ def test_edit_packtickets(client_with_redis: TestClient) -> None:
     assert response.status_code == 204
 
 
-def test_delete_packtickets(client_with_redis: TestClient) -> None:
+def test_delete_packtickets(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
-    response = client_with_redis.delete(
+    response = client.delete(
         f"/tombola/pack_tickets/{packticket_to_delete.id}",
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -431,20 +431,20 @@ def test_delete_packtickets(client_with_redis: TestClient) -> None:
 
 
 # # prizes
-def test_get_prizes(client_with_redis: TestClient) -> None:
+def test_get_prizes(client: TestClient) -> None:
     token = create_api_access_token(student_user)
 
-    response = client_with_redis.get(
+    response = client.get(
         "/tombola/prizes",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
 
 
-def test_get_prizes_by_raffle_id(client_with_redis: TestClient) -> None:
+def test_get_prizes_by_raffle_id(client: TestClient) -> None:
     token = create_api_access_token(student_user)
 
-    response = client_with_redis.get(
+    response = client.get(
         f"/tombola/raffles/{raffle.id}/prizes",
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -452,10 +452,10 @@ def test_get_prizes_by_raffle_id(client_with_redis: TestClient) -> None:
     assert response.json() != []
 
 
-def test_create_prizes(client_with_redis: TestClient) -> None:
+def test_create_prizes(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
-    response = client_with_redis.post(
+    response = client.post(
         "/tombola/prizes",
         json={
             "raffle_id": raffle.id,
@@ -468,10 +468,10 @@ def test_create_prizes(client_with_redis: TestClient) -> None:
     assert response.status_code == 201, response.text
 
 
-def test_edit_prizes(client_with_redis: TestClient) -> None:
+def test_edit_prizes(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
-    response = client_with_redis.patch(
+    response = client.patch(
         f"/tombola/prizes/{prize.id}",
         json={
             "raffle_id": raffle.id,
@@ -484,10 +484,10 @@ def test_edit_prizes(client_with_redis: TestClient) -> None:
     assert response.status_code == 204, response.text
 
 
-def test_draw_prizes(client_with_redis: TestClient) -> None:
+def test_draw_prizes(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
-    response = client_with_redis.post(
+    response = client.post(
         f"/tombola/prizes/{prize_to_draw.id}/draw",
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -496,20 +496,20 @@ def test_draw_prizes(client_with_redis: TestClient) -> None:
     assert tickets[0]["prize"] is not None
 
 
-def test_delete_prizes(client_with_redis: TestClient) -> None:
+def test_delete_prizes(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
-    response = client_with_redis.delete(
+    response = client.delete(
         f"/tombola/prizes/{prize.id}",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204, response.text
 
 
-def test_delete_raffle(client_with_redis: TestClient) -> None:
+def test_delete_raffle(client: TestClient) -> None:
     token = create_api_access_token(BDE_user)
 
-    response = client_with_redis.delete(
+    response = client.delete(
         f"/tombola/raffles/{raffle_to_delete.id}",
         headers={"Authorization": f"Bearer {token}"},
     )
