@@ -46,7 +46,7 @@ def _create_mock_token(user_id: str = "user_123") -> Mock:
     """Create a mock TokenData for testing."""
     token = Mock()
     token.sub = user_id
-    token.id = user_id
+    token.user_id = user_id
     token.group_ids = []
     token.account_type = AccountType.student
     token.school_id = SchoolType.centrale_lyon
