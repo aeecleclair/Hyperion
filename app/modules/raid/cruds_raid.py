@@ -1216,3 +1216,56 @@ async def delete_volunteer(
         ),
     )
     await db.flush()
+
+
+async def delete_all_volunteers(
+    edition_id: UUID,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        delete(models_raid.RaidVolunteer).where(
+            models_raid.RaidVolunteer.edition_id == edition_id,
+        ),
+    )
+    await db.flush()
+
+
+async def delete_all_security_files(
+    edition_id: UUID,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        delete(models_raid.SecurityFile).where(
+            models_raid.SecurityFile.edition_id == edition_id,
+        ),
+    )
+    await db.flush()
+
+
+async def delete_all_documents(
+    edition_id: UUID,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        delete(models_raid.Document).where(
+            models_raid.Document.edition_id == edition_id,
+        ),
+    )
+    await db.flush()
+
+
+async def delete_all_checkouts(
+    edition_id: UUID,
+    db: AsyncSession,
+) -> None:
+    await db.execute(
+        delete(models_raid.RaidParticipantCheckout).where(
+            models_raid.RaidParticipantCheckout.edition_id == edition_id,
+        ),
+    )
+    await db.execute(
+        delete(models_raid.RaidVolunteerCheckout).where(
+            models_raid.RaidVolunteerCheckout.edition_id == edition_id,
+        ),
+    )
+    await db.flush()
