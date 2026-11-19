@@ -759,7 +759,7 @@ async def delete_all_teams(
     await cruds_raid.delete_all_teams(edition.id, db)
     await cruds_raid.delete_all_checkouts(edition.id, db)
     await cruds_raid.delete_all_volunteers(edition.id, db)
-    await cruds_raid.delete_all_participant(edition.id, db) 
+    await cruds_raid.delete_all_participant(edition.id, db)
     await cruds_raid.delete_all_documents(edition.id, db)
     await cruds_raid.delete_all_security_files(edition.id, db)
     await delete_all_folder_from_data("raid")
