@@ -1217,6 +1217,7 @@ async def delete_volunteer(
     )
     await db.flush()
 
+
 async def delete_all_volunteers(
     edition_id: UUID,
     db: AsyncSession,
@@ -1227,6 +1228,7 @@ async def delete_all_volunteers(
         ),
     )
     await db.flush()
+
 
 async def delete_all_security_files(
     edition_id: UUID,
@@ -1239,6 +1241,7 @@ async def delete_all_security_files(
     )
     await db.flush()
 
+
 async def delete_all_documents(
     edition_id: UUID,
     db: AsyncSession,
@@ -1248,7 +1251,8 @@ async def delete_all_documents(
             models_raid.Document.edition_id == edition_id,
         ),
     )
-    await db.flush()    
+    await db.flush()
+
 
 async def delete_all_checkouts(
     edition_id: UUID,
@@ -1264,4 +1268,4 @@ async def delete_all_checkouts(
             models_raid.RaidVolunteerCheckout.edition_id == edition_id,
         ),
     )
-    await db.flush()    
+    await db.flush()
