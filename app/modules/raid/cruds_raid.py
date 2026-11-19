@@ -1265,14 +1265,3 @@ async def delete_all_checkouts(
         ),
     )
     await db.flush()    
-
-async def delete_all_volunteers(
-    edition_id: UUID,
-    db: AsyncSession,
-) -> None:
-    await db.execute(
-        delete(models_raid.RaidVolunteer).where(
-            models_raid.RaidVolunteer.edition_id == edition_id,
-        ),
-    )
-    await db.flush()
