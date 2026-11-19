@@ -751,6 +751,10 @@ async def delete_all_teams(
 ):
     """Wipe all teams and participants of the active edition."""
 
+    await cruds_raid.delete_all_security_files(edition.id, db)
+    await cruds_raid.delete_all_documents(edition.id, db)
+    await cruds_raid.delete_all_checkouts(edition.id, db)
+    await cruds_raid.delete_all_volunteers(edition.id, db)
     await cruds_raid.delete_all_invite_tokens(edition.id, db)
     await cruds_raid.delete_all_teams(edition.id, db)
     await cruds_raid.delete_all_checkouts(edition.id, db)
