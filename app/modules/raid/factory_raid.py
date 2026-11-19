@@ -39,25 +39,39 @@ class RaidFactory(Factory):
 
     @classmethod
     async def should_run(cls, db: AsyncSession) -> bool:
-        return await cruds_raid.get_all_editions(db) == []
+        # return await cruds_raid.get_all_editions(db) == []
+        return False  # BUG: Please fix that
 
     @classmethod
     async def _ensure_raid_admin_group(cls, db: AsyncSession) -> None:
         """Create the raid_admin group + permission and grant it to the
         admin demo user if config.yaml defined one."""
-        raid_admin_group = CoreGroup(
-            id=RAID_ADMIN_GROUP_ID,
-            name="raid_admin",
-            description="Raid organizers with manage_raid permission",
-        )
-        await cruds_groups.create_group(db=db, group=raid_admin_group)
-        await cruds_permissions.create_group_permission(
-            permission=schemas_permissions.CoreGroupPermission(
-                permission_name="manage_raid",
-                group_id=RAID_ADMIN_GROUP_ID,
-            ),
+        # Check if group already exists
+        raid_admin_group_id = RAID_ADMIN_GROUP_ID
+        db_group = await cruds_groups.get_group_by_id(
             db=db,
+            group_id=raid_admin_group_id,
         )
+        db_group_name = await cruds_groups.get_group_by_name(
+            db=db,
+            group_name="raid_admin",
+        )
+        if db_group is None and db_group_name is None:
+            raid_admin_group = CoreGroup(
+                id=raid_admin_group_id,
+                name="raid_admin",
+                description="Raid organizers with manage_raid permission",
+            )
+            await cruds_groups.create_group(db=db, group=raid_admin_group)
+            await cruds_permissions.create_group_permission(
+                permission=schemas_permissions.CoreGroupPermission(
+                    permission_name="manage_raid",
+                    group_id=raid_admin_group_id,
+                ),
+                db=db,
+            )
+        if db_group is None and db_group_name is not None:
+            raid_admin_group_id = db_group_name.id
 
         admin_user = await cruds_users.get_user_by_email(
             db=db,
@@ -67,7 +81,7 @@ class RaidFactory(Factory):
             await cruds_groups.create_membership(
                 db=db,
                 membership=CoreMembership(
-                    group_id=RAID_ADMIN_GROUP_ID,
+                    group_id=raid_admin_group_id,
                     user_id=admin_user.id,
                     description=None,
                 ),

@@ -23,7 +23,6 @@ class SignatureNotFoundError(Exception):
     """Raised when a signature is not found for a document."""
 
     def __init__(self, document_id: UUID):
-
         super().__init__(
             f"Signature with numeric_signature_id {document_id} not found.",
         )
