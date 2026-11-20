@@ -115,6 +115,7 @@ AUTH_CLIENTS:
 DATABASE_DEBUG: False # If True, will print all SQL queries in the console
 LOG_DEBUG_MESSAGES: True
 ENABLE_RATE_LIMITER: False
+ENABLE_REDIS_CACHE: False
 
 #####################################
 # SMTP configuration using starttls #

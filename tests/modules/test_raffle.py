@@ -465,7 +465,7 @@ def test_create_prizes(client: TestClient) -> None:
         },
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.status_code == 201
+    assert response.status_code == 201, response.text
 
 
 def test_edit_prizes(client: TestClient) -> None:
@@ -481,7 +481,7 @@ def test_edit_prizes(client: TestClient) -> None:
         },
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.status_code == 204
+    assert response.status_code == 204, response.text
 
 
 def test_draw_prizes(client: TestClient) -> None:
@@ -491,7 +491,7 @@ def test_draw_prizes(client: TestClient) -> None:
         f"/tombola/prizes/{prize_to_draw.id}/draw",
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.status_code == 201
+    assert response.status_code == 201, response.text
     tickets = response.json()
     assert tickets[0]["prize"] is not None
 
@@ -503,7 +503,7 @@ def test_delete_prizes(client: TestClient) -> None:
         f"/tombola/prizes/{prize.id}",
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.status_code == 204
+    assert response.status_code == 204, response.text
 
 
 def test_delete_raffle(client: TestClient) -> None:
@@ -513,4 +513,4 @@ def test_delete_raffle(client: TestClient) -> None:
         f"/tombola/raffles/{raffle_to_delete.id}",
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.status_code == 204
+    assert response.status_code == 204, response.text

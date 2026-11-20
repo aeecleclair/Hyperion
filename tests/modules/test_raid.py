@@ -7,7 +7,7 @@ birthday/phone) now live on `CoreUser`; tests set them via `update_user` so
 the participant/volunteer payloads stay small and mirror the real API shape.
 """
 
-import datetime
+import datetime as dt
 import uuid
 from unittest.mock import patch
 
@@ -71,7 +71,7 @@ doc_accepted: models_raid.Document
 doc_pending: models_raid.Document
 
 
-async def _set_user_identity(user_id: str, phone: str, birthday: datetime.date) -> None:
+async def _set_user_identity(user_id: str, phone: str, birthday: dt.date) -> None:
     async with get_TestingSessionLocal()() as db:
         await cruds_users.update_user(
             db,
@@ -93,9 +93,9 @@ async def init_objects() -> None:
         id=uuid.uuid4(),
         year=2026,
         name="Raid 2026",
-        start_date=datetime.date(2026, 5, 1),
-        end_date=datetime.date(2026, 5, 3),
-        registering_end_date=datetime.date(2026, 4, 25),
+        start_date=dt.date(2026, 5, 1),
+        end_date=dt.date(2026, 5, 3),
+        registering_end_date=dt.date(2026, 4, 25),
         active=True,
         inscription_enabled=True,
     )
@@ -119,23 +119,23 @@ async def init_objects() -> None:
     await _set_user_identity(
         raid_admin_user.id,
         "+33600000000",
-        datetime.date(1990, 1, 1),
+        dt.date(1990, 1, 1),
     )
     token_admin = create_api_access_token(raid_admin_user)
 
     global user_captain, token_captain
     user_captain = await create_user_with_groups([])
-    await _set_user_identity(user_captain.id, "+33611111111", datetime.date(2000, 6, 1))
+    await _set_user_identity(user_captain.id, "+33611111111", dt.date(2000, 6, 1))
     token_captain = create_api_access_token(user_captain)
 
     global user_second, token_second
     user_second = await create_user_with_groups([])
-    await _set_user_identity(user_second.id, "+33622222222", datetime.date(2001, 3, 15))
+    await _set_user_identity(user_second.id, "+33622222222", dt.date(2001, 3, 15))
     token_second = create_api_access_token(user_second)
 
     global user_solo, token_solo
     user_solo = await create_user_with_groups([])
-    await _set_user_identity(user_solo.id, "+33633333333", datetime.date(1999, 11, 11))
+    await _set_user_identity(user_solo.id, "+33633333333", dt.date(1999, 11, 11))
     token_solo = create_api_access_token(user_solo)
 
     global user_no_profile, token_no_profile
@@ -143,7 +143,7 @@ async def init_objects() -> None:
     await _set_user_identity(
         user_no_profile.id,
         "+33644444444",
-        datetime.date(2002, 2, 2),
+        dt.date(2002, 2, 2),
     )
     token_no_profile = create_api_access_token(user_no_profile)
 
@@ -152,7 +152,7 @@ async def init_objects() -> None:
     await _set_user_identity(
         user_volunteer.id,
         "+33655555555",
-        datetime.date(1998, 7, 7),
+        dt.date(1998, 7, 7),
     )
     token_volunteer = create_api_access_token(user_volunteer)
 
@@ -166,7 +166,7 @@ async def init_objects() -> None:
         id=str(uuid.uuid4()),
         edition_id=active_edition.id,
         name="accepted.pdf",
-        uploaded_at=datetime.datetime.now(tz=datetime.UTC).date(),
+        uploaded_at=dt.datetime.now(tz=dt.UTC).date(),
         type=DocumentType.idCard,
         validation=DocumentValidation.accepted,
     )
@@ -176,7 +176,7 @@ async def init_objects() -> None:
         id=str(uuid.uuid4()),
         edition_id=active_edition.id,
         name="pending.pdf",
-        uploaded_at=datetime.datetime.now(tz=datetime.UTC).date(),
+        uploaded_at=dt.datetime.now(tz=dt.UTC).date(),
         type=DocumentType.medicalCertificate,
         validation=DocumentValidation.pending,
     )
@@ -613,7 +613,7 @@ async def test_admin_validate_full_happy_path(
                 id=str(uuid.uuid4()),
                 edition_id=active_edition.id,
                 name=f"{doc_type.value}.pdf",
-                uploaded_at=datetime.datetime.now(tz=datetime.UTC).date(),
+                uploaded_at=dt.datetime.now(tz=dt.UTC).date(),
                 type=doc_type,
                 validation=DocumentValidation.accepted,
             )
@@ -919,7 +919,7 @@ async def test_cannot_attach_document_owned_by_another_participant(
             id=str(uuid.uuid4()),
             edition_id=active_edition.id,
             name="someone_elses_id_card.pdf",
-            uploaded_at=datetime.datetime.now(tz=datetime.UTC).date(),
+            uploaded_at=dt.datetime.now(tz=dt.UTC).date(),
             type=DocumentType.idCard,
             validation=DocumentValidation.pending,
         )
@@ -1499,7 +1499,7 @@ async def _submit_minimum_dossier(
                 id=str(uuid.uuid4()),
                 edition_id=active_edition.id,
                 name=f"min-{doc_type.value}.pdf",
-                uploaded_at=datetime.datetime.now(tz=datetime.UTC).date(),
+                uploaded_at=dt.datetime.now(tz=dt.UTC).date(),
                 type=doc_type,
                 validation=DocumentValidation.pending,
             )
@@ -1564,7 +1564,7 @@ async def _setup_scholarship_participant(
     await _set_user_identity(
         second_user.id,
         "+33672000099",
-        datetime.date(2000, 1, 31),
+        dt.date(2000, 1, 31),
     )
 
     async with get_TestingSessionLocal()() as db:
@@ -1580,7 +1580,7 @@ async def _setup_scholarship_participant(
                 id=str(uuid.uuid4()),
                 edition_id=active_edition.id,
                 name=f"{doc_type.value}.pdf",
-                uploaded_at=datetime.datetime.now(tz=datetime.UTC).date(),
+                uploaded_at=dt.datetime.now(tz=dt.UTC).date(),
                 type=doc_type,
                 validation=DocumentValidation.accepted,
             )
@@ -1659,7 +1659,7 @@ async def _setup_scholarship_participant(
 async def test_scholarship_participant_can_be_validated(client: TestClient) -> None:
     """A scholarship participant with an accepted school authorization validates."""
     user = await create_user_with_groups([])
-    await _set_user_identity(user.id, "+33671000001", datetime.date(2000, 1, 1))
+    await _set_user_identity(user.id, "+33671000001", dt.date(2000, 1, 1))
     token = create_api_access_token(user)
 
     r = client.post(
@@ -1692,7 +1692,7 @@ async def test_scholarship_participant_rejected_without_school_authorization(
 ) -> None:
     """Admin validation fails while the school authorization is missing."""
     user = await create_user_with_groups([])
-    await _set_user_identity(user.id, "+33671000002", datetime.date(2000, 2, 2))
+    await _set_user_identity(user.id, "+33671000002", dt.date(2000, 2, 2))
     token = create_api_access_token(user)
 
     r = client.post(
@@ -1727,7 +1727,7 @@ async def test_school_authorization_lazy_load_does_not_break_read(
 ) -> None:
     """Reading a participant with a school authorization must not lazy-load."""
     user = await create_user_with_groups([])
-    await _set_user_identity(user.id, "+33671000003", datetime.date(2000, 3, 3))
+    await _set_user_identity(user.id, "+33671000003", dt.date(2000, 3, 3))
     token = create_api_access_token(user)
 
     r = client.post(
@@ -1769,7 +1769,7 @@ async def _reset_mocked_checkout() -> None:
 async def test_pay_endpoint_uses_scholarship_price(client: TestClient) -> None:
     """POST /raid/pay charges the scholarship price for scholars."""
     user = await create_user_with_groups([])
-    await _set_user_identity(user.id, "+33671000004", datetime.date(2000, 4, 4))
+    await _set_user_identity(user.id, "+33671000004", dt.date(2000, 4, 4))
     token = create_api_access_token(user)
 
     r = client.post(
@@ -1835,7 +1835,7 @@ async def test_participant_can_set_scholarship_flag(client: TestClient) -> None:
 async def test_non_student_cannot_claim_scholarship(client: TestClient) -> None:
     """Scholarship is student-only: an explicit non-student situation is rejected"""
     user = await create_user_with_groups([])
-    await _set_user_identity(user.id, "+33671000007", datetime.date(2000, 7, 7))
+    await _set_user_identity(user.id, "+33671000007", dt.date(2000, 7, 7))
     token = create_api_access_token(user)
 
     r = client.post(
@@ -1881,7 +1881,7 @@ async def test_scholarship_price_requires_accepted_school_authorization(
     """Self-declared scholarship does not unlock the discounted price."""
     await _reset_mocked_checkout()
     user = await create_user_with_groups([])
-    await _set_user_identity(user.id, "+33671000005", datetime.date(2000, 5, 5))
+    await _set_user_identity(user.id, "+33671000005", dt.date(2000, 5, 5))
     token = create_api_access_token(user)
 
     r = client.post(
@@ -1925,7 +1925,7 @@ async def test_scholarship_price_applies_with_accepted_school_authorization(
     """Scholar price only once the school authorization is accepted."""
     await _reset_mocked_checkout()
     user = await create_user_with_groups([])
-    await _set_user_identity(user.id, "+33671000006", datetime.date(2000, 6, 6))
+    await _set_user_identity(user.id, "+33671000006", dt.date(2000, 6, 6))
     token = create_api_access_token(user)
 
     r = client.post(
@@ -2015,7 +2015,7 @@ async def test_school_authorization_document_is_readable_by_owner(
         id=doc_id,
         edition_id=active_edition.id,
         name="school_auth.pdf",
-        uploaded_at=datetime.datetime.now(tz=datetime.UTC).date(),
+        uploaded_at=dt.datetime.now(tz=dt.UTC).date(),
         type=DocumentType.schoolAuthorization,
         validation=DocumentValidation.pending,
     )
@@ -2067,7 +2067,7 @@ async def test_raid_rules_document_is_readable_by_every_participant(
         id=doc_id,
         edition_id=active_edition.id,
         name="reglement.pdf",
-        uploaded_at=datetime.datetime.now(tz=datetime.UTC).date(),
+        uploaded_at=dt.datetime.now(tz=dt.UTC).date(),
         type=DocumentType.raidRules,
         validation=DocumentValidation.pending,
     )
@@ -2136,7 +2136,7 @@ async def test_raid_information_document_is_readable_by_every_participant(
         id=doc_id,
         edition_id=active_edition.id,
         name="guide-du-raid.pdf",
-        uploaded_at=datetime.datetime.now(tz=datetime.UTC).date(),
+        uploaded_at=dt.datetime.now(tz=dt.UTC).date(),
         type=DocumentType.raidInformation,
         validation=DocumentValidation.pending,
     )
@@ -2236,13 +2236,13 @@ async def test_get_number_of_teams_counts() -> None:
 @pytest.mark.asyncio
 async def test_volunteer_crud_roundtrip() -> None:
     user = await create_user_with_groups([])
-    await _set_user_identity(user.id, "+33600000001", datetime.date(1998, 1, 1))
+    await _set_user_identity(user.id, "+33600000001", dt.date(1998, 1, 1))
 
     async with get_TestingSessionLocal()() as db:
         v = schemas_raid.RaidVolunteerCreate(
             user_id=user.id,
             edition_id=active_edition.id,
-            created_at=datetime.datetime.now(tz=datetime.UTC),
+            created_at=dt.datetime.now(tz=dt.UTC),
             validated=False,
             cancelled=False,
         )
@@ -2343,7 +2343,7 @@ async def test_upload_raid_information_document_not_attached_to_participant(
 async def _new_participant_user(phone: str):
     """Create a user with identity + a draft participant row, return (user, token)."""
     user = await create_user_with_groups([])
-    await _set_user_identity(user.id, phone, datetime.date(2000, 1, 1))
+    await _set_user_identity(user.id, phone, dt.date(2000, 1, 1))
     await add_object_to_db(
         models_raid.RaidParticipant(
             user_id=user.id,

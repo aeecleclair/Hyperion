@@ -109,7 +109,7 @@ def create_access_token(
     if expires_delta is None:
         # We use the default value
         expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode = data.model_dump(exclude_none=True)
+    to_encode = data.model_dump(exclude_none=True, mode="json")
     iat = datetime.now(UTC)
     expire_on = datetime.now(UTC) + expires_delta
     to_encode.update({"exp": expire_on, "iat": iat})
@@ -136,7 +136,7 @@ def create_access_token_RS256(
         expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
     to_encode: dict[str, Any] = additional_data or {}
-    to_encode.update(data.model_dump(exclude_none=True))
+    to_encode.update(data.model_dump(exclude_none=True, mode="json"))
 
     iat = datetime.now(UTC)
     expire_on = datetime.now(UTC) + expires_delta
