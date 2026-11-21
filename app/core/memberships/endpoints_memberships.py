@@ -1,8 +1,7 @@
-import asyncio
 import uuid
 from datetime import UTC, date, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.documents import cruds_documents
@@ -10,6 +9,7 @@ from app.core.documents.exceptions_documents import (
     DocumentCreationError,
     ElementTeamNotFoundError,
 )
+from app.core.documents.utils_documents import configure_documenso_api_wrapper
 from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import GroupType
 from app.core.memberships import (
@@ -23,6 +23,7 @@ from app.core.memberships.utils_memberships import (
     membership_document_callback,
     remove_membership_from_user,
     renew_membership_documents,
+    renew_memberships_documents_list,
     validate_user_new_membership,
 )
 from app.core.users import cruds_users, models_users
@@ -290,12 +291,12 @@ async def update_association_membership(
 
 @router.post(
     "/memberships/{membership_id}/renew-documents",
-    status_code=201,
-    response_model=schemas_memberships.MembershipRenewalErrors,
+    status_code=204,
 )
 async def renew_users_membership_document(
     renewal_criterion: schemas_memberships.MembershipRenewalCriterion,
     membership_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
     settings=Depends(get_settings),
@@ -341,29 +342,31 @@ async def renew_users_membership_document(
         await cruds_memberships.get_user_memberships_by_association_membership_id(
             db=db,
             association_membership_id=membership_id,
-            maximal_start_date=renewal_criterion.active_date,
-            minimal_end_date=renewal_criterion.active_date,
+            maximal_start_date=renewal_criterion.membership_active_date,
+            minimal_end_date=renewal_criterion.membership_active_date,
         )
     )
 
-    results: list[BaseException | None] = await asyncio.gather(
-        *[
-            renew_membership_documents(
-                association_membership=db_association_membership,
-                team=team,
-                user_membership=user_membership,
-                db=db,
-                settings=settings,
+    if renewal_criterion.last_document_max_date is not None:
+        renewal_targets = [
+            target
+            for target in renewal_targets
+            if target.document is None
+            or (
+                target.document.created_at.date()
+                <= renewal_criterion.last_document_max_date
             )
-            for user_membership in renewal_targets
-        ],
-        return_exceptions=True,
+        ]
+
+    background_tasks.add_task(
+        renew_memberships_documents_list,
+        targets=renewal_targets,
+        team=team,
+        association_membership=db_association_membership,
+        db=db,
+        settings=settings,
+        report_user=user_model_to_schema(user),
     )
-    errors: dict[str, str] = {}
-    for res in results:
-        if isinstance(res, DocumentCreationError):
-            errors[res.user_email] = res.message
-    return schemas_memberships.MembershipRenewalErrors(errors=errors)
 
 
 @router.delete(
@@ -617,7 +620,7 @@ async def add_batch_membership(
 )
 async def update_user_membership(
     membership_id: uuid.UUID,
-    user_membership: schemas_memberships.UserMembershipEdit,
+    user_membership_edit: schemas_memberships.UserMembershipEdit,
     db: AsyncSession = Depends(get_db),
     user: models_users.CoreUser = Depends(is_user()),
 ):
@@ -640,21 +643,21 @@ async def update_user_membership(
     ):
         raise HTTPException(status_code=403, detail="Unauthorized")
 
-    new_membership = schemas_memberships.UserMembershipSimple(
-        id=db_user_membership.id,
-        user_id=db_user_membership.user_id,
-        association_membership_id=db_user_membership.association_membership_id,
-        start_date=user_membership.start_date or db_user_membership.start_date,
-        end_date=user_membership.end_date or db_user_membership.end_date,
-        valid=db_user_membership.valid,
+    await validate_user_new_membership(
+        db_user_membership.user_id,
+        schemas_memberships.UserMembershipBase(
+            association_membership_id=db_user_membership.association_membership_id,
+            start_date=user_membership_edit.start_date or db_user_membership.start_date,
+            end_date=user_membership_edit.end_date or db_user_membership.end_date,
+        ),
+        db,
+        membership_id,
     )
-
-    await validate_user_new_membership(new_membership, db)
 
     await cruds_memberships.update_user_membership(
         db=db,
         user_membership_id=membership_id,
-        user_membership_edit=user_membership,
+        user_membership_edit=user_membership_edit,
     )
 
 
@@ -707,24 +710,23 @@ async def renew_user_membership_document(
         raise ElementTeamNotFoundError(
             team_id=db_association_membership.template.team_id,
         )
+    documenso = configure_documenso_api_wrapper(
+        api_key=team.api_key,
+        settings=settings,
+    )
 
     try:
         await renew_membership_documents(
             association_membership=db_association_membership,
-            team=team,
             user_membership=db_user_membership,
+            documenso=documenso,
             db=db,
-            settings=settings,
         )
-        return schemas_memberships.MembershipRenewalErrors(errors={})
+        return schemas_memberships.MembershipRenewalErrors(error=None)
     except Exception as e:
         if isinstance(e, DocumentCreationError):
-            return schemas_memberships.MembershipRenewalErrors(
-                errors={e.user_email: e.message},
-            )
-        return schemas_memberships.MembershipRenewalErrors(
-            errors={db_user_membership.user_id: str(e)},
-        )
+            return schemas_memberships.MembershipRenewalErrors(error=e.message)
+        return schemas_memberships.MembershipRenewalErrors(error=str(e))
 
 
 @router.delete(
