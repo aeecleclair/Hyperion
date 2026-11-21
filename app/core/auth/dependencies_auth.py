@@ -77,6 +77,11 @@ def get_token_data(
     )
     return schemas_auth.FunctionalTokenData(
         sub=token_data.sub,
+        iss=token_data.iss,
+        aud=token_data.aud,
+        cid=token_data.cid,
+        iat=token_data.iat,
+        nonce=token_data.nonce,
         scopes=token_data.scopes,
         account_type=token_data.account_type,
         group_ids=token_data.group_ids,

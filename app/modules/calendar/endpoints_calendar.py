@@ -9,8 +9,10 @@ from app.core.auth import schemas_auth
 from app.core.auth.dependencies_auth import is_user_allowed_to
 from app.core.groups.groups_type import AccountType
 from app.core.permissions.type_permissions import ModulePermissions
+from app.core.users import schemas_users
+from app.core.users.dependencies_users import get_request_user
 from app.dependencies import get_db
-from app.modules.calendar import cruds_calendar, models_calendar, schemas_calendar
+from app.modules.calendar import cruds_calendar, schemas_calendar
 from app.modules.calendar.factory_calendar import CalendarFactory
 from app.modules.calendar.types_calendar import Decision
 from app.types.module import Module
@@ -144,19 +146,39 @@ async def add_event(
     token: schemas_auth.FunctionalTokenData = Depends(
         is_user_allowed_to([CalendarPermissions.access_calendar]),
     ),
+    user: schemas_users.CoreUser = Depends(get_request_user()),
 ):
     """Add an event to the calendar."""
 
     event_id = str(uuid.uuid4())
 
-    db_event = models_calendar.Event(
+    db_event = schemas_calendar.EventReturn(
         id=event_id,
         decision=Decision.pending,
         applicant_id=token.id,
-        **event.model_dump(),
+        name=event.name,
+        description=event.description,
+        start=event.start,
+        end=event.end,
+        type=event.type,
+        all_day=event.all_day,
+        location=event.location,
+        recurrence_rule=event.recurrence_rule,
+        organizer=event.organizer,
+        applicant=schemas_calendar.EventApplicant(
+            id=user.id,
+            firstname=user.firstname,
+            name=user.name,
+            nickname=user.nickname,
+            email=user.email,
+            promo=user.promo,
+            phone=user.phone,
+            account_type=user.account_type,
+            school_id=user.school_id,
+        ),
     )
-
-    return await cruds_calendar.add_event(event=db_event, db=db)
+    await cruds_calendar.add_event(event=db_event, db=db)
+    return db_event
 
 
 @module.router.patch(
