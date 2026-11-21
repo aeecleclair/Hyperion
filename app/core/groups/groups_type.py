@@ -30,33 +30,3 @@ class AccountType(StrEnum):
 
     def __str__(self):
         return f"{self.name}<{self.value}>"
-
-
-def get_ecl_account_types() -> list[AccountType]:
-    return [
-        AccountType.student,
-        AccountType.former_student,
-        AccountType.staff,
-        AccountType.association,
-    ]
-
-
-def get_schools_account_types() -> list[AccountType]:
-    return [
-        AccountType.student,
-        AccountType.former_student,
-        AccountType.staff,
-        AccountType.association,
-        AccountType.other_school_student,
-    ]
-
-
-def get_account_types_except_externals() -> list[AccountType]:
-    return [
-        AccountType.student,
-        AccountType.former_student,
-        AccountType.staff,
-        AccountType.association,
-        AccountType.demo,
-        AccountType.other_school_student,
-    ]

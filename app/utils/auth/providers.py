@@ -7,9 +7,8 @@ from app.core.groups.groups_type import (
     GroupType,
 )
 from app.core.permissions.type_permissions import ModulePermissions
-from app.core.users import models_users
+from app.core.users import schemas_users
 from app.types.scopes_type import ScopeType
-from app.utils.tools import is_user_member_of_any_group
 
 
 class BaseAuthClient:
@@ -55,7 +54,7 @@ class BaseAuthClient:
     # NOTE: you should only set this to True if you are sure the client is correctly configured and secure.
     allow_pkce_with_client_secret: bool = False
 
-    def get_userinfo(self, user: models_users.CoreUser) -> dict[str, Any]:
+    def get_userinfo(self, user: schemas_users.CoreUser) -> dict[str, Any]:
         """
         Return information about the user in a format understandable by the client.
         This method return the result of Openid connect userinfo endpoint.
@@ -147,7 +146,7 @@ class NextcloudAuthClient(BaseAuthClient):
     # Required claims : https://github.com/pulsejet/nextcloud-oidc-login/blob/0c072ecaa02579384bb5e10fbb9d219bbd96cfb8/3rdparty/jumbojett/openid-connect-php/src/OpenIDConnectClient.php#L1016
 
     @classmethod
-    def get_userinfo(cls, user: models_users.CoreUser):
+    def get_userinfo(cls, user: schemas_users.CoreUser):
         # For Nextcloud, various claims can be provided.
         # See https://github.com/pulsejet/nextcloud-oidc-login#config for claim names
 
@@ -159,14 +158,14 @@ class NextcloudAuthClient(BaseAuthClient):
             "groups": [group.name for group in user.groups] + [user.account_type.value],
             "email": user.email,
             "picture": f"https://hyperion.myecl.fr/users/{user.id}/profile-picture",
-            "is_admin": is_user_member_of_any_group(user, [GroupType.admin]),
+            "is_admin": any(group.id == GroupType.admin for group in user.groups),
         }
 
 
 class PiwigoAuthClient(BaseAuthClient):
     permission = AuthPermissions.piwigo
 
-    def get_userinfo(self, user: models_users.CoreUser) -> dict[str, Any]:
+    def get_userinfo(self, user: schemas_users.CoreUser) -> dict[str, Any]:
         """
         Return information about the user in a format understandable by the client.
         This method return the result of Openid connect userinfo endpoint.
@@ -200,7 +199,7 @@ class HedgeDocAuthClient(BaseAuthClient):
     permission = AuthPermissions.hedgedoc
 
     @classmethod
-    def get_userinfo(cls, user: models_users.CoreUser):
+    def get_userinfo(cls, user: schemas_users.CoreUser):
         return {
             "sub": user.id,
             "name": user.firstname,
@@ -218,7 +217,7 @@ class WikijsAuthClient(BaseAuthClient):
     permission = AuthPermissions.wikijs
 
     @classmethod
-    def get_userinfo(cls, user: models_users.CoreUser):
+    def get_userinfo(cls, user: schemas_users.CoreUser):
         return {
             "sub": user.id,
             "name": user.full_name,
@@ -240,7 +239,7 @@ class SynapseAuthClient(BaseAuthClient):
     permission = AuthPermissions.synapse
 
     @classmethod
-    def get_userinfo(cls, user: models_users.CoreUser):
+    def get_userinfo(cls, user: schemas_users.CoreUser):
         # Accepted characters are [a-z] [0-9] `.` and `-`. Spaces are replaced by `-` and accents are removed.
         username = (
             unidecode.unidecode(f"{user.firstname.strip()}.{user.name.strip()}")
@@ -265,7 +264,7 @@ class MinecraftAuthClient(BaseAuthClient):
     permission = AuthPermissions.minecraft
 
     @classmethod
-    def get_userinfo(cls, user: models_users.CoreUser):
+    def get_userinfo(cls, user: schemas_users.CoreUser):
         return {
             "sub": user.id,
             "preferred_username": user.nickname or user.firstname,
@@ -288,7 +287,7 @@ class OpenProjectAuthClient(BaseAuthClient):
     permission = AuthPermissions.openproject
 
     @classmethod
-    def get_userinfo(cls, user: models_users.CoreUser):
+    def get_userinfo(cls, user: schemas_users.CoreUser):
         return {
             "sub": user.id,
             "name": user.full_name,
@@ -312,7 +311,7 @@ class RalllyAuthClient(BaseAuthClient):
     permission = AuthPermissions.rallly
 
     @classmethod
-    def get_userinfo(cls, user: models_users.CoreUser):
+    def get_userinfo(cls, user: schemas_users.CoreUser):
         return {
             "sub": user.id,
             "name": user.full_name,
@@ -334,7 +333,7 @@ class DocumensoAuthClient(BaseAuthClient):
     permission = AuthPermissions.documenso
 
     @classmethod
-    def get_userinfo(cls, user: models_users.CoreUser):
+    def get_userinfo(cls, user: schemas_users.CoreUser):
         return {
             "sub": user.id,
             "name": user.full_name,
@@ -363,7 +362,7 @@ class OverleafAuthClient(BaseAuthClient):
     permission = AuthPermissions.overleaf
 
     @classmethod
-    def get_userinfo(cls, user: models_users.CoreUser):
+    def get_userinfo(cls, user: schemas_users.CoreUser):
         # see https://github.com/jaredhanson/passport-openidconnect/blob/master/lib/profile.js
         # and https://github.com/ayaka-notes/ayakaleaf-pro/blob/server-pro/services/web/modules/authentication/oidc/app/src/OIDCModuleManager.mjs
         return {
@@ -371,7 +370,7 @@ class OverleafAuthClient(BaseAuthClient):
             "given_name": user.firstname,
             "family_name": user.name,
             "email": user.email,
-            "is_admin": is_user_member_of_any_group(user, [GroupType.admin]),
+            "is_admin": any(group.id == GroupType.admin for group in user.groups),
         }
 
 
@@ -393,7 +392,7 @@ class PlankaAuthClient(BaseAuthClient):
     permission = AuthPermissions.planka
 
     @classmethod
-    def get_userinfo(cls, user: models_users.CoreUser):
+    def get_userinfo(cls, user: schemas_users.CoreUser):
         return {
             "sub": user.id,
             "name": user.full_name,
@@ -405,7 +404,7 @@ class PlankaAuthClient(BaseAuthClient):
 class SlashAuthClient(BaseAuthClient):
     permission = AuthPermissions.slash
 
-    def get_userinfo(self, user: models_users.CoreUser) -> dict[str, Any]:
+    def get_userinfo(self, user: schemas_users.CoreUser) -> dict[str, Any]:
         """
         See oidc specifications and `app.endpoints.auth.auth_get_userinfo` for more information:
         https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
