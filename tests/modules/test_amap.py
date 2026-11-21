@@ -118,20 +118,20 @@ async def init_objects() -> None:
     await add_object_to_db(cash)
 
 
-def test_get_products(client: TestClient) -> None:
+def test_get_products(client_with_redis: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
-    response = client.get(
+    response = client_with_redis.get(
         "/amap/products",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
 
 
-def test_create_product(client: TestClient) -> None:
+def test_create_product(client_with_redis: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
-    response = client.post(
+    response = client_with_redis.post(
         "/amap/products",
         json={"name": "test", "price": 10, "category": "test"},
         headers={"Authorization": f"Bearer {token}"},
@@ -139,21 +139,21 @@ def test_create_product(client: TestClient) -> None:
     assert response.status_code == 201
 
 
-def test_get_product_by_id(client: TestClient) -> None:
+def test_get_product_by_id(client_with_redis: TestClient) -> None:
     # The user doesn't need to be part of group amap to get a product
     student_token = create_api_access_token(student_user)
 
-    response = client.get(
+    response = client_with_redis.get(
         f"/amap/products/{product.id}",
         headers={"Authorization": f"Bearer {student_token}"},
     )
     assert response.status_code == 200
 
 
-def test_edit_product(client: TestClient) -> None:
+def test_edit_product(client_with_redis: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
-    response = client.patch(
+    response = client_with_redis.patch(
         f"/amap/products/{product.id}",
         json={"name": "testupdate", "price": 10, "category": "test"},
         headers={"Authorization": f"Bearer {token}"},
@@ -161,31 +161,31 @@ def test_edit_product(client: TestClient) -> None:
     assert response.status_code == 204
 
 
-def test_delete_product(client: TestClient) -> None:
+def test_delete_product(client_with_redis: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
-    response = client.delete(
+    response = client_with_redis.delete(
         f"/amap/products/{deletable_product.id}",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
 
 
-def test_get_deliveries(client: TestClient) -> None:
+def test_get_deliveries(client_with_redis: TestClient) -> None:
     # The user don't need to be part of group amap to get a delivery
     student_token = create_api_access_token(student_user)
 
-    response = client.get(
+    response = client_with_redis.get(
         "/amap/deliveries",
         headers={"Authorization": f"Bearer {student_token}"},
     )
     assert response.status_code == 200
 
 
-def test_create_delivery(client: TestClient) -> None:
+def test_create_delivery(client_with_redis: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
-    response = client.post(
+    response = client_with_redis.post(
         "/amap/deliveries",
         json={
             "name": "Livraison",
@@ -198,20 +198,20 @@ def test_create_delivery(client: TestClient) -> None:
     assert response.status_code == 201
 
 
-def test_delete_delivery(client: TestClient) -> None:
+def test_delete_delivery(client_with_redis: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
-    response = client.delete(
+    response = client_with_redis.delete(
         f"/amap/deliveries/{deletable_delivery.id}",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
 
 
-def test_edit_delivery(client: TestClient) -> None:
+def test_edit_delivery(client_with_redis: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
-    response = client.patch(
+    response = client_with_redis.patch(
         f"/amap/deliveries/{delivery.id}",
         json={
             "name": "Livraison editee",
@@ -223,10 +223,10 @@ def test_edit_delivery(client: TestClient) -> None:
     assert response.status_code == 204
 
 
-def test_add_product_to_delivery(client: TestClient) -> None:
+def test_add_product_to_delivery(client_with_redis: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
-    response = client.post(
+    response = client_with_redis.post(
         f"/amap/deliveries/{delivery.id}/products",
         json={"products_ids": [product.id]},
         headers={"Authorization": f"Bearer {token}"},
@@ -234,9 +234,9 @@ def test_add_product_to_delivery(client: TestClient) -> None:
     assert response.status_code == 201
 
 
-def test_remove_product_from_delivery(client: TestClient) -> None:
+def test_remove_product_from_delivery(client_with_redis: TestClient) -> None:
     token = create_api_access_token(admin_user)
-    response = client.request(
+    response = client_with_redis.request(
         method="DELETE",
         url=f"/amap/deliveries/{delivery.id}/products",
         json={"products_ids": [product.id, "notaproduct"]},
@@ -245,7 +245,7 @@ def test_remove_product_from_delivery(client: TestClient) -> None:
     assert response.status_code == 204
 
     # Recreate product for future tests
-    response = client.post(
+    response = client_with_redis.post(
         f"/amap/deliveries/{delivery.id}/products",
         json={"products_ids": [product.id]},
         headers={"Authorization": f"Bearer {token}"},
@@ -253,38 +253,38 @@ def test_remove_product_from_delivery(client: TestClient) -> None:
     assert response.status_code == 201
 
 
-def test_get_orders_from_delivery(client: TestClient) -> None:
+def test_get_orders_from_delivery(client_with_redis: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
-    response = client.get(
+    response = client_with_redis.get(
         f"/amap/deliveries/{delivery.id}/orders",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
 
 
-def test_get_order_by_id(client: TestClient) -> None:
+def test_get_order_by_id(client_with_redis: TestClient) -> None:
     token = create_api_access_token(admin_user)
-    response = client.get(
+    response = client_with_redis.get(
         f"/amap/orders/{order.order_id}",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
 
 
-def test_make_delivery_orderable(client: TestClient) -> None:
+def test_make_delivery_orderable(client_with_redis: TestClient) -> None:
     token = create_api_access_token(admin_user)
-    response = client.post(
+    response = client_with_redis.post(
         f"/amap/deliveries/{delivery.id}/openordering",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 204
 
 
-def test_add_order_to_delivery(client: TestClient) -> None:
+def test_add_order_to_delivery(client_with_redis: TestClient) -> None:
     token = create_api_access_token(student_user)
 
-    response = client.post(
+    response = client_with_redis.post(
         "/amap/orders",
         json={
             "user_id": student_user.id,
@@ -300,10 +300,10 @@ def test_add_order_to_delivery(client: TestClient) -> None:
     assert response.status_code == 201
 
 
-def test_edit_order(client: TestClient) -> None:
+def test_edit_order(client_with_redis: TestClient) -> None:
     token = create_api_access_token(student_user)
 
-    response = client.patch(
+    response = client_with_redis.patch(
         f"/amap/orders/{order.order_id}",
         json={
             "user_id": student_user.id,
@@ -320,10 +320,10 @@ def test_edit_order(client: TestClient) -> None:
     assert response.status_code == 204
 
 
-def test_remove_order(client: TestClient) -> None:
+def test_remove_order(client_with_redis: TestClient) -> None:
     token = create_api_access_token(student_user)
 
-    response = client.delete(
+    response = client_with_redis.delete(
         f"/amap/orders/{order.order_id}",
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -331,40 +331,40 @@ def test_remove_order(client: TestClient) -> None:
     assert response.status_code == 204
 
 
-def test_remove_order_by_admin(client: TestClient) -> None:
+def test_remove_order_by_admin(client_with_redis: TestClient) -> None:
     token = create_api_access_token(student_user)
     token_amap = create_api_access_token(admin_user)
 
-    response = client.delete(
+    response = client_with_redis.delete(
         f"/amap/orders/{deletable_order_by_admin.order_id}",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 400
 
-    response = client.delete(
+    response = client_with_redis.delete(
         f"/amap/orders/{deletable_order_by_admin.order_id}",
         headers={"Authorization": f"Bearer {token_amap}"},
     )
     assert response.status_code == 204
 
 
-def test_get_users_cash(client: TestClient) -> None:
+def test_get_users_cash(client_with_redis: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
-    response = client.get(
+    response = client_with_redis.get(
         "/amap/users/cash",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
 
 
-def test_get_cash_by_id(client: TestClient) -> None:
+def test_get_cash_by_id(client_with_redis: TestClient) -> None:
     amap_token = create_api_access_token(admin_user)
     student_token = create_api_access_token(student_user)
 
     # The student user who is not part of AMAP group
     # should be able to access its own cash
-    response = client.get(
+    response = client_with_redis.get(
         f"/amap/users/{student_user.id}/cash",
         headers={"Authorization": f"Bearer {student_token}"},
     )
@@ -372,24 +372,24 @@ def test_get_cash_by_id(client: TestClient) -> None:
 
     # The student user who is not part of AMAP group
     # should not be able to access an other user cash
-    response = client.get(
+    response = client_with_redis.get(
         f"/amap/users/{admin_user.id}/cash",
         headers={"Authorization": f"Bearer {student_token}"},
     )
     assert response.status_code == 403
 
     # The AMAP user should be able to access an other user cash
-    response = client.get(
+    response = client_with_redis.get(
         f"/amap/users/{student_user.id}/cash",
         headers={"Authorization": f"Bearer {amap_token}"},
     )
     assert response.status_code == 200
 
 
-def test_create_cash_of_user(client: TestClient) -> None:
+def test_create_cash_of_user(client_with_redis: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
-    response = client.post(
+    response = client_with_redis.post(
         f"/amap/users/{admin_user.id}/cash",
         json={"balance": 50, "user_id": admin_user.id},
         headers={"Authorization": f"Bearer {token}"},
@@ -397,16 +397,16 @@ def test_create_cash_of_user(client: TestClient) -> None:
     assert response.status_code == 201
 
 
-def test_edit_cash_by_id(client: TestClient) -> None:
+def test_edit_cash_by_id(client_with_redis: TestClient) -> None:
     token = create_api_access_token(admin_user)
 
-    response = client.post(
+    response = client_with_redis.post(
         f"/amap/users/{admin_user.id}/cash",
         json={"balance": 50, "user_id": admin_user.id},
         headers={"Authorization": f"Bearer {token}"},
     )
 
-    response = client.patch(
+    response = client_with_redis.patch(
         f"/amap/users/{admin_user.id}/cash",
         json={"balance": 45},
         headers={"Authorization": f"Bearer {token}"},
@@ -414,10 +414,10 @@ def test_edit_cash_by_id(client: TestClient) -> None:
     assert response.status_code == 204
 
 
-def test_get_orders_of_user(client: TestClient) -> None:
+def test_get_orders_of_user(client_with_redis: TestClient) -> None:
     token = create_api_access_token(student_user)
 
-    response = client.get(
+    response = client_with_redis.get(
         f"/amap/users/{student_user.id}/orders",
         headers={"Authorization": f"Bearer {token}"},
     )
