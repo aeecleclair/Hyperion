@@ -6,6 +6,8 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.groups.groups_type import AccountType
+from app.core.schools.schools_type import SchoolType
 from app.modules.raid import cruds_raid, schemas_raid
 from app.modules.raid.endpoints_raid import set_security_file
 
@@ -38,6 +40,17 @@ def _create_mock_user(user_id: str = "user_123") -> Mock:
     user.groups = []
     user.account_type = None
     return user
+
+
+def _create_mock_token(user_id: str = "user_123") -> Mock:
+    """Create a mock TokenData for testing."""
+    token = Mock()
+    token.sub = user_id
+    token.id = user_id
+    token.group_ids = []
+    token.account_type = AccountType.student
+    token.school_id = SchoolType.centrale_lyon
+    return token
 
 
 def _create_mock_edition() -> Mock:
@@ -106,7 +119,7 @@ class TestSecurityFileFKViolation:
     async def test_set_security_file_update_existing_success(self) -> None:
         """Test updating an existing security file works without FK violation."""
         db = _create_mock_db()
-        user = _create_mock_user()
+        token = _create_mock_token()
         edition = _create_mock_edition()
         team = _create_mock_team()
         participant = _create_mock_participant(security_file_id="existing_sec_file_id")
@@ -115,7 +128,7 @@ class TestSecurityFileFKViolation:
         # Mock the permission check
         with (
             patch(
-                "app.modules.raid.endpoints_raid.has_user_permission",
+                "app.modules.raid.endpoints_raid.has_user_token_permission",
                 new=AsyncMock(return_value=False),
             ),
             patch(
@@ -144,7 +157,7 @@ class TestSecurityFileFKViolation:
                 security_file=security_file_base,
                 participant_id="user_123",
                 db=db,
-                user=user,
+                token=token,
                 edition=edition,
             )
 
@@ -161,7 +174,7 @@ class TestSecurityFileFKViolation:
     async def test_set_security_file_create_new_when_none_exists(self) -> None:
         """Test creating a new security file when participant has none."""
         db = _create_mock_db()
-        user = _create_mock_user()
+        token = _create_mock_token()
         edition = _create_mock_edition()
         team = _create_mock_team()
         participant = _create_mock_participant(security_file_id=None)
@@ -172,7 +185,7 @@ class TestSecurityFileFKViolation:
 
         with (
             patch(
-                "app.modules.raid.endpoints_raid.has_user_permission",
+                "app.modules.raid.endpoints_raid.has_user_token_permission",
                 new=AsyncMock(return_value=False),
             ),
             patch(
@@ -201,7 +214,7 @@ class TestSecurityFileFKViolation:
                 security_file=security_file_base,
                 participant_id="user_123",
                 db=db,
-                user=user,
+                token=token,
                 edition=edition,
             )
 
@@ -225,7 +238,7 @@ class TestSecurityFileFKViolation:
         security_file.id.
         """
         db = _create_mock_db()
-        user = _create_mock_user()
+        token = _create_mock_token()
         edition = _create_mock_edition()
         team = _create_mock_team()
         security_file_id = "sec_file_123"
@@ -234,7 +247,7 @@ class TestSecurityFileFKViolation:
 
         with (
             patch(
-                "app.modules.raid.endpoints_raid.has_user_permission",
+                "app.modules.raid.endpoints_raid.has_user_token_permission",
                 new=AsyncMock(return_value=False),
             ),
             patch(
@@ -263,7 +276,7 @@ class TestSecurityFileFKViolation:
                 security_file=security_file_base,
                 participant_id="user_123",
                 db=db,
-                user=user,
+                token=token,
                 edition=edition,
             )
 
@@ -343,7 +356,7 @@ class TestSecurityFileFKEdgeCases:
         2. A race condition during creation
         """
         db = _create_mock_db()
-        user = _create_mock_user()
+        token: Mock = _create_mock_token()
         edition = _create_mock_edition()
         team = _create_mock_team()
         participant = _create_mock_participant(security_file_id="non_existent_sec_file")
@@ -351,7 +364,7 @@ class TestSecurityFileFKEdgeCases:
 
         with (
             patch(
-                "app.modules.raid.endpoints_raid.has_user_permission",
+                "app.modules.raid.endpoints_raid.has_user_token_permission",
                 new=AsyncMock(return_value=False),
             ),
             patch(
@@ -377,7 +390,7 @@ class TestSecurityFileFKEdgeCases:
                     security_file=security_file_base,
                     participant_id="user_123",
                     db=db,
-                    user=user,
+                    token=token,
                     edition=edition,
                 )
 
@@ -429,7 +442,7 @@ class TestSecurityFileConsentRules:
                 security_file=security_file,
                 participant_id="user_123",
                 db=_create_mock_db(),
-                user=_create_mock_user(),
+                token=_create_mock_token(),
                 edition=_create_mock_edition(),
             )
         assert getattr(exc_info.value, "status_code", None) == 400
@@ -442,14 +455,14 @@ class TestSecurityFileConsentRules:
         """Existing file + no consent + no medical data: only the emergency
         contact is rewritten (update_security_file must NOT be called)."""
         db = _create_mock_db()
-        user = _create_mock_user()
+        token = _create_mock_token()
         edition = _create_mock_edition()
         participant = _create_mock_participant(security_file_id="existing_id")
         security_file = schemas_raid.SecurityFileBase(**self._base_kwargs())
 
         with (
             patch(
-                "app.modules.raid.endpoints_raid.has_user_permission",
+                "app.modules.raid.endpoints_raid.has_user_token_permission",
                 new=AsyncMock(return_value=False),
             ),
             patch(
@@ -478,7 +491,7 @@ class TestSecurityFileConsentRules:
                 security_file=security_file,
                 participant_id="user_123",
                 db=db,
-                user=user,
+                token=token,
                 edition=edition,
             )
 
@@ -496,14 +509,14 @@ class TestSecurityFileConsentRules:
     async def test_emergency_only_creation_nulls_medical_fields(self) -> None:
         """Creation without consent stores the emergency contact only."""
         db = _create_mock_db()
-        user = _create_mock_user()
+        token = _create_mock_token()
         edition = _create_mock_edition()
         participant = _create_mock_participant(security_file_id=None)
         security_file = schemas_raid.SecurityFileBase(**self._base_kwargs())
 
         with (
             patch(
-                "app.modules.raid.endpoints_raid.has_user_permission",
+                "app.modules.raid.endpoints_raid.has_user_token_permission",
                 new=AsyncMock(return_value=False),
             ),
             patch(
@@ -529,7 +542,7 @@ class TestSecurityFileConsentRules:
                 security_file=security_file,
                 participant_id="user_123",
                 db=db,
-                user=user,
+                token=token,
                 edition=edition,
             )
 
@@ -549,7 +562,7 @@ class TestSecurityFileConsentRules:
     async def test_consent_given_updates_everything(self) -> None:
         """With consent, the full file (medical + emergency) is updated."""
         db = _create_mock_db()
-        user = _create_mock_user()
+        token = _create_mock_token()
         edition = _create_mock_edition()
         participant = _create_mock_participant(security_file_id="existing_id")
         security_file = schemas_raid.SecurityFileBase(
@@ -562,7 +575,7 @@ class TestSecurityFileConsentRules:
 
         with (
             patch(
-                "app.modules.raid.endpoints_raid.has_user_permission",
+                "app.modules.raid.endpoints_raid.has_user_token_permission",
                 new=AsyncMock(return_value=False),
             ),
             patch(
@@ -591,7 +604,7 @@ class TestSecurityFileConsentRules:
                 security_file=security_file,
                 participant_id="user_123",
                 db=db,
-                user=user,
+                token=token,
                 edition=edition,
             )
 

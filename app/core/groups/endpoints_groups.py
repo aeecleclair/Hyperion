@@ -10,17 +10,19 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import schemas_auth
 from app.core.groups import cruds_groups, models_groups, schemas_groups
 from app.core.groups.factory_groups import CoreGroupsFactory
 from app.core.groups.groups_type import GroupType
 from app.core.notification.utils_notification import get_topics_restricted_to_group_id
-from app.core.users import cruds_users
+from app.core.users import cruds_users, schemas_users
 from app.dependencies import (
+    filter_user_token,
     get_db,
     get_notification_manager,
     get_request_id,
-    is_user_an_ecl_member,
-    is_user_in,
+    get_request_user,
+    is_user_admin,
 )
 from app.types.module import CoreModule
 from app.utils.communication.notifications import NotificationManager
@@ -44,7 +46,7 @@ hyperion_security_logger = logging.getLogger("hyperion.security")
 )
 async def read_groups(
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_an_ecl_member),
+    user=Depends(filter_user_token()),
 ):
     """
     Return all groups from database as a list of dictionaries
@@ -61,7 +63,7 @@ async def read_groups(
 async def read_group(
     group_id: str,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.TokenData = Depends(is_user_admin()),
 ):
     """
     Return group with id from database as a dictionary. This includes a list of users being members of the group.
@@ -83,7 +85,7 @@ async def read_group(
 async def create_group(
     group: schemas_groups.CoreGroupCreate,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.TokenData = Depends(is_user_admin()),
 ):
     """
     Create a new group.
@@ -115,7 +117,7 @@ async def update_group(
     group_id: str,
     group_update: schemas_groups.CoreGroupUpdate,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.TokenData = Depends(is_user_admin()),
 ):
     """
     Update the name or the description of a group.
@@ -149,7 +151,8 @@ async def update_group(
 async def create_membership(
     membership: schemas_groups.CoreMembership,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    user: schemas_users.CoreUser = Depends(get_request_user()),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -163,7 +166,7 @@ async def create_membership(
     group_db = await cruds_groups.get_group_by_id(group_id=membership.group_id, db=db)
     if group_db is None:
         raise HTTPException(status_code=400, detail="Invalid group_id")
-    user_db = await cruds_users.get_user_by_id(user_id=membership.user_id, db=db)
+    user_db = await cruds_users.get_user_by_id_schema(user_id=membership.user_id, db=db)
     if user_db is None:
         raise HTTPException(status_code=400, detail="Invalid user_id")
 
@@ -186,7 +189,8 @@ async def create_membership(
 async def create_batch_membership(
     batch_membership: schemas_groups.CoreBatchMembership,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    user: schemas_users.CoreUser = Depends(get_request_user()),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -208,7 +212,7 @@ async def create_batch_membership(
     )
 
     for email in batch_membership.user_emails:
-        user_db = await cruds_users.get_user_by_email(db=db, email=email)
+        user_db = await cruds_users.get_user_by_email_schema(db=db, email=email)
 
         # We only want to add existing users to the group
         if user_db is not None:
@@ -232,7 +236,8 @@ async def create_batch_membership(
 async def delete_membership(
     membership: schemas_groups.CoreMembershipDelete,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    user: schemas_users.CoreUser = Depends(get_request_user()),
     request_id: str = Depends(get_request_id),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
@@ -273,7 +278,8 @@ async def delete_membership(
 async def delete_batch_membership(
     batch_membership: schemas_groups.CoreBatchDeleteMembership,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.TokenData = Depends(is_user_admin()),
+    user: schemas_users.CoreUser = Depends(get_request_user()),
     request_id: str = Depends(get_request_id),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
@@ -321,7 +327,7 @@ async def delete_batch_membership(
 async def delete_group(
     group_id: str,
     db: AsyncSession = Depends(get_db),
-    user=Depends(is_user_in(GroupType.admin)),
+    token: schemas_auth.TokenData = Depends(is_user_admin()),
 ):
     """
     Delete group from database.
