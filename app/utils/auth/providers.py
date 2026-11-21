@@ -364,10 +364,12 @@ class OverleafAuthClient(BaseAuthClient):
 
     @classmethod
     def get_userinfo(cls, user: models_users.CoreUser):
+        # see https://github.com/jaredhanson/passport-openidconnect/blob/master/lib/profile.js
+        # and https://github.com/ayaka-notes/ayakaleaf-pro/blob/server-pro/services/web/modules/authentication/oidc/app/src/OIDCModuleManager.mjs
         return {
             "sub": user.id,
-            "firstname": user.firstname,
-            "lastname": user.name,
+            "given_name": user.firstname,
+            "family_name": user.name,
             "email": user.email,
             "is_admin": is_user_member_of_any_group(user, [GroupType.admin]),
         }
