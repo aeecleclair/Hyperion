@@ -655,7 +655,7 @@ async def vote(
     # Check if the user has already voted for this section.
     has_voted = await cruds_campaign.has_user_voted_for_section(
         db=db,
-        user_id=token.id,
+        user_id=token.user_id,
         section_id=campaign_list.section_id,
     )
     if has_voted:
@@ -673,7 +673,7 @@ async def vote(
     # Mark user has voted for the given section.
     await cruds_campaign.mark_has_voted(
         db=db,
-        user_id=token.id,
+        user_id=token.user_id,
         section_id=campaign_list.section_id,
     )
     await cruds_campaign.add_vote(
@@ -706,7 +706,7 @@ async def get_sections_already_voted(
             detail=f"You can only vote if the vote is open. The current status is {status}",
         )
 
-    has_voted = await cruds_campaign.get_has_voted(db=db, user_id=token.id)
+    has_voted = await cruds_campaign.get_has_voted(db=db, user_id=token.user_id)
     return [section.section_id for section in has_voted]
 
 

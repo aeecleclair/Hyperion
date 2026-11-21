@@ -20,7 +20,7 @@ async def get_user_notification_topics(
     )
 
     memberships = await cruds_notification.get_topic_memberships_by_user_id(
-        user_id=token.id,
+        user_id=token.user_id,
         db=db,
     )
 
@@ -33,7 +33,7 @@ async def get_user_notification_topics(
             if token.account_type == AccountType.external:
                 continue
         if topic.restrict_to_group_id:
-            if not token.is_from_any_group(allowed_groups=[topic.restrict_to_group_id]):
+            if not token.is_from_any_group([topic.restrict_to_group_id]):
                 continue
 
         result.append(

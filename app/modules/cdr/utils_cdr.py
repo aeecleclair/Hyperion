@@ -126,7 +126,7 @@ async def is_user_in_a_seller_group(
         )
 
     if token.is_from_any_group(
-        allowed_groups=[seller.group_id],
+        [seller.group_id],
     ) or await token.check_permission(
         CdrPermissions.manage_cdr,
         db,

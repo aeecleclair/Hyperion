@@ -113,7 +113,7 @@ async def edit_raffle(
     if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
-            detail=f"{token.id} user is unauthorized to manage the raffle {raffle_id}",
+            detail=f"{token.user_id} user is unauthorized to manage the raffle {raffle_id}",
         )
 
     if not (raffle.status == RaffleStatusType.creation):
@@ -152,7 +152,7 @@ async def delete_raffle(
     if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
-            detail=f"{token.id} user is unauthorized to manage the raffle {raffle_id}",
+            detail=f"{token.user_id} user is unauthorized to manage the raffle {raffle_id}",
         )
 
     await cruds_raffle.delete_tickets_by_raffleid(db=db, raffle_id=raffle_id)
@@ -238,7 +238,7 @@ async def create_current_raffle_logo(
     if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
-            detail=f"{token.id} user is unauthorized to manage the raffle {raffle_id}",
+            detail=f"{token.user_id} user is unauthorized to manage the raffle {raffle_id}",
         )
 
     if not (raffle.status == RaffleStatusType.creation):
@@ -329,7 +329,7 @@ async def create_packticket(
     if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
-            detail=f"{token.id} user is unauthorized to manage the raffle {packticket.raffle_id}",
+            detail=f"{token.user_id} user is unauthorized to manage the raffle {packticket.raffle_id}",
         )
 
     db_packticket = models_raffle.PackTicket(
@@ -373,7 +373,7 @@ async def edit_packticket(
     if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
-            detail=f"{token.id} user is unauthorized to manage the raffle {packticket.raffle_id}",
+            detail=f"{token.user_id} user is unauthorized to manage the raffle {packticket.raffle_id}",
         )
 
     if not (raffle.status == RaffleStatusType.creation):
@@ -420,7 +420,7 @@ async def delete_packticket(
     if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
-            detail=f"{token.id} user is unauthorized to manage the raffle {packticket.raffle_id}",
+            detail=f"{token.user_id} user is unauthorized to manage the raffle {packticket.raffle_id}",
         )
 
     await cruds_raffle.delete_packticket(packticket_id=packticket_id, db=db)
@@ -487,14 +487,14 @@ async def buy_ticket(
 
     balance: models_raffle.Cash | None = await cruds_raffle.get_cash_by_id(
         db=db,
-        user_id=token.id,
+        user_id=token.user_id,
     )
 
     # If the balance does not exist, we create a new one with a balance of 0
     if not balance:
         new_cash_db = schemas_raffle.CashDB(
             balance=0,
-            user_id=token.id,
+            user_id=token.user_id,
         )
         balance = models_raffle.Cash(
             **new_cash_db.model_dump(),
@@ -507,14 +507,14 @@ async def buy_ticket(
         schemas_raffle.TicketComplete(
             id=str(uuid.uuid4()),
             pack_id=pack_id,
-            user_id=token.id,
+            user_id=token.user_id,
             user=user,
             pack_ticket=pack_ticket,
         )
         for i in range(pack_ticket.pack_size)
     ]
 
-    redis_key = "raffle_" + token.id
+    redis_key = "raffle_" + token.user_id
 
     if not isinstance(redis_client, Redis) or locker_get(
         redis_client=redis_client,
@@ -532,13 +532,13 @@ async def buy_ticket(
         await cruds_raffle.create_ticket(tickets=tickets, db=db)
         await cruds_raffle.edit_cash(
             db=db,
-            user_id=token.id,
+            user_id=token.user_id,
             amount=new_amount,
         )
 
         display_name = user.full_name
         hyperion_raffle_logger.info(
-            f"Add_ticket_to_user: A pack of {pack_ticket.pack_size} tickets of type {pack_id} has been bought by user {display_name}({token.id}) for an amount of {pack_ticket.price}€. ({request_id})",
+            f"Add_ticket_to_user: A pack of {pack_ticket.pack_size} tickets of type {pack_id} has been bought by user {display_name}({token.user_id}) for an amount of {pack_ticket.price}€. ({request_id})",
         )
 
         return tickets
@@ -569,7 +569,7 @@ async def get_tickets_by_userid(
         raise HTTPException(status_code=404, detail="User not found")
 
     if not (
-        user_id == token.id
+        user_id == token.user_id
         or await token.check_permission(RafflePermissions.manage_raffle, db)
     ):
         raise HTTPException(
@@ -611,7 +611,7 @@ async def get_tickets_by_raffleid(
     if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
-            detail=f"{token.id} user is unauthorized to manage the raffle {raffle_id}",
+            detail=f"{token.user_id} user is unauthorized to manage the raffle {raffle_id}",
         )
 
     return tickets
@@ -658,7 +658,7 @@ async def create_prize(
     if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
-            detail=f"{token.id} user is unauthorized to manage the raffle {raffle.id}",
+            detail=f"{token.user_id} user is unauthorized to manage the raffle {raffle.id}",
         )
 
     if not (raffle.status == RaffleStatusType.creation):
@@ -702,7 +702,7 @@ async def edit_prize(
     if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
-            detail=f"{token.id} user is unauthorized to manage the raffle {raffle.id}",
+            detail=f"{token.user_id} user is unauthorized to manage the raffle {raffle.id}",
         )
 
     if not (raffle.status == RaffleStatusType.creation):
@@ -743,7 +743,7 @@ async def delete_prize(
     if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
-            detail=f"{token.id} user is unauthorized to manage the raffle {raffle.id}",
+            detail=f"{token.user_id} user is unauthorized to manage the raffle {raffle.id}",
         )
 
     await cruds_raffle.delete_prize(db=db, prize_id=prize_id)
@@ -799,7 +799,7 @@ async def create_prize_picture(
     if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
-            detail=f"{token.id} user is unauthorized to manage the raffle {raffle.id}",
+            detail=f"{token.user_id} user is unauthorized to manage the raffle {raffle.id}",
         )
 
     if not (raffle.status == RaffleStatusType.creation):
@@ -889,7 +889,7 @@ async def get_cash_by_id(
     if user_db is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if user_id == token.id or await token.check_permission(
+    if user_id == token.user_id or await token.check_permission(
         RafflePermissions.manage_cash,
         db,
     ):
@@ -1024,7 +1024,7 @@ async def draw_winner(
     if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
-            detail=f"{token.id} user is unauthorized to manage the raffle {raffle.id}",
+            detail=f"{token.user_id} user is unauthorized to manage the raffle {raffle.id}",
         )
 
     if prize.raffle.status != RaffleStatusType.lock:
@@ -1074,7 +1074,7 @@ async def open_raffle(
     if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
-            detail=f"{token.id} user is unauthorized to manage the raffle {raffle_id}",
+            detail=f"{token.user_id} user is unauthorized to manage the raffle {raffle_id}",
         )
 
     await cruds_raffle.change_raffle_status(
@@ -1114,7 +1114,7 @@ async def lock_raffle(
     if not token.is_from_any_group([raffle.group_id]):
         raise HTTPException(
             status_code=403,
-            detail=f"{token.id} user is unauthorized to manage the raffle {raffle_id}",
+            detail=f"{token.user_id} user is unauthorized to manage the raffle {raffle_id}",
         )
 
     await cruds_raffle.change_raffle_status(

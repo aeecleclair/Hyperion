@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
-from app.core.auth.dependencies_auth import filter_user_token, is_user_admin
+from app.core.auth.dependencies_auth import is_user_admin, is_user_token
 from app.core.documents import cruds_documents
 from app.core.documents.exceptions_documents import (
     DocumentCreationError,
@@ -50,7 +50,7 @@ core_module = CoreModule(
 )
 async def read_associations_memberships(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
 ):
     """
     Return all memberships from database as a list of dictionaries
@@ -67,7 +67,7 @@ async def read_associations_memberships(
 async def read_association_membership_by_id(
     association_membership_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
 ):
     """
     Return membership with the given ID.
@@ -108,7 +108,7 @@ async def read_association_membership(
     minimalEndDate: date = Query(None),
     maximalEndDate: date = Query(None),
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
 ):
     """
     Return membership with the given ID.
@@ -211,7 +211,7 @@ async def update_association_membership(
     association_membership_id: uuid.UUID,
     membership: schemas_memberships.MembershipEdit,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
 ):
     """
     Update a membership.
@@ -290,7 +290,7 @@ async def renew_users_membership_document(
     renewal_criterion: schemas_memberships.MembershipRenewalCriterion,
     membership_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
     settings=Depends(get_settings),
 ):
     """
@@ -407,7 +407,7 @@ async def delete_association_membership(
 async def read_user_memberships(
     user_id: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
 ):
     """
     Return all memberships for a user.
@@ -415,7 +415,7 @@ async def read_user_memberships(
     # Check if the user is trying to access their own memberships or if they are an admin
     # If the user is not an admin or the user_id does not match the current user,
     # filter the query to get the managed memberships from user's groups.
-    if user_id != token.id and not token.is_from_any_group([GroupType.admin]):
+    if user_id != token.user_id and not token.is_from_any_group([GroupType.admin]):
         return await cruds_memberships.get_user_memberships_by_user_id(
             db,
             user_id,
@@ -436,7 +436,7 @@ async def read_user_association_membership_history(
     user_id: str,
     association_membership_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
 ):
     """
     Return all user memberships for a specific association membership for a user.
@@ -472,7 +472,7 @@ async def create_user_membership(
     user_id: str,
     user_membership: schemas_memberships.UserMembershipBase,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
     settings=Depends(get_settings),
 ):
     """
@@ -530,7 +530,7 @@ async def add_batch_membership(
     association_membership_id: uuid.UUID,
     memberships_details: list[schemas_memberships.MembershipUserMappingEmail],
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
     settings=Depends(get_settings),
 ):
     """
@@ -605,7 +605,7 @@ async def update_user_membership(
     membership_id: uuid.UUID,
     user_membership: schemas_memberships.UserMembershipEdit,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
 ):
     """
     Update a user membership.
@@ -651,7 +651,7 @@ async def update_user_membership(
 async def renew_user_membership_document(
     membership_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
     settings=Depends(get_settings),
 ):
     """
@@ -718,7 +718,7 @@ async def renew_user_membership_document(
 async def delete_user_membership(
     membership_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
     settings=Depends(get_settings),
 ):
     """

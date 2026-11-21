@@ -55,7 +55,7 @@ def is_competition_user() -> Callable[
         """
         user = await cruds_sport_competition.load_competition_user_by_id(
             db=db,
-            user_id=token.id,
+            user_id=token.user_id,
             edition_id=edition.id,
         )
         if not user:
@@ -117,7 +117,7 @@ def has_user_competition_access(
             user_groups = (
                 await cruds_sport_competition.load_user_competition_groups_memberships(
                     db=db,
-                    user_id=token.id,
+                    user_id=token.user_id,
                     edition_id=edition.id,
                 )
             )

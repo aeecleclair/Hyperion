@@ -19,7 +19,7 @@ from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import cruds_auth, schemas_auth
-from app.core.auth.dependencies_auth import filter_user_token, is_user_admin
+from app.core.auth.dependencies_auth import is_user_admin, is_user_token
 from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification.utils_notification import get_user_notification_topics
@@ -117,7 +117,7 @@ async def search_users(
     includedGroups: list[str] = Query(default=[]),
     excludedGroups: list[str] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
 ):
     """
     Search for a user using Jaro_Winkler distance algorithm.
@@ -160,7 +160,7 @@ async def get_account_types(
     status_code=200,
 )
 async def read_current_user(
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
     user: schemas_users.CoreUser = Depends(get_request_user()),
 ):
     """
@@ -731,7 +731,7 @@ async def reset_password(
 async def migrate_mail(
     mail_migration: schemas_users.MailMigrationRequest,
     db: AsyncSession = Depends(get_db),
-    _: schemas_auth.TokenData = Depends(filter_user_token()),
+    _: schemas_auth.TokenData = Depends(is_user_token()),
     user: schemas_users.CoreUser = Depends(get_request_user()),
     mail_templates: calypsso.MailTemplates = Depends(get_mail_templates),
     settings: Settings = Depends(get_settings),
@@ -963,7 +963,7 @@ async def delete_user(
 async def update_current_user(
     user_update: schemas_users.CoreUserUpdate,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
 ):
     """
     Update the current user, the request should contain a JSON with the fields to change (not necessarily all fields) and their new value
@@ -971,7 +971,7 @@ async def update_current_user(
     **The user must be authenticated to use this endpoint**
     """
 
-    await cruds_users.update_user(db=db, user_id=token.id, user_update=user_update)
+    await cruds_users.update_user(db=db, user_id=token.user_id, user_update=user_update)
 
 
 @router.post(
@@ -1060,7 +1060,7 @@ async def update_user(
 )
 async def create_current_user_profile_picture(
     image: UploadFile = File(...),
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
     request_id: str = Depends(get_request_id),
 ):
     """
@@ -1072,7 +1072,7 @@ async def create_current_user_profile_picture(
     await save_file_as_data(
         upload_file=image,
         directory="profile-pictures",
-        filename=str(token.id),
+        filename=str(token.user_id),
         max_file_size=4 * 1024 * 1024,
         accepted_content_types=[
             ContentType.jpg,
@@ -1090,7 +1090,7 @@ async def create_current_user_profile_picture(
     status_code=200,
 )
 async def read_own_profile_picture(
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
 ):
     """
     Get the profile picture of the authenticated user.
@@ -1098,7 +1098,7 @@ async def read_own_profile_picture(
 
     return await get_file_from_data(
         directory="profile-pictures",
-        filename=str(token.id),
+        filename=str(token.user_id),
         default_asset="assets/images/default_profile_picture.png",
     )
 

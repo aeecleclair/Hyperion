@@ -68,7 +68,7 @@ async def read_school(
 async def create_school(
     school: schemas_schools.CoreSchoolBase,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.FunctionalTokenData = Depends(dependency=is_user_admin()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_admin()),
 ):
     """
     Create a new school and add users to it based on the email regex.

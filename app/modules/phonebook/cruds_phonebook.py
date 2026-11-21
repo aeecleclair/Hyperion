@@ -20,7 +20,7 @@ async def is_user_president(
 ) -> bool:
     membership = await get_membership_by_association_id_user_id_and_mandate_year(
         association_id=association_id,
-        user_id=token.id,
+        user_id=token.user_id,
         mandate_year=mandate_year,
         db=db,
     )

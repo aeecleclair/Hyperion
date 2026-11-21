@@ -5,7 +5,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
-from app.core.auth.dependencies_auth import filter_user_token, is_user_admin
+from app.core.auth.dependencies_auth import is_user_admin, is_user_token
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification import (
     cruds_notification,
@@ -50,7 +50,7 @@ core_module = CoreModule(
 async def register_firebase_device(
     firebase_token: str = Body(embed=True),
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
@@ -67,7 +67,7 @@ async def register_firebase_device(
     )
 
     if firebase_device is not None:
-        if firebase_device.user_id == token.id:
+        if firebase_device.user_id == token.user_id:
             # Update the register date
             await cruds_notification.update_firebase_devices_register_date(
                 firebase_device_token=firebase_token,
@@ -82,7 +82,7 @@ async def register_firebase_device(
         )
 
     user_topics = await cruds_notification.get_topic_memberships_by_user_id(
-        user_id=token.id,
+        user_id=token.user_id,
         db=db,
     )
     for topic_membership in user_topics:
@@ -92,7 +92,7 @@ async def register_firebase_device(
         )
 
     firebase_device = models_notification.FirebaseDevice(
-        user_id=token.id,
+        user_id=token.user_id,
         firebase_device_token=firebase_token,
         register_date=datetime.now(tz=UTC).date(),
     )
@@ -110,7 +110,7 @@ async def register_firebase_device(
 async def unregister_firebase_device(
     firebase_token: str,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
@@ -126,7 +126,7 @@ async def unregister_firebase_device(
     )
 
     topic_memberships = await cruds_notification.get_topic_memberships_by_user_id(
-        user_id=token.id,
+        user_id=token.user_id,
         db=db,
     )
     for topic_membership in topic_memberships:
@@ -143,7 +143,7 @@ async def unregister_firebase_device(
 async def subscribe_to_topic(
     topic_id: UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
@@ -163,7 +163,7 @@ async def subscribe_to_topic(
         )
 
     if topic.restrict_to_group_id is not None:
-        if not token.is_from_any_group(allowed_groups=[topic.restrict_to_group_id]):
+        if not token.is_from_any_group([topic.restrict_to_group_id]):
             raise HTTPException(
                 status_code=400,
                 detail="You are not in a group allowed to subscribe to this topic.",
@@ -175,7 +175,7 @@ async def subscribe_to_topic(
         )
 
     await notification_manager.subscribe_user_to_topic(
-        user_id=token.id,
+        user_id=token.user_id,
         topic_id=topic_id,
         db=db,
     )
@@ -188,7 +188,7 @@ async def subscribe_to_topic(
 async def unsubscribe_to_topic(
     topic_id: UUID,
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
     notification_manager: NotificationManager = Depends(get_notification_manager),
 ):
     """
@@ -198,7 +198,7 @@ async def unsubscribe_to_topic(
     """
 
     await notification_manager.unsubscribe_user_to_topic(
-        user_id=token.id,
+        user_id=token.user_id,
         topic_id=topic_id,
         db=db,
     )
@@ -211,7 +211,7 @@ async def unsubscribe_to_topic(
 )
 async def get_topics(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
 ):
     """
     Return all available topics for a user
@@ -266,7 +266,7 @@ async def send_test_notification(
         action_module="test",
     )
     await notification_tool.send_notification_to_user(
-        user_id=user_id or token.id,
+        user_id=user_id or token.user_id,
         message=message,
     )
 
@@ -292,7 +292,7 @@ async def send_test_future_notification(
         action_module="test",
     )
     await notification_tool.send_notification_to_users(
-        user_ids=[user_id or token.id],
+        user_ids=[user_id or token.user_id],
         message=message,
         defer_date=datetime.now(UTC) + timedelta(seconds=10),
         scheduler=scheduler,
@@ -369,6 +369,6 @@ async def get_devices(
     **Only admins can use this endpoint**
     """
     return await cruds_notification.get_firebase_devices_by_user_id(
-        user_id=user_id or token.id,
+        user_id=user_id or token.user_id,
         db=db,
     )

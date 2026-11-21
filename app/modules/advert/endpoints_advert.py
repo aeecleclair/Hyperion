@@ -280,7 +280,7 @@ async def create_advert(
         )
 
     if not token.is_from_any_group(
-        allowed_groups=[advertiser.group_manager_id],
+        [advertiser.group_manager_id],
     ):
         raise HTTPException(
             status_code=403,

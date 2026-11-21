@@ -262,7 +262,7 @@ async def get_applicant_bookings(
 
     **Only usable by the user**
     """
-    return await cruds_booking.get_applicant_bookings(db=db, applicant_id=token.id)
+    return await cruds_booking.get_applicant_bookings(db=db, applicant_id=token.user_id)
 
 
 @module.router.post(
@@ -342,9 +342,9 @@ async def edit_booking(
     )
 
     if not (
-        (token.id == booking.applicant_id and booking.decision == Decision.pending)
+        (token.user_id == booking.applicant_id and booking.decision == Decision.pending)
         or token.is_from_any_group(
-            allowed_groups=[booking.room.manager.group_id],
+            [booking.room.manager.group_id],
         )
     ):
         raise HTTPException(
@@ -417,7 +417,7 @@ async def delete_booking(
         booking_id=booking_id,
     )
 
-    if token.id == booking.applicant_id and booking.decision == Decision.pending:
+    if token.user_id == booking.applicant_id and booking.decision == Decision.pending:
         await cruds_booking.delete_booking(booking_id=booking_id, db=db)
 
     else:

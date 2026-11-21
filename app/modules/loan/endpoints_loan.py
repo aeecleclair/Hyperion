@@ -200,7 +200,7 @@ async def get_loans_by_loaner(
 
     # The user should be a member of the loaner's manager group
     if not token.is_from_any_group(
-        allowed_groups=[loaner.group_manager_id],
+        [loaner.group_manager_id],
     ):
         raise HTTPException(
             status_code=403,
@@ -477,7 +477,7 @@ async def get_current_user_loans(
 
     loans_borrowed = await cruds_loan.get_loans_by_borrower(
         db=db,
-        borrower_id=token.id,
+        borrower_id=token.user_id,
         returned=returned,
     )
 
@@ -524,7 +524,7 @@ async def get_current_user_loaners(
     user_loaners: list[models_loan.Loaner] = [
         loaner
         for loaner in existing_loaners
-        if token.is_from_any_group(allowed_groups=[loaner.group_manager_id])
+        if token.is_from_any_group([loaner.group_manager_id])
     ]
 
     return user_loaners

@@ -357,7 +357,7 @@ async def remove_product_from_delivery(
 async def get_orders_from_delivery(
     delivery_id: str,
     db: AsyncSession = Depends(get_db),
-    user_req: schemas_auth.TokenData = Depends(
+    token: schemas_auth.TokenData = Depends(
         is_user_allowed_to([AmapPermissions.manage_amap]),
     ),
 ):
@@ -457,7 +457,7 @@ async def add_order_to_delievery(
         raise HTTPException(status_code=400, detail="Invalid request")
 
     if not (
-        token.id == order.user_id
+        token.user_id == order.user_id
         or await token.check_permission(AmapPermissions.manage_amap, db)
     ):
         raise HTTPException(
@@ -588,7 +588,7 @@ async def edit_order_from_delivery(
         )
 
     if not (
-        token.id == previous_order.user_id
+        token.user_id == previous_order.user_id
         or await token.check_permission(AmapPermissions.manage_amap, db)
     ):
         raise HTTPException(
@@ -709,7 +709,7 @@ async def remove_order(
             detail=f"You can't remove an order if the delivery is not in orderable mode. The current mode is {delivery.status}",
         )
 
-    if not (token.id == order.user_id or is_user_admin):
+    if not (token.user_id == order.user_id or is_user_admin):
         raise HTTPException(
             status_code=403,
             detail="You are not allowed to delete this order",
@@ -894,7 +894,7 @@ async def get_cash_by_id(
         raise HTTPException(status_code=404, detail="User not found")
 
     if not (
-        user_id == token.id
+        user_id == token.user_id
         or await token.check_permission(AmapPermissions.manage_amap, db)
     ):
         raise HTTPException(
@@ -1043,7 +1043,7 @@ async def get_orders_of_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     if not (
-        user_id == token.id
+        user_id == token.user_id
         or await token.check_permission(AmapPermissions.manage_amap, db)
     ):
         raise HTTPException(

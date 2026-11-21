@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
-from app.core.auth.dependencies_auth import filter_user_token, is_user_admin
+from app.core.auth.dependencies_auth import is_user_admin, is_user_token
 from app.core.groups import cruds_groups, models_groups, schemas_groups
 from app.core.groups.factory_groups import CoreGroupsFactory
 from app.core.groups.groups_type import GroupType
@@ -41,7 +41,7 @@ hyperion_security_logger = logging.getLogger("hyperion.security")
 )
 async def read_groups(
     db: AsyncSession = Depends(get_db),
-    token: schemas_auth.FunctionalTokenData = Depends(filter_user_token()),
+    token: schemas_auth.FunctionalTokenData = Depends(is_user_token()),
 ):
     """
     Return all groups from database as a list of dictionaries
