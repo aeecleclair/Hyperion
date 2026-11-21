@@ -48,9 +48,7 @@ class FailedToUpdateObjectInDB(Exception):
     """Exception raised when an object cannot be updated in the database."""
 
 
-def override_init_state(
-    enable_redis: bool = True,
-):
+def override_init_state():
     async def override_init_state(
         app: FastAPI,
         settings: Settings,
@@ -64,13 +62,9 @@ def override_init_state(
 
         SessionLocal = init_test_SessionLocal(engine=engine)
 
-        redis_client = (
-            init_redis_client(
-                settings=settings,
-                hyperion_error_logger=hyperion_error_logger,
-            )
-            if enable_redis
-            else None
+        redis_client = init_redis_client(
+            settings=settings,
+            hyperion_error_logger=hyperion_error_logger,
         )
 
         # Even if we have a Redis client, we still want to use the OfflineScheduler for tests

@@ -9,6 +9,7 @@ from pydantic import BaseModel, field_validator
 from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth.dependencies_auth import get_cached_permission_requirements
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.utils.config import Settings
@@ -148,7 +149,6 @@ class FunctionalTokenData(TokenData):
         """
         Check if the user has the permission to perform the action.
         """
-        from app.core.auth.dependencies_auth import get_cached_permission_requirements
 
         if GroupType.admin in self.group_ids:
             return True
@@ -162,6 +162,13 @@ class FunctionalTokenData(TokenData):
             any(group_id in self.group_ids for group_id in groups)
             or self.account_type in account_types
         )
+
+    def __str__(self) -> str:
+        """
+        Return a string representation of the token data.
+        We override the default __str__ method to avoid printing the settings which can contain sensitive information.
+        """
+        return f"FunctionalTokenData(sub={self.sub}, iss={self.iss}, aud={self.aud}, cid={self.cid}, iat={self.iat}, nonce={self.nonce}, scopes={self.scopes}, account_type={self.account_type}, group_ids={self.group_ids}, school_id={self.school_id})"
 
 
 class TokenReq(BaseModel):
