@@ -6,16 +6,13 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import is_user_admin, is_user_allowed_to
 from app.core.groups import cruds_groups, models_groups
 from app.core.groups.groups_type import AccountType
 from app.core.permissions.cruds_permissions import get_permissions_by_permission_name
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users
-from app.dependencies import (
-    get_db,
-    is_user_admin,
-    is_user_allowed_to,
-)
+from app.dependencies import get_db
 from app.modules.phonebook import cruds_phonebook, schemas_phonebook
 from app.modules.phonebook.factory_phonebook import PhonebookFactory
 from app.modules.phonebook.types_phonebook import RoleTags

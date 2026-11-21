@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import filter_user_token, is_user_admin
 from app.core.documents import cruds_documents
 from app.core.documents.exceptions_documents import (
     DocumentCreationError,
@@ -28,12 +29,7 @@ from app.core.memberships.utils_memberships import (
 )
 from app.core.users import cruds_users
 from app.core.users.utils_users import user_model_to_schema
-from app.dependencies import (
-    filter_user_token,
-    get_db,
-    get_settings,
-    is_user_admin,
-)
+from app.dependencies import get_db, get_settings
 from app.types.module import CoreModule
 from app.utils.tools import is_user_token_from_any_group
 

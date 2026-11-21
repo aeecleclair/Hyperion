@@ -5,6 +5,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import filter_user_token, is_user_admin
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.notification import (
     cruds_notification,
@@ -13,12 +14,10 @@ from app.core.notification import (
 )
 from app.core.notification.utils_notification import get_user_notification_topics
 from app.dependencies import (
-    filter_user_token,
     get_db,
     get_notification_manager,
     get_notification_tool,
     get_scheduler,
-    is_user_admin,
 )
 from app.types.module import CoreModule
 from app.types.scheduler import Scheduler

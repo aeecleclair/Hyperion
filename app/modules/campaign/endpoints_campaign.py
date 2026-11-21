@@ -9,20 +9,13 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import is_user_allowed_to
 from app.core.groups.groups_type import AccountType
 from app.core.permissions import cruds_permissions, schemas_permissions
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import cruds_users
-from app.dependencies import (
-    get_db,
-    get_request_id,
-    is_user_allowed_to,
-)
-from app.modules.campaign import (
-    cruds_campaign,
-    models_campaign,
-    schemas_campaign,
-)
+from app.dependencies import get_db, get_request_id
+from app.modules.campaign import cruds_campaign, models_campaign, schemas_campaign
 from app.modules.campaign.factory_campaign import CampaignFactory
 from app.modules.campaign.types_campaign import ListType, StatusType
 from app.types import standard_responses

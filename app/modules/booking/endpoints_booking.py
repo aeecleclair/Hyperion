@@ -7,22 +7,15 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import is_user_allowed_to
 from app.core.groups import cruds_groups
 from app.core.groups.groups_type import AccountType
 from app.core.notification.schemas_notification import Message
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.users import schemas_users
-from app.dependencies import (
-    get_db,
-    get_notification_tool,
-    get_request_user,
-    is_user_allowed_to,
-)
-from app.modules.booking import (
-    cruds_booking,
-    models_booking,
-    schemas_booking,
-)
+from app.core.users.dependencies_users import get_request_user
+from app.dependencies import get_db, get_notification_tool
+from app.modules.booking import cruds_booking, models_booking, schemas_booking
 from app.modules.booking.factory_booking import BookingFactory
 from app.modules.booking.types_booking import Decision
 from app.types.module import Module

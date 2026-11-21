@@ -8,6 +8,7 @@ from pydantic import TypeAdapter
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import schemas_auth
+from app.core.auth.dependencies_auth import filter_user_token, is_user_admin
 from app.core.documents import cruds_documents, schemas_documents
 from app.core.documents.exceptions_documents import (
     DocumentCreationError,
@@ -34,12 +35,7 @@ from app.core.documents.utils_documents import (
 )
 from app.core.users import cruds_users
 from app.core.utils.config import Settings
-from app.dependencies import (
-    filter_user_token,
-    get_db,
-    get_settings,
-    is_user_admin,
-)
+from app.dependencies import get_db, get_settings
 from app.types.module import CoreModule
 from app.utils.tools import is_user_token_from_any_group
 
@@ -299,7 +295,8 @@ async def read_template(
     if db_template is None:
         raise HTTPException(status_code=404, detail="Template not found")
     if not is_user_token_from_any_group(
-        token, allowed_groups=[db_template.team.group_id]
+        token,
+        allowed_groups=[db_template.team.group_id],
     ):
         raise HTTPException(
             status_code=403,

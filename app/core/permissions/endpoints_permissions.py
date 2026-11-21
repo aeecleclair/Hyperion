@@ -10,13 +10,10 @@ from typing import TYPE_CHECKING, cast
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth.dependencies_auth import filter_user_token, is_user_admin
 from app.core.permissions import cruds_permissions, schemas_permissions
 from app.core.permissions.factory_permissions import CorePermissionsFactory
-from app.dependencies import (
-    filter_user_token,
-    get_db,
-    is_user_admin,
-)
+from app.dependencies import get_db
 from app.module import full_name_permissions_list, permissions_list
 from app.types.module import CoreModule
 from app.utils.tools import is_group_id_valid
