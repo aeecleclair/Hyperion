@@ -258,7 +258,8 @@ class WebsocketConnectionManager:
             )
 
             user_id = auth_utils.get_token_with_scopes(
-                [[ScopeType.API]], token_data
+                [[ScopeType.API]],
+                token_data,
             ).user_id
             user = await cruds_users.get_user_by_id_schema(
                 db=db,

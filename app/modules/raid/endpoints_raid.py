@@ -246,7 +246,9 @@ async def create_participant(
     """Create a participant. Identity (name/firstname/email/birthday/phone)
     is read from the CoreUser and must already be set there."""
     existing = await cruds_raid.get_participant_by_user_id(
-        token.user_id, edition.id, db
+        token.user_id,
+        edition.id,
+        db,
     )
     if existing is not None and existing.status != RaidRegistrationStatus.cancelled:
         raise HTTPException(status_code=403, detail="You are already a participant.")
@@ -1408,7 +1410,9 @@ async def get_payment_url(
         raise HTTPException(status_code=404, detail="Prices not set.")
 
     participant = await cruds_raid.get_participant_by_user_id(
-        token.user_id, edition.id, db
+        token.user_id,
+        edition.id,
+        db,
     )
     if not participant:
         raise HTTPException(status_code=403, detail="You are not a participant.")
