@@ -9,7 +9,7 @@ from app.core.users import cruds_users
 from app.core.users.factory_users import CoreUsersFactory
 from app.core.utils.config import Settings
 from app.modules.phonebook import cruds_phonebook, schemas_phonebook
-from app.modules.phonebook.types_phonebook import RoleTags
+from app.modules.phonebook.others.types_phonebook import RoleTags
 from app.types.factory import Factory
 
 faker = Faker("fr_FR")
