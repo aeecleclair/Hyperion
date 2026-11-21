@@ -134,6 +134,7 @@ async def disconnect_scheduler(
 async def init_websocket_connection_manager(
     settings: Settings,
 ) -> WebsocketConnectionManager:
+
     ws_manager = WebsocketConnectionManager(settings=settings)
 
     await ws_manager.connect_broadcaster()

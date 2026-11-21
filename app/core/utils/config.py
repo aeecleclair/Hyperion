@@ -258,6 +258,8 @@ class Settings(BaseSettings):
     # Rate limit requests based on REDIS_LIMIT and REDIS_WINDOW
     # A working Redis client is required to use the rate limiter
     ENABLE_RATE_LIMITER: bool = True
+    # Enable Redis cache for the application. This is used to cache some data in Redis to improve performance.
+    ENABLE_REDIS_CACHE: bool = True
 
     ##########################
     # Firebase Configuration #

@@ -4,37 +4,45 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from app.core.auth.dependencies_auth import filter_user_token
-from app.core.auth.schemas_auth import TokenData
+from app.core.auth.schemas_auth import FunctionalTokenData
 from app.core.groups import models_groups
 from app.core.groups.groups_type import AccountType, GroupType
 from app.core.users import models_users
+from app.core.utils.config import Settings
 from tests.commons import (
     create_groups_with_permissions,
     create_user_with_groups,
+    override_get_settings,
 )
 
 group1: models_groups.CoreGroup
 group2: models_groups.CoreGroup
 
-admin_user: TokenData
-user_with_needed_account_type: TokenData
-user_with_restricted_account_type: TokenData
-user_external: TokenData
-user_with_restricted_group: TokenData
-user_with_needed_group: TokenData
+admin_user: FunctionalTokenData
+user_with_needed_account_type: FunctionalTokenData
+user_with_restricted_account_type: FunctionalTokenData
+user_external: FunctionalTokenData
+user_with_restricted_group: FunctionalTokenData
+user_with_needed_group: FunctionalTokenData
 
 
-def construct_token_data_from_user(user: models_users.CoreUser) -> TokenData:
-    return TokenData(
+def construct_token_data_from_user(
+    user: models_users.CoreUser,
+    settings: Settings,
+) -> FunctionalTokenData:
+    return FunctionalTokenData(
         sub=user.id,
         group_ids=[str(group.id) for group in user.groups],
         account_type=user.account_type,
         school_id=user.school_id,
+        settings=settings,
     )
 
 
 @pytest_asyncio.fixture(scope="module", autouse=True)
 async def init_objects() -> None:
+    settings = override_get_settings()
+
     global \
         group1, \
         group2, \
@@ -58,15 +66,18 @@ async def init_objects() -> None:
         await create_user_with_groups(
             [GroupType.admin],
         ),
+        settings,
     )
     user_with_restricted_account_type = construct_token_data_from_user(
         await create_user_with_groups(
             [],
             AccountType.staff,
         ),
+        settings,
     )
     user_with_needed_account_type = construct_token_data_from_user(
         await create_user_with_groups([], AccountType.demo),
+        settings,
     )
 
     user_external = construct_token_data_from_user(
@@ -74,16 +85,19 @@ async def init_objects() -> None:
             [],
             AccountType.external,
         ),
+        settings,
     )
 
     user_with_restricted_group = construct_token_data_from_user(
         await create_user_with_groups(
             [group1.id],
         ),
+        settings,
     )
 
     user_with_needed_group = construct_token_data_from_user(
         await create_user_with_groups([group2.id]),
+        settings,
     )
 
 

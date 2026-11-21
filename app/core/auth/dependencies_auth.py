@@ -1,3 +1,4 @@
+import json
 import logging
 from collections.abc import Callable, Coroutine
 from typing import Any
@@ -10,11 +11,12 @@ from sqlalchemy.ext.asyncio import (
 
 from app.core.auth import schemas_auth
 from app.core.groups.groups_type import AccountType, GroupType
-from app.core.permissions.cruds_permissions import get_cached_permission_requirements
+from app.core.permissions.cruds_permissions import get_permissions_by_permission_name
 from app.core.permissions.type_permissions import ModulePermissions
 from app.core.utils import security
 from app.core.utils.config import Settings
 from app.dependencies import get_db, get_redis_client, get_request_id, get_settings
+from app.types.exceptions import TokenClassMismatchError
 from app.types.scopes_type import ScopeType
 from app.utils.auth import auth_utils
 
@@ -22,27 +24,78 @@ from app.utils.auth import auth_utils
 hyperion_access_logger = logging.getLogger("hyperion.access")
 hyperion_error_logger = logging.getLogger("hyperion.error")
 
+# Keep permissions in Redis for 1 hour
+PERMISSION_CACHE_TTL = 3600
+
+
+async def get_cached_permission_requirements(
+    permission_name: ModulePermissions,
+    db: AsyncSession,
+    settings: Settings,
+    redis_client: Redis | None = None,
+) -> tuple[list[str], list[AccountType]]:
+    cache_key = f"core:permissions:{permission_name}"
+    if settings.ENABLE_REDIS_CACHE and redis_client is not None:
+        cached_data = redis_client.get(cache_key)
+
+        if cached_data is not None:
+            # Decode the JSON payload from Redis
+            data = json.loads(cached_data)
+            account_types = [AccountType(acc) for acc in data["account_types"]]
+            return (data["groups"], account_types)
+
+    # Cache miss: fetch from PostgreSQL
+    perm_config = await get_permissions_by_permission_name(
+        db,
+        permission_name,
+    )
+
+    if settings.ENABLE_REDIS_CACHE and redis_client is not None:
+        # Save to Redis and set expiration
+        redis_client.set(
+            cache_key,
+            json.dumps(
+                {
+                    "groups": perm_config.groups,
+                    "account_types": [acc.value for acc in perm_config.account_types],
+                },
+            ),
+            ex=PERMISSION_CACHE_TTL,
+        )
+
+    return perm_config.groups, perm_config.account_types
+
 
 def get_token_data(
     settings: Settings = Depends(get_settings),
     token: str = Depends(security.oauth2_scheme),
     request_id: str = Depends(get_request_id),
-) -> schemas_auth.TokenData:
+    redis_client: Redis | None = Depends(get_redis_client),
+) -> schemas_auth.FunctionalTokenData:
     """
     Dependency that returns the token payload data
     """
-    return auth_utils.get_token_data(
+    token_data = auth_utils.get_token_data(
         settings=settings,
         token=token,
         request_id=request_id,
+    )
+    return schemas_auth.FunctionalTokenData(
+        sub=token_data.sub,
+        scopes=token_data.scopes,
+        account_type=token_data.account_type,
+        group_ids=token_data.group_ids,
+        school_id=token_data.school_id,
+        settings=settings,
+        redis_client=redis_client,
     )
 
 
 def get_token_with_scopes(
     scopes: list[list[ScopeType]],
 ) -> Callable[
-    [schemas_auth.TokenData],
-    schemas_auth.TokenData,
+    [schemas_auth.FunctionalTokenData],
+    schemas_auth.FunctionalTokenData,
 ]:
     """
     Generate a dependency which will:
@@ -55,35 +108,23 @@ def get_token_with_scopes(
     """
 
     def get_current_token_data(
-        token_data: schemas_auth.TokenData = Depends(get_token_data),
-    ) -> schemas_auth.TokenData:
+        token_data: schemas_auth.FunctionalTokenData = Depends(get_token_data),
+    ) -> schemas_auth.FunctionalTokenData:
         """
         Dependency that makes sure the token is valid, contains the expected scopes and returns the corresponding user_id.
         The expected scopes are passed as list of list of scopes, each list of scopes is an "AND" condition, and the list of list of scopes is an "OR" condition.
         """
 
-        access_granted = False
-        if scopes == []:
-            access_granted = True
-        else:
-            for scope_set in scopes:
-                # `token_data.scopes` contain a " " separated list of scopes
-                # `scope_set` is a list of scopes that must be present in the token
-                # If one of the scope set is present in the token, the access is granted
-
-                scope_set_present = True
-                for scope in scope_set:
-                    scope_set_present = scope_set_present and (
-                        scope in token_data.scopes.split(" ")
-                    )
-                access_granted = access_granted or scope_set_present
-
-        if not access_granted:
-            raise HTTPException(
-                status_code=403,
-                detail=f"Unauthorized, token does not contain at least one of the following scope_set {[[scope.value for scope in scope_set] for scope_set in scopes]}",
+        token = auth_utils.get_token_with_scopes(
+            scopes=scopes,
+            token_data=token_data,
+        )
+        if not isinstance(token, schemas_auth.FunctionalTokenData):
+            raise TokenClassMismatchError(
+                type(token).__name__,
+                schemas_auth.FunctionalTokenData.__name__,
             )
-        return token_data
+        return token
 
     return get_current_token_data
 
@@ -95,7 +136,7 @@ def filter_user_token(
     excluded_account_types: list[AccountType] | None = None,
     included_account_types: list[AccountType] | None = None,
     exclude_external: bool = False,
-) -> Callable[[schemas_auth.TokenData], schemas_auth.TokenData]:
+) -> Callable[[schemas_auth.FunctionalTokenData], schemas_auth.FunctionalTokenData]:
     """
     A dependency that will:
         * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
@@ -107,10 +148,10 @@ def filter_user_token(
     included_account_types = included_account_types or list(AccountType)
 
     def filter_token(
-        token: schemas_auth.TokenData = Depends(
+        token: schemas_auth.FunctionalTokenData = Depends(
             get_token_with_scopes([[ScopeType.API]]),
         ),
-    ) -> schemas_auth.TokenData:
+    ) -> schemas_auth.FunctionalTokenData:
         if GroupType.admin in token.group_ids:
             return token
         if token.account_type in excluded_account_types:
@@ -145,7 +186,10 @@ def filter_user_token(
     return filter_token
 
 
-def is_user_admin() -> Callable[[schemas_auth.TokenData], schemas_auth.TokenData]:
+def is_user_admin() -> Callable[
+    [schemas_auth.FunctionalTokenData],
+    schemas_auth.FunctionalTokenData,
+]:
     """
     Generate a dependency which will:
         * check if the request header contains a valid API JWT token (a token that can be used to call endpoints from the API)
@@ -155,10 +199,10 @@ def is_user_admin() -> Callable[[schemas_auth.TokenData], schemas_auth.TokenData
     """
 
     def is_user_in(
-        token: schemas_auth.TokenData = Depends(
+        token: schemas_auth.FunctionalTokenData = Depends(
             filter_user_token(included_groups=[GroupType.admin]),
         ),
-    ) -> schemas_auth.TokenData:
+    ) -> schemas_auth.FunctionalTokenData:
         """
         A dependency that checks that user is a member of the group with the given id then returns the corresponding user.
         """
@@ -171,17 +215,18 @@ def is_user_admin() -> Callable[[schemas_auth.TokenData], schemas_auth.TokenData
 def is_user_allowed_to(
     permissions_name: list[ModulePermissions],
 ) -> Callable[
-    [schemas_auth.TokenData, AsyncSession],
-    Coroutine[Any, Any, schemas_auth.TokenData],
+    [schemas_auth.FunctionalTokenData, AsyncSession],
+    Coroutine[Any, Any, schemas_auth.FunctionalTokenData],
 ]:
 
     async def _is_user_allowed_to(
-        token: schemas_auth.TokenData = Depends(
+        token: schemas_auth.FunctionalTokenData = Depends(
             get_token_with_scopes([[ScopeType.API]]),
         ),
         db: AsyncSession = Depends(get_db),
         redis_client: Redis = Depends(get_redis_client),
-    ) -> schemas_auth.TokenData:
+        settings: Settings = Depends(get_settings),
+    ) -> schemas_auth.FunctionalTokenData:
 
         if GroupType.admin in token.group_ids:
             return token
@@ -195,6 +240,7 @@ def is_user_allowed_to(
             groups, account_types = await get_cached_permission_requirements(
                 permission_name,
                 db,
+                settings,
                 redis_client,
             )
             allowed_group_ids.update(groups)

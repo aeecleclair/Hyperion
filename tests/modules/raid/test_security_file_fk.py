@@ -128,7 +128,7 @@ class TestSecurityFileFKViolation:
         # Mock the permission check
         with (
             patch(
-                "app.modules.raid.endpoints_raid.has_user_token_permission",
+                "app.modules.raid.endpoints_raid.token.check_permission",
                 new=AsyncMock(return_value=False),
             ),
             patch(
@@ -185,7 +185,7 @@ class TestSecurityFileFKViolation:
 
         with (
             patch(
-                "app.modules.raid.endpoints_raid.has_user_token_permission",
+                "app.modules.raid.endpoints_raid.token.check_permission",
                 new=AsyncMock(return_value=False),
             ),
             patch(
@@ -247,7 +247,7 @@ class TestSecurityFileFKViolation:
 
         with (
             patch(
-                "app.modules.raid.endpoints_raid.has_user_token_permission",
+                "app.modules.raid.endpoints_raid.token.check_permission",
                 new=AsyncMock(return_value=False),
             ),
             patch(
@@ -364,7 +364,7 @@ class TestSecurityFileFKEdgeCases:
 
         with (
             patch(
-                "app.modules.raid.endpoints_raid.has_user_token_permission",
+                "app.modules.raid.endpoints_raid.token.check_permission",
                 new=AsyncMock(return_value=False),
             ),
             patch(
@@ -462,7 +462,7 @@ class TestSecurityFileConsentRules:
 
         with (
             patch(
-                "app.modules.raid.endpoints_raid.has_user_token_permission",
+                "app.modules.raid.endpoints_raid.token.check_permission",
                 new=AsyncMock(return_value=False),
             ),
             patch(
@@ -516,7 +516,7 @@ class TestSecurityFileConsentRules:
 
         with (
             patch(
-                "app.modules.raid.endpoints_raid.has_user_token_permission",
+                "app.modules.raid.endpoints_raid.token.check_permission",
                 new=AsyncMock(return_value=False),
             ),
             patch(
@@ -575,7 +575,7 @@ class TestSecurityFileConsentRules:
 
         with (
             patch(
-                "app.modules.raid.endpoints_raid.has_user_token_permission",
+                "app.modules.raid.endpoints_raid.token.check_permission",
                 new=AsyncMock(return_value=False),
             ),
             patch(
